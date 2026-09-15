@@ -4847,7 +4847,6 @@ export interface components {
             /** Format: int32 */
             id: number;
             is_anonymous: boolean;
-            is_public: boolean;
             /** Format: int32 */
             max_players?: number;
             portrait_avatars: boolean;
@@ -6150,7 +6149,6 @@ export interface components {
             end_date?: string;
             genre?: string;
             is_anonymous?: boolean;
-            is_public?: boolean;
             /** Format: int32 */
             max_players?: number;
             portrait_avatars?: boolean;
@@ -10243,8 +10241,6 @@ export interface operations {
                 /** @description Only games in this community; omit for all */
                 community_id?: string;
                 sort_by?: string;
-                /** @description "true" enables admin mode for an authenticated admin */
-                admin_mode?: string;
                 /** @description 1-based page number; defaults to 1 */
                 page?: string;
                 /** @description 1-100; defaults to 20 */

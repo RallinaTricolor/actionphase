@@ -159,7 +159,6 @@ func TestDataFactories_ComplexScenarios(t *testing.T) {
 		game := factory.NewGame().
 			WithTitle("Private Campaign").
 			WithGM(gm.ID).
-			AsPrivate().
 			WithMaxPlayers(4).
 			Create()
 
@@ -261,7 +260,6 @@ func TestDataFactories_EdgeCases(t *testing.T) {
 			WithGenre("Sci-Fi").
 			WithState("recruitment").
 			WithMaxPlayers(8).
-			AsPrivate().
 			WithStartDate(startDate).
 			WithEndDate(endDate).
 			WithRecruitmentDeadline(recruitmentDeadline).

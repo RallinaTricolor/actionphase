@@ -18,7 +18,6 @@ describe('GameDetailsPage', () => {
     genre: 'Fantasy',
     max_players: 5,
     current_players: 2,
-    is_public: true,
     is_anonymous: false,
     recruitment_deadline: '2025-12-31T23:59:59Z',
     start_date: '2026-01-01T00:00:00Z',

@@ -410,7 +410,6 @@ func (td *TestDatabase) CreateTestGame(t TestingInterface, gmUserID int32, title
 		GmUserID:    gmUserID,
 		Genre:       pgtype.Text{String: "Test", Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test game: %v", err)
@@ -431,7 +430,6 @@ func (td *TestDatabase) CreateTestGameWithState(t TestingInterface, gmUserID int
 		GmUserID:    gmUserID,
 		Genre:       pgtype.Text{String: "Test", Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test game: %v", err)

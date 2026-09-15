@@ -309,7 +309,6 @@ type BotPreventionServiceInterface interface {
 //	    GMUserID:    int32(gmUser.ID),
 //	    Genre:       "Fantasy RPG",
 //	    MaxPlayers:  6,
-//	    IsPublic:    true,
 //	})
 //
 //	// Transition game to accept players
@@ -555,7 +554,6 @@ type CreateGameRequest struct {
 	EndDate                 *time.Time
 	RecruitmentDeadline     *time.Time
 	MaxPlayers              int32
-	IsPublic                bool
 	IsAnonymous             bool
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool
@@ -584,7 +582,6 @@ type UpdateGameRequest struct {
 	EndDate                 *time.Time
 	RecruitmentDeadline     *time.Time
 	MaxPlayers              int32
-	IsPublic                bool
 	IsAnonymous             bool
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool

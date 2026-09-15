@@ -63,9 +63,6 @@ export class GamesApi extends BaseApiClient {
     if (filters?.sort_by) {
       params.append('sort_by', filters.sort_by);
     }
-    if (filters?.admin_mode === true) {
-      params.append('admin_mode', 'true');
-    }
     if (filters?.page) {
       params.append('page', filters.page.toString());
     }

@@ -127,7 +127,6 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 			Description: "An updated comprehensive test campaign",
 			Genre:       "Sci-Fi RPG",
 			MaxPlayers:  8,
-			IsPublic:    true,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -231,7 +230,6 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		Genre:       "Action",
 		MaxPlayers:  4,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
@@ -355,7 +353,6 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		MaxPlayers:  3,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
@@ -449,7 +446,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		Description: "A game for testing authorization",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
@@ -473,7 +469,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		updateData := UpdateGameRequest{
 			Title:       "Unauthorized Update",
 			Description: "This should not work",
-			IsPublic:    false,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -520,7 +515,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		updateData := UpdateGameRequest{
 			Title:       "Owner Update",
 			Description: "This should work",
-			IsPublic:    true,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -785,7 +779,6 @@ func BenchmarkGameAPI_GetAllGames(b *testing.B) {
 			Description: "A game for benchmark testing",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		})
 	}
 
@@ -839,7 +832,6 @@ func TestGameAPI_GameApplications(t *testing.T) {
 		Description: "A game to test applications",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -1130,7 +1122,6 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		Description: "A game to test audience features",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -1326,7 +1317,6 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 			Description: "A game to test audience joining during character creation",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
 

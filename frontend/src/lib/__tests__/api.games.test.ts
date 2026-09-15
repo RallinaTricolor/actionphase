@@ -99,7 +99,6 @@ describe('ApiClient - Games', () => {
             genre: 'Fantasy',
             max_players: 5,
             current_players: 2,
-            is_public: true,
             start_date: '2025-09-01T19:00:00Z',
             recruitment_deadline: '2025-08-25T23:59:59Z',
             created_at: '2025-08-07T18:30:00Z',
@@ -167,7 +166,6 @@ describe('ApiClient - Games', () => {
             genre: 'Sci-Fi',
             max_players: 6,
             current_players: 3,
-            is_public: true,
             start_date: '2025-09-15T19:00:00Z',
             recruitment_deadline: '2025-09-01T23:59:59Z',
             created_at: '2025-08-07T18:30:00Z',
@@ -208,7 +206,6 @@ describe('ApiClient - Games', () => {
           max_players: 4,
           start_date: '2025-09-01T19:00:00Z',
           recruitment_deadline: '2025-08-25T23:59:59Z',
-          is_public: true,
           current_phase_id: null,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T18:30:00Z',
@@ -260,7 +257,6 @@ describe('ApiClient - Games', () => {
           max_players: 5,
           start_date: '2025-09-01T19:00:00Z',
           recruitment_deadline: '2025-08-25T23:59:59Z',
-          is_public: true,
           current_phase_id: 1,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T18:30:00Z',
@@ -341,7 +337,6 @@ describe('ApiClient - Games', () => {
           ...createData,
           gm_user_id: 1,
           state: 'setup',
-          is_public: true,
           current_phase_id: null,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T18:30:00Z',
@@ -411,7 +406,6 @@ describe('ApiClient - Games', () => {
           ...createData,
           gm_user_id: 1,
           state: 'setup',
-          is_public: true,
           current_phase_id: null,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T18:30:00Z',
@@ -459,7 +453,6 @@ describe('ApiClient - Games', () => {
           max_players: 8,
           start_date: '2025-09-01T19:00:00Z',
           recruitment_deadline: '2025-08-25T23:59:59Z',
-          is_public: true,
           current_phase_id: null,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T19:45:00Z',
@@ -511,7 +504,6 @@ describe('ApiClient - Games', () => {
           start_date: '2025-12-01T18:00:00Z', // ISO 8601 format
           end_date: '2025-12-31T23:59:00Z',   // ISO 8601 format
           recruitment_deadline: '2025-11-25T23:59:00Z', // ISO 8601 format
-          is_public: true,
           is_anonymous: false,
         }
 
@@ -601,7 +593,6 @@ describe('ApiClient - Games', () => {
           max_players: 4,
           start_date: '2025-09-01T19:00:00Z',
           recruitment_deadline: '2025-08-25T23:59:59Z',
-          is_public: true,
           current_phase_id: null,
           created_at: '2025-08-07T18:30:00Z',
           updated_at: '2025-08-07T19:30:00Z',

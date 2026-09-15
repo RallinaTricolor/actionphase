@@ -300,7 +300,6 @@ type updateGameBody struct {
 	// A POINTER, unlike most of this body: absent means "leave the community
 	// alone", not "clear it". Only honoured while the game is in setup.
 	CommunityID             *int32                     `json:"community_id,omitempty" required:"false" minimum:"1"`
-	IsPublic                bool                       `json:"is_public,omitempty" required:"false"`
 	IsAnonymous             bool                       `json:"is_anonymous,omitempty" required:"false"`
 	AutoAcceptAudience      bool                       `json:"auto_accept_audience,omitempty" required:"false"`
 	AllowGroupConversations bool                       `json:"allow_group_conversations,omitempty" required:"false"`
@@ -610,7 +609,6 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 		EndDate:                 in.Body.EndDate.ToTimePtr(),
 		RecruitmentDeadline:     in.Body.RecruitmentDeadline.ToTimePtr(),
 		MaxPlayers:              in.Body.MaxPlayers,
-		IsPublic:                true, // All games are now public
 		IsAnonymous:             in.Body.IsAnonymous,
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
@@ -774,7 +772,6 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 		RecruitmentDeadline:     in.Body.RecruitmentDeadline,
 		MaxPlayers:              in.Body.MaxPlayers,
 		CommunityID:             in.Body.CommunityID,
-		IsPublic:                in.Body.IsPublic,
 		IsAnonymous:             in.Body.IsAnonymous,
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
@@ -1002,7 +999,6 @@ type filteredGamesInput struct {
 	HasOpenSpots  string `query:"has_open_spots" required:"false" doc:"\"true\" or \"false\"; anything else is ignored"`
 	CommunityID   string `query:"community_id" required:"false" doc:"Only games in this community; omit for all"`
 	SortBy        string `query:"sort_by" required:"false"`
-	AdminMode     string `query:"admin_mode" required:"false" doc:"\"true\" enables admin mode for an authenticated admin"`
 	Page          string `query:"page" required:"false" doc:"1-based page number; defaults to 1"`
 	PageSize      string `query:"page_size" required:"false" doc:"1-100; defaults to 20"`
 }
@@ -1059,11 +1055,6 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 		filters.UserID = &userID
 	}
 
-	if in.AdminMode == "true" && userID != 0 {
-		filters.AdminMode = true
-		filters.AdminUserID = &userID
-	}
-
 	result, err := h.GameService.GetFilteredGames(ctx, filters)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get filtered games", "error", err)
@@ -1096,7 +1087,6 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 			EndDate:                 game.EndDate,
 			RecruitmentDeadline:     game.RecruitmentDeadline,
 			MaxPlayers:              game.MaxPlayers,
-			IsPublic:                game.IsPublic,
 			IsAnonymous:             game.IsAnonymous,
 			AutoAcceptAudience:      game.AutoAcceptAudience,
 			AllowGroupConversations: game.AllowGroupConversations,

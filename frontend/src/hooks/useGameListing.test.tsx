@@ -55,7 +55,6 @@ describe('useGameListing', () => {
     genre: 'Fantasy',
     current_players: 3,
     max_players: 5,
-    is_public: true,
     user_relationship: 'none',
     deadline_urgency: 'normal',
     has_recent_activity: true,
@@ -257,7 +256,6 @@ describe('useGameListing', () => {
         participation: 'my_games',
         has_open_spots: true,
         sort_by: 'created',
-        admin_mode: false,
         search: undefined,
         page: 1, // Default pagination
         page_size: 20, // Default pagination

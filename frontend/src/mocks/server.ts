@@ -116,7 +116,6 @@ const handlers = [
       gm_username: 'testgm',
       state: 'setup',
       max_players: 4,
-      is_public: true,
       is_anonymous: false,
       auto_accept_audience: false,
       game_config: {},

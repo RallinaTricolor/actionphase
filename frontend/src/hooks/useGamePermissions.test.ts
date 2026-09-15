@@ -45,7 +45,6 @@ const MOCK_GAME: GameWithDetails = {
   gm_user_id: 1, // current user is GM
   state: 'in_progress',
   max_players: 5,
-  is_public: true,
   is_anonymous: false,
   game_config: {},
   created_at: new Date().toISOString(),

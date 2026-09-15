@@ -6,8 +6,6 @@ import (
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TestCreateGameNilCharacterSheet pins the NOT NULL trap that broke every
@@ -33,7 +31,6 @@ func TestCreateGameNilCharacterSheet(t *testing.T) {
 		Title:       "Game Without A Sheet Config",
 		Description: "Built without setting CharacterSheet.",
 		GmUserID:    int32(fixtures.TestUser.ID),
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 		// CharacterSheet deliberately left nil.
 	})
 	if err != nil {
@@ -74,7 +71,6 @@ func TestUpdateGameNilCharacterSheetKeepsRawQuerySafe(t *testing.T) {
 		Title:          "Game With Renamed Tabs",
 		Description:    "Has GM label overrides.",
 		GmUserID:       int32(fixtures.TestUser.ID),
-		IsPublic:       pgtype.Bool{Bool: true, Valid: true},
 		CharacterSheet: []byte(`{"labels":{"skills":"Approaches"}}`),
 	})
 	if err != nil {
@@ -85,7 +81,6 @@ func TestUpdateGameNilCharacterSheetKeepsRawQuerySafe(t *testing.T) {
 		ID:          game.ID,
 		Title:       "Game With Renamed Tabs",
 		Description: "Updated, but not for the sheet.",
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 		// CharacterSheet deliberately left nil.
 	})
 	if err != nil {
@@ -128,7 +123,6 @@ func TestGameService_UpdateGameUnsetsCharacterSheetLabels(t *testing.T) {
 		Description: "Starts with GM label overrides.",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 		CharacterSheet: core.CharacterSheetConfig{
 			Labels: &core.CharacterSheetLabels{Skills: "Approaches", Numbers: "Stress"},
 		},
@@ -146,7 +140,6 @@ func TestGameService_UpdateGameUnsetsCharacterSheetLabels(t *testing.T) {
 		ID:          game.ID,
 		Title:       "Game With Renamed Tabs",
 		Description: "The GM cleared every label box.",
-		IsPublic:    true,
 		// CharacterSheet left as its zero value: no overrides.
 	})
 	core.AssertNoError(t, err, "Failed to update game")
@@ -177,7 +170,6 @@ func TestGameService_UpdateGameReplacesCharacterSheetLabels(t *testing.T) {
 		Description: "Starts with two GM label overrides.",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 		CharacterSheet: core.CharacterSheetConfig{
 			Labels: &core.CharacterSheetLabels{Skills: "Approaches", Numbers: "Stress"},
 		},
@@ -189,7 +181,6 @@ func TestGameService_UpdateGameReplacesCharacterSheetLabels(t *testing.T) {
 		ID:          game.ID,
 		Title:       "Game With Two Renamed Tabs",
 		Description: "The GM cleared only the Numbers label.",
-		IsPublic:    true,
 		CharacterSheet: core.CharacterSheetConfig{
 			Labels: &core.CharacterSheetLabels{Skills: "Approaches"},
 		},

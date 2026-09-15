@@ -136,7 +136,6 @@ func TestGameService_FilterByParticipation(t *testing.T) {
 		Description: "Game where test user is GM",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 
@@ -146,7 +145,6 @@ func TestGameService_FilterByParticipation(t *testing.T) {
 		Description: "Game where test user is participant",
 		GMUserID:    int32(player2.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 	_, err = gameService.AddGameParticipant(ctx, participantGame.ID, int32(fixtures.TestUser.ID), "player")
@@ -158,7 +156,6 @@ func TestGameService_FilterByParticipation(t *testing.T) {
 		Description: "Game where test user has applied",
 		GMUserID:    int32(player2.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 	// Update to recruitment state
@@ -179,7 +176,6 @@ func TestGameService_FilterByParticipation(t *testing.T) {
 		Description: "Game where test user is not involved",
 		GMUserID:    int32(player2.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 
@@ -269,7 +265,6 @@ func createTestGameInState(t *testing.T, testDB *core.TestDatabase, gameService 
 		GMUserID:    gmUserID,
 		CommunityID: communityID,
 		MaxPlayers:  int32(maxPlayers),
-		IsPublic:    true,
 		StartDate:   core.TimePtr(time.Now().Add(24 * time.Hour)),
 		EndDate:     core.TimePtr(time.Now().Add(7 * 24 * time.Hour)),
 	})
@@ -322,7 +317,6 @@ func TestGameService_CurrentPlayersExcludesAudience(t *testing.T) {
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		MaxPlayers:  5,
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 
@@ -374,7 +368,6 @@ func TestGameService_UserRelationshipDistinguishesRoles(t *testing.T) {
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		MaxPlayers:  5,
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 

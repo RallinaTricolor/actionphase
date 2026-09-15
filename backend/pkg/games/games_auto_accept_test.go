@@ -45,7 +45,6 @@ func TestGameAPI_AutoAcceptAudience(t *testing.T) {
 		Description:        "Testing auto-accept audience",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		AutoAcceptAudience: true, // Enable auto-accept
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
@@ -150,7 +149,6 @@ func TestGameAPI_AutoAcceptAudience(t *testing.T) {
 			Description:        "Testing manual approval",
 			GMUserID:           int32(fixtures.TestUser.ID),
 			CommunityID:        int32(fixtures.TestCommunity.ID),
-			IsPublic:           true,
 			AutoAcceptAudience: false, // Disabled
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")

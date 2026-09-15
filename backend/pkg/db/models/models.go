@@ -315,7 +315,6 @@ type Game struct {
 	EndDate             pgtype.Timestamptz `json:"end_date"`
 	RecruitmentDeadline pgtype.Timestamptz `json:"recruitment_deadline"`
 	MaxPlayers          pgtype.Int4        `json:"max_players"`
-	IsPublic            pgtype.Bool        `json:"is_public"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	// When true, character ownership and NPC status are hidden from players

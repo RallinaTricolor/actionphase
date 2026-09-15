@@ -562,7 +562,6 @@ describe('EditGameModal', () => {
           recruitment_deadline: expect.any(String),
           start_date: expect.any(String),
           end_date: expect.any(String),
-          is_public: true,
           is_anonymous: true,
           auto_accept_audience: true,
           allow_group_conversations: expect.any(Boolean),

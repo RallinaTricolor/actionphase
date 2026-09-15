@@ -88,10 +88,7 @@ export function EditGameModal({ game, isOpen, onClose, onGameUpdated }: EditGame
 
     try {
       setLoading(true);
-      const updateData: UpdateGameRequest = {
-        ...payload,
-        is_public: true,
-      };
+      const updateData: UpdateGameRequest = { ...payload };
       await apiClient.games.updateGame(game.id, updateData);
       onGameUpdated();
       onClose();

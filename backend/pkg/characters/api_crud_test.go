@@ -18,7 +18,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupCharacterTestRouter creates a test router with auth middleware
@@ -610,7 +609,6 @@ func TestGetCharacter_AnonymousMode(t *testing.T) {
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	core.AssertNoError(t, err, "Creating anonymous game should succeed")
 

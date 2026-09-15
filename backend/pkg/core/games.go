@@ -12,8 +12,6 @@ type GameListingFilters struct {
 	HasOpenSpots        *bool    // Only games with available player spots
 	CommunityID         *int32   // Only games in this community; nil means all
 	SortBy              string   // 'recent_activity', 'created', 'start_date', 'alphabetical'
-	AdminMode           bool     // Admin mode: bypasses is_public filter when user is admin
-	AdminUserID         *int32   // User ID requesting admin mode (for validation)
 	Page                int      // Page number (1-indexed, default: 1)
 	PageSize            int      // Number of items per page (default: 20, max: 100)
 }
@@ -32,7 +30,6 @@ type EnrichedGameListItem struct {
 	EndDate                 *time.Time `json:"end_date,omitempty"`
 	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
 	MaxPlayers              *int32     `json:"max_players,omitempty"`
-	IsPublic                bool       `json:"is_public"`
 	IsAnonymous             bool       `json:"is_anonymous"`
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
 	AllowGroupConversations bool       `json:"allow_group_conversations"`

@@ -126,7 +126,6 @@ export interface UpdateGameRequest extends Omit<CreateGameRequest, 'community_id
    * in setup (decision 4).
    */
   community_id?: number;
-  is_public: boolean;
   is_anonymous?: boolean;
   auto_accept_audience?: boolean;
   allow_group_conversations?: boolean;
@@ -309,7 +308,6 @@ type PhaseType = 'action' | 'common_room';
 export interface EnrichedGameListItem extends Game {
   gm_username: string;
   current_players: number;
-  is_public: boolean;
   user_relationship?: UserRelationship;
   current_phase_type?: PhaseType;
   current_phase_deadline?: string;
@@ -344,7 +342,6 @@ export interface GameListingFilters {
   /** Only games in this community. Omitted means every community. */
   community_id?: number;
   sort_by?: SortBy;
-  admin_mode?: boolean;
   page?: number;
   page_size?: number;
 }

@@ -2474,8 +2474,6 @@ components:
                     type: integer
                 is_anonymous:
                     type: boolean
-                is_public:
-                    type: boolean
                 max_players:
                     format: int32
                     type: integer
@@ -2503,7 +2501,6 @@ components:
                 - gm_user_id
                 - gm_username
                 - state
-                - is_public
                 - is_anonymous
                 - auto_accept_audience
                 - allow_group_conversations
@@ -5018,8 +5015,6 @@ components:
                 genre:
                     type: string
                 is_anonymous:
-                    type: boolean
-                is_public:
                     type: boolean
                 max_players:
                     format: int32
@@ -8256,13 +8251,6 @@ paths:
                   in: query
                   name: sort_by
                   schema:
-                    type: string
-                - description: '"true" enables admin mode for an authenticated admin'
-                  explode: false
-                  in: query
-                  name: admin_mode
-                  schema:
-                    description: '"true" enables admin mode for an authenticated admin'
                     type: string
                 - description: 1-based page number; defaults to 1
                   explode: false
