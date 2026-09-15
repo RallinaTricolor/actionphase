@@ -77,4 +77,22 @@ describe('API Client - Basic Functionality', () => {
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
     expect(logger.error).toHaveBeenCalledWith('Attempted to set invalid token')
   })
+
+  // The stringified-undefined case is the one that actually bites: a caller doing
+  // setAuthToken(`${maybeToken}`) on an absent value sends the literal "undefined",
+  // which would otherwise be stored and then sent as a Bearer token on every
+  // request. Whitespace and "null" are the same class of mistake.
+  it.each(['undefined', 'null', '   '])(
+    'rejects %o as a token and clears any stored one',
+    async (bogus) => {
+      const { apiClient } = await import('../api')
+      const { logger } = await import('@/services/LoggingService')
+
+      apiClient.setAuthToken(bogus)
+
+      expect(localStorageMock.setItem).not.toHaveBeenCalled()
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token')
+      expect(logger.error).toHaveBeenCalledWith('Attempted to set invalid token')
+    }
+  )
 })
