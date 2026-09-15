@@ -5,6 +5,8 @@
  * game history, and profile updates.
  */
 
+import type { components } from './api.gen';
+
 /**
  * User profile information
  */
@@ -69,12 +71,11 @@ export interface UserProfileResponse {
 }
 
 /**
- * Request payload for updating user profile
+ * PATCH /users/me/profile — generated from the OpenAPI spec
+ * (`just gen-api-types`), so an unknown property is a build failure rather than
+ * a 422 at runtime. The schema is named UpdateProfileBody after the Go struct.
  */
-export interface UpdateUserProfileRequest {
-  display_name?: string;
-  bio?: string;
-}
+export type UpdateUserProfileRequest = components['schemas']['UpdateProfileBody'];
 
 /**
  * Response from avatar upload

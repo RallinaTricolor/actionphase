@@ -807,7 +807,7 @@ _verify-unix:
   just tidy
   just fmt
   fail=0
-  for t in "vet" "check-game-states" "check-api-docs" "dead-code" "build-backend" \
+  for t in "vet" "check-game-states" "check-api-docs" "check-api-types" "dead-code" "build-backend" \
            "lint-frontend" "knip" "build-frontend"; do
     ( out=$(just $t 2>&1); code=$?; \
       if [ $code -ne 0 ]; then printf '\n=== FAILED: just %s ===\n%s\n' "$t" "$out" >&2; fi; \
@@ -842,7 +842,7 @@ _verify-quick-unix:
     exit 0
   fi
   fail=0
-  for t in "tidy-check" "fmt-check" "vet" "check-game-states" "check-api-docs" "type-check" "lint-frontend"; do
+  for t in "tidy-check" "fmt-check" "vet" "check-game-states" "check-api-docs" "check-api-types" "type-check" "lint-frontend"; do
     ( out=$(just $t 2>&1); code=$?; \
       if [ $code -ne 0 ]; then printf '\n=== FAILED: just %s ===\n%s\n' "$t" "$out" >&2; fi; \
       exit $code ) &
@@ -1308,6 +1308,42 @@ test-all:
 # Lint frontend code (in frontend container)
 lint-frontend:
   {{FE}} npm run lint
+
+# Regenerate the frontend's TypeScript view of the API from the OpenAPI spec.
+#
+# The spec is generated from the Go types (`just gen-openapi`), so this makes
+# request payload shapes a compile-time contract instead of a 422 at runtime.
+# Commit src/types/api.gen.ts alongside the spec; check-api-types fails when it
+# is stale.
+#
+# The frontend service mounts only ./frontend at /app — there is no /repo here
+# (that mount exists on the backend container), so the spec is staged into the
+# frontend tree first and removed afterwards. .openapi.gen.yaml is gitignored.
+gen-api-types:
+  cp backend/pkg/docs/openapi.gen.yaml frontend/.openapi.gen.yaml
+  {{FE}} npx openapi-typescript .openapi.gen.yaml -o src/types/api.gen.ts
+  rm -f frontend/.openapi.gen.yaml
+  @echo "✅ frontend/src/types/api.gen.ts regenerated — commit it with your change"
+
+# Verify the committed frontend API types match the committed OpenAPI spec.
+#
+# Like check-api-docs one layer down, this is a diff rather than a judgment
+# call: regenerate to a temp file and compare. A failure means the spec changed
+# without `just gen-api-types` being run.
+check-api-types:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cp backend/pkg/docs/openapi.gen.yaml frontend/.openapi.gen.yaml
+  trap 'rm -f frontend/.openapi.gen.yaml frontend/src/types/.api.gen.check.ts' EXIT
+  {{FE}} npx openapi-typescript .openapi.gen.yaml -o src/types/.api.gen.check.ts >/dev/null
+  if diff -u frontend/src/types/api.gen.ts frontend/src/types/.api.gen.check.ts > /tmp/api-types-drift.diff 2>&1; then
+    echo "✓ frontend API types are up to date"
+  else
+    echo "✗ frontend/src/types/api.gen.ts is stale" >&2
+    echo "  Run 'just gen-api-types' and commit the result." >&2
+    head -40 /tmp/api-types-drift.diff | sed 's/^/    /' >&2
+    exit 1
+  fi
 
 # ═══════════════════════════════════════════════════════════════════════════
 # DOCUMENTATION  (VitePress; runs in an ephemeral node container)

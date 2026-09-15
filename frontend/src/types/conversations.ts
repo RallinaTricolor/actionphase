@@ -1,3 +1,5 @@
+import type { components } from './api.gen';
+
 export interface Conversation {
   id: number;
   game_id: number;
@@ -63,23 +65,22 @@ export interface ConversationWithDetails {
 }
 
 // Request types
-export interface CreateConversationRequest {
-  title?: string;
-  character_ids: number[]; // At least 2 characters required
-}
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
 
-export interface SendMessageRequest {
-  character_id: number;
-  content: string;
-}
+/** POST /games/{gameID}/conversations — title is required on the wire, and
+ *  character_ids is nullable; at least two characters are required. */
+export type CreateConversationRequest = components['schemas']['CreateConversationRequest'];
 
-export interface AddParticipantRequest {
-  character_id: number;
-}
+/** POST /games/{gameID}/conversations/{conversationId}/messages */
+export type SendMessageRequest = components['schemas']['SendMessageRequest'];
 
-export interface UpdateMessageRequest {
-  content: string;
-}
+/** POST /games/{gameID}/conversations/{conversationId}/participants */
+export type AddParticipantRequest = components['schemas']['AddParticipantRequest'];
+
+/** PATCH /games/{gameID}/conversations/{conversationId}/messages/{messageId} */
+export type UpdateMessageRequest = components['schemas']['UpdateMessageRequest'];
 
 // Audience viewing types (read-only conversation access for audience members)
 export interface AudienceConversationListItem {

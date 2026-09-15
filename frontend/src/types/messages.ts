@@ -1,5 +1,7 @@
 // Message/Post types for Common Room
 
+import type { components } from './api.gen';
+
 export interface Message {
   id: number;
   game_id: number;
@@ -28,23 +30,19 @@ export interface Message {
   edit_count?: number;
 }
 
-export interface CreatePostRequest {
-  phase_id?: number;
-  character_id: number;
-  content: string;
-}
+// Request types
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
 
-export interface CreateCommentRequest {
-  phase_id?: number;
-  character_id: number;
-  content: string;
-  root_post_id?: number;
-}
+/** POST /games/{gameID}/posts */
+export type CreatePostRequest = components['schemas']['CreatePostRequest'];
 
-export interface UpdateCommentRequest {
-  content: string;
-  character_id?: number;
-}
+/** POST /games/{gameID}/posts/{postId}/comments */
+export type CreateCommentRequest = components['schemas']['CreateCommentRequest'];
+
+/** PATCH /games/{gameID}/posts/{postId}/comments/{commentId} */
+export type UpdateCommentRequest = components['schemas']['UpdateCommentRequest'];
 
 export interface GetPostsParams {
   phase_id?: number;
@@ -71,6 +69,12 @@ export interface PostUnreadInfo {
   latest_comment_at?: string | null;
 }
 
+/**
+ * NOT generated, deliberately. MarkPostReadRequest types
+ * `last_read_comment_id` as a plain optional number, but callers here pass an
+ * explicit `null` to mark the post itself without advancing the comment
+ * marker. Aliasing the schema would reject that at compile time.
+ */
 export interface MarkPostReadRequest {
   last_read_comment_id?: number | null;
 }

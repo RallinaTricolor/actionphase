@@ -36,14 +36,17 @@ export interface UnifiedDeadline {
 }
 
 // Request types
-export interface CreateDeadlineRequest {
-  title: string;
-  description: string;
-  deadline: string; // ISO 8601 timestamp
-}
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
+// Schema names come from the Go structs and do not always match the frontend's
+// names — both endpoints below share DeadlineBody — so alias here and leave
+// call sites importing the names they already use.
+import type { components } from './api.gen';
 
-export interface UpdateDeadlineRequest {
-  title: string;
-  description: string;
-  deadline: string; // ISO 8601 timestamp
-}
+/** POST /games/{gameID}/deadlines */
+export type CreateDeadlineRequest = components['schemas']['DeadlineBody'];
+
+/** PATCH /deadlines/{deadlineId} — same body as create, not UpdateDeadlineBody
+ *  (which belongs to PUT /phases/{id}/deadline; see types/phases.ts). */
+export type UpdateDeadlineRequest = components['schemas']['DeadlineBody'];

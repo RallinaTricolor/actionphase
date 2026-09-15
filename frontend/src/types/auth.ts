@@ -12,20 +12,25 @@ export interface User {
   createdAt?: string;
 }
 
+import type { components } from './api.gen';
+
+/**
+ * NOT generated, deliberately. LoginBody types both `username` and `password`
+ * as optional, because the route accepts either a username or an email. That is
+ * honest about the wire format but useless as a client contract: a payload with
+ * no password would type-check. The hand-written type stays narrower.
+ */
 export interface LoginRequest {
   username: string;
   password: string;
   fingerprint?: string;
 }
 
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-  hcaptcha_token?: string;
-  honeypot_value?: string;
-  fingerprint?: string;
-}
+/**
+ * POST /auth/register — generated from the OpenAPI spec (`just gen-api-types`),
+ * so an unknown property is a build failure rather than a 422 at runtime.
+ */
+export type RegisterRequest = components['schemas']['RegisterBody'];
 
 export interface AuthResponse {
   user?: User;
@@ -33,11 +38,8 @@ export interface AuthResponse {
   token?: string; // Keep lowercase for backward compatibility
 }
 
-export interface ChangePasswordRequest {
-  current_password: string;
-  new_password: string;
-  confirm_password: string;
-}
+/** POST /auth/change-password — generated, as above. */
+export type ChangePasswordRequest = components['schemas']['ChangePasswordRequest'];
 
 export interface ChangePasswordResponse {
   message: string;

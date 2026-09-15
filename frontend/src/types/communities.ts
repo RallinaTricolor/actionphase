@@ -7,6 +7,8 @@
  * mechanism.
  */
 
+import type { components } from './api.gen';
+
 export interface Community {
   id: number;
   name: string;
@@ -78,23 +80,19 @@ export interface CommunityModerator {
 }
 
 /** Admin-only: creating a community and assigning its owner. */
-export interface CreateCommunityRequest {
-  name: string;
-  slug: string;
-  description?: string;
-  owner_user_id: number;
-}
+/**
+ * POST /admin/communities — generated from the OpenAPI spec
+ * (`just gen-api-types`), so an unknown property is a build failure rather than
+ * a 422 at runtime.
+ */
+export type CreateCommunityRequest = components['schemas']['CreateCommunityInputBody'];
 
 /**
  * Partial update. An omitted field is left unchanged.
  * `slug` is absent on purpose -- it is immutable after creation.
  */
-export interface UpdateCommunityRequest {
-  name?: string;
-  description?: string;
-  owner_user_id?: number;
-  is_active?: boolean;
-}
+/** PATCH /admin/communities/{id} — the site-admin edit. Generated, as above. */
+export type UpdateCommunityRequest = components['schemas']['UpdateCommunityInputBody'];
 
 /**
  * Moderator-level profile edit: name and description only.
@@ -106,16 +104,12 @@ export interface UpdateCommunityRequest {
  *
  * `description: ''` CLEARS the blurb; omitting the key leaves it unchanged.
  */
-export interface UpdateCommunityProfileRequest {
-  name?: string;
-  description?: string;
-}
+export type UpdateCommunityProfileRequest = components['schemas']['UpdateCommunityProfileInputBody'];
 
 
-/** Owner-only: granting a user moderation powers. */
-export interface AddModeratorRequest {
-  user_id: number;
-}
+/** Owner-only: granting a user moderation powers.
+ *  POST /communities/{slug}/moderators. Generated, as above. */
+export type AddModeratorRequest = components['schemas']['AddModeratorInputBody'];
 
 /**
  * One user's exclusion from one community's games.
@@ -189,11 +183,9 @@ export type BanEventAction = 'banned' | 'unbanned' | 'modified';
  * future; the server rejects a past expiry rather than writing a ban that is
  * inert on arrival.
  */
-export interface CreateCommunityBanRequest {
-  user_id: number;
-  reason?: string;
-  expires_at?: string;
-}
+/** POST /communities/{slug}/bans — named CreateBanInputBody after the Go
+ *  struct. Generated, as above. */
+export type CreateCommunityBanRequest = components['schemas']['CreateBanInputBody'];
 
 /**
  * One of a community's rules or reference pages.
@@ -238,12 +230,8 @@ type DocumentStatus = 'draft' | 'published';
  * Create a document. Omit `status` for a draft, which is the default -- a
  * half-written page should bind nobody until its author says otherwise.
  */
-export interface CreateCommunityDocumentRequest {
-  title: string;
-  content: string;
-  status?: DocumentStatus;
-  sort_order?: number;
-}
+/** POST /communities/{slug}/documents. Generated, as above. */
+export type CreateCommunityDocumentRequest = components['schemas']['CreateDocumentInputBody'];
 
 /**
  * Partial update; an omitted field is left unchanged.
@@ -254,12 +242,7 @@ export interface CreateCommunityDocumentRequest {
  * Unlike a community description, `content` is NOT tri-state: the column is NOT
  * NULL, so an empty string is a blank page rather than a clear.
  */
-export interface UpdateCommunityDocumentRequest {
-  title?: string;
-  content?: string;
-  status?: DocumentStatus;
-  sort_order?: number;
-}
+export type UpdateCommunityDocumentRequest = components['schemas']['UpdateDocumentInputBody'];
 
 /**
  * A game state a webhook can announce.
@@ -332,6 +315,12 @@ export interface CommunityWebhook {
 }
 
 /** Register a webhook. `is_enabled` omitted means enabled. */
+/**
+ * NOT generated, deliberately. CreateWebhookInputBody types `events` as
+ * `string[] | null`, which would erase the WebhookEvent union below -- the one
+ * that deliberately excludes `setup` so an unlisted game cannot leak into a
+ * Discord channel. Same reasoning as UpdateGameStateRequest in types/games.ts.
+ */
 export interface CreateCommunityWebhookRequest {
   /** The REAL Discord webhook URL. This is the only direction it travels. */
   url: string;
@@ -347,6 +336,7 @@ export interface CreateCommunityWebhookRequest {
  * stored credential, which is what lets this form save a label or event change
  * without ever holding the secret. Sending the masked URL back would destroy it.
  */
+/** NOT generated, for the same reason as CreateCommunityWebhookRequest above. */
 export interface UpdateCommunityWebhookRequest {
   url?: string;
   label?: string;

@@ -4,7 +4,7 @@ import { Button, Modal } from './ui';
 import { DeadlineCard } from './DeadlineCard';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
 import { EditDeadlineModal } from './EditDeadlineModal';
-import type { UnifiedDeadline } from '../types/deadlines';
+import type { UnifiedDeadline, CreateDeadlineRequest, UpdateDeadlineRequest } from '../types/deadlines';
 
 export interface DeadlineStripProps {
   deadlines: UnifiedDeadline[];
@@ -18,8 +18,8 @@ export interface DeadlineStripProps {
    * GM-created free-text deadline). Cards without a destination stay inert.
    */
   getDeadlineHref?: (deadline: UnifiedDeadline) => string | null;
-  onCreateDeadline: (data: { title: string; description: string; deadline: string }) => Promise<void>;
-  onUpdateDeadline: (deadlineId: number, data: { title: string; description: string; deadline: string }) => Promise<void>;
+  onCreateDeadline: (data: CreateDeadlineRequest) => Promise<void>;
+  onUpdateDeadline: (deadlineId: number, data: UpdateDeadlineRequest) => Promise<void>;
   onDeleteDeadline: (deadlineId: number) => Promise<void>;
   onExtendDeadline: (deadlineId: number, hours: number) => Promise<void>;
 }
@@ -118,7 +118,7 @@ export function DeadlineStrip({
     setShowEditModal(true);
   };
 
-  const handleUpdate = async (deadlineId: number, data: { title: string; description: string; deadline: string }) => {
+  const handleUpdate = async (deadlineId: number, data: UpdateDeadlineRequest) => {
     await onUpdateDeadline(deadlineId, data);
     setShowEditModal(false);
     setSelectedDeadline(null);
@@ -156,7 +156,7 @@ export function DeadlineStrip({
     setExtendHours(24);
   };
 
-  const handleCreate = async (data: { title: string; description: string; deadline: string }) => {
+  const handleCreate = async (data: CreateDeadlineRequest) => {
     await onCreateDeadline(data);
     setShowCreateModal(false);
   };

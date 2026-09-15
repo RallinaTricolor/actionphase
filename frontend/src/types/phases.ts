@@ -18,26 +18,28 @@ export interface GamePhase {
   is_expired?: boolean;
 }
 
-export interface CreatePhaseRequest {
-  phase_type: 'common_room' | 'action' | 'interlude';
-  title?: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
-  deadline?: string;
-}
+// Request types
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
+//
+// Note what is NOT here: the hand-written UpdatePhaseRequest carried
+// `end_time`, which PUT /phases/{id} rejects outright (every schema is
+// additionalProperties:false). EditPhaseModal happened to build its payload
+// from only the four permitted fields, so it never fired — it would have 422'd
+// the moment anyone added an end-time control. Create still accepts end_time;
+// update genuinely does not.
+import type { components } from './api.gen';
 
-export interface UpdatePhaseRequest {
-  title?: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
-  deadline?: string;
-}
+/** POST /games/{gameID}/phases */
+export type CreatePhaseRequest = components['schemas']['CreatePhaseBody'];
 
-export interface UpdateDeadlineRequest {
-  deadline: string;
-}
+/** PUT /phases/{id} */
+export type UpdatePhaseRequest = components['schemas']['UpdatePhaseBody'];
+
+/** PUT /phases/{id}/deadline — distinct from PATCH /deadlines/{deadlineId},
+ *  which takes the wider DeadlineBody (see types/deadlines.ts). */
+export type UpdateDeadlineRequest = components['schemas']['UpdateDeadlineBody'];
 
 export interface ActionSubmission {
   id: number;
@@ -50,10 +52,8 @@ export interface ActionSubmission {
   updated_at: string;
 }
 
-export interface ActionSubmissionRequest {
-  character_id?: number;
-  content: string;
-}
+/** POST /games/{gameID}/actions */
+export type ActionSubmissionRequest = components['schemas']['SubmitActionBody'];
 
 export interface ActionWithDetails extends ActionSubmission {
   username?: string;
@@ -133,18 +133,11 @@ export interface DraftCharacterUpdate {
   updated_at: string;
 }
 
-export interface CreateDraftCharacterUpdateRequest {
-  character_id: number;
-  module_type: 'skills' | 'inventory' | 'numbers';
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  operation: 'upsert' | 'delete';
-}
+/** POST /games/{gameID}/results/{resultId}/character-updates */
+export type CreateDraftCharacterUpdateRequest = components['schemas']['CreateDraftUpdateBody'];
 
-export interface UpdateDraftCharacterUpdateRequest {
-  field_value: string;
-}
+/** PUT /games/{gameID}/results/{resultId}/character-updates/{draftId} */
+export type UpdateDraftCharacterUpdateRequest = components['schemas']['UpdateDraftUpdateBody'];
 
 // Phase display helpers
 export const PHASE_TYPE_LABELS: Record<GamePhase['phase_type'], string> = {

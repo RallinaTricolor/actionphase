@@ -1,5 +1,7 @@
 // Character-related types for the frontend
 
+import type { components } from './api.gen';
+
 export interface Character {
   id: number;
   game_id: number;
@@ -83,27 +85,23 @@ export interface CharacterData {
   updated_at: string;
 }
 
-export interface CreateCharacterRequest {
-  name: string;
-  character_type: 'player_character' | 'npc';
-  user_id?: number; // Optional: for GMs to assign player characters to specific players
-}
+// Request types
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
 
-export interface CharacterDataRequest {
-  module_type: string;
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  is_public: boolean;
-}
+/** POST /games/{gameID}/characters */
+export type CreateCharacterRequest = components['schemas']['CreateCharacterRequest'];
 
-export interface ApproveCharacterRequest {
-  status: 'approved';
-}
+/** PUT /characters/{id}/data — note field_value and is_public are optional on
+ *  the wire (an empty field_value clears the field). */
+export type CharacterDataRequest = components['schemas']['CharacterDataRequest'];
 
-export interface AssignNPCRequest {
-  assigned_user_id: number;
-}
+/** PUT /characters/{id}/approve */
+export type ApproveCharacterRequest = components['schemas']['ApproveCharacterRequest'];
+
+/** PUT /characters/{id}/assign */
+export type AssignNPCRequest = components['schemas']['AssignNPCRequest'];
 
 export interface CharacterActivityStats {
   public_messages: number;

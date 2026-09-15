@@ -90,37 +90,22 @@ export interface PollResults {
 }
 
 // Request types
-interface CreatePollOptionRequest {
-  text: string;
-  display_order: number;
-}
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
+//
+// Note what is NOT here: the hand-written CreatePollRequest carried
+// `created_by_character_id`, which POST /games/{gameID}/polls rejects outright
+// (every schema is additionalProperties:false). Nothing set it, so it never
+// fired — it would have 422'd the first time someone wired up "post a poll as a
+// character". It remains on the `Poll` response above, which is a real field.
+import type { components } from './api.gen';
 
-export interface CreatePollRequest {
-  question: string;
-  description?: string;
-  deadline: string; // ISO 8601 timestamp
-  show_individual_votes: boolean;
-  allow_other_option: boolean;
-  hide_results_from_players: boolean;
-  allow_audience_voting: boolean;
-  show_running_totals_to_players: boolean;
-  phase_id?: number;
-  created_by_character_id?: number;
-  options: CreatePollOptionRequest[];
-}
+/** POST /games/{gameID}/polls */
+export type CreatePollRequest = components['schemas']['CreatePollRequest'];
 
-export interface UpdatePollRequest {
-  question: string;
-  description?: string;
-  deadline: string; // ISO 8601 timestamp
-  show_individual_votes: boolean;
-  allow_other_option: boolean;
-  hide_results_from_players: boolean;
-  allow_audience_voting: boolean;
-  show_running_totals_to_players: boolean;
-}
+/** PUT /polls/{pollId} */
+export type UpdatePollRequest = components['schemas']['UpdatePollRequest'];
 
-export interface SubmitVoteRequest {
-  selected_option_id?: number;
-  other_response?: string;
-}
+/** POST /polls/{pollId}/vote */
+export type SubmitVoteRequest = components['schemas']['SubmitVoteRequest'];

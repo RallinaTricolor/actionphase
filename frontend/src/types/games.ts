@@ -1,4 +1,5 @@
 import type { CharacterSheetConfig } from './characters';
+import type { components } from './api.gen';
 
 export interface Game {
   id: number;
@@ -132,10 +133,12 @@ export interface UpdateGameRequest extends Omit<CreateGameRequest, 'community_id
   portrait_avatars?: boolean;
 }
 
-export interface ApplyToGameRequest {
-  role: 'player' | 'audience';
-  message?: string;
-}
+/**
+ * POST /games/{gameID}/apply — generated from the OpenAPI spec
+ * (`just gen-api-types`), so an unknown property is a build failure rather than
+ * a 422 at runtime.
+ */
+export type ApplyToGameRequest = components['schemas']['ApplyToGameBody'];
 
 export interface GameApplication {
   id: number;
@@ -202,10 +205,16 @@ export interface PublicGameApplicant {
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 
-export interface ReviewApplicationRequest {
-  action: 'approve' | 'reject';
-}
+/** PUT /games/{gameID}/applications/{applicationId} — generated, as above. */
+export type ReviewApplicationRequest = components['schemas']['ReviewApplicationBody'];
 
+/**
+ * NOT generated, deliberately. UpdateGameStateBody types `state` as a bare
+ * `string`, so aliasing it would erase the GameState union above — the same
+ * union scripts/check-game-states.sh exists to keep in step with the Go
+ * constants, the transition table, and the migration CHECK constraint. A
+ * narrower hand-written type is the safer contract here.
+ */
 export interface UpdateGameStateRequest {
   state: GameState;
 }

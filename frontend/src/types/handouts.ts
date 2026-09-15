@@ -39,23 +39,19 @@ export interface HandoutComment {
 }
 
 // Request types
-export interface CreateHandoutRequest {
-  title: string;
-  content: string;
-  status: 'draft' | 'published';
-}
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
+import type { components } from './api.gen';
 
-export interface UpdateHandoutRequest {
-  title: string;
-  content: string;
-  status: 'draft' | 'published';
-}
+/** POST /games/{gameID}/handouts */
+export type CreateHandoutRequest = components['schemas']['CreateHandoutRequest'];
 
-export interface CreateHandoutCommentRequest {
-  content: string;
-  parent_comment_id?: number;
-}
+/** PUT /games/{gameID}/handouts/{handoutId} */
+export type UpdateHandoutRequest = components['schemas']['UpdateHandoutRequest'];
 
-export interface UpdateHandoutCommentRequest {
-  content: string;
-}
+/** POST /handouts/{handoutId}/comments */
+export type CreateHandoutCommentRequest = components['schemas']['CreateHandoutCommentRequest'];
+
+/** PUT /handouts/{handoutId}/comments/{commentId} */
+export type UpdateHandoutCommentRequest = components['schemas']['UpdateHandoutCommentRequest'];
