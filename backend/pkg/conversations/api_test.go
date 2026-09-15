@@ -265,7 +265,7 @@ func TestConversationAPI_CreateConversation_GroupRestriction(t *testing.T) {
 	_, err = gameService.UpdateGame(context.Background(), core.UpdateGameRequest{
 		ID:                      game.ID,
 		Title:                   game.Title,
-		Description:             game.Description.String,
+		Description:             game.Description,
 		IsPublic:                true,
 		AllowGroupConversations: false,
 	})
@@ -764,7 +764,7 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 		queries := models.New(testDB.Pool)
 		anonGame, err := queries.CreateGame(context.Background(), models.CreateGameParams{
 			Title:       "Anonymous Test Game",
-			Description: pgtype.Text{String: "Test", Valid: true},
+			Description: "Test",
 			GmUserID:    int32(anonGM.ID),
 			IsAnonymous: true,
 			IsPublic:    pgtype.Bool{Bool: true, Valid: true},

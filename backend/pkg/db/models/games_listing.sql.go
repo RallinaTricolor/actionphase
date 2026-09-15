@@ -120,15 +120,15 @@ ORDER BY state ASC
 // $6: admin_user_id (int, nullable) - user ID to validate admin status
 // $7: search (text, nullable) - case-insensitive search in title and description
 // $8: community_id (int, nullable) - 0/NULL means every community
-func (q *Queries) GetAvailableStates(ctx context.Context) ([]pgtype.Text, error) {
+func (q *Queries) GetAvailableStates(ctx context.Context) ([]string, error) {
 	rows, err := q.db.Query(ctx, getAvailableStates)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []pgtype.Text
+	var items []string
 	for rows.Next() {
-		var state pgtype.Text
+		var state string
 		if err := rows.Scan(&state); err != nil {
 			return nil, err
 		}
@@ -291,10 +291,10 @@ type GetFilteredGamesParams struct {
 type GetFilteredGamesRow struct {
 	ID                      int32              `json:"id"`
 	Title                   string             `json:"title"`
-	Description             pgtype.Text        `json:"description"`
+	Description             string             `json:"description"`
 	GmUserID                int32              `json:"gm_user_id"`
 	GmUsername              string             `json:"gm_username"`
-	State                   pgtype.Text        `json:"state"`
+	State                   string             `json:"state"`
 	Genre                   pgtype.Text        `json:"genre"`
 	StartDate               pgtype.Timestamptz `json:"start_date"`
 	EndDate                 pgtype.Timestamptz `json:"end_date"`

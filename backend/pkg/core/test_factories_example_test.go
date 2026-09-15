@@ -112,7 +112,7 @@ func TestDataFactories_ComplexScenarios(t *testing.T) {
 			Create()
 
 		AssertEqual(t, "Epic Adventure", game.Title, "Should have custom title")
-		AssertEqual(t, "recruitment", game.State.String, "Should be in recruitment state")
+		AssertEqual(t, "recruitment", game.State, "Should be in recruitment state")
 		AssertEqual(t, gm.ID, game.GmUserID, "Should have correct GM")
 
 		// Add some interested players
@@ -268,6 +268,6 @@ func TestDataFactories_EdgeCases(t *testing.T) {
 			Create()
 
 		AssertEqual(t, "Comprehensive Game", game.Title, "Should have correct title")
-		AssertEqual(t, "recruitment", game.State.String, "Should be in recruitment state")
+		AssertEqual(t, "recruitment", game.State, "Should be in recruitment state")
 	})
 }

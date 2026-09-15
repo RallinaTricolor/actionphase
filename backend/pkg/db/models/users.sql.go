@@ -132,7 +132,7 @@ INSERT INTO users (
 ) VALUES (
              $1, $2, $3
          )
-RETURNING id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since
+RETURNING id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since
 `
 
 type CreateUserParams struct {
@@ -147,13 +147,12 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.Email,
 		&i.Password,
-		&i.IsAdmin,
+		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
 		&i.DisplayName,
 		&i.Bio,
-		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -161,11 +160,12 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.BannedAt,
 		&i.BannedByUserID,
 		&i.EmailVerified,
-		&i.EmailChangePending,
-		&i.PasswordChangedAt,
-		&i.UsernameChangedAt,
 		&i.DeletedAt,
 		&i.DeletionScheduledFor,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.EmailChangePending,
+		&i.AvatarUrl,
 		&i.PendingApproval,
 		&i.PendingApprovalSince,
 	)
@@ -205,7 +205,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getDeletedUser = `-- name: GetDeletedUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE id = $1
   AND deleted_at IS NOT NULL
 LIMIT 1
@@ -217,13 +217,12 @@ func (q *Queries) GetDeletedUser(ctx context.Context, id int32) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.Email,
 		&i.Password,
-		&i.IsAdmin,
+		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
 		&i.DisplayName,
 		&i.Bio,
-		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -231,11 +230,12 @@ func (q *Queries) GetDeletedUser(ctx context.Context, id int32) (User, error) {
 		&i.BannedAt,
 		&i.BannedByUserID,
 		&i.EmailVerified,
-		&i.EmailChangePending,
-		&i.PasswordChangedAt,
-		&i.UsernameChangedAt,
 		&i.DeletedAt,
 		&i.DeletionScheduledFor,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.EmailChangePending,
+		&i.AvatarUrl,
 		&i.PendingApproval,
 		&i.PendingApprovalSince,
 	)
@@ -288,7 +288,7 @@ func (q *Queries) GetPasswordResetToken(ctx context.Context, token string) (Pass
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -298,13 +298,12 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.Email,
 		&i.Password,
-		&i.IsAdmin,
+		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
 		&i.DisplayName,
 		&i.Bio,
-		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -312,11 +311,12 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.BannedAt,
 		&i.BannedByUserID,
 		&i.EmailVerified,
-		&i.EmailChangePending,
-		&i.PasswordChangedAt,
-		&i.UsernameChangedAt,
 		&i.DeletedAt,
 		&i.DeletionScheduledFor,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.EmailChangePending,
+		&i.AvatarUrl,
 		&i.PendingApproval,
 		&i.PendingApprovalSince,
 	)
@@ -324,7 +324,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE LOWER(email) = LOWER($1) LIMIT 1
 `
 
@@ -334,13 +334,12 @@ func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.Email,
 		&i.Password,
-		&i.IsAdmin,
+		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
 		&i.DisplayName,
 		&i.Bio,
-		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -348,11 +347,12 @@ func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error
 		&i.BannedAt,
 		&i.BannedByUserID,
 		&i.EmailVerified,
-		&i.EmailChangePending,
-		&i.PasswordChangedAt,
-		&i.UsernameChangedAt,
 		&i.DeletedAt,
 		&i.DeletionScheduledFor,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.EmailChangePending,
+		&i.AvatarUrl,
 		&i.PendingApproval,
 		&i.PendingApprovalSince,
 	)
@@ -360,7 +360,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE LOWER(username) = LOWER($1) LIMIT 1
 `
 
@@ -370,13 +370,12 @@ func (q *Queries) GetUserByUsername(ctx context.Context, lower string) (User, er
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.Email,
 		&i.Password,
-		&i.IsAdmin,
+		&i.Email,
 		&i.CreatedAt,
+		&i.IsAdmin,
 		&i.DisplayName,
 		&i.Bio,
-		&i.AvatarUrl,
 		&i.Timezone,
 		&i.EmailNotifications,
 		&i.HighContrast,
@@ -384,11 +383,12 @@ func (q *Queries) GetUserByUsername(ctx context.Context, lower string) (User, er
 		&i.BannedAt,
 		&i.BannedByUserID,
 		&i.EmailVerified,
-		&i.EmailChangePending,
-		&i.PasswordChangedAt,
-		&i.UsernameChangedAt,
 		&i.DeletedAt,
 		&i.DeletionScheduledFor,
+		&i.PasswordChangedAt,
+		&i.UsernameChangedAt,
+		&i.EmailChangePending,
+		&i.AvatarUrl,
 		&i.PendingApproval,
 		&i.PendingApprovalSince,
 	)
@@ -403,10 +403,10 @@ ORDER BY created_at ASC
 `
 
 type ListAdminsRow struct {
-	ID        int32            `json:"id"`
-	Username  string           `json:"username"`
-	Email     string           `json:"email"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ID        int32              `json:"id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
@@ -435,7 +435,7 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listAllUsers = `-- name: ListAllUsers :many
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE (
     $1::text = '' OR username ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%'
 )
@@ -461,13 +461,12 @@ func (q *Queries) ListAllUsers(ctx context.Context, arg ListAllUsersParams) ([]U
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
-			&i.Email,
 			&i.Password,
-			&i.IsAdmin,
+			&i.Email,
 			&i.CreatedAt,
+			&i.IsAdmin,
 			&i.DisplayName,
 			&i.Bio,
-			&i.AvatarUrl,
 			&i.Timezone,
 			&i.EmailNotifications,
 			&i.HighContrast,
@@ -475,11 +474,12 @@ func (q *Queries) ListAllUsers(ctx context.Context, arg ListAllUsersParams) ([]U
 			&i.BannedAt,
 			&i.BannedByUserID,
 			&i.EmailVerified,
-			&i.EmailChangePending,
-			&i.PasswordChangedAt,
-			&i.UsernameChangedAt,
 			&i.DeletedAt,
 			&i.DeletionScheduledFor,
+			&i.PasswordChangedAt,
+			&i.UsernameChangedAt,
+			&i.EmailChangePending,
+			&i.AvatarUrl,
 			&i.PendingApproval,
 			&i.PendingApprovalSince,
 		); err != nil {
@@ -494,7 +494,7 @@ func (q *Queries) ListAllUsers(ctx context.Context, arg ListAllUsersParams) ([]U
 }
 
 const listAllUsersAdmin = `-- name: ListAllUsersAdmin :many
-SELECT u.id, u.username, u.email, u.password, u.is_admin, u.created_at, u.display_name, u.bio, u.avatar_url, u.timezone, u.email_notifications, u.high_contrast, u.is_banned, u.banned_at, u.banned_by_user_id, u.email_verified, u.email_change_pending, u.password_changed_at, u.username_changed_at, u.deleted_at, u.deletion_scheduled_for, u.pending_approval, u.pending_approval_since, da.discord_username
+SELECT u.id, u.username, u.password, u.email, u.created_at, u.is_admin, u.display_name, u.bio, u.timezone, u.email_notifications, u.high_contrast, u.is_banned, u.banned_at, u.banned_by_user_id, u.email_verified, u.deleted_at, u.deletion_scheduled_for, u.password_changed_at, u.username_changed_at, u.email_change_pending, u.avatar_url, u.pending_approval, u.pending_approval_since, da.discord_username
 FROM users u
 LEFT JOIN user_discord_accounts da ON da.user_id = u.id
 WHERE (
@@ -513,25 +513,25 @@ type ListAllUsersAdminParams struct {
 type ListAllUsersAdminRow struct {
 	ID                   int32              `json:"id"`
 	Username             string             `json:"username"`
-	Email                string             `json:"email"`
 	Password             string             `json:"password"`
+	Email                string             `json:"email"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	IsAdmin              pgtype.Bool        `json:"is_admin"`
-	CreatedAt            pgtype.Timestamp   `json:"created_at"`
 	DisplayName          pgtype.Text        `json:"display_name"`
 	Bio                  pgtype.Text        `json:"bio"`
-	AvatarUrl            pgtype.Text        `json:"avatar_url"`
 	Timezone             pgtype.Text        `json:"timezone"`
 	EmailNotifications   pgtype.Bool        `json:"email_notifications"`
 	HighContrast         pgtype.Bool        `json:"high_contrast"`
 	IsBanned             bool               `json:"is_banned"`
-	BannedAt             pgtype.Timestamp   `json:"banned_at"`
+	BannedAt             pgtype.Timestamptz `json:"banned_at"`
 	BannedByUserID       pgtype.Int4        `json:"banned_by_user_id"`
 	EmailVerified        bool               `json:"email_verified"`
-	EmailChangePending   pgtype.Text        `json:"email_change_pending"`
-	PasswordChangedAt    pgtype.Timestamptz `json:"password_changed_at"`
-	UsernameChangedAt    pgtype.Timestamptz `json:"username_changed_at"`
 	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
 	DeletionScheduledFor pgtype.Timestamptz `json:"deletion_scheduled_for"`
+	PasswordChangedAt    pgtype.Timestamptz `json:"password_changed_at"`
+	UsernameChangedAt    pgtype.Timestamptz `json:"username_changed_at"`
+	EmailChangePending   pgtype.Text        `json:"email_change_pending"`
+	AvatarUrl            pgtype.Text        `json:"avatar_url"`
 	PendingApproval      bool               `json:"pending_approval"`
 	PendingApprovalSince pgtype.Timestamptz `json:"pending_approval_since"`
 	DiscordUsername      pgtype.Text        `json:"discord_username"`
@@ -549,13 +549,12 @@ func (q *Queries) ListAllUsersAdmin(ctx context.Context, arg ListAllUsersAdminPa
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
-			&i.Email,
 			&i.Password,
-			&i.IsAdmin,
+			&i.Email,
 			&i.CreatedAt,
+			&i.IsAdmin,
 			&i.DisplayName,
 			&i.Bio,
-			&i.AvatarUrl,
 			&i.Timezone,
 			&i.EmailNotifications,
 			&i.HighContrast,
@@ -563,11 +562,12 @@ func (q *Queries) ListAllUsersAdmin(ctx context.Context, arg ListAllUsersAdminPa
 			&i.BannedAt,
 			&i.BannedByUserID,
 			&i.EmailVerified,
-			&i.EmailChangePending,
-			&i.PasswordChangedAt,
-			&i.UsernameChangedAt,
 			&i.DeletedAt,
 			&i.DeletionScheduledFor,
+			&i.PasswordChangedAt,
+			&i.UsernameChangedAt,
+			&i.EmailChangePending,
+			&i.AvatarUrl,
 			&i.PendingApproval,
 			&i.PendingApprovalSince,
 			&i.DiscordUsername,
@@ -592,13 +592,13 @@ ORDER BY u.banned_at DESC
 `
 
 type ListBannedUsersRow struct {
-	ID               int32            `json:"id"`
-	Username         string           `json:"username"`
-	Email            string           `json:"email"`
-	BannedAt         pgtype.Timestamp `json:"banned_at"`
-	BannedByUserID   pgtype.Int4      `json:"banned_by_user_id"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
-	BannedByUsername pgtype.Text      `json:"banned_by_username"`
+	ID               int32              `json:"id"`
+	Username         string             `json:"username"`
+	Email            string             `json:"email"`
+	BannedAt         pgtype.Timestamptz `json:"banned_at"`
+	BannedByUserID   pgtype.Int4        `json:"banned_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	BannedByUsername pgtype.Text        `json:"banned_by_username"`
 }
 
 func (q *Queries) ListBannedUsers(ctx context.Context) ([]ListBannedUsersRow, error) {
@@ -630,7 +630,7 @@ func (q *Queries) ListBannedUsers(ctx context.Context) ([]ListBannedUsersRow, er
 }
 
 const listPendingApprovalUsers = `-- name: ListPendingApprovalUsers :many
-SELECT id, username, email, password, is_admin, created_at, display_name, bio, avatar_url, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, email_change_pending, password_changed_at, username_changed_at, deleted_at, deletion_scheduled_for, pending_approval, pending_approval_since FROM users
+SELECT id, username, password, email, created_at, is_admin, display_name, bio, timezone, email_notifications, high_contrast, is_banned, banned_at, banned_by_user_id, email_verified, deleted_at, deletion_scheduled_for, password_changed_at, username_changed_at, email_change_pending, avatar_url, pending_approval, pending_approval_since FROM users
 WHERE pending_approval = TRUE
 ORDER BY created_at ASC
 `
@@ -647,13 +647,12 @@ func (q *Queries) ListPendingApprovalUsers(ctx context.Context) ([]User, error) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Username,
-			&i.Email,
 			&i.Password,
-			&i.IsAdmin,
+			&i.Email,
 			&i.CreatedAt,
+			&i.IsAdmin,
 			&i.DisplayName,
 			&i.Bio,
-			&i.AvatarUrl,
 			&i.Timezone,
 			&i.EmailNotifications,
 			&i.HighContrast,
@@ -661,11 +660,12 @@ func (q *Queries) ListPendingApprovalUsers(ctx context.Context) ([]User, error) 
 			&i.BannedAt,
 			&i.BannedByUserID,
 			&i.EmailVerified,
-			&i.EmailChangePending,
-			&i.PasswordChangedAt,
-			&i.UsernameChangedAt,
 			&i.DeletedAt,
 			&i.DeletionScheduledFor,
+			&i.PasswordChangedAt,
+			&i.UsernameChangedAt,
+			&i.EmailChangePending,
+			&i.AvatarUrl,
 			&i.PendingApproval,
 			&i.PendingApprovalSince,
 		); err != nil {
@@ -746,10 +746,10 @@ LIMIT 20
 `
 
 type SearchUsersRow struct {
-	ID        int32            `json:"id"`
-	Username  string           `json:"username"`
-	Email     string           `json:"email"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ID        int32              `json:"id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 // User search queries

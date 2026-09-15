@@ -102,7 +102,7 @@ func TestCharacterService_CreateCharacter(t *testing.T) {
 				core.AssertNoError(t, err, "Failed to create character")
 				core.AssertEqual(t, tc.request.Name, character.Name, "Character name mismatch")
 				core.AssertEqual(t, tc.request.CharacterType, character.CharacterType, "Character type mismatch")
-				core.AssertEqual(t, "pending", character.Status.String, "Character should start with pending status")
+				core.AssertEqual(t, "pending", character.Status, "Character should start with pending status")
 
 				if tc.request.UserID != nil {
 					core.AssertEqual(t, true, character.UserID.Valid, "Character should have user ID")
@@ -232,7 +232,7 @@ func TestCharacterService_ApproveRejectCharacter(t *testing.T) {
 	t.Run("approve character", func(t *testing.T) {
 		approved, err := characterService.ApproveCharacter(context.Background(), character.ID)
 		core.AssertNoError(t, err, "Failed to approve character")
-		core.AssertEqual(t, "approved", approved.Status.String, "Character should be approved")
+		core.AssertEqual(t, "approved", approved.Status, "Character should be approved")
 	})
 
 	// Test approval of nonexistent character
@@ -757,7 +757,7 @@ func TestCharacterService_GetUserControllableCharacters_PendingAssignedNPC(t *te
 		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Failed to create pending NPC")
-	core.AssertEqual(t, "pending", pendingNPC.Status.String, "NPC should start as pending")
+	core.AssertEqual(t, "pending", pendingNPC.Status, "NPC should start as pending")
 
 	err = characterService.AssignNPCToUser(context.Background(), pendingNPC.ID, int32(audienceUser.ID), int32(fixtures.TestUser.ID))
 	core.AssertNoError(t, err, "Failed to assign pending NPC to audience user")
@@ -896,7 +896,7 @@ func TestCharacterService_GetUserControllableCharactersAcrossGames(t *testing.T)
 		core.AssertEqual(t, charA.ID, rows[0].ID, "First row should be the Alpha Game character")
 		core.AssertEqual(t, "Alpha Game", rows[0].GameTitle, "Should carry the game title")
 		core.AssertEqual(t, "Kael Vance", rows[0].Name, "Should carry the character name")
-		core.AssertEqual(t, "in_progress", rows[0].GameState.String, "Should carry the game state")
+		core.AssertEqual(t, "in_progress", rows[0].GameState, "Should carry the game state")
 
 		core.AssertEqual(t, charB.ID, rows[1].ID, "Second row should be the Beta Game character")
 		core.AssertEqual(t, "Beta Game", rows[1].GameTitle, "Should carry the game title")
@@ -1457,7 +1457,7 @@ func TestCharacterService_CreateGamemasterNPC(t *testing.T) {
 		// Verify NPC attributes
 		core.AssertEqual(t, "Gamemaster", character.Name, "Character name should be 'Gamemaster'")
 		core.AssertEqual(t, "npc", character.CharacterType, "Character type should be 'npc'")
-		core.AssertEqual(t, "approved", character.Status.String, "Character status should be 'approved'")
+		core.AssertEqual(t, "approved", character.Status, "Character status should be 'approved'")
 		core.AssertEqual(t, false, character.UserID.Valid, "User ID should be NULL for GM NPCs")
 		core.AssertEqual(t, fixtures.TestGame.ID, character.GameID, "Game ID should match")
 	})

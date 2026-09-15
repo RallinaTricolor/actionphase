@@ -94,11 +94,11 @@ func (s *GameService) CreateGame(ctx context.Context, req *CreateGameRequest) (*
 db/
 ├── queries/        # SQL query files (*.sql)
 ├── models/         # Generated Go types (from sqlc)
-├── migrations/     # Database schema migrations
+├── migrations/     # Database schema migrations (the schema source of truth;
+│                   #   sqlc generates models/ directly from these)
 ├── services/       # Service implementations using queries
 │                   #   (phases/, actions/, messages/ are multi-file subpackages)
 ├── test_fixtures/  # Seed SQL + apply scripts (common/, demo/, e2e/, perf/)
-├── schema.sql      # Full generated schema
 └── sqlc.yaml       # sqlc configuration
 ```
 

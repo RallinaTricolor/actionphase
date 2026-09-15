@@ -152,7 +152,7 @@ func CanSeeUsernamesInAnonymousGame(ctx context.Context, db *pgxpool.Pool, game 
 	}
 
 	// Public archive (completed or epilogue): anonymity no longer applies.
-	if game.State.Valid && IsPublicArchive(game.State.String) {
+	if IsPublicArchive(game.State) {
 		return true
 	}
 

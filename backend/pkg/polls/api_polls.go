@@ -247,7 +247,7 @@ func (h *Handler) checkPollViewAccess(ctx context.Context, gameID int32, userID 
 	// Anonymity (CanSeeUsernamesInAnonymousGame) lifts at the same point and for
 	// the same reason. Cancelled games are NOT public and keep the play-time
 	// rules below.
-	if core.IsPublicArchive(game.State.String) {
+	if core.IsPublicArchive(game.State) {
 		return pollViewAccess{allowed: true, canSeeIndividualVotes: true, isPrivileged: true}, nil
 	}
 

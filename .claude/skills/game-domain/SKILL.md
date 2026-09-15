@@ -79,18 +79,17 @@ Canonical list: `core.ValidPhaseTypes` (`backend/pkg/core/constants.go:43`).
 Results live in the `action_results` table (FK to `game_phases` + `action_submissions`),
 not in a phase of their own.
 
-⚠️ **`backend/pkg/db/schema.sql` is STALE** — it still shows the two-type
-constraint and omits `interlude`. sqlc generates from it, but the live database
-is defined by `backend/pkg/db/migrations/`. **Trust the migrations and
-`core/constants.go`, not `schema.sql`.**
+The schema source of truth is `backend/pkg/db/migrations/`, which is what sqlc
+generates from. Cross-check values against `core/constants.go`.
 
 **See**: [phase-system.md](resources/phase-system.md)
 
 ### Character Status
 
 ```sql
--- backend/pkg/db/schema.sql — NOTE: no CHECK constraint; values are enforced in code
-status VARCHAR(50) DEFAULT 'pending'
+-- backend/pkg/db/migrations/ (20260421192302 tightened this constraint)
+status VARCHAR(50) NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved'))
 ```
 
 Values actually used in code: `pending` (awaiting GM review), `approved` (GM

@@ -33,7 +33,7 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	// Create anonymous game directly (CreateTestGame doesn't set IsAnonymous)
 	anonGame, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Anonymous Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
@@ -45,7 +45,7 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	// Create non-anonymous game for contrast
 	normalGame, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Normal Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
@@ -56,7 +56,7 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	// Anonymous game that has COMPLETED: public archive mode lifts anonymity.
 	completedAnonGame, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Completed Anonymous Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
@@ -64,13 +64,13 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create completed anonymous test game: %v", err)
 	}
-	completedAnonGame.State = pgtype.Text{String: GameStateCompleted, Valid: true}
+	completedAnonGame.State = GameStateCompleted
 
 	// Anonymous game in EPILOGUE: a public archive, so anonymity lifts here too
 	// even though the game is still writable.
 	epilogueAnonGame, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Epilogue Anonymous Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
@@ -78,12 +78,12 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create epilogue anonymous test game: %v", err)
 	}
-	epilogueAnonGame.State = pgtype.Text{String: GameStateEpilogue, Valid: true}
+	epilogueAnonGame.State = GameStateEpilogue
 
 	// Anonymous game that was CANCELLED: not public, so anonymity still applies.
 	cancelledAnonGame, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       "Cancelled Anonymous Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
@@ -91,7 +91,7 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create cancelled anonymous test game: %v", err)
 	}
-	cancelledAnonGame.State = pgtype.Text{String: GameStateCancelled, Valid: true}
+	cancelledAnonGame.State = GameStateCancelled
 
 	type participant struct {
 		userID int32
@@ -642,7 +642,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Player Character",
 		CharacterType: "player_character",
 		UserID:        pgtype.Int4{Int32: int32(playerUser.ID), Valid: true},
-		Status:        pgtype.Text{String: "approved", Valid: true},
+		Status:        "approved",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create player character: %v", err)
@@ -654,7 +654,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Unassigned NPC",
 		CharacterType: "npc",
 		UserID:        pgtype.Int4{Valid: false}, // NULL
-		Status:        pgtype.Text{String: "approved", Valid: true},
+		Status:        "approved",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create unassigned NPC: %v", err)
@@ -666,7 +666,7 @@ func TestCanUserControlNPC(t *testing.T) {
 		Name:          "Assigned NPC",
 		CharacterType: "npc",
 		UserID:        pgtype.Int4{Valid: false}, // NULL
-		Status:        pgtype.Text{String: "approved", Valid: true},
+		Status:        "approved",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create assigned NPC: %v", err)

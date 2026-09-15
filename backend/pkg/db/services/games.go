@@ -146,7 +146,7 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:                   req.Title,
-		Description:             pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		Description:             req.Description,
 		GmUserID:                req.GMUserID,
 		Genre:                   pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:               startDate,
@@ -265,7 +265,7 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 	)
 
 	// Validate state transition
-	currentState := currentGame.State.String
+	currentState := currentGame.State
 	if !isValidTransition(currentState, newState) {
 		gs.Logger.Warn(ctx, "Invalid game state transition",
 			"game_id", gameID,
@@ -279,7 +279,7 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 
 	game, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 		ID:    gameID,
-		State: pgtype.Text{String: newState, Valid: true},
+		State: newState,
 	})
 	if err != nil {
 		gs.Logger.LogError(ctx, err, "Failed to update game state",
@@ -513,7 +513,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	if req.CommunityID != nil {
 		isMove := !game.CommunityID.Valid || game.CommunityID.Int32 != *req.CommunityID
 		if isMove {
-			if game.State.String != core.GameStateSetup {
+			if game.State != core.GameStateSetup {
 				return nil, core.ErrGameCommunityLocked
 			}
 			if err := gs.validateGameCommunity(ctx, *req.CommunityID); err != nil {
@@ -562,7 +562,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	updatedGame, err := queries.UpdateGame(ctx, models.UpdateGameParams{
 		ID:                      req.ID,
 		Title:                   req.Title,
-		Description:             pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		Description:             req.Description,
 		Genre:                   pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:               startDate,
 		EndDate:                 endDate,
@@ -640,13 +640,13 @@ func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) err
 	}
 
 	// Verify the game is in cancelled state
-	if game.State.String != core.GameStateCancelled {
+	if game.State != core.GameStateCancelled {
 		gs.Logger.Warn(ctx, "Cannot delete game: not in cancelled state",
 			"game_id", gameID,
-			"current_state", game.State.String,
+			"current_state", game.State,
 			"required_state", core.GameStateCancelled,
 		)
-		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State.String)
+		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State)
 	}
 
 	// Delete the game (SQL query enforces cancelled state as well)
@@ -713,7 +713,7 @@ func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID in
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
 		gs.Logger.Warn(ctx, "Cannot add participant to completed/cancelled game",
 			"game_id", gameID,
-			"game_state", game.State.String,
+			"game_state", game.State,
 		)
 		return nil, err
 	}
@@ -903,13 +903,8 @@ func (gs *GameService) getListingMetadata(ctx context.Context, queries *models.Q
 		return core.GameListingMetadata{}, err
 	}
 
-	// Convert pgtype.Text to []string
 	states := make([]string, 0, len(statesDB))
-	for _, s := range statesDB {
-		if s.Valid {
-			states = append(states, s.String)
-		}
-	}
+	states = append(states, statesDB...)
 
 	return core.GameListingMetadata{
 		TotalCount:      int(totalCount),
@@ -922,10 +917,10 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 	return &core.EnrichedGameListItem{
 		ID:                      row.ID,
 		Title:                   row.Title,
-		Description:             textToString(row.Description),
+		Description:             row.Description,
 		GMUserID:                row.GmUserID,
 		GMUsername:              row.GmUsername,
-		State:                   textToString(row.State),
+		State:                   row.State,
 		Genre:                   nullTextToStringPtr(row.Genre),
 		StartDate:               timestamptzToTimePtr(row.StartDate),
 		EndDate:                 timestamptzToTimePtr(row.EndDate),
@@ -952,13 +947,6 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 }
 
 // Helper conversion functions for pgtype to Go types
-func textToString(t pgtype.Text) string {
-	if t.Valid {
-		return t.String
-	}
-	return ""
-}
-
 func nullTextToStringPtr(t pgtype.Text) *string {
 	if t.Valid && t.String != "" {
 		return &t.String
@@ -1178,7 +1166,7 @@ func (gs *GameService) CreateAudienceApplication(ctx context.Context, gameID, us
 	participant, err := queries.CreateAudienceApplication(ctx, models.CreateAudienceApplicationParams{
 		GameID: gameID,
 		UserID: userID,
-		Status: pgtype.Text{String: status, Valid: true},
+		Status: status,
 	})
 
 	if err != nil {
@@ -1239,7 +1227,7 @@ func (gs *GameService) CanUserViewGame(ctx context.Context, gameID, userID int32
 	}
 
 	// Public Archive Mode: completed and epilogue games are viewable by anyone
-	if game.State.Valid && core.IsPublicArchive(game.State.String) {
+	if core.IsPublicArchive(game.State) {
 		return true, nil
 	}
 

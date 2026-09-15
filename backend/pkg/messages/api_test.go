@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1193,7 +1192,7 @@ func TestMessageAPI_GetCharacterComments_AnonymousGame(t *testing.T) {
 
 	anonGame, err := queries.CreateGame(ctx, dbmodels.CreateGameParams{
 		Title:       "Anonymous Character Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gm.ID),
 		IsAnonymous: true,
 	})

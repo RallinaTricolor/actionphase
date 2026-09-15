@@ -190,7 +190,7 @@ func TestGameAPI_AutoAcceptAudience(t *testing.T) {
 		appService := &db.GameApplicationService{DB: testDB.Pool}
 		application, err := appService.GetGameApplicationByUserAndGame(context.Background(), gameNoAutoAccept.ID, int32(audienceUser3.ID))
 		core.AssertNoError(t, err, "Application should exist")
-		core.AssertEqual(t, "pending", application.Status.String, "Application should be pending (not auto-approved)")
+		core.AssertEqual(t, "pending", application.Status, "Application should be pending (not auto-approved)")
 
 		// Verify participant was NOT created
 		participants, err := gameService.GetGameParticipants(context.Background(), gameNoAutoAccept.ID)
@@ -245,7 +245,7 @@ func TestGameAPI_AutoAcceptAudience(t *testing.T) {
 		appService := &db.GameApplicationService{DB: testDB.Pool}
 		application, err := appService.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(playerUser.ID))
 		core.AssertNoError(t, err, "Application should exist")
-		core.AssertEqual(t, "pending", application.Status.String, "Player application should be pending (not auto-approved)")
+		core.AssertEqual(t, "pending", application.Status, "Player application should be pending (not auto-approved)")
 
 		// Verify GM received notification for player application
 		notificationService := &db.NotificationService{DB: testDB.Pool, Logger: app.ObsLogger}

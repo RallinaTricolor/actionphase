@@ -142,9 +142,9 @@ func gameResponseFrom(game *models.Game) *GameResponse {
 	resp := &GameResponse{
 		ID:                      game.ID,
 		Title:                   game.Title,
-		Description:             game.Description.String,
+		Description:             game.Description,
 		GMUserID:                game.GmUserID,
-		State:                   game.State.String,
+		State:                   game.State,
 		IsAnonymous:             game.IsAnonymous,
 		AutoAcceptAudience:      game.AutoAcceptAudience,
 		AllowGroupConversations: game.AllowGroupConversations,
@@ -205,7 +205,7 @@ func applicationResponseFrom(app *models.GameApplication) *GameApplicationRespon
 		GameID:    app.GameID,
 		UserID:    app.UserID,
 		Role:      app.Role,
-		Status:    app.Status.String,
+		Status:    app.Status,
 		AppliedAt: app.AppliedAt.Time,
 	}
 	if app.Message.Valid {
@@ -678,9 +678,9 @@ func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInpu
 	resp := &GameWithDetailsResponse{
 		ID:                      game.ID,
 		Title:                   game.Title,
-		Description:             game.Description.String,
+		Description:             game.Description,
 		GMUserID:                game.GmUserID,
-		State:                   game.State.String,
+		State:                   game.State,
 		IsAnonymous:             game.IsAnonymous,
 		AutoAcceptAudience:      game.AutoAcceptAudience,
 		AllowGroupConversations: game.AllowGroupConversations,
@@ -882,9 +882,9 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		if errors.Is(err, core.ErrInvalidStateTransition) {
 			return nil, h.logAndErr(ctx,
 				core.ErrWithStatus(http.StatusConflict,
-					fmt.Sprintf("cannot change game state from %s to %s", game.State.String, in.Body.State)),
+					fmt.Sprintf("cannot change game state from %s to %s", game.State, in.Body.State)),
 				"Invalid game state transition requested",
-				"game_id", game.ID, "from_state", game.State.String, "to_state", in.Body.State)
+				"game_id", game.ID, "from_state", game.State, "to_state", in.Body.State)
 		}
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update game state", "error", err, "game_id", game.ID)
 	}
@@ -895,9 +895,9 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 	return &gameOutput{Body: &GameResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
-		Description: updatedGame.Description.String,
+		Description: updatedGame.Description,
 		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State.String,
+		State:       updatedGame.State,
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}}, nil
@@ -910,7 +910,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 // failure here is logged but must not fail the request — otherwise the caller
 // would see an error for a change that did happen.
 func (h *Handler) settleRecruitment(ctx context.Context, game, updatedGame *models.Game, newState string, actorID int32) {
-	if game.State.String != core.GameStateRecruitment || newState == core.GameStateRecruitment {
+	if game.State != core.GameStateRecruitment || newState == core.GameStateRecruitment {
 		return
 	}
 
@@ -967,7 +967,7 @@ func (h *Handler) settleRecruitment(ctx context.Context, game, updatedGame *mode
 // it is not terminal — the game is still writable.
 func (h *Handler) notifyStateChange(ctx context.Context, game, updatedGame *models.Game, newState string, actorID int32) {
 	isPauseResume := newState == core.GameStatePaused ||
-		(newState == core.GameStateInProgress && game.State.String == core.GameStatePaused)
+		(newState == core.GameStateInProgress && game.State == core.GameStatePaused)
 	isEndgame := newState == core.GameStateEpilogue ||
 		newState == core.GameStateCompleted ||
 		newState == core.GameStateCancelled
@@ -1211,7 +1211,7 @@ func (h *Handler) humaLeaveGame(ctx context.Context, in *gameScopedInput) (*noCo
 			return nil, h.logAndErr(ctx, core.ErrNotFound("you are not associated with this game"),
 				"User is neither participant nor applicant", "error", err, "game_id", gameID, "user_id", userID)
 		}
-	} else if application.Status.String == core.ApplicationStatusPending {
+	} else if application.Status == core.ApplicationStatusPending {
 		// Deleted rather than marked withdrawn, so the user can reapply.
 		//
 		// Approved audience applications no longer reach here:
@@ -1719,7 +1719,7 @@ func (h *Handler) humaGetMyGameApplication(ctx context.Context, in *gameScopedIn
 	// IsPublished is never set for them. A surviving audience application is
 	// therefore a rejection (approvals delete the row), and the applicant should
 	// see "rejected" right away rather than a permanent, misleading "pending".
-	displayStatus := application.Status.String
+	displayStatus := application.Status
 	if application.Role != core.RoleAudience && !application.IsPublished {
 		displayStatus = core.ApplicationStatusPending
 	}
@@ -1765,7 +1765,7 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 		return nil, err
 	}
 
-	if !game.State.Valid || game.State.String != core.GameStateRecruitment {
+	if game.State != core.GameStateRecruitment {
 		return nil, h.logAndErr(ctx, core.ErrForbidden("applicant list is only visible during recruitment"),
 			"Get public game applicants forbidden")
 	}
@@ -1813,12 +1813,12 @@ func (h *Handler) humaWithdrawGameApplication(ctx context.Context, in *gameScope
 	}
 
 	switch {
-	case application.Status.String == core.ApplicationStatusPending:
+	case application.Status == core.ApplicationStatusPending:
 		// Deleted rather than marked withdrawn, so the user can reapply.
 		if err := h.GameApplicationService.DeleteGameApplication(ctx, application.ID, authUser.ID); err != nil {
 			return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete application", "error", err, "application_id", application.ID)
 		}
-	case application.Status.String == core.ApplicationStatusApproved && application.Role == core.RoleAudience:
+	case application.Status == core.ApplicationStatusApproved && application.Role == core.RoleAudience:
 		// Audience applications create a participant row immediately on
 		// approval. If that participant later left or was removed, the
 		// 'approved' application row is stale — it no longer represents any live
@@ -1864,7 +1864,7 @@ func (h *Handler) humaListAudienceMembers(ctx context.Context, in *gameScopedInp
 			UserID:   member.UserID,
 			Username: member.Username,
 			Role:     member.Role,
-			Status:   member.Status.String,
+			Status:   member.Status,
 			JoinedAt: member.JoinedAt.Time,
 		}
 	}
@@ -2205,7 +2205,7 @@ func (h *Handler) humaGetGameLogs(ctx context.Context, in *gameScopedInput) (*ga
 
 	// Once a game is over its log becomes readable by any participant; while it
 	// is running the log would reveal GM activity, so it is GM-only.
-	if game.State.String != core.GameStateCompleted && game.State.String != core.GameStateCancelled {
+	if game.State != core.GameStateCompleted && game.State != core.GameStateCancelled {
 		if err := h.requireGMFlag(ctx, "only the GM can retrieve game logs while the game is running", "Game logs access forbidden"); err != nil {
 			return nil, err
 		}
@@ -2253,9 +2253,9 @@ func (h *Handler) humaGetGameStats(ctx context.Context, in *gameScopedInput) (*g
 
 	// Checked before the view permission so an in-progress game reports the
 	// actual reason rather than a 403.
-	if game.State.String != core.GameStateCompleted {
+	if game.State != core.GameStateCompleted {
 		return nil, h.logAndErr(ctx, core.ErrConflict("statistics are only available for completed games"),
-			"Game stats requested for non-completed game", "game_id", gameID, "state", game.State.String)
+			"Game stats requested for non-completed game", "game_id", gameID, "state", game.State)
 	}
 
 	authUser := core.GetAuthenticatedUser(ctx)

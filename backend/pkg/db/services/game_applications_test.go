@@ -71,7 +71,7 @@ func TestGameApplicationService_GMCannotApply(t *testing.T) {
 		assert.Equal(t, game.ID, application.GameID)
 		assert.Equal(t, int32(player.ID), application.UserID)
 		assert.Equal(t, core.RolePlayer, application.Role)
-		assert.Equal(t, core.ApplicationStatusPending, application.Status.String)
+		assert.Equal(t, core.ApplicationStatusPending, application.Status)
 	})
 }
 
@@ -111,7 +111,7 @@ func TestGameApplicationService_CreateGameApplication(t *testing.T) {
 		assert.Equal(t, int32(player1.ID), application.UserID)
 		assert.Equal(t, core.RolePlayer, application.Role)
 		assert.Equal(t, "I would like to join", application.Message.String)
-		assert.Equal(t, core.ApplicationStatusPending, application.Status.String)
+		assert.Equal(t, core.ApplicationStatusPending, application.Status)
 	})
 
 	t.Run("rejects duplicate application", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestGameApplicationService_ApproveRejectApplication(t *testing.T) {
 		// Verify status changed
 		updatedApp, err := service.GetGameApplication(context.Background(), application.ID)
 		require.NoError(t, err)
-		assert.Equal(t, core.ApplicationStatusApproved, updatedApp.Status.String)
+		assert.Equal(t, core.ApplicationStatusApproved, updatedApp.Status)
 		assert.True(t, updatedApp.ReviewedByUserID.Valid)
 		assert.Equal(t, int32(gm.ID), updatedApp.ReviewedByUserID.Int32)
 	})
@@ -223,7 +223,7 @@ func TestGameApplicationService_RejectApplication(t *testing.T) {
 		// Verify status changed
 		updatedApp, err := service.GetGameApplication(context.Background(), application.ID)
 		require.NoError(t, err)
-		assert.Equal(t, core.ApplicationStatusRejected, updatedApp.Status.String)
+		assert.Equal(t, core.ApplicationStatusRejected, updatedApp.Status)
 		assert.True(t, updatedApp.ReviewedByUserID.Valid)
 		assert.Equal(t, int32(gm.ID), updatedApp.ReviewedByUserID.Int32)
 	})
@@ -732,7 +732,7 @@ func TestGameApplicationService_DeleteRejectedApplications(t *testing.T) {
 	require.NoError(t, err)
 	rejectedCount := 0
 	for _, a := range before {
-		if a.Status.String == "rejected" {
+		if a.Status == "rejected" {
 			rejectedCount++
 		}
 	}
@@ -746,7 +746,7 @@ func TestGameApplicationService_DeleteRejectedApplications(t *testing.T) {
 	after, err := service.GetGameApplications(ctx, game.ID)
 	require.NoError(t, err)
 	for _, a := range after {
-		assert.NotEqual(t, "rejected", a.Status.String, "no rejected applications should remain after cleanup")
+		assert.NotEqual(t, "rejected", a.Status, "no rejected applications should remain after cleanup")
 	}
 }
 
@@ -942,7 +942,7 @@ func TestGameApplicationService_ApproveAudienceApplicationDeletesIt(t *testing.T
 		// Player application row survives, marked approved
 		retrieved, err := service.GetGameApplication(context.Background(), application.ID)
 		require.NoError(t, err, "approved player application should not be deleted")
-		assert.Equal(t, core.ApplicationStatusApproved, retrieved.Status.String)
+		assert.Equal(t, core.ApplicationStatusApproved, retrieved.Status)
 
 		// No participant row yet (created only at recruitment close)
 		var count int
@@ -1015,7 +1015,7 @@ func TestGameApplicationService_LeftAudienceMemberCanReapply(t *testing.T) {
 		// The application row must still exist since the participant is still active
 		retrieved, err := service.GetGameApplicationByUserAndGame(context.Background(), game.ID, int32(activeUser.ID))
 		require.NoError(t, err)
-		assert.Equal(t, core.ApplicationStatusApproved, retrieved.Status.String)
+		assert.Equal(t, core.ApplicationStatusApproved, retrieved.Status)
 
 		_ = gameService.RemovePlayer(context.Background(), game.ID, int32(activeUser.ID), int32(activeUser.ID))
 	})
@@ -1044,7 +1044,7 @@ func TestAddGameParticipant_ReactivatesRemovedRecord(t *testing.T) {
 	participant, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(user.ID), core.RoleAudience)
 
 	require.NoError(t, err)
-	assert.Equal(t, "active", participant.Status.String)
+	assert.Equal(t, "active", participant.Status)
 	assert.True(t, participant.IsFormerPlayer, "is_former_player should be preserved on re-join")
 	assert.False(t, participant.RemovedAt.Valid, "removed_at should be cleared")
 }

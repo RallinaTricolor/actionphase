@@ -104,7 +104,7 @@ type CreateGameApplicationRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -217,7 +217,7 @@ type GetApprovedApplicationsForGameRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -270,7 +270,7 @@ type GetGameApplicationRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -312,7 +312,7 @@ type GetGameApplicationByUserAndGameRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -354,7 +354,7 @@ type GetGameApplicationsRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -408,8 +408,8 @@ ORDER BY ga.applied_at ASC
 `
 
 type GetGameApplicationsByStatusParams struct {
-	GameID int32       `json:"game_id"`
-	Status pgtype.Text `json:"status"`
+	GameID int32  `json:"game_id"`
+	Status string `json:"status"`
 }
 
 type GetGameApplicationsByStatusRow struct {
@@ -418,7 +418,7 @@ type GetGameApplicationsByStatusRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
@@ -529,13 +529,13 @@ type GetUserGameApplicationsRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`
 	IsPublished      bool               `json:"is_published"`
 	GameTitle        string             `json:"game_title"`
-	GameState        pgtype.Text        `json:"game_state"`
+	GameState        string             `json:"game_state"`
 }
 
 func (q *Queries) GetUserGameApplications(ctx context.Context, userID int32) ([]GetUserGameApplicationsRow, error) {
@@ -615,7 +615,7 @@ RETURNING id, game_id, user_id, role, message, status, reviewed_by_user_id, revi
 
 type UpdateGameApplicationStatusParams struct {
 	ID               int32       `json:"id"`
-	Status           pgtype.Text `json:"status"`
+	Status           string      `json:"status"`
 	ReviewedByUserID pgtype.Int4 `json:"reviewed_by_user_id"`
 }
 
@@ -625,7 +625,7 @@ type UpdateGameApplicationStatusRow struct {
 	UserID           int32              `json:"user_id"`
 	Role             string             `json:"role"`
 	Message          pgtype.Text        `json:"message"`
-	Status           pgtype.Text        `json:"status"`
+	Status           string             `json:"status"`
 	ReviewedByUserID pgtype.Int4        `json:"reviewed_by_user_id"`
 	ReviewedAt       pgtype.Timestamptz `json:"reviewed_at"`
 	AppliedAt        pgtype.Timestamptz `json:"applied_at"`

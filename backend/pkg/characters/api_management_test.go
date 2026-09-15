@@ -314,7 +314,7 @@ func TestCharacterAPI_ApproveCharacter(t *testing.T) {
 		// Verify DB state changed
 		updated, err := characterService.GetCharacter(context.Background(), char.ID)
 		require.NoError(t, err)
-		assert.Equal(t, "approved", updated.Status.String)
+		assert.Equal(t, "approved", updated.Status)
 	})
 
 	t.Run("GM sends rejected status — returns 400", func(t *testing.T) {

@@ -189,7 +189,7 @@ server-side session row, so a forged or revoked token fails regardless of claims
 > `refresh_token` column, `device_id`, and `expires_at`. The real table has no
 > refresh token at all — it stores the JWT itself in `data`.
 
-**Actual schema** (`backend/pkg/db/schema.sql`):
+**Actual schema** (`backend/pkg/db/migrations/`):
 ```sql
 CREATE TABLE sessions (
     id SERIAL PRIMARY KEY,
@@ -275,7 +275,7 @@ single token.** Each row below was checked against source.
 | Access token lives **15 minutes** | **7 days** (`core.SessionLifetime`) | `pkg/core/config.go:128`, `pkg/auth/jwt.go:61` |
 | `sub` is the **username**, "user ID intentionally excluded" | `sub` **is the user ID** (`strconv.Itoa(user.ID)`) | `pkg/auth/jwt.go:60,80` |
 | Claims include `iat` and `jti` | Neither is set. Claims are `sub`, `session_id`, `exp` | `pkg/auth/jwt.go:78-83` |
-| Separate long-lived **refresh token** in the DB | **No separate refresh token exists.** `sessions.data` stores the JWT itself | `pkg/db/schema.sql` (`sessions`) |
+| Separate long-lived **refresh token** in the DB | **No separate refresh token exists.** `sessions.data` stores the JWT itself | `pkg/db/migrations/` (`sessions`) |
 | HTTP-only cookie for refresh tokens is a "future" item | **Already shipped** — `SetJWTCookie` sets an HTTP-only `jwt` cookie | `pkg/auth/jwt.go:17` |
 
 ### How authentication actually works
