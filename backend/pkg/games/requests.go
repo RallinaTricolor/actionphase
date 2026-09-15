@@ -47,11 +47,6 @@ type CreateGameRequest struct {
 	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty"`
 }
 
-// UpdateGameStateRequest represents the request to update a game's state
-type UpdateGameStateRequest struct {
-	State string `json:"state"`
-}
-
 // UpdateGameRequest represents the request to update game details
 type UpdateGameRequest struct {
 	Title                   string                     `json:"title"`

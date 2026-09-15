@@ -70,14 +70,14 @@ export interface PostUnreadInfo {
 }
 
 /**
- * NOT generated, deliberately. MarkPostReadRequest types
- * `last_read_comment_id` as a plain optional number, but callers here pass an
- * explicit `null` to mark the post itself without advancing the comment
- * marker. Aliasing the schema would reject that at compile time.
+ * POST /games/{gameID}/posts/{postId}/mark-read — generated.
+ *
+ * The whole body is optional: marking a post read without naming a comment is
+ * a valid request, and every caller here sends `{}`. Omitting
+ * `last_read_comment_id` is how you mark the post itself -- the backend reads
+ * absence, not an explicit null.
  */
-export interface MarkPostReadRequest {
-  last_read_comment_id?: number | null;
-}
+export type MarkPostReadRequest = components['schemas']['MarkPostReadRequest'];
 
 // Unread comment IDs for posts (new since last visit)
 export interface PostUnreadComments {

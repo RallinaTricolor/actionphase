@@ -15,16 +15,19 @@ export interface User {
 import type { components } from './api.gen';
 
 /**
- * NOT generated, deliberately. LoginBody types both `username` and `password`
- * as optional, because the route accepts either a username or an email. That is
- * honest about the wire format but useless as a client contract: a payload with
- * no password would type-check. The hand-written type stays narrower.
+ * POST /auth/login — generated.
+ *
+ * `password` is required. `username` and `email` are each optional because
+ * there are two fields for one value: the route takes an identifier in either,
+ * preferring `email`, and treats a `username` containing "@" as an email. The
+ * server rejects a request with neither -- a rule JSON Schema cannot express
+ * per-field, and the one part of this contract types do not carry.
+ *
+ * The hand-written predecessor declared `username: string` and omitted `email`
+ * entirely, so the email login path the backend supports was unreachable from
+ * typed client code.
  */
-export interface LoginRequest {
-  username: string;
-  password: string;
-  fingerprint?: string;
-}
+export type LoginRequest = components['schemas']['LoginBody'];
 
 /**
  * POST /auth/register — generated from the OpenAPI spec (`just gen-api-types`),

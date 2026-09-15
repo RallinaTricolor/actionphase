@@ -232,7 +232,7 @@ func transformGameCard(game db.GetUserDashboardGamesRow) *core.DashboardGameCard
 	card := &core.DashboardGameCard{
 		GameID:              game.ID,
 		Title:               game.Title,
-		State:               game.State,
+		State:               core.GameState(game.State),
 		Genre:               ptrStringValue(game.Genre),
 		GMUserID:            game.GmUserID,
 		GMUsername:          stringValue(game.GmUsername),

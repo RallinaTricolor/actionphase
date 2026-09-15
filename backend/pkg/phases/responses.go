@@ -116,14 +116,19 @@ type ActionResultWithDetailsResponse struct {
 
 // DraftCharacterUpdateResponse represents a draft character update
 type DraftCharacterUpdateResponse struct {
-	ID             int32     `json:"id"`
-	ActionResultID int32     `json:"action_result_id"`
-	CharacterID    int32     `json:"character_id"`
-	ModuleType     string    `json:"module_type"`
-	FieldName      string    `json:"field_name"`
-	FieldValue     string    `json:"field_value"`
-	FieldType      string    `json:"field_type"`
-	Operation      string    `json:"operation"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             int32 `json:"id"`
+	ActionResultID int32 `json:"action_result_id"`
+	CharacterID    int32 `json:"character_id"`
+	// The three enums mirror createDraftUpdateBody, which has carried them since
+	// the huma conversion. Only the request half was tagged, so the response
+	// rendered as a bare string and the frontend hand-wrote the same unions to
+	// compensate. The values match the check constraints on
+	// action_result_character_updates.
+	ModuleType string    `json:"module_type" enum:"skills,inventory,numbers"`
+	FieldName  string    `json:"field_name"`
+	FieldValue string    `json:"field_value"`
+	FieldType  string    `json:"field_type" enum:"text,number,boolean,json"`
+	Operation  string    `json:"operation" enum:"upsert,delete"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }

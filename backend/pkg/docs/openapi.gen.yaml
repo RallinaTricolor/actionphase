@@ -426,6 +426,57 @@ components:
             required:
                 - npcs
             type: object
+        AuthUser:
+            additionalProperties: false
+            properties:
+                Token:
+                    type: string
+                avatar_url:
+                    type: string
+                banned_at:
+                    format: date-time
+                    type: string
+                banned_by_user_id:
+                    format: int32
+                    type: integer
+                bio:
+                    type: string
+                createdAt:
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
+                discord_username:
+                    type: string
+                email:
+                    type: string
+                email_verified:
+                    type: boolean
+                id:
+                    format: int64
+                    type: integer
+                is_admin:
+                    type: boolean
+                is_banned:
+                    type: boolean
+                pending_approval:
+                    type: boolean
+                pending_approval_since:
+                    format: date-time
+                    type: string
+                username:
+                    type: string
+            required:
+                - id
+                - username
+                - email
+                - email_verified
+                - is_admin
+                - is_banned
+                - createdAt
+                - pending_approval
+                - Token
+            type: object
         AutoAcceptAudienceBody:
             additionalProperties: false
             properties:
@@ -1023,6 +1074,10 @@ components:
             additionalProperties: false
             properties:
                 action:
+                    enum:
+                        - banned
+                        - unbanned
+                        - modified
                     type: string
                 actor_user_id:
                     format: int32
@@ -1076,6 +1131,9 @@ components:
                     format: int32
                     type: integer
                 status:
+                    enum:
+                        - draft
+                        - published
                     type: string
                 title:
                     type: string
@@ -1136,6 +1194,15 @@ components:
                     type: string
                 events:
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -2034,6 +2101,15 @@ components:
                 events:
                     description: Game states to announce
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -2208,6 +2284,16 @@ components:
                     format: int64
                     type: integer
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -2399,6 +2485,11 @@ components:
                 field_name:
                     type: string
                 field_type:
+                    enum:
+                        - text
+                        - number
+                        - boolean
+                        - json
                     type: string
                 field_value:
                     type: string
@@ -2406,8 +2497,15 @@ components:
                     format: int32
                     type: integer
                 module_type:
+                    enum:
+                        - skills
+                        - inventory
+                        - numbers
                     type: string
                 operation:
+                    enum:
+                        - upsert
+                        - delete
                     type: string
                 updated_at:
                     format: date-time
@@ -2486,6 +2584,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -2873,6 +2981,16 @@ components:
             properties:
                 available_states:
                     items:
+                        description: Game lifecycle state
+                        enum:
+                            - setup
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -3066,6 +3184,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -3150,6 +3278,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -3424,6 +3562,8 @@ components:
                 username:
                     description: Username or email address
                     type: string
+            required:
+                - password
             type: object
         LootTableItemBody:
             additionalProperties: false
@@ -5042,7 +5182,15 @@ components:
             properties:
                 state:
                     description: Target game state
-                    minLength: 1
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
             required:
                 - state
@@ -5207,6 +5355,15 @@ components:
                 events:
                     description: Game states to announce
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -5311,6 +5468,16 @@ components:
                         - string
                         - "null"
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -6277,8 +6444,66 @@ paths:
                 "200":
                     content:
                         application/json:
-                            schema: {}
-                    description: OK
+                            schema:
+                                oneOf:
+                                    - additionalProperties: false
+                                      properties:
+                                        Token:
+                                            type: string
+                                        avatar_url:
+                                            type: string
+                                        banned_at:
+                                            format: date-time
+                                            type: string
+                                        banned_by_user_id:
+                                            format: int32
+                                            type: integer
+                                        bio:
+                                            type: string
+                                        createdAt:
+                                            format: date-time
+                                            type:
+                                                - string
+                                                - "null"
+                                        discord_username:
+                                            type: string
+                                        email:
+                                            type: string
+                                        email_verified:
+                                            type: boolean
+                                        id:
+                                            format: int64
+                                            type: integer
+                                        is_admin:
+                                            type: boolean
+                                        is_banned:
+                                            type: boolean
+                                        pending_approval:
+                                            type: boolean
+                                        pending_approval_since:
+                                            format: date-time
+                                            type: string
+                                        username:
+                                            type: string
+                                      required:
+                                        - id
+                                        - username
+                                        - email
+                                        - email_verified
+                                        - is_admin
+                                        - is_banned
+                                        - createdAt
+                                        - pending_approval
+                                        - Token
+                                      type: object
+                                    - additionalProperties: false
+                                      properties:
+                                        user:
+                                            $ref: '#/components/schemas/AuthUser'
+                                      required:
+                                        - user
+                                      type: object
+                    description: The signed-in user, or a null user when not signed in
                 default:
                     content:
                         application/problem+json:

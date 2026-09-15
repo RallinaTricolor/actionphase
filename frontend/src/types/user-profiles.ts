@@ -50,16 +50,9 @@ export interface UserGame {
 }
 
 /**
- * Pagination metadata for user game history
+ * Pagination metadata for user game history. Generated.
  */
-export interface UserGameHistoryMetadata {
-  page: number;
-  page_size: number;
-  total_pages: number;
-  total_count: number;
-  has_next_page: boolean;
-  has_previous_page: boolean;
-}
+export type UserGameHistoryMetadata = components['schemas']['UserGameHistoryMetadata'];
 
 /**
  * Complete user profile response from API
@@ -78,8 +71,6 @@ export interface UserProfileResponse {
 export type UpdateUserProfileRequest = components['schemas']['UpdateProfileBody'];
 
 /**
- * Response from avatar upload
+ * Response from avatar upload. Generated.
  */
-export interface UploadAvatarResponse {
-  avatar_url: string;
-}
+export type UploadAvatarResponse = components['schemas']['UploadAvatarResponse'];

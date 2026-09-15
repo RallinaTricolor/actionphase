@@ -20,14 +20,14 @@ type DashboardData struct {
 // DashboardGameCard represents a game card on the dashboard.
 // It includes context-specific information based on user's role and game state.
 type DashboardGameCard struct {
-	GameID      int32   `json:"game_id"`
-	Title       string  `json:"title"`
-	Description *string `json:"description,omitempty"`
-	State       string  `json:"state"` // "recruitment", "in_progress", "paused", "completed"
-	Genre       *string `json:"genre,omitempty"`
-	GMUserID    int32   `json:"gm_user_id"`
-	GMUsername  string  `json:"gm_username"`
-	UserRole    string  `json:"user_role"` // "player", "gm", or "both"
+	GameID      int32     `json:"game_id"`
+	Title       string    `json:"title"`
+	Description *string   `json:"description,omitempty"`
+	State       GameState `json:"state"`
+	Genre       *string   `json:"genre,omitempty"`
+	GMUserID    int32     `json:"gm_user_id"`
+	GMUsername  string    `json:"gm_username"`
+	UserRole    string    `json:"user_role"` // "player", "gm", or "both"
 
 	// Current phase information
 	CurrentPhaseID       *int32     `json:"current_phase_id,omitempty"`

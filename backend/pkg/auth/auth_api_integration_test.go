@@ -198,12 +198,17 @@ func TestAuthAPI_LoginEndpoint(t *testing.T) {
 			description:    "Login without username should fail",
 		},
 		{
+			// 422, not 401/400: `password` is a REQUIRED property, so huma
+			// rejects the body during validation and the handler never runs.
+			// Contrast login_empty_credentials below, which sends password:""
+			// -- present but empty satisfies the schema, so that one reaches
+			// the handler and fails authentication as a 401.
 			name: "login_missing_password",
 			payload: map[string]interface{}{
 				"username": fixtures.TestUser.Username,
 			},
-			expectedStatus: 400,
-			description:    "Login without password should fail",
+			expectedStatus: 422,
+			description:    "Login without password should fail schema validation",
 		},
 		{
 			name: "login_empty_credentials",

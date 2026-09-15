@@ -3812,6 +3812,28 @@ export interface components {
         AudienceNPCsOutputBody: {
             npcs: unknown;
         };
+        AuthUser: {
+            Token: string;
+            avatar_url?: string;
+            /** Format: date-time */
+            banned_at?: string;
+            /** Format: int32 */
+            banned_by_user_id?: number;
+            bio?: string;
+            /** Format: date-time */
+            createdAt: string | null;
+            discord_username?: string;
+            email: string;
+            email_verified: boolean;
+            /** Format: int64 */
+            id: number;
+            is_admin: boolean;
+            is_banned: boolean;
+            pending_approval: boolean;
+            /** Format: date-time */
+            pending_approval_since?: string;
+            username: string;
+        };
         AutoAcceptAudienceBody: {
             auto_accept_audience: boolean;
         };
@@ -4127,7 +4149,8 @@ export interface components {
             username?: string;
         };
         CommunityBanEvent: {
-            action: string;
+            /** @enum {string} */
+            action: "banned" | "unbanned" | "modified";
             /** Format: int32 */
             actor_user_id?: number;
             actor_username?: string;
@@ -4156,7 +4179,8 @@ export interface components {
             id: number;
             /** Format: int32 */
             sort_order: number;
-            status: string;
+            /** @enum {string} */
+            status: "draft" | "published";
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -4182,7 +4206,7 @@ export interface components {
             community_id: number;
             /** Format: date-time */
             created_at: string;
-            events: string[] | null;
+            events: ("recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
             /** Format: int32 */
             id: number;
             is_enabled: boolean;
@@ -4648,7 +4672,7 @@ export interface components {
         };
         CreateWebhookInputBody: {
             /** @description Game states to announce */
-            events?: string[] | null;
+            events?: ("recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
             /** @description Whether this webhook fires; defaults to true */
             is_enabled?: boolean;
             /** @description Name for this channel, e.g. #recruitment */
@@ -4716,7 +4740,11 @@ export interface components {
             is_urgent: boolean;
             /** Format: int64 */
             pending_applications: number;
-            state: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
             title: string;
             /** Format: int64 */
             unread_comments: number;
@@ -4811,12 +4839,15 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             field_name: string;
-            field_type: string;
+            /** @enum {string} */
+            field_type: "text" | "number" | "boolean" | "json";
             field_value: string;
             /** Format: int32 */
             id: number;
-            module_type: string;
-            operation: string;
+            /** @enum {string} */
+            module_type: "skills" | "inventory" | "numbers";
+            /** @enum {string} */
+            operation: "upsert" | "delete";
             /** Format: date-time */
             updated_at: string;
         };
@@ -4854,7 +4885,11 @@ export interface components {
             recruitment_deadline?: string;
             /** Format: date-time */
             start_date?: string;
-            state: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -5063,7 +5098,7 @@ export interface components {
             username?: string;
         };
         GameListingMetadataResponse: {
-            available_states: string[] | null;
+            available_states: ("setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
             /** Format: int64 */
             filtered_count: number;
             has_next_page: boolean;
@@ -5149,7 +5184,11 @@ export interface components {
             schedule_timezone?: string;
             /** Format: date-time */
             start_date?: string;
-            state: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -5191,7 +5230,11 @@ export interface components {
             schedule_timezone?: string;
             /** Format: date-time */
             start_date?: string;
-            state: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -5366,7 +5409,7 @@ export interface components {
             hcaptcha_token?: string;
             honeypot_value?: string;
             /** @description Account password */
-            password?: string;
+            password: string;
             /** @description Username or email address */
             username?: string;
         };
@@ -6160,8 +6203,11 @@ export interface components {
             title: string;
         };
         UpdateGameStateBody: {
-            /** @description Target game state */
-            state: string;
+            /**
+             * @description Target game state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
         };
         UpdateHandoutCommentRequest: {
             /** @description Replacement comment text */
@@ -6239,7 +6285,7 @@ export interface components {
         };
         UpdateWebhookInputBody: {
             /** @description Game states to announce */
-            events?: string[] | null;
+            events?: ("recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
             /** @description Whether this webhook fires */
             is_enabled?: boolean;
             /** @description Name for this channel */
@@ -6284,7 +6330,11 @@ export interface components {
             is_anonymous: boolean;
             /** Format: date-time */
             start_date: string | null;
-            state: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -7449,13 +7499,36 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description The signed-in user, or a null user when not signed in */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": {
+                        Token: string;
+                        avatar_url?: string;
+                        /** Format: date-time */
+                        banned_at?: string;
+                        /** Format: int32 */
+                        banned_by_user_id?: number;
+                        bio?: string;
+                        /** Format: date-time */
+                        createdAt: string | null;
+                        discord_username?: string;
+                        email: string;
+                        email_verified: boolean;
+                        /** Format: int64 */
+                        id: number;
+                        is_admin: boolean;
+                        is_banned: boolean;
+                        pending_approval: boolean;
+                        /** Format: date-time */
+                        pending_approval_since?: string;
+                        username: string;
+                    } | {
+                        user: components["schemas"]["AuthUser"];
+                    };
                 };
             };
             /** @description Error */

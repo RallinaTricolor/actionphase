@@ -120,18 +120,7 @@ export interface StagedResultPart {
   delay_minutes: number;
 }
 
-export interface DraftCharacterUpdate {
-  id: number;
-  action_result_id: number;
-  character_id: number;
-  module_type: 'skills' | 'inventory' | 'numbers';
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  operation: 'upsert' | 'delete';
-  created_at: string;
-  updated_at: string;
-}
+export type DraftCharacterUpdate = components['schemas']['DraftCharacterUpdateResponse'];
 
 /** POST /games/{gameID}/results/{resultId}/character-updates */
 export type CreateDraftCharacterUpdateRequest = components['schemas']['CreateDraftUpdateBody'];

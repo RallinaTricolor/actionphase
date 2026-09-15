@@ -34,7 +34,7 @@ type CommunityWebhook struct {
 	// Events are the game states this webhook fires on. Empty means it fires for
 	// nothing -- a valid configuration (a moderator staging a webhook before
 	// choosing its events), not an error.
-	Events []string `json:"events"`
+	Events []WebhookEvent `json:"events"`
 
 	// Delivery status. LastSuccessAt survives a later failure on purpose:
 	// "worked at 09:00, broken since 14:00" is the useful diagnosis, and

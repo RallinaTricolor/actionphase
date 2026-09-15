@@ -72,15 +72,22 @@ export interface GameParticipant {
   is_former_player?: boolean;
 }
 
-export type GameState =
-  | 'setup'
-  | 'recruitment'
-  | 'character_creation'
-  | 'in_progress'
-  | 'paused'
-  | 'epilogue'
-  | 'completed'
-  | 'cancelled';
+/**
+ * A game's lifecycle state.
+ *
+ * DERIVED, not hand-written. The members come from core.ValidGameStates in Go,
+ * through the OpenAPI spec, to here -- so this union cannot drift from the
+ * backend the way a maintained copy could.
+ *
+ * Read off UpdateGameStateBody rather than a response schema because that
+ * endpoint is the one place the full set is accepted as INPUT: a response can
+ * only ever report a state, while this is the contract for setting one.
+ *
+ * Huma inlines scalar enums rather than emitting a $ref, so there is no
+ * components['schemas']['GameState'] to alias -- indexing a schema property is
+ * how a named union is recovered. Same technique as GamePhase['phase_type'].
+ */
+export type GameState = components['schemas']['UpdateGameStateBody']['state'];
 
 type ParticipantRole = 'player' | 'co_gm' | 'audience';
 type ParticipantStatus = 'active' | 'inactive' | 'removed';
@@ -162,17 +169,26 @@ export interface GameLog {
   created_at: string;
 }
 
-export interface CreateLootTableRequest {
+/**
+ * Arguments to the loot-table mutation hooks -- NOT wire types.
+ *
+ * `id` is a PATH parameter, and the API client strips it before sending: the
+ * body that actually goes over the wire is UpdateLootTableBody ({name, items}).
+ * These were named `...Request` and sat beside the generated request types,
+ * which read as though they described a payload. They describe a function
+ * argument, so they are named for that.
+ */
+export interface CreateLootTableArgs {
   name: string;
   items: LootTableContent[] | undefined;
 }
 
-export interface UpdateLootTableRequest {
+export interface UpdateLootTableArgs {
   id: number;
   name: string;
 }
 
-export interface UpdateLootTableContentsRequest {
+export interface UpdateLootTableContentsArgs {
   id: number;
   items: LootTableContent[];
 }
@@ -208,15 +224,10 @@ export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn
 export type ReviewApplicationRequest = components['schemas']['ReviewApplicationBody'];
 
 /**
- * NOT generated, deliberately. UpdateGameStateBody types `state` as a bare
- * `string`, so aliasing it would erase the GameState union above — the same
- * union scripts/check-game-states.sh exists to keep in step with the Go
- * constants, the transition table, and the migration CHECK constraint. A
- * narrower hand-written type is the safer contract here.
+ * PUT /games/{gameID}/state — generated. `state` carries the enum, so an
+ * invalid state is a build failure rather than a 422.
  */
-export interface UpdateGameStateRequest {
-  state: GameState;
-}
+export type UpdateGameStateRequest = components['schemas']['UpdateGameStateBody'];
 
 export const GAME_STATE_LABELS: Record<GameState, string> = {
   setup: 'Setup',

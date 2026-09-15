@@ -39,25 +39,13 @@ export interface PrivateMessage {
   edit_count?: number;
 }
 
-export interface ConversationListItem {
-  id: number;
-  game_id: number;
-  /** Null for untitled conversations; the API sends an explicit null, not an absent key. */
-  title: string | null;
-  conversation_type: string;
-  created_by_user_id: number;
-  created_at: string;
-  updated_at: string;
-  participant_count: number;
-  participant_names: string;
-  /** Empty string when the conversation has no messages yet. */
-  last_message: string;
-  last_message_at: string | null;
-  unread_count: number;
-  /** Null until the caller has read something in this conversation. */
-  last_read_message_id: number | null;
-  last_read_at: string | null;
-}
+/**
+ * Generated. Note the nullable fields carry an explicit null rather than being
+ * absent: `title` is null for untitled conversations, and
+ * `last_read_message_id` is null until the caller has read something here.
+ * `last_message` is an empty string when there are no messages yet.
+ */
+export type ConversationListItem = components['schemas']['ConversationListItemResponse'];
 
 export interface ConversationWithDetails {
   conversation: Conversation;
@@ -117,7 +105,5 @@ export interface AudienceConversationMessage {
  * filter controls. The UI displays `name` but filters by `id`, since character
  * names are mutable and not unique within a game.
  */
-export interface ConversationParticipantCharacter {
-  id: number;
-  name: string;
-}
+export type ConversationParticipantCharacter =
+  components['schemas']['ConversationParticipantCharacter'];

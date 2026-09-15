@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -134,13 +135,21 @@ func clientMeta(ctx context.Context) (ip, userAgent string) {
 
 // loginBody accepts either a username or an email in `username`, matching the
 // chi handler: it prefers `email` when both are sent, and treats a `username`
-// containing "@" as an email. Neither field is required on its own, because
-// either one may carry the identifier -- the handler rejects the request when
-// both are empty, exactly as before.
+// containing "@" as an email.
+//
+// Username and Email are each optional because there are two fields for one
+// value -- requiring either would break the other path, so the handler enforces
+// the real rule (reject when both are empty) rather than the schema.
+//
+// Password is NOT one of them, and used to be declared required:"false"
+// alongside them. Nothing accepts a login without a password: it goes straight
+// to CheckPasswordHash. That declaration reached the frontend as
+// `password?: string`, so a payload missing it type-checked and failed at
+// runtime. RegisterBody below has always had this right.
 type loginBody struct {
 	Username      string `json:"username,omitempty" required:"false" doc:"Username or email address"`
 	Email         string `json:"email,omitempty" required:"false" doc:"Email address; takes precedence over username"`
-	Password      string `json:"password" required:"false" doc:"Account password"`
+	Password      string `json:"password" required:"true" doc:"Account password"`
 	Fingerprint   string `json:"fingerprint,omitempty" required:"false" maxLength:"512" doc:"Device fingerprint, recorded on the session"`
 	HCaptchaToken string `json:"hcaptcha_token,omitempty" required:"false"`
 	HoneypotValue string `json:"honeypot_value,omitempty" required:"false"`
@@ -1364,9 +1373,41 @@ func RegisterHumaAuthProbe(api huma.API, h *Handler) {
 			"expired token yields 200 with {\"user\": null}, so the frontend can " +
 			"poll it without provoking console errors. A token whose session has " +
 			"been revoked also reads as signed out.",
-		Tags:     []string{tagAuth},
-		Security: noAuth,
+		Tags:      []string{tagAuth},
+		Security:  noAuth,
+		Responses: meResponses(api),
 	}, h.HumaMe)
+}
+
+// meResponses describes the two shapes /me answers with.
+//
+// meOutput carries them in a `Body any`, which huma cannot reflect -- the
+// operation rendered as `schema: {}`, so the generated TypeScript for the
+// endpoint the frontend polls on every page load was `unknown`.
+//
+// Declared as a oneOf rather than one flattened object with everything
+// optional: the response really is a user OR {"user": null}, never a merge, and
+// a merged schema would describe a payload the server never sends. huma fills a
+// response schema only when it is nil, so pre-setting it here survives
+// registration.
+func meResponses(api huma.API) map[string]*huma.Response {
+	registry := api.OpenAPI().Components.Schemas
+
+	return map[string]*huma.Response{
+		"200": {
+			Description: "The signed-in user, or a null user when not signed in",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: &huma.Schema{
+						OneOf: []*huma.Schema{
+							huma.SchemaFromType(registry, reflect.TypeFor[authUser]()),
+							huma.SchemaFromType(registry, reflect.TypeFor[nullUserBody]()),
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 // RegisterHumaAuthProtected registers the routes behind full authentication.

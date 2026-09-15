@@ -246,7 +246,9 @@ type CommunityBanEvent struct {
 	ActorUserID   *int32  `json:"actor_user_id,omitempty"`
 	ActorUsername *string `json:"actor_username,omitempty"`
 
-	Action    string     `json:"action"` // See ValidBanEventActions
+	// Tagged so the spec carries the closed set: the frontend had hand-written
+	// the same union as BanEventAction and keys two Record lookups off it.
+	Action    string     `json:"action" enum:"banned,unbanned,modified"` // See ValidBanEventActions
 	Reason    *string    `json:"reason,omitempty"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -316,7 +318,7 @@ type CommunityDocument struct {
 	// Status is "draft" or "published". Only published documents are visible to
 	// anyone but a moderator, so this is the whole visibility rule -- see
 	// ValidDocumentStatuses.
-	Status string `json:"status"`
+	Status string `json:"status" enum:"draft,published"`
 
 	// SortOrder is the display position, lowest first. Explicit because a
 	// community's documents have a deliberate reading order that neither the

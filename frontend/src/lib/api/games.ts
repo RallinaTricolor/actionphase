@@ -16,8 +16,8 @@ import type {
   GameLog,
   LootTable,
   LootTableContent,
-  CreateLootTableRequest,
-  UpdateLootTableRequest
+  CreateLootTableArgs,
+  UpdateLootTableArgs
 } from '../../types/games';
 import type {
   AudienceConversationListItem,
@@ -257,11 +257,11 @@ export class GamesApi extends BaseApiClient {
     return contents?.map(({ name, data }) => ({ name, data }));
   }
 
-  async createLootTable(gameId: number, data: CreateLootTableRequest) {
+  async createLootTable(gameId: number, data: CreateLootTableArgs) {
     return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, { name: data.name, items: this.toLootItemPayload(data.items) });
   }
 
-  async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableRequest) {
+  async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableArgs) {
     return this.client.put(`/api/v1/games/${gameId}/loot-tables/${lootTableId}`, { name: data.name });
   }
 

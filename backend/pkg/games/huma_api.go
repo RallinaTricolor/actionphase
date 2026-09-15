@@ -144,7 +144,7 @@ func gameResponseFrom(game *models.Game) *GameResponse {
 		Title:                   game.Title,
 		Description:             game.Description,
 		GMUserID:                game.GmUserID,
-		State:                   game.State,
+		State:                   core.GameState(game.State),
 		IsAnonymous:             game.IsAnonymous,
 		AutoAcceptAudience:      game.AutoAcceptAudience,
 		AllowGroupConversations: game.AllowGroupConversations,
@@ -358,7 +358,7 @@ func sheetConfigValue(sheet *core.CharacterSheetConfig) core.CharacterSheetConfi
 }
 
 type updateGameStateBody struct {
-	State string `json:"state" minLength:"1" doc:"Target game state"`
+	State core.GameState `json:"state" doc:"Target game state"`
 }
 
 type applyToGameBody struct {
@@ -678,7 +678,7 @@ func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInpu
 		Title:                   game.Title,
 		Description:             game.Description,
 		GMUserID:                game.GmUserID,
-		State:                   game.State,
+		State:                   core.GameState(game.State),
 		IsAnonymous:             game.IsAnonymous,
 		AutoAcceptAudience:      game.AutoAcceptAudience,
 		AllowGroupConversations: game.AllowGroupConversations,
@@ -869,7 +869,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		return nil, err
 	}
 
-	updatedGame, err := h.GameService.UpdateGameState(ctx, game.ID, in.Body.State)
+	updatedGame, err := h.GameService.UpdateGameState(ctx, game.ID, string(in.Body.State))
 	if err != nil {
 		// A rejected transition is a client-side precondition failure, not a
 		// bug: the request was well formed and authorized, but the move is not
@@ -886,15 +886,15 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update game state", "error", err, "game_id", game.ID)
 	}
 
-	h.settleRecruitment(ctx, game, updatedGame, in.Body.State, user.ID)
-	h.notifyStateChange(ctx, game, updatedGame, in.Body.State, user.ID)
+	h.settleRecruitment(ctx, game, updatedGame, string(in.Body.State), user.ID)
+	h.notifyStateChange(ctx, game, updatedGame, string(in.Body.State), user.ID)
 
 	return &gameOutput{Body: &GameResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
 		Description: updatedGame.Description,
 		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State,
+		State:       core.GameState(updatedGame.State),
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}}, nil
@@ -1065,7 +1065,7 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 		Metadata: GameListingMetadataResponse{
 			TotalCount:      result.Metadata.TotalCount,
 			FilteredCount:   result.Metadata.FilteredCount,
-			AvailableStates: result.Metadata.AvailableStates,
+			AvailableStates: core.GameStates(result.Metadata.AvailableStates),
 			Page:            result.Metadata.Page,
 			PageSize:        result.Metadata.PageSize,
 			TotalPages:      result.Metadata.TotalPages,
@@ -1081,7 +1081,7 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 			Description:             game.Description,
 			GMUserID:                game.GMUserID,
 			GMUsername:              game.GMUsername,
-			State:                   game.State,
+			State:                   core.GameState(game.State),
 			Genre:                   game.Genre,
 			StartDate:               game.StartDate,
 			EndDate:                 game.EndDate,

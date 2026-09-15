@@ -153,7 +153,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	for _, step := range []string{"recruitment", "character_creation", "in_progress"} {
 		step := step
 		t.Run("update_game_state_to_"+step, func(t *testing.T) {
-			stateData := UpdateGameStateRequest{State: step}
+			stateData := map[string]string{"state": step}
 			payload, _ := json.Marshal(stateData)
 			req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
 			req.Header.Set("Content-Type", "application/json")
@@ -165,15 +165,13 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 			var response GameResponse
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			core.AssertNoError(t, err, "Response should be valid JSON")
-			core.AssertEqual(t, step, response.State, "Response body should reflect new state")
+			core.AssertEqual(t, core.GameState(step), response.State, "Response body should reflect new state")
 		})
 	}
 
 	// Step 6: Cancel game (required before deletion)
 	t.Run("cancel_game", func(t *testing.T) {
-		stateData := UpdateGameStateRequest{
-			State: "cancelled",
-		}
+		stateData := map[string]string{"state": core.GameStateCancelled}
 
 		payload, _ := json.Marshal(stateData)
 		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
@@ -484,9 +482,11 @@ func TestGameAPI_Authorization(t *testing.T) {
 
 	// Test that non-owner cannot update game state
 	t.Run("non_owner_cannot_update_state", func(t *testing.T) {
-		stateData := UpdateGameStateRequest{
-			State: "active",
-		}
+		// A REAL state, so authorization is what rejects this rather than
+		// schema validation. The payload used to say "active", which is not a
+		// game state at all -- it reached the 403 only because nothing
+		// validated it, and would have 422'd once `state` carried its enum.
+		stateData := map[string]string{"state": core.GameStateRecruitment}
 
 		payload, _ := json.Marshal(stateData)
 		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/state", bytes.NewBuffer(payload))

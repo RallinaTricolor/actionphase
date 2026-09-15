@@ -1945,7 +1945,7 @@ type UserProfile struct {
 type UserGame struct {
 	GameID      int32               `json:"game_id"`
 	Title       string              `json:"title"`
-	State       string              `json:"state"`
+	State       GameState           `json:"state"`
 	IsAnonymous bool                `json:"is_anonymous"`
 	UserRole    string              `json:"user_role"` // "player", "co_gm", "audience"
 	GMUsername  string              `json:"gm_username"`
