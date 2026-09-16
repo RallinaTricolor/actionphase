@@ -594,60 +594,23 @@ func TestGameService_GetGamesByUser(t *testing.T) {
 // TestGameService_GetAllGames removed - GetAllGames method no longer exists.
 // Use GetFilteredGames with empty filters instead.
 
-func TestGameService_GetRecruitingGames(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	app := core.NewTestApp(testDB.Pool)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "sessions", "users")
-
-	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-
-	// Create test user
-	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-
-	// Create games in different states
-	setupGame := testDB.CreateTestGame(t, int32(gm.ID), "Setup Game")
-	recruitingGame := testDB.CreateTestGame(t, int32(gm.ID), "Recruiting Game")
-	inProgressGame := testDB.CreateTestGame(t, int32(gm.ID), "In Progress Game")
-
-	// Update states
-	_, err := gameService.UpdateGameState(context.Background(), recruitingGame.ID, "recruitment")
-	core.AssertNoError(t, err, "Failed to set game to recruitment")
-
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "recruitment")
-	core.AssertNoError(t, err, "Failed to set game to recruitment")
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "character_creation")
-	core.AssertNoError(t, err, "Failed to set game to character_creation")
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "in_progress")
-	core.AssertNoError(t, err, "Failed to set game to in_progress")
-
-	t.Run("returns only games in recruitment state", func(t *testing.T) {
-		games, err := gameService.GetRecruitingGames(context.Background())
-
-		core.AssertNoError(t, err, "Failed to get recruiting games")
-
-		// Verify recruiting game is in the list
-		foundRecruiting := false
-		foundSetup := false
-		foundInProgress := false
-
-		for _, g := range games {
-			if g.ID == recruitingGame.ID {
-				foundRecruiting = true
-			}
-			if g.ID == setupGame.ID {
-				foundSetup = true
-			}
-			if g.ID == inProgressGame.ID {
-				foundInProgress = true
-			}
-		}
-
-		core.AssertTrue(t, foundRecruiting, "Recruiting game should be in the list")
-		core.AssertEqual(t, false, foundSetup, "Setup game should NOT be in the list")
-		core.AssertEqual(t, false, foundInProgress, "In-progress game should NOT be in the list")
-	})
-}
+// TestGameService_GetRecruitingGames removed - GetRecruitingGames no longer
+// exists. GET /games/recruiting was redundant with the filtered listing, so the
+// endpoint, the service method and the SQL query were all removed.
+// TestGameService_GetFilteredGames/"filters by state - recruitment only" covers
+// the same behaviour, and asserts the stronger property: EVERY returned game is
+// in recruitment, not merely that the recruiting one appears.
+//
+// One behaviour was deliberately NOT carried over. The old query also excluded
+// games whose recruitment_deadline had passed; the listing returns them with
+// deadline_urgency 'critical' instead.
+//
+// That is correct. recruitment_deadline is ADVISORY -- it is how a GM tells
+// prospective players when they should expect recruitment to close, not a rule
+// the server enforces. A game stays open until the GM moves it, so hiding it
+// from the listing on an arbitrary date would have been the bug. Same for
+// end_date on in-progress games. The unused GetGamesNeedingStateUpdate query,
+// which would have auto-transitioned both, was removed alongside this.
 
 func TestGameService_GetGameWithDetails(t *testing.T) {
 	testDB := core.NewTestDatabase(t)

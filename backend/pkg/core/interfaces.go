@@ -356,9 +356,6 @@ type GameServiceInterface interface {
 	// GetGameWithDetails retrieves a game with additional metadata
 	GetGameWithDetails(ctx context.Context, gameID int32) (*models.GetGameWithDetailsRow, error)
 
-	// GetRecruitingGames retrieves all games currently accepting new players
-	GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error)
-
 	// CanUserJoinGame checks if a user is eligible to join a specific game
 	CanUserJoinGame(ctx context.Context, gameID, userID int32) (string, error)
 

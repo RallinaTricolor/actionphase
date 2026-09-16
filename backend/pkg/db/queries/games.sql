@@ -127,21 +127,6 @@ SELECT EXISTS(
 SELECT COUNT(*) FROM game_participants
 WHERE game_id = $1 AND role = 'player' AND status = 'active';
 
--- name: GetRecruitingGames :many
-SELECT games.*, COALESCE(users.username, 'Unknown') as gm_username,
-       COALESCE(participant_count.count, 0) as current_players
-FROM games
-LEFT JOIN users ON games.gm_user_id = users.id
-LEFT JOIN (
-    SELECT game_id, COUNT(*) as count
-    FROM game_participants
-    WHERE role = 'player' AND status = 'active'
-    GROUP BY game_id
-) participant_count ON games.id = participant_count.game_id
-WHERE games.state = 'recruitment'
-AND (games.recruitment_deadline IS NULL OR games.recruitment_deadline > NOW())
-ORDER BY games.created_at DESC;
-
 -- name: GetGameWithDetails :one
 -- Joins the owning community's name and slug so a game surface can label and
 -- link its community without a second request.
@@ -183,11 +168,6 @@ LEFT JOIN (
     GROUP BY game_id
 ) pc ON g.id = pc.game_id
 WHERE g.id = $1;
-
--- name: GetGamesNeedingStateUpdate :many
-SELECT * FROM games
-WHERE (state = 'recruitment' AND recruitment_deadline IS NOT NULL AND recruitment_deadline < NOW())
-   OR (state = 'in_progress' AND end_date IS NOT NULL AND end_date < NOW());
 
 -- Player Management Queries
 

@@ -673,12 +673,6 @@ func (gs *GameService) GetGameWithDetails(ctx context.Context, gameID int32) (*m
 	return &game, err
 }
 
-// GetRecruitingGames - Get games currently accepting players
-func (gs *GameService) GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error) {
-	queries := models.New(gs.DB)
-	return queries.GetRecruitingGames(ctx)
-}
-
 // CanUserJoinGame - Check if user can join a game
 func (gs *GameService) CanUserJoinGame(ctx context.Context, gameID, userID int32) (string, error) {
 	queries := models.New(gs.DB)

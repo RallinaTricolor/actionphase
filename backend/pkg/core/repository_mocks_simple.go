@@ -162,10 +162,6 @@ func (m *SimpleMockGameRepository) GetGamesByGM(ctx context.Context, gmUserID in
 	return games, nil
 }
 
-func (m *SimpleMockGameRepository) GetRecruitingGames(ctx context.Context) ([]db.GetRecruitingGamesRow, error) {
-	return []db.GetRecruitingGamesRow{}, nil
-}
-
 func (m *SimpleMockGameRepository) GetGameWithDetails(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error) {
 	return db.GetGameWithDetailsRow{}, nil
 }
