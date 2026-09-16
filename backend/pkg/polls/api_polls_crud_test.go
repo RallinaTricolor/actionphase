@@ -507,6 +507,37 @@ func TestPollCRUD_ListGamePolls_IncludeExpired(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		assert.Len(t, response, 2, "should return both active and expired polls")
 	})
+
+	// is_expired is what the frontend splits the poll list on. It was absent
+	// from every response until this change, so PollsTab's filter silently put
+	// every poll in "active" and left "expired" permanently empty -- asserted
+	// here so a regression is a test failure rather than an empty UI section.
+	t.Run("each poll reports is_expired matching its deadline", func(t *testing.T) {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/polls?include_expired=true", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var response []map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		require.Len(t, response, 2)
+
+		byQuestion := make(map[string]bool, len(response))
+		for _, poll := range response {
+			expired, ok := poll["is_expired"]
+			require.True(t, ok, "every poll must carry is_expired")
+			byQuestion[poll["question"].(string)] = expired.(bool)
+		}
+
+		assert.True(t, byQuestion["Expired poll"], "the past-deadline poll is expired")
+		for question, expired := range byQuestion {
+			if question != "Expired poll" {
+				assert.False(t, expired, "the future-deadline poll %q is not expired", question)
+			}
+		}
+	})
 }
 
 // TestPollAPI_AdminMode_CreatePoll is the regression test for the bug where admin mode was

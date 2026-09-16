@@ -2,6 +2,7 @@ import { BaseApiClient } from './client';
 import { logger } from '@/services/LoggingService';
 import type {
   Character,
+  InactiveCharacter,
   ControllableCharacterWithGame,
   CharacterData,
   CharacterActivityStats,
@@ -134,7 +135,7 @@ export class CharactersApi extends BaseApiClient {
   }
 
   async getInactiveCharacters(gameId: number) {
-    return this.client.get<Character[]>(`/api/v1/games/${gameId}/characters/inactive`);
+    return this.client.get<InactiveCharacter[]>(`/api/v1/games/${gameId}/characters/inactive`);
   }
 
   // Audience Participation endpoints

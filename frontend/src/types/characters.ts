@@ -2,76 +2,69 @@
 
 import type { components } from './api.gen';
 
-export interface Character {
-  id: number;
-  game_id: number;
-  user_id?: number;
-  username?: string;
-  name: string;
-  character_type?: 'player_character' | 'npc';
-  status: 'pending' | 'approved';
-  avatar_url?: string | null;
-  is_active: boolean;
-  original_owner_user_id?: number;
-  original_owner_username?: string;
-  current_owner_username?: string;
-  // NPC assignment fields (only present for NPCs)
-  assigned_user_id?: number;
-  assigned_username?: string;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * A character, as every character-shaped endpoint returns it — generated.
+ *
+ * Create, get, approve, reassign, rename, the game roster and both controllable
+ * lists all answer with this exact shape. There is no per-endpoint variant to
+ * pick between.
+ *
+ * It used to be a hand-written interface standing in for four different backend
+ * structs, and it described a shape none of them returned:
+ *
+ *   - `is_active` was REQUIRED, but the controllable endpoints did not send it
+ *     at all (their query pre-filters to active characters). Every
+ *     `character.is_active` against that data read `undefined`.
+ *   - `username` was declared everywhere but joined almost nowhere. The
+ *     "Played by @…" block on CharacterPage was guarded on it and had never
+ *     rendered — GET /characters/{id} did not report it until this was fixed.
+ *   - `current_owner_username` / `original_owner_username` were typed
+ *     `string | undefined`; the inactive list sends explicit `null`.
+ *
+ * Optionality here now means one of two things, and the distinction matters:
+ *
+ *   - WITHHELD BY ENTITLEMENT. `user_id`, `username`, `assigned_user_id` and
+ *     `assigned_username` are dropped TOGETHER for a regular player in an
+ *     anonymous game, and `character_type` is dropped alongside them by
+ *     GET /characters/{id} for the same reason. Treat the identity fields as a
+ *     unit; never infer one from another's presence.
+ *   - GENUINELY ABSENT. `avatar_url` when the character has no portrait,
+ *     `user_id` for an unassigned NPC.
+ *
+ * `status` and `is_active` are required: both columns are NOT NULL and every
+ * handler sets them.
+ */
+export type Character = components['schemas']['CharacterResponse'];
+
+/** Per-game character sheet configuration, as sent by the backend — generated. */
+export type CharacterSheetConfig = components['schemas']['CharacterSheetConfig'];
 
 /**
- * A controllable character returned by the cross-game endpoint, carrying the
- * game context its sheet needs. Surfaces with no game in scope (the global
- * Utility Drawer) have no GameContext to read role/state from, so the backend
- * sends them alongside each character.
+ * A controllable character from the cross-game endpoint, carrying the game
+ * context its sheet needs — generated.
  *
- * `is_active` is omitted rather than optional: the endpoint filters to active
- * characters, so the field is absent from the payload and callers must not
- * branch on it. It's the only required `Character` field the endpoint drops.
+ * Surfaces with no game in scope (the global Utility Drawer) have no
+ * GameContext to read role/state from, so the backend sends it per character.
+ * Everything a plain Character has, plus that context.
  *
- * `username` and `assigned_username` come back for the GM's cast entries (a
- * GM/co-GM receives every character in games they run, not just the ones they
- * personally control), and stay optional because the rest of the payload — a
- * player's own characters — has no one else to credit.
+ * `game_character_sheet` is absent when the GM set no overrides, which is the
+ * common case — the defaults live in the frontend, so absent means "use them",
+ * never "this game has no labels".
  */
-/**
- * Per-game character sheet configuration, as sent by the backend.
- *
- * Every level is optional because that is the wire reality: the backend stores
- * only genuine GM overrides and omits the key entirely when there are none, so
- * most games send nothing at all. Defaults are NOT filled in server-side — the
- * frontend owns them so exactly one place knows them.
- */
-export interface CharacterSheetConfig {
-  labels?: {
-    skills?: string;
-    inventory?: string;
-    numbers?: string;
-  };
-}
+export type ControllableCharacterWithGame =
+  components['schemas']['ControllableCharacterWithGameResponse'];
 
-export interface ControllableCharacterWithGame extends Omit<Character, 'is_active'> {
-  game_title: string;
-  game_state: string;
-  game_is_anonymous: boolean;
-  game_portrait_avatars: boolean;
-  /**
-   * That game's character sheet config, for the same reason the flags above
-   * travel here: the drawer renders sheets outside a GameProvider and has no
-   * game context to read it from. Absent when the GM has set no overrides,
-   * which is the common case — the defaults live in the frontend, so an absent
-   * value means "use them", never "the game has no labels".
-   */
-  game_character_sheet?: CharacterSheetConfig;
-  /**
-   * The current user's role in that character's game. `audience` is reachable:
-   * an audience member assigned an NPC controls it, so it comes back here.
-   */
-  user_role: 'gm' | 'co_gm' | 'player' | 'audience';
-}
+/**
+ * One entry of the GM's inactive-character list — generated.
+ *
+ * The only character shape that is genuinely its own type: it adds the
+ * ownership history a reassignment decision needs, and the endpoint is GM-only.
+ * That makes it the WIDEST shape, not a narrowed one — it withholds nothing.
+ *
+ * Both owner usernames are REQUIRED but nullable, not optional: the handler
+ * always emits the key, sending `null` when that account is gone.
+ */
+export type InactiveCharacter = components['schemas']['InactiveCharacterResponse'];
 
 /**
  * One sheet field — generated.

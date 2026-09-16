@@ -54,7 +54,7 @@ const mockCharacter: Character = {
   name: 'Aelindra',
   character_type: 'player_character',
   status: 'active',
-  avatar_url: null,
+  avatar_url: undefined,
   is_active: true,
   username: 'testplayer',
   created_at: '2025-01-01T00:00:00Z',

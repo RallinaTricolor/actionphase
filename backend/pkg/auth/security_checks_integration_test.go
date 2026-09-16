@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -225,6 +226,19 @@ func TestSecurityChecks_RegistrationApprovalMode(t *testing.T) {
 	token, hasToken := regResponse["Token"]
 	if hasToken && token != "" && token != nil {
 		t.Errorf("No token should be issued for pending user, got: %v", token)
+	}
+
+	// Pin the 202 body's field NAMES, not just the absence of a token. Until
+	// this was added the 202 had no schema in the spec at all -- it generated
+	// as `content?: never` -- and nothing on either side asserted the keys. A
+	// frontend test fixture had drifted to `status_text` as a result, serving a
+	// shape the server has never sent.
+	core.AssertEqual(t, "Pending Approval", fmt.Sprintf("%v", regResponse["status"]),
+		"202 body should carry the status field")
+	core.AssertEqual(t, "Your account has been created and is pending admin approval.",
+		fmt.Sprintf("%v", regResponse["error"]), "202 body should carry the error field")
+	if _, wrong := regResponse["status_text"]; wrong {
+		t.Error("202 body must not use status_text; the field is named status")
 	}
 
 	// Verify login is blocked

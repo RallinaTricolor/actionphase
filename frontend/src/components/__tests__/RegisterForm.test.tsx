@@ -129,11 +129,16 @@ describe('RegisterForm', () => {
       server.use(
         http.post('/api/v1/auth/register', async () => {
           await new Promise(resolve => setTimeout(resolve, 10));
+          // The 201 body is the created user FLAT, with Token alongside its
+          // columns -- no `data` envelope (that is axios's own wrapper, not a
+          // wire field) and no `user` key. This fixture previously had both, so
+          // `response.data.Token` was undefined and the token path it looks
+          // like it covers was never actually exercised.
           return HttpResponse.json({
-            data: {
-              Token: 'fake-token',
-              user: { id: 1, username: 'testuser', email: 'test@example.com' },
-            },
+            id: 1,
+            username: 'testuser',
+            email: 'test@example.com',
+            Token: 'fake-token',
           });
         })
       );
@@ -165,10 +170,10 @@ describe('RegisterForm', () => {
         http.post('/api/v1/auth/register', async () => {
           await new Promise(resolve => setTimeout(resolve, 100));
           return HttpResponse.json({
-            data: {
-              Token: 'fake-token',
-              user: { id: 1, username: 'testuser' },
-            },
+            id: 1,
+            username: 'testuser',
+            email: 'test@example.com',
+            Token: 'fake-token',
           });
         })
       );
@@ -257,7 +262,12 @@ describe('RegisterForm', () => {
       server.use(
         http.post('/api/v1/auth/register', () => {
           return HttpResponse.json(
-            { status_text: 'Pending Approval', error: 'Your account has been created and is pending admin approval.' },
+            // Field is `status`, not `status_text`. This fixture claimed the
+            // latter, a shape the server has never sent -- MSW bodies are
+            // untyped, so nothing caught it. The component branches on the HTTP
+            // status rather than the body, which is why it never mattered.
+            // Pinned server-side by TestSecurityChecks_RegistrationApprovalMode.
+            { status: 'Pending Approval', error: 'Your account has been created and is pending admin approval.' },
             { status: 202 }
           );
         })
@@ -265,6 +275,7 @@ describe('RegisterForm', () => {
 
       const user = userEvent.setup();
       const onSuccess = vi.fn();
+      localStorage.removeItem('auth_token');
 
       renderWithProviders(<RegisterForm onSuccess={onSuccess} />);
 
@@ -281,6 +292,13 @@ describe('RegisterForm', () => {
 
       expect(screen.getByText(/pending admin approval/i)).toBeInTheDocument();
       expect(onSuccess).not.toHaveBeenCalled();
+
+      // A pending account must not be signed in. AuthContext's onSuccess runs
+      // for a 202 as well (axios resolves every 2xx), so this asserts the
+      // narrowing there actually holds: the body carries no Token, and none is
+      // stored. Previously this was guaranteed only by `if (token)` skipping a
+      // field the type wrongly claimed was always present.
+      expect(localStorage.getItem('auth_token')).toBeNull();
     });
   });
 

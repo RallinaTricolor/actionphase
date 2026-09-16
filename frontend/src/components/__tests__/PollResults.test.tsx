@@ -7,13 +7,21 @@ import type { Poll, PollResults as PollResultsType } from '../../types/polls';
 const basePoll: Poll = {
   id: 1,
   game_id: 1,
+  phase_id: null,
   created_by_user_id: 1,
+  created_by_character_id: null,
   question: 'Which path?',
+  description: null,
   deadline: new Date(Date.now() + 3600000).toISOString(),
   show_individual_votes: false,
   allow_other_option: false,
+  hide_results_from_players: false,
+  allow_audience_voting: false,
+  show_running_totals_to_players: false,
   is_deleted: false,
+  is_expired: false,
   created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
 };
 
 const makeResults = (overrides: Partial<PollResultsType> = {}): PollResultsType => ({

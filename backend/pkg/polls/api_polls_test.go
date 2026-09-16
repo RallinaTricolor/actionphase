@@ -534,8 +534,14 @@ func TestGetPoll_ShowsUserVoteOptionID(t *testing.T) {
 	body := w.Body.String()
 	core.AssertTrue(t, strings.Contains(body, "user_vote_option_id"), "Response should contain user_vote_option_id")
 	core.AssertTrue(t, strings.Contains(body, strconv.Itoa(int(votedOptionID))), "Response should contain the voted option ID")
-	// has_voted must be true
-	core.AssertTrue(t, strings.Contains(body, `"has_voted":true`), "Response should show has_voted: true")
+	// The flag is user_has_voted, matching the list endpoint. It used to be
+	// has_voted here and nothing on the frontend read that spelling.
+	//
+	// Asserted with the leading quote so this cannot pass on a substring of
+	// "user_has_voted" -- which is exactly how it kept passing against the old
+	// name after the rename.
+	core.AssertTrue(t, strings.Contains(body, `"user_has_voted":true`), "Response should show user_has_voted: true")
+	core.AssertTrue(t, !strings.Contains(body, `,"has_voted":`), "Response should no longer carry the old has_voted field")
 }
 
 // TestPollVoting_GMAndCoGMBlocked tests that GMs and co-GMs cannot vote on polls

@@ -1313,15 +1313,9 @@ func RegisterHumaAuthRateLimited(api huma.API, h *Handler) {
 		Description: "Creates an account and returns a token. Responds 202 with a " +
 			"pending-approval notice instead when the instance requires admin " +
 			"approval of new accounts. Rate limited.",
-		Tags:     []string{tagAuth},
-		Security: noAuth,
-		Responses: map[string]*huma.Response{
-			"422": {Description: "Request failed validation"},
-			"202": {Description: "Account created and awaiting admin approval"},
-			"400": {Description: "Validation failed, username taken, or blocked by bot prevention"},
-			"403": {Description: "IP address or device fingerprint is banned"},
-			"429": {Description: "Too many attempts"},
-		},
+		Tags:      []string{tagAuth},
+		Security:  noAuth,
+		Responses: registerResponses(api),
 	}, h.HumaRegister)
 
 	huma.Register(api, huma.Operation{
@@ -1407,6 +1401,57 @@ func meResponses(api huma.API) map[string]*huma.Response {
 				},
 			},
 		},
+	}
+}
+
+// registerResponses documents both shapes POST /register answers with.
+//
+// registerOutput.Body is `any` because the endpoint returns a created user on
+// 201 and a pending-approval notice on 202, so huma had nothing to reflect and
+// rendered the 201 as `schema: {}` -- the generated TypeScript for account
+// creation was `unknown`. The 202 was worse: declared with a description and no
+// content, it generated as `content?: never`, i.e. a body that does not exist.
+//
+// Unlike /me this needs no oneOf. There the two shapes share one status code,
+// so the union had to live inside a single schema; here they are already
+// separated by status, which OpenAPI models natively and openapi-typescript
+// keys on. Each status gets its own concrete schema.
+//
+// huma fills a response schema only when it is nil, and it only ever touches
+// DefaultStatus (201) -- see huma.go's Register, which resolves the body field
+// against op.DefaultStatus alone. Pre-setting both here therefore survives
+// registration, and the 202 would never have been filled in regardless.
+//
+// Registry.Schema, NOT huma.SchemaFromType: the latter inlines the whole object
+// every time, which is what /me's oneOf does. An inlined schema has no name, so
+// openapi-typescript emits an anonymous object literal and there is nothing for
+// the frontend to alias -- which would defeat the point. Registry.Schema
+// registers the type under a name and hands back a $ref, so both shapes land in
+// components/schemas and AuthUser is shared with /me rather than duplicated.
+func registerResponses(api huma.API) map[string]*huma.Response {
+	registry := api.OpenAPI().Components.Schemas
+
+	return map[string]*huma.Response{
+		"201": {
+			Description: "Account created; the user and a session token",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: registry.Schema(reflect.TypeFor[authUser](), true, "AuthUser"),
+				},
+			},
+		},
+		"202": {
+			Description: "Account created and awaiting admin approval",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: registry.Schema(reflect.TypeFor[pendingApprovalBody](), true, "PendingApprovalBody"),
+				},
+			},
+		},
+		"400": {Description: "Validation failed, username taken, or blocked by bot prevention"},
+		"403": {Description: "IP address or device fingerprint is banned"},
+		"422": {Description: "Request failed validation"},
+		"429": {Description: "Too many attempts"},
 	}
 }
 

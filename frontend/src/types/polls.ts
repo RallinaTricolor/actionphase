@@ -6,47 +6,48 @@
  * or individual voters (with character names when available).
  */
 
-interface PollOption {
-  id: number;
-  poll_id: number;
-  option_text: string;
-  display_order: number;
-  created_at?: string;
-}
+/**
+ * Every poll response type is generated from the OpenAPI spec.
+ *
+ * There used to be a single hand-written `Poll` interface standing in for three
+ * different backend schemas at once, and two optional fields at the bottom were
+ * what let it get away with it:
+ *
+ *   - `is_expired?` was never sent by ANY endpoint. PollCard computed expiry
+ *     from the deadline itself (with a comment saying the backend didn't provide
+ *     it) while PollsTab filtered on the field -- so `activePolls` was every
+ *     poll and `expiredPolls` was permanently empty. It is now a real computed
+ *     field on the backend, next to the identical one on PhaseResponse, so a
+ *     second client never has to rediscover this.
+ *   - `user_has_voted?` was real, but only on the LIST response. The detail
+ *     endpoint called the same flag `has_voted`, which nothing ever read.
+ *     The backend now uses one name everywhere.
+ *
+ * The three types below are no longer variants of each other in any meaningful
+ * sense: PollSummary is the poll row, and the other two are that row plus
+ * whatever their endpoint additionally loaded.
+ */
+import type { components } from './api.gen';
 
-export interface Poll {
-  id: number;
-  game_id: number;
-  phase_id?: number;
-  created_by_user_id: number;
-  created_by_character_id?: number;
-  question: string;
-  description?: string;
-  deadline: string; // ISO 8601 timestamp
-  show_individual_votes: boolean;
-  allow_other_option: boolean;
-  /** When true, players never see results — not even after the deadline. */
-  hide_results_from_players: boolean;
-  /** When true, audience members may vote; their votes are recorded anonymously. */
-  allow_audience_voting: boolean;
-  /**
-   * When true, players see results while voting is still open. Attribution still
-   * follows show_individual_votes: tallies only unless that flag is also set.
-   */
-  show_running_totals_to_players: boolean;
-  is_deleted: boolean;
-  created_at: string;
-  updated_at?: string;
-  // Computed properties from backend
-  is_expired?: boolean;
-  user_has_voted?: boolean;
-}
+/**
+ * The poll row itself, and the base shape of every poll response.
+ *
+ * Returned nested under poll results. Both other poll types are a superset of
+ * this one, so it is what a function should accept when it only needs the poll's
+ * own settings.
+ */
+export type Poll = components['schemas']['PollSummary'];
 
-export interface PollWithOptions extends Poll {
-  options: PollOption[];
-  user_vote_option_id?: number;
-  user_vote_other_response?: string;
-}
+/** An entry in the poll list: the poll row plus whether the caller has voted. */
+export type PollListItem = components['schemas']['PollListItem'];
+
+/**
+ * A single poll with its options loaded, from GET /polls/{id}.
+ *
+ * `options` is nullable, not optional: PUT /polls/{id} answers with the updated
+ * poll and no options loaded, sending an explicit `"options": null`.
+ */
+export type PollWithOptions = components['schemas']['PollResponse'];
 
 /**
  * Generated — returned by POST /polls/{id}/vote.
@@ -60,36 +61,15 @@ export interface PollWithOptions extends Poll {
  */
 export type PollVote = components['schemas']['PollVoteResponse'];
 
-interface VoterInfo {
-  user_id: number;
-  character_name: string;
-  other_response?: string;
-  /** True for audience votes, which are never attributed to a user or character. */
-  is_anonymous?: boolean;
-}
-
-interface OptionResult {
-  poll_option_id?: number;
-  option_text?: string;
-  vote_count: number;
-  voters?: VoterInfo[]; // Only populated if show_individual_votes is true
-}
-
-interface OtherResponse {
-  vote_id: number;
-  other_text: string;
-  character_name: string;
-  /** True for audience responses, which are never attributed. */
-  is_anonymous?: boolean;
-}
-
-export interface PollResults {
-  poll: Poll;
-  option_results: OptionResult[];
-  other_responses: OtherResponse[];
-  total_votes: number;
-  show_individual_votes: boolean;
-}
+/**
+ * Poll results, from GET /polls/{id}/results.
+ *
+ * The nested `option_results` / `other_responses` / `voters` shapes are reached
+ * through this type rather than aliased separately, since nothing imports them
+ * on their own. Note that VoterInfo carries no write-in text: per-voter
+ * write-ins live in `other_responses`, not on the voter.
+ */
+export type PollResults = components['schemas']['PollResultsResponse'];
 
 // Request types
 //
@@ -101,8 +81,6 @@ export interface PollResults {
 // (every schema is additionalProperties:false). Nothing set it, so it never
 // fired — it would have 422'd the first time someone wired up "post a poll as a
 // character". It remains on the `Poll` response above, which is a real field.
-import type { components } from './api.gen';
-
 /** POST /games/{gameID}/polls */
 export type CreatePollRequest = components['schemas']['CreatePollRequest'];
 

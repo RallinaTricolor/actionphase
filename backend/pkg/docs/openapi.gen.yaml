@@ -741,6 +741,13 @@ components:
         CharacterResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
+                assigned_username:
+                    description: Username controlling this NPC
+                    type: string
                 avatar_url:
                     description: Character portrait URL
                     type: string
@@ -761,6 +768,9 @@ components:
                     description: Character ID
                     format: int32
                     type: integer
+                is_active:
+                    description: False once the character has been retired
+                    type: boolean
                 name:
                     description: Character name
                     type: string
@@ -777,11 +787,15 @@ components:
                     description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
+                username:
+                    description: Owning player's username
+                    type: string
             required:
                 - id
                 - game_id
                 - name
                 - status
+                - is_active
                 - created_at
                 - updated_at
             type: object
@@ -1236,56 +1250,13 @@ components:
                 - created_at
                 - updated_at
             type: object
-        ControllableCharacterResponse:
-            additionalProperties: false
-            properties:
-                avatar_url:
-                    description: Character portrait URL
-                    type: string
-                character_type:
-                    description: Character kind
-                    enum:
-                        - player_character
-                        - npc
-                    type: string
-                created_at:
-                    format: date-time
-                    type: string
-                game_id:
-                    description: Game the character belongs to
-                    format: int32
-                    type: integer
-                id:
-                    description: Character ID
-                    format: int32
-                    type: integer
-                name:
-                    description: Character name
-                    type: string
-                status:
-                    description: Approval status
-                    enum:
-                        - pending
-                        - approved
-                    type: string
-                updated_at:
-                    format: date-time
-                    type: string
-                user_id:
-                    description: Owning player
-                    format: int32
-                    type: integer
-            required:
-                - id
-                - game_id
-                - name
-                - character_type
-                - created_at
-                - updated_at
-            type: object
         ControllableCharacterWithGameResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
                 assigned_username:
                     description: Username controlling this NPC
                     type: string
@@ -1293,7 +1264,7 @@ components:
                     description: Character portrait URL
                     type: string
                 character_type:
-                    description: Character kind
+                    description: Absent when an anonymous game hides it from the caller
                     enum:
                         - player_character
                         - npc
@@ -1324,6 +1295,9 @@ components:
                     description: Character ID
                     format: int32
                     type: integer
+                is_active:
+                    description: False once the character has been retired
+                    type: boolean
                 name:
                     description: Character name
                     type: string
@@ -1337,7 +1311,7 @@ components:
                     format: date-time
                     type: string
                 user_id:
-                    description: Owning player
+                    description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
                 user_role:
@@ -1359,7 +1333,8 @@ components:
                 - id
                 - game_id
                 - name
-                - character_type
+                - status
+                - is_active
                 - created_at
                 - updated_at
             type: object
@@ -2926,67 +2901,6 @@ components:
                 - status
                 - applied_at
             type: object
-        GameCharacterResponse:
-            additionalProperties: false
-            properties:
-                assigned_user_id:
-                    description: User controlling this NPC
-                    format: int32
-                    type: integer
-                assigned_username:
-                    description: Username controlling this NPC
-                    type: string
-                avatar_url:
-                    description: Character portrait URL
-                    type: string
-                character_type:
-                    description: Character kind
-                    enum:
-                        - player_character
-                        - npc
-                    type: string
-                created_at:
-                    format: date-time
-                    type: string
-                game_id:
-                    description: Game the character belongs to
-                    format: int32
-                    type: integer
-                id:
-                    description: Character ID
-                    format: int32
-                    type: integer
-                is_active:
-                    description: False once the character has been retired
-                    type: boolean
-                name:
-                    description: Character name
-                    type: string
-                status:
-                    description: Approval status
-                    enum:
-                        - pending
-                        - approved
-                    type: string
-                updated_at:
-                    format: date-time
-                    type: string
-                user_id:
-                    description: Owning player
-                    format: int32
-                    type: integer
-                username:
-                    description: Owning player's username
-                    type: string
-            required:
-                - id
-                - game_id
-                - name
-                - character_type
-                - is_active
-                - created_at
-                - updated_at
-            type: object
         GameListingMetadataResponse:
             additionalProperties: false
             properties:
@@ -3517,8 +3431,18 @@ components:
         InactiveCharacterResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
+                assigned_username:
+                    description: Username controlling this NPC
+                    type: string
+                avatar_url:
+                    description: Character portrait URL
+                    type: string
                 character_type:
-                    description: Character kind
+                    description: Absent when an anonymous game hides it from the caller
                     enum:
                         - player_character
                         - npc
@@ -3540,7 +3464,7 @@ components:
                     format: int32
                     type: integer
                 is_active:
-                    description: Always false in this list
+                    description: False once the character has been retired
                     type: boolean
                 name:
                     description: Character name
@@ -3564,20 +3488,22 @@ components:
                     format: date-time
                     type: string
                 user_id:
-                    description: Current owner
+                    description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
+                username:
+                    description: Owning player's username
+                    type: string
             required:
+                - current_owner_username
+                - original_owner_username
                 - id
                 - game_id
                 - name
-                - character_type
                 - status
                 - is_active
                 - created_at
                 - updated_at
-                - current_owner_username
-                - original_owner_username
             type: object
         ListAudienceMembersResponse:
             additionalProperties: false
@@ -4024,6 +3950,17 @@ components:
                 - character_name
                 - character_avatar_url
             type: object
+        PendingApprovalBody:
+            additionalProperties: false
+            properties:
+                error:
+                    type: string
+                status:
+                    type: string
+            required:
+                - status
+                - error
+            type: object
         PhaseResponse:
             additionalProperties: false
             properties:
@@ -4111,6 +4048,8 @@ components:
                     type: integer
                 is_deleted:
                     type: boolean
+                is_expired:
+                    type: boolean
                 phase_id:
                     format: int32
                     type:
@@ -4128,6 +4067,7 @@ components:
                 user_has_voted:
                     type: boolean
             required:
+                - user_has_voted
                 - id
                 - game_id
                 - phase_id
@@ -4144,7 +4084,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
-                - user_has_voted
+                - is_expired
             type: object
         PollOptionRequest:
             additionalProperties: false
@@ -4211,14 +4151,14 @@ components:
                 game_id:
                     format: int32
                     type: integer
-                has_voted:
-                    type: boolean
                 hide_results_from_players:
                     type: boolean
                 id:
                     format: int32
                     type: integer
                 is_deleted:
+                    type: boolean
+                is_expired:
                     type: boolean
                 options:
                     items:
@@ -4240,12 +4180,16 @@ components:
                 updated_at:
                     format: date-time
                     type: string
+                user_has_voted:
+                    type: boolean
                 user_vote_option_id:
                     format: int32
                     type: integer
                 user_vote_other_response:
                     type: string
             required:
+                - options
+                - user_has_voted
                 - id
                 - game_id
                 - phase_id
@@ -4262,7 +4206,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
-                - options
+                - is_expired
             type: object
         PollResultsResponse:
             additionalProperties: false
@@ -4324,6 +4268,8 @@ components:
                     type: integer
                 is_deleted:
                     type: boolean
+                is_expired:
+                    type: boolean
                 phase_id:
                     format: int32
                     type:
@@ -4355,6 +4301,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
+                - is_expired
             type: object
         PollVoteResponse:
             additionalProperties: false
@@ -6625,9 +6572,14 @@ paths:
                 "201":
                     content:
                         application/json:
-                            schema: {}
-                    description: Created
+                            schema:
+                                $ref: '#/components/schemas/AuthUser'
+                    description: Account created; the user and a session token
                 "202":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PendingApprovalBody'
                     description: Account created and awaiting admin approval
                 "400":
                     description: Validation failed, username taken, or blocked by bot prevention
@@ -9122,7 +9074,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    $ref: '#/components/schemas/GameCharacterResponse'
+                                    $ref: '#/components/schemas/CharacterResponse'
                                 type:
                                     - array
                                     - "null"
@@ -9217,7 +9169,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    $ref: '#/components/schemas/ControllableCharacterResponse'
+                                    $ref: '#/components/schemas/CharacterResponse'
                                 type:
                                     - array
                                     - "null"

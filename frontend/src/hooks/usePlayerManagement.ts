@@ -10,7 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { Character } from '../types/characters';
+import type { Character, InactiveCharacter } from '../types/characters';
 import type { GameParticipant } from '../types/games';
 
 /**
@@ -106,7 +106,7 @@ export function useTransitionPlayerToAudience(gameId: number) {
  * Returns characters whose owners have been removed
  */
 export function useInactiveCharacters(gameId: number) {
-  return useQuery<Character[]>({
+  return useQuery<InactiveCharacter[]>({
     queryKey: ['inactive-characters', gameId],
     queryFn: async () => {
       const response = await apiClient.characters.getInactiveCharacters(gameId);

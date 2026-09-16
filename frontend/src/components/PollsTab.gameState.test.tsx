@@ -4,12 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollsTab } from './PollsTab';
 import * as hooks from '../hooks';
-import type { Poll } from '../types/polls';
+import type { PollListItem } from '../types/polls';
 
 // PollCard stands in for the real card, reporting only the gameState it was
 // handed. The gate itself is covered separately below against the real card.
 vi.mock('./PollCard', () => ({
-  PollCard: ({ poll, gameState }: { poll: Poll; gameState?: string }) => (
+  PollCard: ({ poll, gameState }: { poll: PollListItem; gameState?: string }) => (
     <div id={`poll-${poll.id}`} data-testid={`poll-${poll.id}`} data-game-state={gameState ?? 'undefined'}>
       {poll.question}
     </div>
@@ -25,7 +25,7 @@ vi.mock('../contexts/GameContext', () => ({
   useGameContext: () => ({ currentPhaseId: 10 }),
 }));
 
-const basePoll: Poll = {
+const basePoll: PollListItem = {
   id: 1,
   game_id: 100,
   phase_id: 10,
@@ -36,6 +36,10 @@ const basePoll: Poll = {
   deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   show_individual_votes: false,
   allow_other_option: false,
+  hide_results_from_players: false,
+  allow_audience_voting: false,
+  show_running_totals_to_players: false,
+  is_deleted: false,
   is_expired: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

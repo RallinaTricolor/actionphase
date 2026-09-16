@@ -3936,6 +3936,13 @@ export interface components {
             pagination: components["schemas"]["PaginationResponse"];
         };
         CharacterResponse: {
+            /**
+             * Format: int32
+             * @description User controlling this NPC
+             */
+            assigned_user_id?: number;
+            /** @description Username controlling this NPC */
+            assigned_username?: string;
             /** @description Character portrait URL */
             avatar_url?: string;
             /**
@@ -3955,6 +3962,8 @@ export interface components {
              * @description Character ID
              */
             id: number;
+            /** @description False once the character has been retired */
+            is_active: boolean;
             /** @description Character name */
             name: string;
             /**
@@ -3969,6 +3978,8 @@ export interface components {
              * @description Owning player, absent for unassigned NPCs
              */
             user_id?: number;
+            /** @description Owning player's username */
+            username?: string;
         };
         CharacterSheetConfig: {
             labels?: components["schemas"]["CharacterSheetLabels"];
@@ -4200,51 +4211,21 @@ export interface components {
             updated_at: string;
             url: string;
         };
-        ControllableCharacterResponse: {
-            /** @description Character portrait URL */
-            avatar_url?: string;
-            /**
-             * @description Character kind
-             * @enum {string}
-             */
-            character_type: "player_character" | "npc";
-            /** Format: date-time */
-            created_at: string;
-            /**
-             * Format: int32
-             * @description Game the character belongs to
-             */
-            game_id: number;
-            /**
-             * Format: int32
-             * @description Character ID
-             */
-            id: number;
-            /** @description Character name */
-            name: string;
-            /**
-             * @description Approval status
-             * @enum {string}
-             */
-            status?: "pending" | "approved";
-            /** Format: date-time */
-            updated_at: string;
-            /**
-             * Format: int32
-             * @description Owning player
-             */
-            user_id?: number;
-        };
         ControllableCharacterWithGameResponse: {
+            /**
+             * Format: int32
+             * @description User controlling this NPC
+             */
+            assigned_user_id?: number;
             /** @description Username controlling this NPC */
             assigned_username?: string;
             /** @description Character portrait URL */
             avatar_url?: string;
             /**
-             * @description Character kind
+             * @description Absent when an anonymous game hides it from the caller
              * @enum {string}
              */
-            character_type: "player_character" | "npc";
+            character_type?: "player_character" | "npc";
             /** Format: date-time */
             created_at: string;
             /** @description That game's sheet label overrides, absent when it has none */
@@ -4267,18 +4248,20 @@ export interface components {
              * @description Character ID
              */
             id: number;
+            /** @description False once the character has been retired */
+            is_active: boolean;
             /** @description Character name */
             name: string;
             /**
              * @description Approval status
              * @enum {string}
              */
-            status?: "pending" | "approved";
+            status: "pending" | "approved";
             /** Format: date-time */
             updated_at: string;
             /**
              * Format: int32
-             * @description Owning player
+             * @description Owning player, absent for unassigned NPCs
              */
             user_id?: number;
             /**
@@ -5034,52 +5017,6 @@ export interface components {
             user_id: number;
             username?: string;
         };
-        GameCharacterResponse: {
-            /**
-             * Format: int32
-             * @description User controlling this NPC
-             */
-            assigned_user_id?: number;
-            /** @description Username controlling this NPC */
-            assigned_username?: string;
-            /** @description Character portrait URL */
-            avatar_url?: string;
-            /**
-             * @description Character kind
-             * @enum {string}
-             */
-            character_type: "player_character" | "npc";
-            /** Format: date-time */
-            created_at: string;
-            /**
-             * Format: int32
-             * @description Game the character belongs to
-             */
-            game_id: number;
-            /**
-             * Format: int32
-             * @description Character ID
-             */
-            id: number;
-            /** @description False once the character has been retired */
-            is_active: boolean;
-            /** @description Character name */
-            name: string;
-            /**
-             * @description Approval status
-             * @enum {string}
-             */
-            status?: "pending" | "approved";
-            /** Format: date-time */
-            updated_at: string;
-            /**
-             * Format: int32
-             * @description Owning player
-             */
-            user_id?: number;
-            /** @description Owning player's username */
-            username?: string;
-        };
         GameListingMetadataResponse: {
             available_states: ("setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
             /** Format: int64 */
@@ -5356,10 +5293,19 @@ export interface components {
         };
         InactiveCharacterResponse: {
             /**
-             * @description Character kind
+             * Format: int32
+             * @description User controlling this NPC
+             */
+            assigned_user_id?: number;
+            /** @description Username controlling this NPC */
+            assigned_username?: string;
+            /** @description Character portrait URL */
+            avatar_url?: string;
+            /**
+             * @description Absent when an anonymous game hides it from the caller
              * @enum {string}
              */
-            character_type: "player_character" | "npc";
+            character_type?: "player_character" | "npc";
             /** Format: date-time */
             created_at: string;
             /** @description Who holds the character now; null if that account is gone */
@@ -5374,7 +5320,7 @@ export interface components {
              * @description Character ID
              */
             id: number;
-            /** @description Always false in this list */
+            /** @description False once the character has been retired */
             is_active: boolean;
             /** @description Character name */
             name: string;
@@ -5394,9 +5340,11 @@ export interface components {
             updated_at: string;
             /**
              * Format: int32
-             * @description Current owner
+             * @description Owning player, absent for unassigned NPCs
              */
             user_id?: number;
+            /** @description Owning player's username */
+            username?: string;
         };
         ListAudienceMembersResponse: {
             audience_members: components["schemas"]["AudienceMemberResponse"][] | null;
@@ -5604,6 +5552,10 @@ export interface components {
             /** @description "post" or "comment" */
             message_type: string | null;
         };
+        PendingApprovalBody: {
+            error: string;
+            status: string;
+        };
         PhaseResponse: {
             /** Format: date-time */
             activated_at?: string;
@@ -5648,6 +5600,7 @@ export interface components {
             /** Format: int32 */
             id: number;
             is_deleted: boolean;
+            is_expired: boolean;
             /** Format: int32 */
             phase_id: number | null;
             question: string;
@@ -5691,11 +5644,11 @@ export interface components {
             description: string | null;
             /** Format: int32 */
             game_id: number;
-            has_voted?: boolean;
             hide_results_from_players: boolean;
             /** Format: int32 */
             id: number;
             is_deleted: boolean;
+            is_expired: boolean;
             options: components["schemas"]["PollOptionResponse"][] | null;
             /** Format: int32 */
             phase_id: number | null;
@@ -5704,6 +5657,7 @@ export interface components {
             show_running_totals_to_players: boolean;
             /** Format: date-time */
             updated_at: string;
+            user_has_voted: boolean;
             /** Format: int32 */
             user_vote_option_id?: number;
             user_vote_other_response?: string;
@@ -5734,6 +5688,7 @@ export interface components {
             /** Format: int32 */
             id: number;
             is_deleted: boolean;
+            is_expired: boolean;
             /** Format: int32 */
             phase_id: number | null;
             question: string;
@@ -7654,13 +7609,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Created */
+            /** @description Account created; the user and a session token */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuthUser"];
                 };
             };
             /** @description Account created and awaiting admin approval */
@@ -7668,7 +7623,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PendingApprovalBody"];
+                };
             };
             /** @description Validation failed, username taken, or blocked by bot prevention */
             400: {
@@ -11093,7 +11050,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GameCharacterResponse"][] | null;
+                    "application/json": components["schemas"]["CharacterResponse"][] | null;
                 };
             };
             /** @description Not authenticated */
@@ -11208,7 +11165,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ControllableCharacterResponse"][] | null;
+                    "application/json": components["schemas"]["CharacterResponse"][] | null;
                 };
             };
             /** @description Not authenticated */

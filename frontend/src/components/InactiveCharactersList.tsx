@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { Card, CardHeader, CardBody, Button, Badge, Spinner } from './ui';
 import { useInactiveCharacters } from '../hooks/usePlayerManagement';
 import { ReassignCharacterModal } from './ReassignCharacterModal';
-import type { Character } from '../types/characters';
+import type { InactiveCharacter } from '../types/characters';
 
 interface InactiveCharactersListProps {
   gameId: number;
@@ -17,7 +17,7 @@ interface InactiveCharactersListProps {
 
 export function InactiveCharactersList({ gameId }: InactiveCharactersListProps) {
   const { data: characters, isLoading, error } = useInactiveCharacters(gameId);
-  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [selectedCharacter, setSelectedCharacter] = useState<InactiveCharacter | null>(null);
 
   if (isLoading) {
     return (

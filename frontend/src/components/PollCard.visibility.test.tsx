@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollCard } from './PollCard';
-import type { Poll } from '../types/polls';
+import type { PollListItem } from '../types/polls';
 
 const usePollResultsMock = vi.fn(() => ({
   data: undefined,
@@ -39,12 +39,14 @@ vi.mock('../hooks', () => ({
   })),
 }));
 
-const basePoll: Poll = {
+const basePoll: PollListItem = {
   id: 1,
   game_id: 100,
+  phase_id: null,
   question: 'Should we storm the keep?',
-  description: undefined,
+  description: null,
   created_by_user_id: 1,
+  created_by_character_id: null,
   deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   show_individual_votes: false,
   allow_other_option: false,
@@ -52,14 +54,19 @@ const basePoll: Poll = {
   allow_audience_voting: false,
   show_running_totals_to_players: false,
   is_deleted: false,
+  is_expired: false,
   user_has_voted: false,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
 
-const expired = (poll: Poll): Poll => ({
+// is_expired is what the component reads; the deadline is moved with it only so
+// the fixture stays self-consistent. Rolling back the deadline alone would no
+// longer expire a poll, because the server decides that now, not the client.
+const expired = (poll: PollListItem): PollListItem => ({
   ...poll,
   deadline: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  is_expired: true,
 });
 
 describe('PollCard - hidden results', () => {

@@ -10,11 +10,11 @@ import { Button, Select } from './ui';
 import { Modal } from './Modal';
 import { useReassignCharacter, useGameParticipants } from '../hooks/usePlayerManagement';
 import { useAuth } from '../contexts/AuthContext';
-import type { Character } from '../types/characters';
+import type { InactiveCharacter } from '../types/characters';
 import { logger } from '@/services/LoggingService';
 
 interface ReassignCharacterModalProps {
-  character: Character;
+  character: InactiveCharacter;
   gameId: number;
   isOpen: boolean;
   onClose: () => void;
