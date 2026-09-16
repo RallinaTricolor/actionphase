@@ -201,8 +201,10 @@ type PostUnreadInfoResponse struct {
 
 // PostUnreadCommentsResponse lists which comments in a post are unread.
 type PostUnreadCommentsResponse struct {
-	PostID           int32   `json:"post_id"`
-	UnreadCommentIDs []int32 `json:"unread_comment_ids" doc:"Comments newer than the caller's read marker"`
+	PostID int32 `json:"post_id"`
+	// nullable:"false": GetUnreadCommentIDsForPosts initialises unreadIDs to
+	// []int32{} for every row, so this is never nil.
+	UnreadCommentIDs []int32 `json:"unread_comment_ids" nullable:"false" doc:"Comments newer than the caller's read marker"`
 }
 
 // ManualReadCommentIDsResponse represents the manual read comment IDs for a post
@@ -262,7 +264,9 @@ type FavoritesPaginationResponse struct {
 // FavoriteCommentIDsResponse is the flat set of comment IDs the caller has
 // starred, used to render star state without fetching the comments themselves.
 type FavoriteCommentIDsResponse struct {
-	FavoriteCommentIDs []int32 `json:"favorite_comment_ids" doc:"Comments the caller has starred"`
+	// nullable:"false": both service methods carry an explicit
+	// `if ids == nil { ids = []int32{} }` guard, so this is never nil.
+	FavoriteCommentIDs []int32 `json:"favorite_comment_ids" nullable:"false" doc:"Comments the caller has starred"`
 }
 
 // DeletedResponse is the {"message": ...} / {"message": ..., "id": ...}

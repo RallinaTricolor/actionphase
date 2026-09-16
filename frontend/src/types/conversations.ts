@@ -1,14 +1,13 @@
 import type { components } from './api.gen';
 
-export interface Conversation {
-  id: number;
-  game_id: number;
-  title?: string;
-  conversation_type: string;
-  created_by_user_id: number;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * Generated. `title` is REQUIRED but nullable, not optional: the Go field is a
+ * bare `*string` with no `omitempty`, so an untitled conversation sends
+ * `"title": null` rather than dropping the key. Every render site coalesces it
+ * to 'Untitled Conversation', which stays correct for null as it was for
+ * undefined.
+ */
+export type Conversation = components['schemas']['ConversationResponse'];
 
 interface ConversationParticipant {
   id: number;

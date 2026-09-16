@@ -156,7 +156,9 @@ type GameListingMetadataResponse struct {
 
 // GameListingResponse represents the full game listing response
 type GameListingResponse struct {
-	Games    []*EnrichedGameListItemResponse `json:"games"`
+	// nullable:"false": built with make([]*EnrichedGameListItemResponse,
+	// len(...)), so never nil. See PollResultsResponse for why the tag is needed.
+	Games    []*EnrichedGameListItemResponse `json:"games" nullable:"false"`
 	Metadata GameListingMetadataResponse     `json:"metadata"`
 }
 

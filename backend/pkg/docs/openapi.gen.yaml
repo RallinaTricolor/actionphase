@@ -2715,9 +2715,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - favorite_comment_ids
             type: object
@@ -3030,9 +3028,7 @@ components:
                 games:
                     items:
                         $ref: '#/components/schemas/EnrichedGameListItemResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 metadata:
                     $ref: '#/components/schemas/GameListingMetadataResponse'
             required:
@@ -3725,9 +3721,7 @@ components:
                 chain:
                     items:
                         $ref: '#/components/schemas/MessageResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_full_thread:
                     type: boolean
                 root_post_id:
@@ -4223,15 +4217,11 @@ components:
                 option_results:
                     items:
                         $ref: '#/components/schemas/OptionResult'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 other_responses:
                     items:
                         $ref: '#/components/schemas/OtherResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 poll:
                     $ref: '#/components/schemas/PollSummary'
                 show_individual_votes:
@@ -4435,9 +4425,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - post_id
                 - unread_comment_ids
@@ -5444,9 +5432,7 @@ components:
                 characters:
                     items:
                         $ref: '#/components/schemas/UserGameCharacter'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 created_at:
                     format: date-time
                     type: string
@@ -5613,9 +5599,7 @@ components:
                 games:
                     items:
                         $ref: '#/components/schemas/UserGame'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 metadata:
                     $ref: '#/components/schemas/UserGameHistoryMetadata'
                 user:

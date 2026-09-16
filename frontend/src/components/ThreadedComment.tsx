@@ -389,6 +389,12 @@ export const ThreadedComment = memo(function ThreadedComment({
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       reply_count: 0,
+      // Required on the wire: both are plain ints with no `omitempty`, so the
+      // server always sends them (0 included). A brand-new reply has neither
+      // comments nor edits. The hand-written Message type made them optional,
+      // which is why this literal omitted them.
+      comment_count: 0,
+      edit_count: 0,
       is_deleted: false,
       is_edited: false,
       is_draft: false,

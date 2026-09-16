@@ -8,46 +8,18 @@
 import type { components } from './api.gen';
 
 /**
- * User profile information
+ * User profile information. Generated.
  */
-export interface UserProfile {
-  id: number;
-  username: string;
-  display_name: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  created_at: string; // ISO 8601 timestamp
-  timezone: string;
-  is_admin: boolean;
-}
+export type UserProfile = components['schemas']['UserProfile'];
 
 /**
- * Character within a game (for game history)
- * Only populated for non-anonymous games
+ * Game in user's game history. Generated.
+ *
+ * `state` carries the GameState enum rather than a bare string, and
+ * `characters` is non-nullable -- an anonymous game yields an empty array, not
+ * null.
  */
-interface UserGameCharacter {
-  id: number;
-  name: string;
-  avatar_url: string | null;
-  character_type: string;
-}
-
-/**
- * Game in user's game history
- */
-export interface UserGame {
-  game_id: number;
-  title: string;
-  state: string;
-  is_anonymous: boolean;
-  user_role: string; // "player", "gm", "co_gm"
-  gm_username: string;
-  created_at: string; // ISO 8601 timestamp
-  updated_at: string; // ISO 8601 timestamp
-  start_date: string | null;
-  end_date: string | null;
-  characters: UserGameCharacter[]; // Empty array for anonymous games
-}
+export type UserGame = components['schemas']['UserGame'];
 
 /**
  * Pagination metadata for user game history. Generated.
@@ -55,13 +27,9 @@ export interface UserGame {
 export type UserGameHistoryMetadata = components['schemas']['UserGameHistoryMetadata'];
 
 /**
- * Complete user profile response from API
+ * Complete user profile response from API. Generated.
  */
-export interface UserProfileResponse {
-  user: UserProfile;
-  games: UserGame[];
-  metadata: UserGameHistoryMetadata;
-}
+export type UserProfileResponse = components['schemas']['UserProfileResponse'];
 
 /**
  * PATCH /users/me/profile — generated from the OpenAPI spec

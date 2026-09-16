@@ -48,15 +48,17 @@ export interface PollWithOptions extends Poll {
   user_vote_other_response?: string;
 }
 
-export interface PollVote {
-  id: number;
-  poll_id: number;
-  user_id: number;
-  selected_option_id?: number;
-  other_response?: string;
-  created_at: string;
-  updated_at?: string;
-}
+/**
+ * Generated — returned by POST /polls/{id}/vote.
+ *
+ * Three corrections against the hand-written shape it replaces. Both
+ * `selected_option_id` and `other_response` are REQUIRED but nullable rather
+ * than optional: each is a bare `*T` with no `omitempty`, so a vote sends the
+ * key it did not use as an explicit null. A vote carries exactly one of the two
+ * -- the server rejects a body with neither. `updated_at` is REQUIRED, not
+ * optional: it is a plain `time.Time`, always marshalled.
+ */
+export type PollVote = components['schemas']['PollVoteResponse'];
 
 interface VoterInfo {
   user_id: number;

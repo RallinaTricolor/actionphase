@@ -1943,17 +1943,20 @@ type UserProfile struct {
 
 // UserGame represents a game the user has participated in.
 type UserGame struct {
-	GameID      int32               `json:"game_id"`
-	Title       string              `json:"title"`
-	State       GameState           `json:"state"`
-	IsAnonymous bool                `json:"is_anonymous"`
-	UserRole    string              `json:"user_role"` // "player", "co_gm", "audience"
-	GMUsername  string              `json:"gm_username"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
-	StartDate   *time.Time          `json:"start_date"`
-	EndDate     *time.Time          `json:"end_date"`
-	Characters  []UserGameCharacter `json:"characters"` // Empty for anonymous games
+	GameID      int32      `json:"game_id"`
+	Title       string     `json:"title"`
+	State       GameState  `json:"state"`
+	IsAnonymous bool       `json:"is_anonymous"`
+	UserRole    string     `json:"user_role"` // "player", "co_gm", "audience"
+	GMUsername  string     `json:"gm_username"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	StartDate   *time.Time `json:"start_date"`
+	EndDate     *time.Time `json:"end_date"`
+	// nullable:"false": GetUserGames sets this to []core.UserGameCharacter{} on
+	// every map insert and only ever appends, so it is never nil -- an
+	// anonymous game yields an empty array, not null.
+	Characters []UserGameCharacter `json:"characters" nullable:"false"` // Empty for anonymous games
 }
 
 // UserGameCharacter represents a character the user played in a game.
@@ -1976,8 +1979,10 @@ type UserGameHistoryMetadata struct {
 
 // UserProfileResponse is the complete response for a user profile.
 type UserProfileResponse struct {
-	User     UserProfile             `json:"user"`
-	Games    []UserGame              `json:"games"`
+	User UserProfile `json:"user"`
+	// nullable:"false": GetUserGames returns make([]core.UserGame, 0,
+	// len(gameMap)), so this is never nil.
+	Games    []UserGame              `json:"games" nullable:"false"`
 	Metadata UserGameHistoryMetadata `json:"metadata"`
 }
 

@@ -4956,7 +4956,7 @@ export interface components {
         };
         FavoriteCommentIDsResponse: {
             /** @description Comments the caller has starred */
-            favorite_comment_ids: number[] | null;
+            favorite_comment_ids: number[];
         };
         FavoriteCommentRequest: {
             /** @description true stars the comment, false removes the star */
@@ -5113,7 +5113,7 @@ export interface components {
             total_pages: number;
         };
         GameListingResponse: {
-            games: components["schemas"]["EnrichedGameListItemResponse"][] | null;
+            games: components["schemas"]["EnrichedGameListItemResponse"][];
             metadata: components["schemas"]["GameListingMetadataResponse"];
         };
         GameLootTableContentResponse: {
@@ -5483,7 +5483,7 @@ export interface components {
             updated_at: string;
         };
         MessageThreadContextResponse: {
-            chain: components["schemas"]["MessageResponse"][] | null;
+            chain: components["schemas"]["MessageResponse"][];
             has_full_thread: boolean;
             /** Format: int32 */
             root_post_id: number;
@@ -5709,8 +5709,8 @@ export interface components {
             user_vote_other_response?: string;
         };
         PollResultsResponse: {
-            option_results: components["schemas"]["OptionResult"][] | null;
-            other_responses: components["schemas"]["OtherResponse"][] | null;
+            option_results: components["schemas"]["OptionResult"][];
+            other_responses: components["schemas"]["OtherResponse"][];
             poll: components["schemas"]["PollSummary"];
             show_individual_votes: boolean;
             /** Format: int32 */
@@ -5817,7 +5817,7 @@ export interface components {
             /** Format: int32 */
             post_id: number;
             /** @description Comments newer than the caller's read marker */
-            unread_comment_ids: number[] | null;
+            unread_comment_ids: number[];
         };
         PostUnreadInfoResponse: {
             /**
@@ -6319,7 +6319,7 @@ export interface components {
             username: string;
         };
         UserGame: {
-            characters: components["schemas"]["UserGameCharacter"][] | null;
+            characters: components["schemas"]["UserGameCharacter"][];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -6381,7 +6381,7 @@ export interface components {
             username: string;
         };
         UserProfileResponse: {
-            games: components["schemas"]["UserGame"][] | null;
+            games: components["schemas"]["UserGame"][];
             metadata: components["schemas"]["UserGameHistoryMetadata"];
             user: components["schemas"]["UserProfile"];
         };

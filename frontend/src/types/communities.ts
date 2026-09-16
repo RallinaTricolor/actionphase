@@ -108,29 +108,21 @@ export type AddModeratorRequest = components['schemas']['AddModeratorInputBody']
  * never ejects them from games already in progress. Removing an existing
  * participant stays the GM's decision.
  */
-export interface CommunityBan {
-  id: number;
-  community_id: number;
-  user_id: number;
-  username: string;
-  display_name?: string;
-  avatar_url?: string;
-  reason?: string;
-  banned_by_user_id?: number;
-  banned_by_username?: string;
-  banned_at: string;
-  /**
-   * Absent means PERMANENT. An expired ban is NOT deleted -- it stays on the
-   * list so a moderator can see it lapsed rather than watching it vanish.
-   */
-  expires_at?: string;
-  /**
-   * Whether the ban is being ENFORCED right now. Computed server-side from the
-   * clock, so never infer "banned" from a row's presence -- an expired ban is
-   * still a row. Render from this field alone.
-   */
-  is_active: boolean;
-}
+/**
+ * Generated.
+ *
+ * `expires_at` absent means PERMANENT. An expired ban is NOT deleted -- it stays
+ * on the list so a moderator can see it lapsed rather than watching it vanish,
+ * so never infer "banned" from a row's presence. Render from `is_active`, which
+ * the server computes from the clock at read time.
+ *
+ * `username` is OPTIONAL, which the hand-written type got wrong by requiring it.
+ * Two endpoints answer with this shape and only one fills it in: the banlist
+ * joins the users table, while POST .../bans returns the bare INSERT row via
+ * banFromDB, whose doc comment says "Callers needing the username re-list."
+ * Pinned by TestCommunityBanUsernameIsOptional.
+ */
+export type CommunityBan = components['schemas']['CommunityBan'];
 
 /**
  * One entry in a community's append-only ban audit log.

@@ -5,15 +5,14 @@
  * Only GMs can create/update/delete handouts. Players can view published handouts.
  */
 
-export interface Handout {
-  id: number;
-  game_id: number;
-  title: string;
-  content: string; // Markdown content
-  status: 'draft' | 'published';
-  created_at?: string;
-  updated_at?: string;
-}
+import type { components } from './api.gen';
+
+/**
+ * Generated. An exact match for the hand-written type it replaces, including
+ * `created_at` / `updated_at` staying optional -- both are `omitempty` pointers
+ * on the Go side, so an unset value omits the key.
+ */
+export type Handout = components['schemas']['HandoutResponse'];
 
 /**
  * A handout together with the game it belongs to, as returned by the cross-game
@@ -24,25 +23,17 @@ export interface HandoutWithGame extends Handout {
   game_title: string;
 }
 
-export interface HandoutComment {
-  id: number;
-  handout_id: number;
-  user_id: number;
-  parent_comment_id?: number | null;
-  content: string;
-  edit_count: number;
-  created_at?: string;
-  updated_at?: string;
-  edited_at?: string | null;
-  deleted_at?: string | null;
-  deleted_by_user_id?: number | null;
-}
+/**
+ * Generated. The nullable-looking fields are absent, never null: every one is an
+ * `omitempty` pointer on the Go side, so a nil value omits the key rather than
+ * marshalling `null`. The hand-written `| null` was fiction the wire never sent.
+ */
+export type HandoutComment = components['schemas']['HandoutCommentResponse'];
 
 // Request types
 //
 // Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
 // hand, so an unknown property is a build failure instead of a 422 at runtime.
-import type { components } from './api.gen';
 
 /** POST /games/{gameID}/handouts */
 export type CreateHandoutRequest = components['schemas']['CreateHandoutRequest'];

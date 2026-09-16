@@ -2,33 +2,18 @@
 
 import type { components } from './api.gen';
 
-export interface Message {
-  id: number;
-  game_id: number;
-  phase_id?: number;
-  author_id: number;
-  character_id: number;
-  content: string;
-  message_type: 'post' | 'comment' | 'private_message';
-  parent_id?: number;
-  thread_depth: number;
-  author_username: string;
-  character_name: string;
-  character_avatar_url?: string | null;
-  comment_count?: number;
-  reply_count?: number;
-  is_edited: boolean;
-  is_deleted: boolean;
-  is_draft: boolean;
-  created_at: string;
-  updated_at: string;
-  mentioned_character_ids?: number[];
-  // Edit/Delete tracking fields
-  deleted_at?: string | null;
-  deleted_by_user_id?: number | null;
-  edited_at?: string | null;
-  edit_count?: number;
-}
+/**
+ * Generated.
+ *
+ * The edit/delete tracking fields and `character_avatar_url` are absent, never
+ * null: each is an `omitempty` pointer on the Go side, so a nil value omits the
+ * key rather than marshalling `null`. The hand-written `| null` was fiction.
+ *
+ * `comment_count` and `edit_count` are REQUIRED here, not optional -- both are
+ * plain int fields with no `omitempty`, so they are always present (0 included).
+ * MessageResponse even carries a Go comment saying so for comment_count.
+ */
+export type Message = components['schemas']['MessageResponse'];
 
 // Request types
 //
@@ -50,24 +35,18 @@ export interface GetPostsParams {
   offset?: number;
 }
 
-// Read tracking types
-export interface ReadMarker {
-  id: number;
-  user_id: number;
-  game_id: number;
-  post_id: number;
-  last_read_comment_id?: number | null;
-  last_read_at: string;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * Read tracking — generated.
+ *
+ * `last_read_comment_id` is REQUIRED but nullable, not optional: the Go field is
+ * a bare `*int32` with no `omitempty`, so the key is always present and carries
+ * an explicit null when only the post itself was read. That is the opposite of
+ * the request shape -- MarkPostReadRequest OMITS the key to mean the same thing.
+ */
+export type ReadMarker = components['schemas']['ReadMarkerResponse'];
 
-export interface PostUnreadInfo {
-  post_id: number;
-  post_created_at: string;
-  total_comments: number;
-  latest_comment_at?: string | null;
-}
+/** Generated. `latest_comment_at` is absent rather than null -- see Message. */
+export type PostUnreadInfo = components['schemas']['PostUnreadInfoResponse'];
 
 /**
  * POST /games/{gameID}/posts/{postId}/mark-read — generated.
@@ -79,11 +58,8 @@ export interface PostUnreadInfo {
  */
 export type MarkPostReadRequest = components['schemas']['MarkPostReadRequest'];
 
-// Unread comment IDs for posts (new since last visit)
-export interface PostUnreadComments {
-  post_id: number;
-  unread_comment_ids: number[];
-}
+// Unread comment IDs for posts (new since last visit). Generated.
+export type PostUnreadComments = components['schemas']['PostUnreadCommentsResponse'];
 
 // Manually read comment IDs for a post (user-controlled, persisted)
 export interface ManualCommentReads {
@@ -108,15 +84,11 @@ export interface PaginatedCommentsResponse {
 
 // Deep-link thread context (for jumping to a nested comment).
 // Returned by GET /games/{id}/messages/{messageId}/thread-context.
-export interface MessageThreadContext {
-  // Target comment plus up to max_parents nearest ancestors,
-  // ordered parent-to-child (nearest included ancestor → target).
-  chain: Message[];
-  // True top-level post ID, even when the chain is trimmed above the target.
-  root_post_id: number;
-  // Whether the chain reaches the root post (nothing trimmed above).
-  has_full_thread: boolean;
-}
+//
+// Generated. `chain` is non-nullable: it is built with
+// make([]*MessageResponse, len(...)) and carries the target comment plus up to
+// max_parents nearest ancestors, ordered parent-to-child.
+export type MessageThreadContext = components['schemas']['MessageThreadContextResponse'];
 
 // Comment with parent context (for "New Comments" view)
 export interface CommentWithParent {
@@ -220,9 +192,8 @@ export interface FavoriteCommentsResponse {
   };
 }
 
-export interface FavoriteCommentIDsResponse {
-  favorite_comment_ids: number[];
-}
+export type FavoriteCommentIDsResponse =
+  components['schemas']['FavoriteCommentIDsResponse'];
 
 // A post or comment by a specific character (for Character Page)
 export interface CharacterMessage {

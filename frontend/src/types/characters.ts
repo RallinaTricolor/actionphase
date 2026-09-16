@@ -73,17 +73,22 @@ export interface ControllableCharacterWithGame extends Omit<Character, 'is_activ
   user_role: 'gm' | 'co_gm' | 'player' | 'audience';
 }
 
-export interface CharacterData {
-  id: number;
-  character_id: number;
-  module_type: string;
-  field_name: string;
-  field_value?: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * One sheet field — generated.
+ *
+ * Two fields are weaker than the hand-written shape claimed, both because the
+ * underlying columns are nullable:
+ *
+ * `is_public` is OPTIONAL (`*bool` with `omitempty`, via ptrBool). It is absent
+ * for a legacy row whose column is NULL. Absent must be treated as PRIVATE --
+ * every read site here already does, since `!undefined` is true, so an unknown
+ * field stays hidden. Preserve that direction: this gates who may read a
+ * character's private sheet fields, and defaulting it to public would leak them.
+ *
+ * `field_type` is REQUIRED but nullable -- a legacy NULL row reports unknown
+ * rather than silently claiming to be text.
+ */
+export type CharacterData = components['schemas']['CharacterDataResponse'];
 
 // Request types
 //

@@ -138,9 +138,14 @@ type PollVoteResponse struct {
 
 // PollResultsResponse is the API response for poll results.
 type PollResultsResponse struct {
-	Poll                PollSummary     `json:"poll"`
-	OptionResults       []OptionResult  `json:"option_results"`
-	OtherResponses      []OtherResponse `json:"other_responses"` // Always include even if empty array
+	Poll PollSummary `json:"poll"`
+	// nullable:"false" on both: huma renders every bare []T as nullable because
+	// a nil Go slice marshals to `null`, but these are make()'d to a known
+	// length before the response is built, so neither can be nil. Without it the
+	// generated client type is `T[] | null` and PollResults.tsx has to guard a
+	// case that cannot happen.
+	OptionResults       []OptionResult  `json:"option_results" nullable:"false"`
+	OtherResponses      []OtherResponse `json:"other_responses" nullable:"false"` // Always include even if empty array
 	TotalVotes          int32           `json:"total_votes"`
 	ShowIndividualVotes bool            `json:"show_individual_votes"`
 }

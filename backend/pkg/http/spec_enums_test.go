@@ -289,3 +289,114 @@ func TestCurrentUserResponseHasASchema(t *testing.T) {
 			schema)
 	}
 }
+
+// TestResponseArraysAreNotNullable pins array fields that can never be null.
+//
+// huma renders EVERY bare []T as nullable (DefaultArrayNullable), because a nil
+// Go slice marshals to JSON `null`. That default is wrong for these seven: each
+// is provably non-nil at its construction site, so the spec over-reports and the
+// generated TypeScript forces `?? []` handling at call sites that can never see
+// null. PollResults.tsx reads `results.other_responses.length` unguarded today
+// and is correct to.
+//
+// Traced individually rather than assumed -- four are make()'d to a known length
+// and two carry an explicit `if ids == nil { ids = []int32{} }` guard written by
+// someone who had already hit this:
+//
+//	PollResultsResponse.option_results   make([]OptionResult, len(...))
+//	PollResultsResponse.other_responses  make([]OtherResponse, len(...))
+//	MessageThreadContextResponse.chain   make([]*MessageResponse, len(...))
+//	GameListingResponse.games            make([]*EnrichedGameListItemResponse, len(...))
+//	UserProfileResponse.games            make([]core.UserGame, 0, len(gameMap))
+//	PostUnreadCommentsResponse.unread_comment_ids  unreadIDs := []int32{} per row
+//	FavoriteCommentIDsResponse.favorite_comment_ids  explicit nil guard
+//	UserGame.characters                  []core.UserGameCharacter{} on map insert
+//
+// NOT included, deliberately: GameListingMetadataResponse.available_states is
+// genuinely nullable -- core.GameStates returns nil for a nil input, and the
+// service assigns the query result straight through. Its `| null` is accurate,
+// which is why these are tagged per field rather than by flipping the global
+// huma.DefaultArrayNullable.
+//
+// Fixed with `nullable:"false"` per field rather than flipping the global
+// DefaultArrayNullable: 46 array properties exist across the spec, including
+// request bodies whose nullability has not been traced, and only these seven
+// were verified.
+func TestResponseArraysAreNotNullable(t *testing.T) {
+	doc := specDocument(t)
+
+	for _, tc := range []struct{ schema, prop string }{
+		{"PollResultsResponse", "option_results"},
+		{"PollResultsResponse", "other_responses"},
+		{"MessageThreadContextResponse", "chain"},
+		{"GameListingResponse", "games"},
+		{"UserProfileResponse", "games"},
+		{"PostUnreadCommentsResponse", "unread_comment_ids"},
+		{"FavoriteCommentIDsResponse", "favorite_comment_ids"},
+		{"UserGame", "characters"},
+	} {
+		t.Run(tc.schema+"."+tc.prop, func(t *testing.T) {
+			p := schemaProperty(t, doc, tc.schema, tc.prop)
+
+			// A nullable array renders as type: [array, null]; a non-nullable
+			// one as the bare string "array".
+			switch got := p["type"].(type) {
+			case string:
+				if got != "array" {
+					t.Errorf("%s.%s has type %q, want \"array\"", tc.schema, tc.prop, got)
+				}
+			default:
+				t.Errorf("%s.%s renders as %v -- the generated TypeScript is "+
+					"`T[] | null`, forcing null handling at call sites that can "+
+					"never see null", tc.schema, tc.prop, got)
+			}
+		})
+	}
+}
+
+// TestCommunityBanUsernameIsOptional pins an asymmetry between the two
+// endpoints that both answer with a CommunityBan.
+//
+// The banlist (GET /communities/{slug}/bans) joins the users table, so every
+// row it returns carries a username. The ban itself (POST .../bans) returns the
+// bare INSERT ... RETURNING row, which has no joined user columns at all --
+// banFromDB sets ID, CommunityID, UserID, Reason, BannedByUserID, BannedAt,
+// ExpiresAt and IsActive, and nothing else. Its own doc comment says so:
+// "Callers needing the username re-list."
+//
+// So `username` is genuinely absent on one of the two responses, and the
+// `omitempty` on core.CommunityBan.Username is correct. This test exists
+// because the hand-written frontend type declared it REQUIRED, which would
+// promise a field the create path never sends -- a consumer that rendered
+// `ban.username` off the mutation result would print "undefined" with no
+// build-time warning. Pinning it optional here keeps the generated type honest.
+//
+// If a future change joins the username onto the create path too, this test
+// should be deleted rather than worked around -- but delete it deliberately,
+// after checking BOTH converters in
+// pkg/db/services/communities/converters.go.
+func TestCommunityBanUsernameIsOptional(t *testing.T) {
+	doc := specDocument(t)
+
+	components, _ := doc["components"].(map[string]any)
+	schemas, _ := components["schemas"].(map[string]any)
+	ban, ok := schemas["CommunityBan"].(map[string]any)
+	if !ok {
+		t.Fatal("CommunityBan is not in the rendered spec")
+	}
+
+	// The property must exist -- optional is not the same as absent.
+	props, _ := ban["properties"].(map[string]any)
+	if _, hasProp := props["username"]; !hasProp {
+		t.Fatal("CommunityBan has no `username` property at all; the banlist " +
+			"joins it and the management view renders it")
+	}
+
+	for _, raw := range ban["required"].([]any) {
+		if s, _ := raw.(string); s == "username" {
+			t.Error("CommunityBan requires `username`, but POST /communities/" +
+				"{slug}/bans returns banFromDB, which never sets it -- the " +
+				"generated client type would promise a field that response omits")
+		}
+	}
+}
