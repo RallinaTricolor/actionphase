@@ -400,3 +400,47 @@ func TestCommunityBanUsernameIsOptional(t *testing.T) {
 		}
 	}
 }
+
+// TestUpdateGameStateResponseMatchesWhatItSends is the regression test for a
+// spec that advertises a contract the handler does not honour.
+//
+// PUT /games/{gameID}/state declares GameResponse, which has 28 properties. The
+// handler fills SEVEN of them -- id, title, description, gm_user_id, state,
+// created_at, updated_at -- and its own comment says so. Everything else is
+// left at its zero value, which for the four booleans means they marshal as
+// `false` whatever the game actually has stored. A client that trusted the
+// declared type would read is_anonymous:false off a game that is anonymous.
+//
+// That is worse than an undocumented response: the spec is confidently wrong,
+// and the generated TypeScript spreads the error to every consumer. Nothing
+// merges this payload today (useGameStateManagement discards it and refetches),
+// so the fix is to declare the reduced shape rather than to widen the handler.
+//
+// This test pins the DECLARED schema to the fields actually assigned. If the
+// handler later starts sending the full game, update the expectation here --
+// after checking humaUpdateGameState, not by assuming.
+func TestUpdateGameStateResponseMatchesWhatItSends(t *testing.T) {
+	doc := specDocument(t)
+
+	paths, _ := doc["paths"].(map[string]any)
+	p, ok := paths["/games/{gameID}/state"].(map[string]any)
+	if !ok {
+		t.Fatal("/games/{gameID}/state is not in the rendered spec")
+	}
+	put, _ := p["put"].(map[string]any)
+	responses, _ := put["responses"].(map[string]any)
+	ok200, _ := responses["200"].(map[string]any)
+	content, _ := ok200["content"].(map[string]any)
+	media, _ := content["application/json"].(map[string]any)
+	schema, _ := media["schema"].(map[string]any)
+
+	ref, _ := schema["$ref"].(string)
+	if ref == "#/components/schemas/GameResponse" {
+		t.Fatal("PUT /games/{gameID}/state still declares GameResponse, but " +
+			"humaUpdateGameState assigns only 7 of its 28 fields -- the four " +
+			"booleans (is_anonymous, auto_accept_audience, " +
+			"allow_group_conversations, portrait_avatars) serialize as false " +
+			"regardless of what the game has stored, so the spec tells every " +
+			"client something the server never promised")
+	}
+}

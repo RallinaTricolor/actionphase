@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GAME_STATE_LABELS, GAME_STATE_COLORS } from '../types/games';
-import type { GameListItem, GameWithDetails, GameParticipant } from '../types/games';
+import type { GameWithDetails, GameParticipant } from '../types/games';
 import { Badge } from './ui';
 import { format } from 'date-fns';
 
 interface GameHeaderProps {
-  game: GameListItem | GameWithDetails;
+  game: GameWithDetails;
   participants?: GameParticipant[];
   playerCount?: string; // e.g., "3/5" or "3" for current players / max
   pinnedAction?: React.ReactNode; // Always visible on mobile, even when collapsed (primary player CTAs)

@@ -2547,11 +2547,18 @@ components:
                     format: date-time
                     type: string
                 current_phase_type:
+                    enum:
+                        - action
+                        - common_room
                     type: string
                 current_players:
                     format: int32
                     type: integer
                 deadline_urgency:
+                    enum:
+                        - critical
+                        - warning
+                        - normal
                     type: string
                 description:
                     type: string
@@ -2601,6 +2608,12 @@ components:
                     format: date-time
                     type: string
                 user_relationship:
+                    enum:
+                        - gm
+                        - co_gm
+                        - participant
+                        - audience
+                        - applied
                     type: string
             required:
                 - id
@@ -3209,6 +3222,46 @@ components:
                 - created_at
                 - updated_at
             type: object
+        GameStateChangedResponse:
+            additionalProperties: false
+            properties:
+                created_at:
+                    format: date-time
+                    type: string
+                description:
+                    type: string
+                gm_user_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
+                    type: string
+                title:
+                    type: string
+                updated_at:
+                    format: date-time
+                    type: string
+            required:
+                - id
+                - title
+                - description
+                - gm_user_id
+                - state
+                - created_at
+                - updated_at
+            type: object
         GameWithDetailsResponse:
             additionalProperties: false
             properties:
@@ -3291,6 +3344,7 @@ components:
                     format: date-time
                     type: string
             required:
+                - current_players
                 - id
                 - title
                 - description
@@ -3300,7 +3354,6 @@ components:
                 - auto_accept_audience
                 - allow_group_conversations
                 - portrait_avatars
-                - current_players
                 - created_at
                 - updated_at
             type: object
@@ -8523,7 +8576,7 @@ paths:
             tags:
                 - Games
         get:
-            description: Returns the game's settings and metadata.
+            description: Returns the game's settings and metadata, the GM's username, the current player count and the owning community. Identical to getGameDetails.
             operationId: getGame
             parameters:
                 - description: Game ID
@@ -8539,7 +8592,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameResponse'
+                                $ref: '#/components/schemas/GameWithDetailsResponse'
                     description: OK
                 "401":
                     description: Not authenticated
@@ -9873,7 +9926,7 @@ paths:
                 - Deadlines
     /games/{gameID}/details:
         get:
-            description: As getGame, plus the GM's username and the current player count.
+            description: 'Alias of getGame, kept for existing callers: the two answer with the same shape from the same query.'
             operationId: getGameDetails
             parameters:
                 - description: Game ID
@@ -12817,7 +12870,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameResponse'
+                                $ref: '#/components/schemas/GameStateChangedResponse'
                     description: OK
                 "400":
                     description: Invalid request body
@@ -12893,29 +12946,6 @@ paths:
             summary: Unread comment IDs per post
             tags:
                 - Common Room
-    /games/recruiting:
-        get:
-            description: Games currently accepting applications.
-            operationId: listRecruitingGames
-            responses:
-                "200":
-                    content:
-                        application/json:
-                            schema:
-                                items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
-                    description: OK
-                "401":
-                    description: Not authenticated
-            security:
-                - BearerAuth: []
-            summary: List recruiting games
-            tags:
-                - Games
     /handouts:
         get:
             description: Returns published handouts from every in_progress game the caller takes part in, each carrying its game's title so the client can group without a request per game.

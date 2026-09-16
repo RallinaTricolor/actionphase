@@ -71,6 +71,9 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
     max_players: 5,
     current_players: 3,
     is_anonymous: false,
+    auto_accept_audience: false,
+    allow_group_conversations: false,
+    portrait_avatars: false,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   };

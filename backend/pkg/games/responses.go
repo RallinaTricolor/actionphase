@@ -7,7 +7,16 @@ import (
 	"actionphase/pkg/core"
 )
 
-// GameResponse represents a basic game response
+// GameResponse is a game's own stored settings and metadata -- everything that
+// lives on the `games` row itself, with no joins.
+//
+// This is the WRITE-PATH shape: create and update answer with it because
+// neither has a joined row in hand, only the row it just wrote. Reads use
+// GameWithDetailsResponse, which embeds this and adds the joined columns.
+//
+// Nothing here is role-conditional. A game exposes the same fields to every
+// caller entitled to see it at all, which is why there is no viewer-dependent
+// variant of this type the way there is for characters.
 type GameResponse struct {
 	ID                      int32          `json:"id"`
 	Title                   string         `json:"title"`
@@ -44,32 +53,20 @@ func (rd *GameResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// GameWithDetailsResponse represents a game response with additional details
+// GameWithDetailsResponse is what every game READ answers with: the stored row
+// plus the columns GetGameWithDetails joins in.
+//
+// EMBEDS GameResponse rather than restating it. The two were near-verbatim
+// copies -- the same 13 fields and the same 12 null-unwrapping blocks -- and
+// they had already drifted: community_name and community_slug were added here
+// and never to GameResponse, so the two endpoints disagreed about what a game
+// is. Embedding makes that drift impossible; huma merges anonymous fields into
+// the parent object, so the wire shape is flat exactly as before.
+//
+// Everything added here is a JOIN or an aggregate, not a visibility decision.
 type GameWithDetailsResponse struct {
-	ID                      int32          `json:"id"`
-	Title                   string         `json:"title"`
-	Description             string         `json:"description"`
-	GMUserID                int32          `json:"gm_user_id"`
-	GMUsername              string         `json:"gm_username,omitempty"`
-	State                   core.GameState `json:"state"`
-	Genre                   string         `json:"genre,omitempty"`
-	StartDate               *time.Time     `json:"start_date,omitempty"`
-	EndDate                 *time.Time     `json:"end_date,omitempty"`
-	RecruitmentDeadline     *time.Time     `json:"recruitment_deadline,omitempty"`
-	MaxPlayers              int32          `json:"max_players,omitempty"`
-	IsAnonymous             bool           `json:"is_anonymous"`
-	AutoAcceptAudience      bool           `json:"auto_accept_audience"`
-	AllowGroupConversations bool           `json:"allow_group_conversations"`
-	PortraitAvatars         bool           `json:"portrait_avatars"`
-	BannerURL               *string        `json:"banner_url,omitempty"`
-	// Same pointer semantics as GameResponse.CommunityID: nil means the game
-	// predates communities (req 5), never community 0.
-	//
-	// This endpoint -- not GET /games/{id} -- is what the game page loads, so
-	// the edit form hydrates its community picker from here. Omitting the
-	// field made the picker fall back to "-- Choose a community --" on games
-	// that plainly had one.
-	CommunityID *int32 `json:"community_id,omitempty"`
+	GameResponse
+	GMUsername string `json:"gm_username,omitempty"`
 	// Name and slug of the owning community, joined alongside CommunityID so a
 	// game surface can label and link it without a second request. Both nil for
 	// a legacy game, exactly like CommunityID.
@@ -77,22 +74,38 @@ type GameWithDetailsResponse struct {
 	// The Info tab's community section needs these even when the community has
 	// published NO documents -- naming the community is not conditional on it
 	// having written anything.
-	CommunityName       *string `json:"community_name,omitempty"`
-	CommunitySlug       *string `json:"community_slug,omitempty"`
-	CommonRoomOpenDay   *int16  `json:"common_room_open_day,omitempty"`
-	CommonRoomOpenTime  *string `json:"common_room_open_time,omitempty"`
-	CommonRoomCloseDay  *int16  `json:"common_room_close_day,omitempty"`
-	CommonRoomCloseTime *string `json:"common_room_close_time,omitempty"`
-	ScheduleTimezone    *string `json:"schedule_timezone,omitempty"`
-	// As stored: sparse, containing only genuine GM overrides. See GameResponse.
-	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty"`
-	CurrentPlayers int64                      `json:"current_players"`
-	CreatedAt      time.Time                  `json:"created_at"`
-	UpdatedAt      time.Time                  `json:"updated_at"`
+	CommunityName  *string `json:"community_name,omitempty"`
+	CommunitySlug  *string `json:"community_slug,omitempty"`
+	CurrentPlayers int64   `json:"current_players"`
 }
 
 func (rd *GameWithDetailsResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
+}
+
+// GameStateChangedResponse is what PUT /games/{gameID}/state answers with.
+//
+// Deliberately NOT GameResponse. The handler assigns exactly these seven
+// fields, so declaring the full game shape advertised 21 more that it never
+// sets -- and the four booleans among them (is_anonymous, auto_accept_audience,
+// allow_group_conversations, portrait_avatars) would marshal as `false`
+// regardless of what the game has stored. A client that trusted the declared
+// type would read is_anonymous:false off a game that is anonymous.
+//
+// The reduced shape is the honest one rather than a regression: a state change
+// answers "the move succeeded, here is the new state", and a caller needing the
+// game's settings refetches. useGameStateManagement already does exactly that,
+// discarding this body and calling refetchGameData.
+//
+// Pinned by TestUpdateGameStateResponseMatchesWhatItSends in pkg/http.
+type GameStateChangedResponse struct {
+	ID          int32          `json:"id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	GMUserID    int32          `json:"gm_user_id"`
+	State       core.GameState `json:"state"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
 // GameApplicationResponse represents a game application
@@ -114,7 +127,18 @@ func (rd *GameApplicationResponse) Render(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-// EnrichedGameListItemResponse represents an enriched game list item with user context
+// EnrichedGameListItemResponse is one row of the games listing.
+//
+// This is the ONE game shape that genuinely differs rather than differing by
+// accident: user_relationship is viewer-dependent, and the phase and activity
+// columns are aggregates computed by the listing query alone. A read of a
+// single game cannot answer them, so this is not GameWithDetailsResponse with
+// extras bolted on.
+//
+// It deliberately does NOT embed GameResponse. The listing query returns
+// genre and max_players as nullable columns, so they are pointers here where
+// the base type has values -- embedding would silently change the wire shape
+// of two fields to make the Go read tidier.
 type EnrichedGameListItemResponse struct {
 	ID                      int32          `json:"id"`
 	Title                   string         `json:"title"`
@@ -135,11 +159,18 @@ type EnrichedGameListItemResponse struct {
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
 	CurrentPlayers          int32          `json:"current_players"`
-	UserRelationship        *string        `json:"user_relationship,omitempty"`
-	CurrentPhaseType        *string        `json:"current_phase_type,omitempty"`
-	CurrentPhaseDeadline    *time.Time     `json:"current_phase_deadline,omitempty"`
-	DeadlineUrgency         string         `json:"deadline_urgency"`
-	HasRecentActivity       bool           `json:"has_recent_activity"`
+	// The viewer's relationship to this game. Absent for a signed-out caller.
+	//
+	// 'none' is NOT a member: the listing query emits it, but
+	// interfaceToStringPtr maps both "" and "none" to nil, so it can never
+	// reach the wire. Absent IS "none".
+	UserRelationship *string `json:"user_relationship,omitempty" enum:"gm,co_gm,participant,audience,applied"`
+	// Absent when the game has no active phase.
+	CurrentPhaseType     *string    `json:"current_phase_type,omitempty" enum:"action,common_room"`
+	CurrentPhaseDeadline *time.Time `json:"current_phase_deadline,omitempty"`
+	// Always present: the listing query's CASE falls through to 'normal'.
+	DeadlineUrgency   string `json:"deadline_urgency" enum:"critical,warning,normal"`
+	HasRecentActivity bool   `json:"has_recent_activity"`
 }
 
 // GameListingMetadataResponse represents metadata about the game listing

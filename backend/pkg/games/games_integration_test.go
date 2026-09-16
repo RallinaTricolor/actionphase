@@ -162,7 +162,10 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 			router.ServeHTTP(w, req)
 			core.AssertEqual(t, 200, w.Code, "Game state update to "+step+" should succeed")
 
-			var response GameResponse
+			// GameStateChangedResponse, not GameResponse: this endpoint answers
+			// with the reduced shape, and decoding into the full one would
+			// quietly read zero values for the 21 fields it never sends.
+			var response GameStateChangedResponse
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			core.AssertNoError(t, err, "Response should be valid JSON")
 			core.AssertEqual(t, core.GameState(step), response.State, "Response body should reflect new state")
@@ -231,7 +234,8 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
-	// Update game to recruiting state for recruiting games test
+	// Move the game out of setup so it is visible to the listing endpoints
+	// below, which is the state a real game is in when anyone browses for it.
 	_, err = gameService.UpdateGameState(context.Background(), createdGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Game state update should succeed")
 
@@ -267,31 +271,11 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		core.AssertTrue(t, found, "Created game should be in the response")
 	})
 
-	// Test get recruiting games (authenticated)
-	t.Run("get_recruiting_games", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/games/recruiting", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		core.AssertEqual(t, 200, w.Code, "Get recruiting games should succeed")
-
-		var response []map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
-
-		// New games should be in recruiting state by default
-		found := false
-		for _, game := range response {
-			if int32(game["id"].(float64)) == createdGame.ID {
-				core.AssertEqual(t, "recruitment", game["state"].(string), "Game should be recruiting")
-				found = true
-				break
-			}
-		}
-		core.AssertTrue(t, found, "Recruiting game should be in the response")
-	})
+	// GET /games/recruiting was removed as redundant: the filtered listing
+	// answers the same question server-side via `GET /games/?states=recruitment`,
+	// with pagination and a typed response instead of []map[string]any. Its
+	// subtest went with it; get_all_games above covers the listing this game
+	// now appears in.
 
 	// Test get single game (authenticated)
 	t.Run("get_single_game", func(t *testing.T) {
@@ -751,48 +735,6 @@ func BenchmarkGameAPI_CreateGame(b *testing.B) {
 
 		if w.Code != 201 {
 			b.Fatalf("Game creation failed with status %d", w.Code)
-		}
-	}
-}
-
-func BenchmarkGameAPI_GetAllGames(b *testing.B) {
-	testDB := core.NewTestDatabase(b)
-	defer testDB.Close()
-	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
-
-	app := core.NewTestApp(testDB.Pool)
-
-	router := setupGameTestRouter(app, testDB)
-	fixtures := testDB.SetupFixtures(b)
-
-	// Create auth token for test user
-	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
-	if err != nil {
-		b.Fatalf("Test token creation should succeed: %v", err)
-	}
-
-	// Create some test games
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	for i := 0; i < 10; i++ {
-		_, _ = gameService.CreateGame(context.Background(), core.CreateGameRequest{
-			Title:       "Benchmark Game " + strconv.Itoa(i),
-			Description: "A game for benchmark testing",
-			GMUserID:    int32(fixtures.TestUser.ID),
-			CommunityID: int32(fixtures.TestCommunity.ID),
-		})
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("GET", "/api/v1/games/public", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		if w.Code != 200 {
-			b.Fatalf("Get all games failed with status %d", w.Code)
 		}
 	}
 }

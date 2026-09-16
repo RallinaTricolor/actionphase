@@ -1,12 +1,12 @@
 import { BaseApiClient } from './client';
 import type {
-  Game,
+  GameWritten,
   GameWithDetails,
-  GameListItem,
   GameParticipant,
   CreateGameRequest,
   UpdateGameRequest,
   UpdateGameStateRequest,
+  GameStateChangedResponse,
   ApplyToGameRequest,
   GameApplication,
   PublicGameApplicant,
@@ -33,14 +33,6 @@ import type { GameStats } from '../../types/gameStats';
  */
 export class GamesApi extends BaseApiClient {
   // Game CRUD endpoints
-  async getAllGames() {
-    return this.client.get<GameListItem[]>('/api/v1/games/public');
-  }
-
-  async getRecruitingGames() {
-    return this.client.get<GameListItem[]>('/api/v1/games/recruiting');
-  }
-
   async getFilteredGames(filters?: GameListingFilters) {
     // Build query string from filters
     const params = new URLSearchParams();
@@ -76,8 +68,13 @@ export class GamesApi extends BaseApiClient {
     return this.client.get<GameListingResponse>(url);
   }
 
+  /**
+   * Both game reads answer with the SAME shape from the same query — there is
+   * no field a caller of one is entitled to and a caller of the other is not.
+   * `/details` is kept only so existing callers keep working.
+   */
   async getGame(id: number) {
-    return this.client.get<Game>(`/api/v1/games/${id}`);
+    return this.client.get<GameWithDetails>(`/api/v1/games/${id}`);
   }
 
   async getGameWithDetails(id: number) {
@@ -89,19 +86,33 @@ export class GamesApi extends BaseApiClient {
   }
 
   async createGame(data: CreateGameRequest) {
-    return this.client.post<Game>('/api/v1/games', data);
+    return this.client.post<GameWritten>('/api/v1/games', data);
   }
 
   async updateGame(id: number, data: UpdateGameRequest) {
-    return this.client.put<Game>(`/api/v1/games/${id}`, data);
+    return this.client.put<GameWritten>(`/api/v1/games/${id}`, data);
   }
 
   async deleteGame(id: number) {
     return this.client.delete(`/api/v1/games/${id}`);
   }
 
+  /**
+   * Move a game to a new state.
+   *
+   * Answers with GameStateChangedResponse, NOT a full game: the endpoint sends
+   * id, title, description, gm_user_id, state and the timestamps, and nothing
+   * else. It used to declare the full GameResponse, which meant the four
+   * settings booleans read as `false` on every response regardless of what the
+   * game had stored.
+   *
+   * Refetch the game if you need its settings -- useGameStateManagement does.
+   */
   async updateGameState(id: number, data: UpdateGameStateRequest) {
-    return this.client.put<Game>(`/api/v1/games/${id}/state`, data);
+    return this.client.put<GameStateChangedResponse>(
+      `/api/v1/games/${id}/state`,
+      data
+    );
   }
 
   async leaveGame(id: number) {

@@ -1,64 +1,42 @@
 import type { CharacterSheetConfig } from './characters';
 import type { components } from './api.gen';
 
-export interface Game {
-  id: number;
-  title: string;
-  description: string;
-  gm_user_id: number;
-  state: GameState;
-  genre?: string;
-  start_date?: string;
-  end_date?: string;
-  recruitment_deadline?: string;
-  max_players?: number;
-  is_anonymous?: boolean;
-  auto_accept_audience?: boolean;
-  allow_group_conversations?: boolean;
-  portrait_avatars?: boolean;
-  /**
-   * Sparse per-game character sheet overrides. Absent for almost every game:
-   * the backend stores only genuine GM overrides and omits the key entirely
-   * when there are none. Absent means "use the defaults", which live in
-   * `useSheetLabels` and nowhere else — never "this game has no tab labels".
-   */
-  character_sheet?: CharacterSheetConfig;
-  banner_url?: string | null;
-  /**
-   * OPTIONAL because games predating communities genuinely have none (req 5).
-   * Absent means "legacy game", never "community 0" -- surfaces must render
-   * nothing rather than a placeholder, and bans never apply to these.
-   */
-  community_id?: number;
-  /**
-   * Name and slug of the owning community, joined alongside community_id by
-   * GET /games/{id}/details -- the endpoint the game page loads. Absent for a
-   * legacy game, exactly like community_id.
-   *
-   * Present so a surface can NAME the community without a second request. The
-   * Info tab needs this even when the community has published no documents:
-   * naming it is not conditional on it having written anything.
-   */
-  community_name?: string;
-  community_slug?: string;
-  common_room_open_day?: number | null;
-  common_room_open_time?: string | null;
-  common_room_close_day?: number | null;
-  common_room_close_time?: string | null;
-  schedule_timezone?: string | null;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * A game as every read endpoint returns it — generated.
+ *
+ * ONE type, not three. `Game`, `GameWithDetails` and `GameListItem` used to be
+ * separate hand-written interfaces, but nothing about a game is
+ * role-conditional the way a character's fields are: the differences between
+ * them were only which JOINs each backend query happened to do, and the two
+ * read endpoints had identical auth. `GET /games/{id}` now answers with the
+ * joined shape too, so there is one thing to describe.
+ *
+ * `character_sheet` is sparse per-game overrides — absent for almost every
+ * game, meaning "use the defaults" (which live in `useSheetLabels` and nowhere
+ * else), never "this game has no tab labels".
+ *
+ * `community_id`/`community_name`/`community_slug` are absent for games
+ * predating communities (req 5). Absent means "legacy game", never
+ * "community 0": surfaces render nothing rather than a placeholder, and bans
+ * never apply to these.
+ */
+export type GameWithDetails = components['schemas']['GameWithDetailsResponse'];
 
-export interface GameWithDetails extends Game {
-  gm_username?: string;
-  current_players: number;
-}
+/**
+ * @deprecated Use `GameWithDetails`. Kept as an alias so the many existing
+ * references keep compiling; they describe the same wire shape.
+ */
+export type Game = GameWithDetails;
 
-export interface GameListItem extends Game {
-  gm_username: string;
-  current_players?: number;
-}
+/**
+ * What create and update answer with — generated.
+ *
+ * Narrower than `GameWithDetails` for a real reason, not an accidental one:
+ * a write has only the row it just wrote, so it cannot supply `gm_username`,
+ * `current_players` or the community join without a second query. Refetch if
+ * you need those — nothing currently does.
+ */
+export type GameWritten = components['schemas']['GameResponse'];
 
 export interface GameParticipant {
   id: number;
@@ -229,6 +207,22 @@ export type ReviewApplicationRequest = components['schemas']['ReviewApplicationB
  */
 export type UpdateGameStateRequest = components['schemas']['UpdateGameStateBody'];
 
+/**
+ * What PUT /games/{gameID}/state answers with — generated.
+ *
+ * Deliberately NOT `Game`. The endpoint sends id, title, description,
+ * gm_user_id, state and the timestamps, and nothing else. It used to declare
+ * the full GameResponse, so the four settings booleans
+ * (`is_anonymous`, `auto_accept_audience`, `allow_group_conversations`,
+ * `portrait_avatars`) read as `false` on every response regardless of what the
+ * game had stored — a lie the generated types spread to every consumer.
+ *
+ * Refetch the game if you need its settings. Pinned on the Go side by
+ * TestUpdateGameStateResponseMatchesWhatItSends.
+ */
+export type GameStateChangedResponse =
+  components['schemas']['GameStateChangedResponse'];
+
 export const GAME_STATE_LABELS: Record<GameState, string> = {
   setup: 'Setup',
   recruitment: 'Recruiting Players',
@@ -308,39 +302,29 @@ export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
 // Enhanced game listing types
 
 /**
- * The viewer's relationship to a game, as computed by the games-listing query.
+ * One row of the games listing — generated.
+ *
+ * The one game shape that genuinely differs rather than differing by accident:
+ * `user_relationship` is viewer-dependent, and the phase and activity columns
+ * are aggregates only the listing query computes. A single-game read cannot
+ * answer them, so this is not `GameWithDetails` with extras.
+ */
+export type EnrichedGameListItem = components['schemas']['EnrichedGameListItemResponse'];
+
+/**
+ * The viewer's relationship to a game — DERIVED from the spec, not maintained.
+ *
  * `participant` means specifically a *player*: co-GMs and audience members get
  * their own values so the games-list badge can name the role accurately.
+ *
+ * There is no `'none'` member. The listing query emits it, but the backend's
+ * `interfaceToStringPtr` maps both `''` and `'none'` to nil, so it never
+ * reaches the wire — absent IS "none". The hand-written union used to include
+ * it, which forced dead `none: ''` entries in both maps below.
  */
-export type UserRelationship = 'gm' | 'co_gm' | 'participant' | 'audience' | 'applied' | 'none';
-type DeadlineUrgency = 'critical' | 'warning' | 'normal';
-type PhaseType = 'action' | 'common_room';
+export type UserRelationship = NonNullable<EnrichedGameListItem['user_relationship']>;
 
-export interface EnrichedGameListItem extends Game {
-  gm_username: string;
-  current_players: number;
-  user_relationship?: UserRelationship;
-  current_phase_type?: PhaseType;
-  current_phase_deadline?: string;
-  deadline_urgency: DeadlineUrgency;
-  has_recent_activity: boolean;
-}
-
-interface GameListingMetadata {
-  total_count: number;
-  filtered_count: number;
-  available_states: GameState[];
-  page: number;
-  page_size: number;
-  total_pages: number;
-  has_next_page: boolean;
-  has_previous_page: boolean;
-}
-
-export interface GameListingResponse {
-  games: EnrichedGameListItem[];
-  metadata: GameListingMetadata;
-}
+export type GameListingResponse = components['schemas']['GameListingResponse'];
 
 export type ParticipationFilter = 'my_games' | 'applied' | 'not_joined';
 export type SortBy = 'recent_activity' | 'created' | 'start_date' | 'alphabetical';
@@ -363,8 +347,7 @@ export const USER_RELATIONSHIP_LABELS: Record<UserRelationship, string> = {
   co_gm: 'Co-GM',
   participant: 'Player',
   audience: 'Audience',
-  applied: 'Applied',
-  none: ''
+  applied: 'Applied'
 };
 
 /**
@@ -380,8 +363,7 @@ export const USER_RELATIONSHIP_BADGE_STYLES: Record<UserRelationship, string> = 
   co_gm: 'border-interactive-primary text-interactive-primary',
   participant: 'border-semantic-info text-semantic-info',
   audience: 'border-semantic-info text-semantic-info',
-  applied: 'border-semantic-warning text-semantic-warning',
-  none: ''
+  applied: 'border-semantic-warning text-semantic-warning'
 };
 
 export const SORT_BY_LABELS: Record<SortBy, string> = {

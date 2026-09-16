@@ -1391,7 +1391,7 @@ export interface paths {
         };
         /**
          * Get a game
-         * @description Returns the game's settings and metadata.
+         * @description Returns the game's settings and metadata, the GM's username, the current player count and the owning community. Identical to getGameDetails.
          */
         get: operations["getGame"];
         /**
@@ -1970,7 +1970,7 @@ export interface paths {
         };
         /**
          * Get a game with details
-         * @description As getGame, plus the GM's username and the current player count.
+         * @description Alias of getGame, kept for existing callers: the two answer with the same shape from the same query.
          */
         get: operations["getGameDetails"];
         put?: never;
@@ -3175,26 +3175,6 @@ export interface paths {
          * @description Lists which comments are newer than the caller's read marker, per post.
          */
         get: operations["getUnreadCommentIDs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/games/recruiting": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List recruiting games
-         * @description Games currently accepting applications.
-         */
-        get: operations["listRecruitingGames"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4863,10 +4843,12 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             current_phase_deadline?: string;
-            current_phase_type?: string;
+            /** @enum {string} */
+            current_phase_type?: "action" | "common_room";
             /** Format: int32 */
             current_players: number;
-            deadline_urgency: string;
+            /** @enum {string} */
+            deadline_urgency: "critical" | "warning" | "normal";
             description: string;
             /** Format: date-time */
             end_date?: string;
@@ -4893,7 +4875,8 @@ export interface components {
             title: string;
             /** Format: date-time */
             updated_at: string;
-            user_relationship?: string;
+            /** @enum {string} */
+            user_relationship?: "gm" | "co_gm" | "participant" | "audience" | "applied";
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -5184,6 +5167,23 @@ export interface components {
             schedule_timezone?: string;
             /** Format: date-time */
             start_date?: string;
+            /**
+             * @description Game lifecycle state
+             * @enum {string}
+             */
+            state: "setup" | "recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled";
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        GameStateChangedResponse: {
+            /** Format: date-time */
+            created_at: string;
+            description: string;
+            /** Format: int32 */
+            gm_user_id: number;
+            /** Format: int32 */
+            id: number;
             /**
              * @description Game lifecycle state
              * @enum {string}
@@ -10363,7 +10363,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GameResponse"];
+                    "application/json": components["schemas"]["GameWithDetailsResponse"];
                 };
             };
             /** @description Not authenticated */
@@ -15391,7 +15391,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GameResponse"];
+                    "application/json": components["schemas"]["GameStateChangedResponse"];
                 };
             };
             /** @description Invalid request body */
@@ -15487,35 +15487,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostUnreadCommentsResponse"][] | null;
-                };
-            };
-            /** @description Not authenticated */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    listRecruitingGames: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
                 };
             };
             /** @description Not authenticated */

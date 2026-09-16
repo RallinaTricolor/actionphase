@@ -46,7 +46,6 @@ describe('API Client - Basic Functionality', () => {
     expect(apiClient).toBeDefined()
     expect(typeof apiClient.auth.login).toBe('function')
     expect(typeof apiClient.auth.register).toBe('function')
-    expect(typeof apiClient.games.getAllGames).toBe('function')
     expect(typeof apiClient.getAuthToken).toBe('function')
     expect(typeof apiClient.setAuthToken).toBe('function')
     expect(typeof apiClient.removeAuthToken).toBe('function')

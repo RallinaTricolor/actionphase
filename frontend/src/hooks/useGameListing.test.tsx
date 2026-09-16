@@ -55,9 +55,12 @@ describe('useGameListing', () => {
     genre: 'Fantasy',
     current_players: 3,
     max_players: 5,
-    user_relationship: 'none',
     deadline_urgency: 'normal',
     has_recent_activity: true,
+    is_anonymous: false,
+    auto_accept_audience: false,
+    allow_group_conversations: false,
+    portrait_avatars: false,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   };
@@ -68,6 +71,11 @@ describe('useGameListing', () => {
       total_count: 10,
       filtered_count: 1,
       available_states: ['recruitment', 'in_progress'],
+      page: 1,
+      page_size: 20,
+      total_pages: 1,
+      has_next_page: false,
+      has_previous_page: false,
     },
   };
 

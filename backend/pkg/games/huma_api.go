@@ -133,9 +133,12 @@ func (h *Handler) requireLootTableInGame(ctx context.Context, tableID, gameID in
 	return nil
 }
 
-// gameResponseFrom builds the full game payload the create, read and update
-// endpoints share. The chi handlers repeated this block five times; the shape
-// was identical each time, so a single builder cannot drift.
+// gameResponseFrom builds the payload the create and update endpoints share.
+// The chi handlers repeated this block five times; the shape was identical each
+// time, so a single builder cannot drift.
+//
+// WRITE PATH ONLY. Reads go through gameWithDetailsFor: create and update have
+// only the row they just wrote, while a read can afford the joins.
 //
 // UpdateGameState deliberately does NOT use this — see humaUpdateGameState.
 func gameResponseFrom(game *models.Game) *GameResponse {
@@ -454,16 +457,14 @@ type gameWithDetailsOutput struct {
 	Body *GameWithDetailsResponse
 }
 
-type gameListingOutput struct {
-	Body *GameListingResponse
+// gameStateOutput carries the reduced shape the state endpoint really sends.
+// See GameStateChangedResponse for why it is not gameOutput.
+type gameStateOutput struct {
+	Body *GameStateChangedResponse
 }
 
-// recruitingGamesOutput keeps the untyped map shape the chi handler encoded,
-// and with it the nil-slice behaviour: an empty result serializes as null, not
-// [] (gotcha 12). Both are preserved rather than corrected, since either change
-// is frontend-visible.
-type recruitingGamesOutput struct {
-	Body []map[string]any
+type gameListingOutput struct {
+	Body *GameListingResponse
 }
 
 // participantsOutput is likewise a nil-able slice of maps: null when empty.
@@ -650,19 +651,30 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 	return &gameOutput{Body: gameResponseFrom(game)}, nil
 }
 
-func (h *Handler) humaGetGame(ctx context.Context, in *gameScopedInput) (*gameOutput, error) {
+// humaGetGame and humaGetGameWithDetails answer with the SAME shape, from the
+// same query. GET /games/{gameID} used to send the bare row from context, which
+// meant the two endpoints disagreed about what a game is for no reason beyond
+// which query each happened to call -- there is no field a caller of one is
+// entitled to and a caller of the other is not, and their auth is identical.
+//
+// /details is kept as an alias rather than removed so existing callers keep
+// working; both now route through gameWithDetailsFor.
+func (h *Handler) humaGetGame(ctx context.Context, in *gameScopedInput) (*gameWithDetailsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game")()
 
-	game, err := gameFromCtx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &gameOutput{Body: gameResponseFrom(game)}, nil
+	return h.gameWithDetailsFor(ctx)
 }
 
 func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInput) (*gameWithDetailsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_with_details")()
 
+	return h.gameWithDetailsFor(ctx)
+}
+
+// gameWithDetailsFor loads the game named by the request context and builds the
+// read-path payload. The joins it adds over the bare row cost three LEFT JOINs
+// on a single-row lookup.
+func (h *Handler) gameWithDetailsFor(ctx context.Context) (*gameWithDetailsOutput, error) {
 	gameID, err := gameIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -674,19 +686,21 @@ func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInpu
 	}
 
 	resp := &GameWithDetailsResponse{
-		ID:                      game.ID,
-		Title:                   game.Title,
-		Description:             game.Description,
-		GMUserID:                game.GmUserID,
-		State:                   core.GameState(game.State),
-		IsAnonymous:             game.IsAnonymous,
-		AutoAcceptAudience:      game.AutoAcceptAudience,
-		AllowGroupConversations: game.AllowGroupConversations,
-		PortraitAvatars:         game.PortraitAvatars,
-		CharacterSheet:          characterSheetResponse(game.CharacterSheet),
-		CurrentPlayers:          game.CurrentPlayers,
-		CreatedAt:               game.CreatedAt.Time,
-		UpdatedAt:               game.UpdatedAt.Time,
+		GameResponse: GameResponse{
+			ID:                      game.ID,
+			Title:                   game.Title,
+			Description:             game.Description,
+			GMUserID:                game.GmUserID,
+			State:                   core.GameState(game.State),
+			IsAnonymous:             game.IsAnonymous,
+			AutoAcceptAudience:      game.AutoAcceptAudience,
+			AllowGroupConversations: game.AllowGroupConversations,
+			PortraitAvatars:         game.PortraitAvatars,
+			CharacterSheet:          characterSheetResponse(game.CharacterSheet),
+			CreatedAt:               game.CreatedAt.Time,
+			UpdatedAt:               game.UpdatedAt.Time,
+		},
+		CurrentPlayers: game.CurrentPlayers,
 	}
 
 	if game.GmUsername.Valid {
@@ -853,7 +867,7 @@ type updateGameStateInput struct {
 // That is what the chi handler sent, and the frontend refetches the game after
 // a state change rather than merging this response, so the shape is preserved
 // as-is rather than quietly widened to gameResponseFrom.
-func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateInput) (*gameOutput, error) {
+func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateInput) (*gameStateOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_update_game_state")()
 
 	if err := h.requireGMFlag(ctx, "only the GM can update this game state", "Update game state forbidden"); err != nil {
@@ -889,7 +903,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 	h.settleRecruitment(ctx, game, updatedGame, string(in.Body.State), user.ID)
 	h.notifyStateChange(ctx, game, updatedGame, string(in.Body.State), user.ID)
 
-	return &gameOutput{Body: &GameResponse{
+	return &gameStateOutput{Body: &GameStateChangedResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
 		Description: updatedGame.Description,
@@ -1104,69 +1118,6 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 	}
 
 	return &gameListingOutput{Body: response}, nil
-}
-
-type emptyInput struct{}
-
-func (h *Handler) humaGetRecruitingGames(ctx context.Context, in *emptyInput) (*recruitingGamesOutput, error) {
-	defer h.App.ObsLogger.LogOperation(ctx, "api_get_recruiting_games")()
-
-	games, err := h.GameService.GetRecruitingGames(ctx)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get recruiting games", "error", err)
-	}
-
-	// Nil slice, not make(...): an empty list serializes as null here, matching
-	// the chi handler.
-	var response []map[string]any
-	for _, game := range games {
-		gameData := map[string]any{
-			"id":              game.ID,
-			"title":           game.Title,
-			"description":     game.Description,
-			"gm_user_id":      game.GmUserID,
-			"gm_username":     game.GmUsername,
-			"state":           game.State,
-			"current_players": game.CurrentPlayers,
-			"created_at":      game.CreatedAt.Time,
-			"updated_at":      game.UpdatedAt.Time,
-		}
-
-		if game.Genre.Valid {
-			gameData["genre"] = game.Genre.String
-		}
-		if game.StartDate.Valid {
-			gameData["start_date"] = game.StartDate.Time
-		}
-		if game.EndDate.Valid {
-			gameData["end_date"] = game.EndDate.Time
-		}
-		if game.RecruitmentDeadline.Valid {
-			gameData["recruitment_deadline"] = game.RecruitmentDeadline.Time
-		}
-		if game.MaxPlayers.Valid {
-			gameData["max_players"] = game.MaxPlayers.Int32
-		}
-		if game.CommonRoomOpenDay.Valid {
-			gameData["common_room_open_day"] = game.CommonRoomOpenDay.Int16
-		}
-		if game.CommonRoomOpenTime.Valid {
-			gameData["common_room_open_time"] = formatPgtypeTime(game.CommonRoomOpenTime)
-		}
-		if game.CommonRoomCloseDay.Valid {
-			gameData["common_room_close_day"] = game.CommonRoomCloseDay.Int16
-		}
-		if game.CommonRoomCloseTime.Valid {
-			gameData["common_room_close_time"] = formatPgtypeTime(game.CommonRoomCloseTime)
-		}
-		if game.ScheduleTimezone.Valid {
-			gameData["schedule_timezone"] = game.ScheduleTimezone.String
-		}
-
-		response = append(response, gameData)
-	}
-
-	return &recruitingGamesOutput{Body: response}, nil
 }
 
 // Participants
@@ -2701,24 +2652,16 @@ func RegisterHumaGamesPublicApplicants(api huma.API, h *Handler) {
 	}, h.humaGetPublicGameApplicants)
 }
 
-// RegisterHumaGamesCollection registers the two operations that need no game
-// context: the recruiting list and game creation. They live on the /games
-// router itself, outside the /{gameID} subrouter.
+// RegisterHumaGamesCollection registers the operation that needs no game
+// context: game creation. It lives on the /games router itself, outside the
+// /{gameID} subrouter.
+//
+// GET /recruiting used to live here too. It was removed as redundant: the
+// filtered listing answers the same question server-side via
+// `GET /games/?states=recruitment`, with pagination and a typed response, and
+// the frontend route /games/recruiting is already a redirect to it.
 func RegisterHumaGamesCollection(api huma.API, h *Handler) {
 	bearer := []map[string][]string{{"BearerAuth": {}}}
-
-	huma.Register(api, huma.Operation{
-		OperationID: "listRecruitingGames",
-		Method:      http.MethodGet,
-		Path:        "/recruiting",
-		Summary:     "List recruiting games",
-		Description: "Games currently accepting applications.",
-		Tags:        []string{"Games"},
-		Security:    bearer,
-		Responses: map[string]*huma.Response{
-			"401": {Description: "Not authenticated"},
-		},
-	}, h.humaGetRecruitingGames)
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createGame",
@@ -2751,7 +2694,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Method:      http.MethodGet,
 		Path:        "/",
 		Summary:     "Get a game",
-		Description: "Returns the game's settings and metadata.",
+		Description: "Returns the game's settings and metadata, the GM's username, the current player count and the owning community. Identical to getGameDetails.",
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
@@ -2765,7 +2708,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Method:      http.MethodGet,
 		Path:        "/details",
 		Summary:     "Get a game with details",
-		Description: "As getGame, plus the GM's username and the current player count.",
+		Description: "Alias of getGame, kept for existing callers: the two answer with the same shape from the same query.",
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
