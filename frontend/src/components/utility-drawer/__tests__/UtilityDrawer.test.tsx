@@ -28,6 +28,7 @@ function makeGameCtx(overrides: Partial<GameUtilityContext> = {}): GameUtilityCo
     userRole: 'player',
     gameState: 'in_progress',
     isAnonymous: false,
+    portraitAvatars: false,
     userCharacters: [makeCharacter()],
     allGameCharacters: [makeCharacter()],
     commentReadMode: 'manual',

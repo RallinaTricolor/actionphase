@@ -4,11 +4,12 @@ import { renderWithProviders } from '../../test-utils'
 import { CharactersList } from '../CharactersList'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
+import { makeCharacter } from '../../test-utils'
 import type { Character } from '../../types/characters'
 
 describe('CharactersList', () => {
   const mockCharacters: Character[] = [
-    {
+    makeCharacter({
       id: 1,
       name: 'Hero Character',
       game_id: 123,
@@ -16,13 +17,10 @@ describe('CharactersList', () => {
       username: 'player1',
       character_type: 'player_character',
       status: 'approved',
-      attributes: {},
-      inventory: [],
-      notes: '',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-    },
-    {
+    }),
+    makeCharacter({
       id: 2,
       name: 'Pending Character',
       game_id: 123,
@@ -30,13 +28,10 @@ describe('CharactersList', () => {
       username: 'player2',
       character_type: 'player_character',
       status: 'pending',
-      attributes: {},
-      inventory: [],
-      notes: '',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-    },
-    {
+    }),
+    makeCharacter({
       id: 3,
       name: 'Villain NPC',
       game_id: 123,
@@ -44,13 +39,10 @@ describe('CharactersList', () => {
       username: 'gm',
       character_type: 'npc',
       status: 'approved',
-      attributes: {},
-      inventory: [],
-      notes: '',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-    },
-    {
+    }),
+    makeCharacter({
       id: 4,
       name: 'Other Hero',
       game_id: 123,
@@ -58,12 +50,9 @@ describe('CharactersList', () => {
       username: 'player2',
       character_type: 'player_character',
       status: 'approved',
-      attributes: {},
-      inventory: [],
-      notes: '',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-    },
+    }),
   ]
 
   beforeEach(() => {
@@ -274,7 +263,7 @@ describe('CharactersList', () => {
   })
 
   describe('Role-based visibility (Audience)', () => {
-    const pendingAudienceNPC: Character = {
+    const pendingAudienceNPC: Character = makeCharacter({
       id: 10,
       name: 'Audience NPC',
       game_id: 123,
@@ -282,12 +271,9 @@ describe('CharactersList', () => {
       status: 'pending',
       assigned_user_id: 5,
       assigned_username: 'audienceuser',
-      attributes: {},
-      inventory: [],
-      notes: '',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-    }
+    })
 
     it('audience member with assigned pending NPC in in_progress game can edit the NPC sheet', async () => {
       server.use(

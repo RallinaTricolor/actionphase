@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils/render';
+import { makeMutationResult } from '../test-utils';
 import { PhaseActivationDialog } from './PhaseActivationDialog';
 import type { GamePhase } from '../types/phases';
 
@@ -17,11 +18,7 @@ const makePhase = (overrides: Partial<GamePhase> = {}): GamePhase => ({
   ...overrides,
 });
 
-const makeMutation = (overrides = {}) => ({
-  mutateAsync: vi.fn().mockResolvedValue(undefined),
-  isPending: false,
-  ...overrides,
-});
+const makeMutation = makeMutationResult;
 
 describe('PhaseActivationDialog', () => {
   const mockOnActivate = vi.fn();

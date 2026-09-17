@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
 import { apiClient } from '../../lib/api';
+import { makeGameParticipant } from '../../test-utils';
 import type { GameParticipant } from '../../types/games';
 
 const renderInRouter = (ui: React.ReactElement) =>
@@ -52,38 +53,35 @@ beforeEach(() => {
 });
 
 describe('PeopleView - Leave Game Button', () => {
-  const mockPlayerParticipant: GameParticipant = {
+  const mockPlayerParticipant: GameParticipant = makeGameParticipant({
     id: 1,
     game_id: 1,
     user_id: 1,
     username: 'player1',
-    email: 'player1@example.com',
     role: 'player',
     status: 'active',
     joined_at: '2024-01-01',
-  };
+  });
 
-  const mockAudienceParticipant: GameParticipant = {
+  const mockAudienceParticipant: GameParticipant = makeGameParticipant({
     id: 2,
     game_id: 1,
     user_id: 2,
     username: 'audience1',
-    email: 'audience1@example.com',
     role: 'audience',
     status: 'active',
     joined_at: '2024-01-02',
-  };
+  });
 
-  const mockGMParticipant: GameParticipant = {
+  const mockGMParticipant: GameParticipant = makeGameParticipant({
     id: 3,
     game_id: 1,
     user_id: 3,
     username: 'gm1',
-    email: 'gm1@example.com',
-    role: 'gm',
+    role: 'co_gm',
     status: 'active',
     joined_at: '2024-01-03',
-  };
+  });
 
   describe('Bug #9: Audience members cannot leave games', () => {
     it('should show Leave Game button for audience members', async () => {

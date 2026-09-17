@@ -3,7 +3,10 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { ChangeEmailForm } from './ChangeEmailForm';
 import { renderWithProviders } from '../test-utils/render';
+import type { components } from '../types/api.gen';
 import { server } from '../mocks/server';
+
+type ChangeEmailRequest = components['schemas']['ChangeEmailRequest'];
 
 // Mock useAuth to provide a user (using importOriginal to keep AuthProvider)
 vi.mock('../contexts/AuthContext', async (importOriginal) => {
@@ -144,10 +147,10 @@ describe('ChangeEmailForm', () => {
   });
 
   it('trims whitespace from new email', async () => {
-    let requestBody: unknown = null;
+    let requestBody: ChangeEmailRequest | undefined;
 
     server.use(
-      http.post('http://localhost:3000/api/v1/auth/request-email-change', async ({ request }) => {
+      http.post<never, ChangeEmailRequest>('http://localhost:3000/api/v1/auth/request-email-change', async ({ request }) => {
         requestBody = await request.json();
         return HttpResponse.json({ message: 'Verification email sent' });
       })

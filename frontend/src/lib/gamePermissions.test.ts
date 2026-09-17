@@ -6,6 +6,7 @@ import {
   resolveUserRole,
   type UserGameRole,
 } from './gamePermissions';
+import { makeGameParticipant } from '../test-utils';
 import type { GameParticipant } from '../types/games';
 
 // These rules are consumed by both GameProvider and useGamePermissions, so a
@@ -13,14 +14,18 @@ import type { GameParticipant } from '../types/games';
 // authorization (CanUserViewGame, CanUserManagePhases, CanUserDeleteComment,
 // checkPollViewAccess) — the UI must be neither stricter nor looser.
 
-const participant = (userId: number, role: string): GameParticipant => ({
-  id: userId * 10,
-  game_id: 1,
-  user_id: userId,
-  role,
-  joined_at: new Date().toISOString(),
-  username: `user${userId}`,
-});
+const participant = (
+  userId: number,
+  role: GameParticipant['role'],
+): GameParticipant =>
+  makeGameParticipant({
+    id: userId * 10,
+    game_id: 1,
+    user_id: userId,
+    role,
+    joined_at: new Date().toISOString(),
+    username: `user${userId}`,
+  });
 
 describe('resolveUserRole', () => {
   it('treats game ownership as GM regardless of any participant row', () => {

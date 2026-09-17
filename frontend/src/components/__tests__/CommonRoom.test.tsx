@@ -9,6 +9,7 @@ import { CommonRoom } from '../CommonRoom';
 import type { Message } from '../../types/messages';
 import type { Character } from '../../types/characters';
 import { makeCharacter, makeMessage } from '../../test-utils/factories';
+import type { CreatePostRequest } from '../../types/messages';
 
 // Mock data
 const mockCharacters: Character[] = [
@@ -404,10 +405,10 @@ describe('CommonRoom', () => {
 
   describe('Post Creation', () => {
     it('creates post when handleCreatePost is called', async () => {
-      let createdPost: unknown;
+      let createdPost: CreatePostRequest | undefined;
 
       server.use(
-        http.post('/api/v1/games/:gameId/posts', async ({ request }) => {
+        http.post<never, CreatePostRequest>('/api/v1/games/:gameId/posts', async ({ request }) => {
           createdPost = await request.json();
           return HttpResponse.json({
             id: 3,
@@ -482,9 +483,9 @@ describe('CommonRoom', () => {
       , { gameId: 1 });
 
       await waitFor(() => {
-        const headings = screen.getAllByText((_content, element) => {
-          return element?.textContent?.match(/common room - test phase/i);
-        });
+        const headings = screen.getAllByText((_content, element) =>
+          /common room - test phase/i.test(element?.textContent ?? ''),
+        );
         expect(headings.length).toBeGreaterThan(0);
         expect(screen.getByText(/create gm posts/i)).toBeInTheDocument();
       });

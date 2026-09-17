@@ -3,7 +3,23 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useRecentComments, useTotalCommentCount } from '../useRecentComments';
 import { apiClient } from '../../lib/api';
-import type { RecentCommentsResponse, CommentWithParent } from '../../types/messages';
+import type { apiClient as apiClientType } from '../../lib/api';
+
+/**
+ * The flattened envelope this method really returns.
+ *
+ * Deliberately NOT `types/messages.ts`'s RecentCommentsResponse: that is the
+ * WIRE shape, and getRecentComments rewrites it before returning, replacing each
+ * comment's nested `parent` object with flattened `parent_*` fields. Typing the
+ * fixtures against the method's own return keeps them describing what the hook
+ * actually receives. (The hand-written wire interfaces also drift from the
+ * generated schema -- recorded separately, out of scope here.)
+ */
+type RecentCommentsResult = Awaited<
+  ReturnType<typeof apiClientType.messages.getRecentComments>
+>;
+type RecentCommentsPage = RecentCommentsResult['data'];
+type RecentComment = RecentCommentsPage['comments'][number];
 
 /**
  * apiClient.messages.getRecentComments does NOT return an AxiosResponse: it
@@ -14,7 +30,7 @@ import type { RecentCommentsResponse, CommentWithParent } from '../../types/mess
  * These mocks previously cast themselves to Partial<AxiosResponse>, which
  * described neither the real envelope nor this method's return type.
  */
-function apiResult(response: RecentCommentsResponse) {
+function apiResult(response: RecentCommentsPage) {
   return { data: response };
 }
 
@@ -47,7 +63,7 @@ describe('useRecentComments', () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  const mockComment: CommentWithParent = {
+  const mockComment: RecentComment = {
     id: 1,
     game_id: 1,
     parent_id: 100,
@@ -69,9 +85,10 @@ describe('useRecentComments', () => {
     parent_message_type: 'post',
     parent_author_username: 'parentuser',
     parent_character_name: 'Parent Character',
+    parent_character_avatar_url: null,
   };
 
-  const mockResponse: RecentCommentsResponse = {
+  const mockResponse: RecentCommentsPage = {
     comments: [mockComment],
     total: 1,
     limit: 20,
@@ -122,7 +139,7 @@ describe('useRecentComments', () => {
   });
 
   it('determines hasNextPage correctly when there are more pages', async () => {
-    const fullPageResponse: RecentCommentsResponse = {
+    const fullPageResponse: RecentCommentsPage = {
       comments: Array(20).fill(mockComment),
       total: 50,
       limit: 20,
@@ -142,7 +159,7 @@ describe('useRecentComments', () => {
   });
 
   it('determines hasNextPage correctly when at end', async () => {
-    const partialPageResponse: RecentCommentsResponse = {
+    const partialPageResponse: RecentCommentsPage = {
       comments: Array(15).fill(mockComment),
       total: 15,
       limit: 20,
@@ -162,14 +179,14 @@ describe('useRecentComments', () => {
   });
 
   it('fetches next page with correct offset', async () => {
-    const firstPageResponse: RecentCommentsResponse = {
+    const firstPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 1 }),
       total: 50,
       limit: 20,
       offset: 0,
     };
 
-    const secondPageResponse: RecentCommentsResponse = {
+    const secondPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 2 }),
       total: 50,
       limit: 20,
@@ -257,14 +274,14 @@ describe('useRecentComments', () => {
     // comment. Correcting types/messages.ts touches production code, so it is
     // out of scope here; this mock stays honest to the declared type and the
     // drift is recorded instead.
-    const responseWithoutOffset: RecentCommentsResponse = {
+    const responseWithoutOffset: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment }),
       total: 50,
       limit: 20,
       offset: 0,
     };
 
-    const secondPageResponse: RecentCommentsResponse = {
+    const secondPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 2 }),
       total: 50,
       limit: 20,

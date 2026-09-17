@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { CreateGameForm } from '../CreateGameForm';
+import type { CreateGameRequest } from '../../types/games';
 
 // Mock ResizeObserver for react-datepicker
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -186,7 +187,7 @@ describe('CreateGameForm', () => {
     beforeEach(() => {
       // Setup successful game creation mock with small delay for realistic timing
       server.use(
-        http.post('/api/v1/games', async ({ request }) => {
+        http.post<never, CreateGameRequest>('/api/v1/games', async ({ request }) => {
           const body = await request.json();
           await new Promise(resolve => setTimeout(resolve, 10));
           return HttpResponse.json({
@@ -248,11 +249,11 @@ describe('CreateGameForm', () => {
 
     it('trims whitespace from title and description', async () => {
       const user = userEvent.setup();
-      let submittedData: unknown = null;
+      let submittedData: CreateGameRequest | undefined;
       const onSuccess = vi.fn();
 
       server.use(
-        http.post('/api/v1/games', async ({ request }) => {
+        http.post<never, CreateGameRequest>('/api/v1/games', async ({ request }) => {
           submittedData = await request.json();
           return HttpResponse.json({ id: 123, ...submittedData });
         })
@@ -280,18 +281,18 @@ describe('CreateGameForm', () => {
         expect(onSuccess).toHaveBeenCalled();
       });
 
-      expect(submittedData).not.toBeNull();
-      expect(submittedData.title).toBe('Spaced Title');
-      expect(submittedData.description).toBe('Spaced Description');
+      expect(submittedData).toBeDefined();
+      expect(submittedData?.title).toBe('Spaced Title');
+      expect(submittedData?.description).toBe('Spaced Description');
     });
 
     it('converts empty date strings to undefined', async () => {
       const user = userEvent.setup();
-      let submittedData: unknown = null;
+      let submittedData: CreateGameRequest | undefined;
       const onSuccess = vi.fn();
 
       server.use(
-        http.post('/api/v1/games', async ({ request }) => {
+        http.post<never, CreateGameRequest>('/api/v1/games', async ({ request }) => {
           submittedData = await request.json();
           return HttpResponse.json({ id: 123, ...submittedData });
         })
@@ -308,19 +309,19 @@ describe('CreateGameForm', () => {
         expect(onSuccess).toHaveBeenCalled();
       });
 
-      expect(submittedData).not.toBeNull();
-      expect(submittedData.start_date).toBeUndefined();
-      expect(submittedData.end_date).toBeUndefined();
-      expect(submittedData.recruitment_deadline).toBeUndefined();
+      expect(submittedData).toBeDefined();
+      expect(submittedData?.start_date).toBeUndefined();
+      expect(submittedData?.end_date).toBeUndefined();
+      expect(submittedData?.recruitment_deadline).toBeUndefined();
     });
 
     it('converts empty genre to undefined', async () => {
       const user = userEvent.setup();
-      let submittedData: unknown = null;
+      let submittedData: CreateGameRequest | undefined;
       const onSuccess = vi.fn();
 
       server.use(
-        http.post('/api/v1/games', async ({ request }) => {
+        http.post<never, CreateGameRequest>('/api/v1/games', async ({ request }) => {
           submittedData = await request.json();
           return HttpResponse.json({ id: 123, ...submittedData });
         })
@@ -337,8 +338,8 @@ describe('CreateGameForm', () => {
         expect(onSuccess).toHaveBeenCalled();
       });
 
-      expect(submittedData).not.toBeNull();
-      expect(submittedData.genre).toBeUndefined();
+      expect(submittedData).toBeDefined();
+      expect(submittedData?.genre).toBeUndefined();
     });
 
     it('shows loading state while submitting', async () => {

@@ -8,6 +8,7 @@ import type { UnreadCommentItem, UnreadPrivateMessageItem } from '@/types/unread
 import type { Notification } from '@/types/notifications';
 import type { PrivateMessage } from '@/types/conversations';
 import type { Message } from '@/types/messages';
+import { makeMessage as makeMessageFixture } from '../test-utils';
 
 vi.mock('@/utils/unreadInboxApi', () => ({
   fetchCommentContext: vi.fn(),
@@ -45,7 +46,7 @@ function makeMessage(overrides: Partial<PrivateMessage> = {}): PrivateMessage {
 }
 
 function makeComment(overrides: Partial<Message> = {}): Message {
-  return {
+  return makeMessageFixture({
     id: 1,
     game_id: 12,
     author_id: 5,
@@ -55,13 +56,10 @@ function makeComment(overrides: Partial<Message> = {}): Message {
     thread_depth: 1,
     author_username: 'player',
     character_name: 'Some Character',
-    is_edited: false,
-    is_deleted: false,
-    is_draft: false,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
-  };
+  });
 }
 
 function createWrapper() {

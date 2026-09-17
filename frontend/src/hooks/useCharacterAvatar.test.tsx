@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUploadCharacterAvatar, useDeleteCharacterAvatar } from './useCharacterAvatar';
 import { apiClient } from '../lib/api';
+import { makeAxiosResponse } from '../test-utils';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({
@@ -39,7 +40,7 @@ describe('useUploadCharacterAvatar', () => {
   });
 
   it('uploads avatar successfully', async () => {
-    const mockResponse = { data: { avatar_url: 'http://example.com/avatar.jpg' } };
+    const mockResponse = makeAxiosResponse({ avatar_url: 'http://example.com/avatar.jpg' });
     vi.mocked(apiClient.characters.uploadCharacterAvatar).mockResolvedValue(mockResponse);
 
     const { result } = renderHook(() => useUploadCharacterAvatar(), {
@@ -72,7 +73,7 @@ describe('useUploadCharacterAvatar', () => {
   });
 
   it('invalidates character queries on success', async () => {
-    const mockResponse = { data: { avatar_url: 'http://example.com/avatar.jpg' } };
+    const mockResponse = makeAxiosResponse({ avatar_url: 'http://example.com/avatar.jpg' });
     vi.mocked(apiClient.characters.uploadCharacterAvatar).mockResolvedValue(mockResponse);
 
     const queryClient = new QueryClient({
@@ -108,7 +109,7 @@ describe('useDeleteCharacterAvatar', () => {
   });
 
   it('deletes avatar successfully', async () => {
-    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
+    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue(makeAxiosResponse(undefined));
 
     const { result } = renderHook(() => useDeleteCharacterAvatar(), {
       wrapper: createWrapper(),
@@ -135,7 +136,7 @@ describe('useDeleteCharacterAvatar', () => {
   });
 
   it('invalidates character queries on success', async () => {
-    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue({ data: undefined });
+    vi.mocked(apiClient.characters.deleteCharacterAvatar).mockResolvedValue(makeAxiosResponse(undefined));
 
     const queryClient = new QueryClient({
       defaultOptions: {

@@ -5,7 +5,7 @@ import { SheetItemAutocomplete } from '../SheetItemAutocomplete';
 import type { SheetItem } from '../../hooks/useCharacterSheetItems';
 
 const items: SheetItem[] = [
-  { id: 'a1', name: 'Fire Bolt', type: 'ability', description: 'Deals fire damage' },
+  { id: 'a1', name: 'Fire Bolt', type: 'skill', description: 'Deals fire damage' },
   { id: 's1', name: 'Stealth', type: 'skill' },
   { id: 'i1', name: 'Longbow', type: 'item' },
 ];
@@ -60,8 +60,7 @@ describe('SheetItemAutocomplete', () => {
     render(
       <SheetItemAutocomplete items={items} query="" position={pos} onSelect={vi.fn()} selectedIndex={0} />
     );
-    expect(screen.getByText('ability')).toBeInTheDocument();
-    expect(screen.getByText('skill')).toBeInTheDocument();
+    expect(screen.getAllByText('skill')).toHaveLength(2);
     expect(screen.getByText('item')).toBeInTheDocument();
   });
 });

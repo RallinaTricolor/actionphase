@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollVotingForm } from './PollVotingForm';
 import type { PollWithOptions } from '../types/polls';
+import { makeMutationResult } from '../test-utils';
 
 // Mock the useSubmitVote and useUserCharacters hooks
 vi.mock('../hooks', () => ({
@@ -70,10 +71,9 @@ describe('PollVotingForm', () => {
     it('calls onSuccess after successful vote submission', async () => {
       const { useSubmitVote } = await import('../hooks');
       const mockMutateAsync = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(useSubmitVote).mockReturnValue({
-        mutateAsync: mockMutateAsync,
-        isPending: false,
-      } as ReturnType<typeof useSubmitVote>);
+      vi.mocked(useSubmitVote).mockReturnValue(
+        makeMutationResult({ mutateAsync: mockMutateAsync }),
+      );
 
       const mockOnSuccessFn = vi.fn();
       renderWithProviders(

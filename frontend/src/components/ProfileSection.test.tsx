@@ -10,11 +10,8 @@ const mockUser: User = {
   id: 1,
   username: 'testuser',
   email: 'test@example.com',
-  display_name: 'Test User',
   bio: 'My test bio',
   avatar_url: 'http://localhost:3000/uploads/avatar.jpg',
-  created_at: '2024-01-01T00:00:00Z',
-  timezone: 'America/New_York',
   is_admin: false,
 };
 

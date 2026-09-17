@@ -33,7 +33,7 @@ describe('AddItemModal', () => {
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       expect(screen.getByText('Cancel')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Add', exact: true })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
     });
 
     it('shows name field as required', () => {
@@ -125,7 +125,7 @@ describe('AddItemModal', () => {
       fireEvent.change(screen.getByLabelText(/Weight/), { target: { value: '5' } });
       await user.type(screen.getByLabelText(/Description/), 'A sturdy iron blade');
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith({
         name: 'Iron Sword',
@@ -144,7 +144,7 @@ describe('AddItemModal', () => {
 
       await user.type(screen.getByLabelText(/^Name/), 'Simple Item');
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith({
         name: 'Simple Item',
@@ -162,7 +162,7 @@ describe('AddItemModal', () => {
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '  Iron Sword  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Iron Sword' })
@@ -176,7 +176,7 @@ describe('AddItemModal', () => {
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Category/), '  Weapon  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ category: 'Weapon' })
@@ -190,7 +190,7 @@ describe('AddItemModal', () => {
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Description/), '  A blade  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ description: 'A blade' })
@@ -204,7 +204,7 @@ describe('AddItemModal', () => {
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Category/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ category: undefined })
@@ -218,7 +218,7 @@ describe('AddItemModal', () => {
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Description/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ description: undefined })
@@ -230,7 +230,7 @@ describe('AddItemModal', () => {
       const user = userEvent.setup();
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).not.toHaveBeenCalled();
     });
@@ -241,7 +241,7 @@ describe('AddItemModal', () => {
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).not.toHaveBeenCalled();
     });
@@ -254,7 +254,7 @@ describe('AddItemModal', () => {
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledTimes(1);
       expect(onAdd.mock.calls[0][0]).not.toHaveProperty('equipped');

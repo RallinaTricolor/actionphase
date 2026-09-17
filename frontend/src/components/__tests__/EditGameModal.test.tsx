@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { EditGameModal } from '../EditGameModal';
-import type { GameWithDetails } from '../../types/games';
+import type { GameWithDetails, UpdateGameRequest } from '../../types/games';
 
 // Mock ResizeObserver for react-datepicker
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -41,7 +41,7 @@ describe('EditGameModal', () => {
 
   const setupDefaultHandlers = () => {
     server.use(
-      http.put('/api/v1/games/:id', async ({ request }) => {
+      http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
         const body = await request.json();
         return HttpResponse.json({
           ...mockGame,
@@ -517,10 +517,10 @@ describe('EditGameModal', () => {
 
     it('sends correct data to API', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: UpdateGameRequest | undefined;
 
       server.use(
-        http.put('/api/v1/games/:id', async ({ request }) => {
+        http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({ ...mockGame, ...requestBody });
         })
@@ -593,10 +593,10 @@ describe('EditGameModal', () => {
 
     it('trims whitespace from title and description', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: UpdateGameRequest | undefined;
 
       server.use(
-        http.put('/api/v1/games/:id', async ({ request }) => {
+        http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({ ...mockGame, ...requestBody });
         })
@@ -623,17 +623,18 @@ describe('EditGameModal', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(requestBody.title).toBe('Trimmed Title');
-        expect(requestBody.description).toBe('Trimmed Description');
+        expect(requestBody).toBeDefined();
       });
+      expect(requestBody?.title).toBe('Trimmed Title');
+      expect(requestBody?.description).toBe('Trimmed Description');
     });
 
     it('sends undefined for empty optional fields', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: UpdateGameRequest | undefined;
 
       server.use(
-        http.put('/api/v1/games/:id', async ({ request }) => {
+        http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({ ...mockGame, ...requestBody });
         })
@@ -658,17 +659,18 @@ describe('EditGameModal', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(requestBody.genre).toBeUndefined();
-        expect(requestBody.max_players).toBeUndefined();
+        expect(requestBody).toBeDefined();
       });
+      expect(requestBody?.genre).toBeUndefined();
+      expect(requestBody?.max_players).toBeUndefined();
     });
 
     it('does not include banner_url in update payload even when game has an existing banner', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: UpdateGameRequest | undefined;
 
       server.use(
-        http.put('/api/v1/games/:id', async ({ request }) => {
+        http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({ ...mockGame, ...requestBody });
         })
@@ -700,10 +702,10 @@ describe('EditGameModal', () => {
 
     it('handles empty genre by trimming and sending undefined', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: UpdateGameRequest | undefined;
 
       server.use(
-        http.put('/api/v1/games/:id', async ({ request }) => {
+        http.put<never, UpdateGameRequest>('/api/v1/games/:id', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({ ...mockGame, ...requestBody });
         })
@@ -726,8 +728,9 @@ describe('EditGameModal', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(requestBody.genre).toBeUndefined();
+        expect(requestBody).toBeDefined();
       });
+      expect(requestBody?.genre).toBeUndefined();
     });
   });
 

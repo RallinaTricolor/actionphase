@@ -5,7 +5,11 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { ActionSubmission } from '../ActionSubmission';
-import type { GamePhase, ActionWithDetails } from '../../types/phases';
+import type {
+  ActionSubmissionRequest,
+  ActionWithDetails,
+  GamePhase,
+} from '../../types/phases';
 import type { Character } from '../../types/characters';
 import { postCachingService } from '../../services/PostCachingService'
 
@@ -467,11 +471,11 @@ describe('ActionSubmission', () => {
 
     it('trims whitespace from content before submitting', async () => {
       const user = userEvent.setup();
-      let submittedData: unknown = null;
+      let submittedData: ActionSubmissionRequest | undefined;
 
       setupDefaultHandlers();
       server.use(
-        http.post('/api/v1/games/:gameId/actions', async ({ request }) => {
+        http.post<never, ActionSubmissionRequest>('/api/v1/games/:gameId/actions', async ({ request }) => {
           submittedData = await request.json();
           return HttpResponse.json({ id: 1 }, { status: 201 });
         })
@@ -496,11 +500,11 @@ describe('ActionSubmission', () => {
 
     it('submits with selected character', async () => {
       const user = userEvent.setup();
-      let submittedData: unknown = null;
+      let submittedData: ActionSubmissionRequest | undefined;
 
       setupDefaultHandlers();
       server.use(
-        http.post('/api/v1/games/:gameId/actions', async ({ request }) => {
+        http.post<never, ActionSubmissionRequest>('/api/v1/games/:gameId/actions', async ({ request }) => {
           submittedData = await request.json();
           return HttpResponse.json({ id: 1 }, { status: 201 });
         })

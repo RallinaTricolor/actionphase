@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
-import type { UseInfiniteQueryResult } from '@tanstack/react-query';
 import { NewCommentsView } from '../NewCommentsView';
 import * as useRecentCommentsModule from '../../hooks/useRecentComments';
-import type { CommentWithParent } from '../../types/messages';
 import { makeInfiniteQueryResult } from '../../test-utils';
 
 /**
@@ -19,6 +17,19 @@ import { makeInfiniteQueryResult } from '../../test-utils';
 type RecentCommentsPage = NonNullable<
   ReturnType<typeof useRecentCommentsModule.useRecentComments>['data']
 >['pages'][number];
+
+/**
+ * One comment as the endpoint actually returns it.
+ *
+ * Deliberately NOT `types/messages.ts`'s hand-written `CommentWithParent`:
+ * that interface marks `parent_content` (and its siblings) optional, but the
+ * query selects `pm.content as parent_content` into a plain
+ * `json:"parent_content"` field -- no omitempty -- so the key is ALWAYS present
+ * and merely null when the LEFT JOIN finds no parent. Typing the fixtures
+ * against the hook keeps them honest about that; the local interface is a
+ * production drift recorded separately.
+ */
+type RecentComment = RecentCommentsPage['comments'][number];
 
 // Mock the useRecentComments hook
 vi.mock('../../hooks/useRecentComments');
@@ -59,7 +70,7 @@ vi.mock('../CommentWithParentCard', () => ({
     onNavigateToParent,
     onNavigateToComment
   }: {
-    comment: CommentWithParent;
+    comment: RecentComment;
     onNavigateToParent: () => void;
     onNavigateToComment: () => void;
   }) => (
@@ -90,7 +101,7 @@ const mockIntersectionObserver = vi.fn(class {
 });
 
 describe('NewCommentsView', () => {
-  const mockComment: CommentWithParent = {
+  const mockComment: RecentComment = {
     id: 1,
     game_id: 1,
     parent_id: 100,
@@ -112,6 +123,7 @@ describe('NewCommentsView', () => {
     parent_message_type: 'post',
     parent_author_username: 'parentuser',
     parent_character_name: 'Parent Character',
+    parent_character_avatar_url: null,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -167,7 +179,7 @@ describe('NewCommentsView', () => {
 
   it('shows empty state when there are no comments', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
-      data: { pages: [] },
+      data: { pages: [], pageParams: [] },
       isLoading: false,
       isError: false,
       error: null,
@@ -193,6 +205,7 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments, total: 3, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -227,6 +240,7 @@ describe('NewCommentsView', () => {
           { comments: page1Comments, total: 4, limit: 2, offset: 0 },
           { comments: page2Comments, total: 4, limit: 2, offset: 2 },
         ],
+        pageParams: [0, 2],
       },
       isLoading: false,
       isError: false,
@@ -249,6 +263,7 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -268,6 +283,7 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -289,6 +305,7 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -313,6 +330,7 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -337,7 +355,12 @@ describe('NewCommentsView', () => {
       data: undefined,
       isLoading: false,
       isError: true,
-      error: 'String error',
+      // Deliberately not an Error. React Query's types say `error` is
+      // `Error | null`, but a queryFn that throws a string produces exactly
+      // this at runtime, which is what NewCommentsView's `error instanceof
+      // Error` fallback exists to handle. Covering that branch requires
+      // stepping outside the declared type.
+      error: 'String error' as unknown as Error,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
@@ -359,6 +382,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -383,6 +407,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -408,6 +433,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [commentWithoutParent], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -437,6 +463,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments, total: 2, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -467,6 +494,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -487,6 +515,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -514,6 +543,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -547,6 +577,7 @@ describe('NewCommentsView', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -596,9 +627,9 @@ describe('NewCommentsView', () => {
   });
 
   describe('unread-only filter', () => {
-    const loadedComments = (comments: CommentWithParent[]) =>
+    const loadedComments = (comments: RecentComment[]) =>
       makeInfiniteQueryResult<RecentCommentsPage>({
-        data: { pages: [{ comments, total: comments.length, limit: 20, offset: 0 }] },
+        data: { pages: [{ comments, total: comments.length, limit: 20, offset: 0 }], pageParams: [0] },
         isLoading: false,
         isError: false,
         error: null,
@@ -696,7 +727,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1 }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -715,7 +746,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -739,7 +770,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -765,14 +796,14 @@ describe('NewCommentsView', () => {
                 ? [{ ...mockComment, id: 2, content: 'Fresh unread' }]
                 : []
               : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>;
+          );
           return {
             ...result,
             refetch: vi.fn(async () => {
               unreadArrived = true;
               return result;
             }),
-          } as UseInfiniteQueryResult<CommentWithParent[], Error>;
+          };
         }
       );
 
@@ -800,7 +831,7 @@ describe('NewCommentsView', () => {
                   { ...mockComment, id: 1, content: 'Read' },
                   { ...mockComment, id: 2, content: 'Unread' },
                 ]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });

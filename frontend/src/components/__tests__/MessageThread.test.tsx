@@ -6,6 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { MessageThread } from '../MessageThread';
 import type { Character } from '../../types/characters';
+import type { SendMessageRequest } from '../../types/conversations';
 
 // Mock the auth hook
 vi.mock('../../contexts/AuthContext', () => ({
@@ -384,10 +385,10 @@ describe('MessageThread', () => {
 
     it('sends message when form is submitted', async () => {
       const user = userEvent.setup();
-      let sentMessage: unknown;
+      let sentMessage: SendMessageRequest | undefined;
 
       server.use(
-        http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
+        http.post<never, SendMessageRequest>('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
           sentMessage = await request.json();
           return HttpResponse.json({
             id: 3, ...sentMessage, created_at: new Date().toISOString()
@@ -409,7 +410,7 @@ describe('MessageThread', () => {
 
       await waitFor(() => {
         expect(sentMessage).toBeDefined();
-        expect(sentMessage.content).toBe('New test message');
+        expect(sentMessage?.content).toBe('New test message');
       });
     });
 
@@ -499,10 +500,10 @@ describe('MessageThread', () => {
 
     it('trims whitespace from message before sending', async () => {
       const user = userEvent.setup();
-      let sentMessage: unknown;
+      let sentMessage: SendMessageRequest | undefined;
 
       server.use(
-        http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
+        http.post<never, SendMessageRequest>('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
           sentMessage = await request.json();
           return HttpResponse.json({ id: 3 });
         })
@@ -519,16 +520,16 @@ describe('MessageThread', () => {
       await user.click(screen.getByRole('button', { name: /^send$/i }));
 
       await waitFor(() => {
-        expect(sentMessage.content).toBe('Trimmed message');
+        expect(sentMessage?.content).toBe('Trimmed message');
       });
     });
 
     it('sends message with selected character ID', async () => {
       const user = userEvent.setup();
-      let sentMessage: unknown;
+      let sentMessage: SendMessageRequest | undefined;
 
       server.use(
-        http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
+        http.post<never, SendMessageRequest>('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
           sentMessage = await request.json();
           return HttpResponse.json({ id: 3 });
         })
@@ -545,16 +546,16 @@ describe('MessageThread', () => {
       await user.click(screen.getByRole('button', { name: /^send$/i }));
 
       await waitFor(() => {
-        expect(sentMessage.character_id).toBe(1); // First character auto-selected
+        expect(sentMessage?.character_id).toBe(1); // First character auto-selected
       });
     });
 
     it('allows switching character before sending', async () => {
       const user = userEvent.setup();
-      let sentMessage: unknown;
+      let sentMessage: SendMessageRequest | undefined;
 
       server.use(
-        http.post('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
+        http.post<never, SendMessageRequest>('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
           sentMessage = await request.json();
           return HttpResponse.json({ id: 3 });
         })
@@ -575,7 +576,7 @@ describe('MessageThread', () => {
       await user.click(screen.getByRole('button', { name: /^send$/i }));
 
       await waitFor(() => {
-        expect(sentMessage.character_id).toBe(2);
+        expect(sentMessage?.character_id).toBe(2);
       });
     });
 

@@ -20,6 +20,7 @@
 import type {
   InfiniteData,
   UseInfiniteQueryResult,
+  UseMutationResult,
   UseQueryResult,
 } from '@tanstack/react-query';
 import { AxiosHeaders } from 'axios';
@@ -27,6 +28,7 @@ import type { AxiosResponse } from 'axios';
 import { vi } from 'vitest';
 
 import type { useAuth } from '../contexts/AuthContext';
+import type { useAuth as useAuthHook } from '../hooks/useAuth';
 import type { User } from '../types/auth';
 import type { Character } from '../types/characters';
 import type {
@@ -35,9 +37,14 @@ import type {
 } from '../types/dashboard';
 import type {
   Conversation,
+  ConversationListItem,
   ConversationWithDetails,
 } from '../types/conversations';
-import type { EnrichedGameListItem } from '../types/games';
+import type {
+  EnrichedGameListItem,
+  GameParticipant,
+  GameWithDetails,
+} from '../types/games';
 import type { CommentWithDepth, Message } from '../types/messages';
 import type { GamePhase } from '../types/phases';
 
@@ -190,6 +197,34 @@ export function makeAuthContext(
 }
 
 /**
+ * The return of `hooks/useAuth`, which is NOT the AuthContext value.
+ *
+ * Two different things are named `useAuth` in this codebase:
+ * `contexts/AuthContext`'s (see makeAuthContext above) carries `currentUser`,
+ * `isCheckingAuth` and `clearError`; this standalone hook carries none of them
+ * -- it exposes only `login`, `register`, `logout`, `isAuthenticated`,
+ * `isLoading` and `error`. Mocks that reached for a `user` field on this one
+ * were inventing it, and nothing read it back.
+ *
+ * `login` and `register` are mutateAsync functions, so they must return
+ * promises: a bare `vi.fn()` returns undefined and any caller that awaits the
+ * result would see a different failure than production's.
+ */
+export function makeUseAuthResult(
+  overrides: Partial<ReturnType<typeof useAuthHook>> = {},
+): ReturnType<typeof useAuthHook> {
+  return {
+    login: vi.fn().mockResolvedValue(undefined),
+    register: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    ...overrides,
+  };
+}
+
+/**
  * One row of a conversation's participant list.
  *
  * There is deliberately no `email` field. Participant mocks written before the
@@ -239,6 +274,107 @@ export function makeConversation(overrides: Partial<Conversation> = {}): Convers
 }
 
 /**
+ * A game as the detail endpoint returns it.
+ *
+ * The four fields fixtures kept omitting are `allow_group_conversations`,
+ * `auto_accept_audience`, `portrait_avatars` and `current_players`: all plain
+ * non-omitempty fields, so the key is always present. The first three are
+ * settings that default false; `current_players` is a computed count.
+ *
+ * Note `state` includes 'setup' -- the lifecycle is
+ * setup -> recruitment -> character_creation -> in_progress -> paused ->
+ * epilogue -> completed | cancelled. 'recruiting' and 'active' are not members
+ * (fixtures have guessed both).
+ */
+export function makeGameWithDetails(
+  overrides: Partial<GameWithDetails> = {},
+): GameWithDetails {
+  return {
+    id: 1,
+    title: 'Test Game',
+    description: 'A test game',
+    gm_user_id: 1,
+    state: 'in_progress',
+    is_anonymous: false,
+    allow_group_conversations: false,
+    auto_accept_audience: false,
+    portrait_avatars: false,
+    current_players: 1,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/**
+ * One row of a game's participant list.
+ *
+ * `email` is NOT a field here, by design: the participant endpoints withhold it.
+ * Mocks that carried one were inventing it, and nothing read it back -- so this
+ * factory takes no override for it either.
+ *
+ * `role` excludes the primary GM: they are not a participant row. The enum is
+ * player | co_gm | audience, and PeopleView only groups player and co_gm, so a
+ * 'gm' value would render in no section at all.
+ *
+ * `avatar_url` is required-and-nullable (null when the user has no avatar, never
+ * absent), and `is_former_player` is a plain bool -- both always present on the
+ * wire. Fixtures kept omitting the pair.
+ */
+export function makeGameParticipant(
+  overrides: Partial<GameParticipant> = {},
+): GameParticipant {
+  return {
+    id: 1,
+    game_id: 1,
+    user_id: 1,
+    username: 'testplayer',
+    avatar_url: null,
+    is_former_player: false,
+    role: 'player',
+    status: 'active',
+    joined_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/**
+ * One conversation as the LIST endpoint returns it.
+ *
+ * Not the same shape as makeConversation above: the list row carries the
+ * denormalised read-state and preview columns (`last_message`,
+ * `last_message_at`, `last_read_at`, `last_read_message_id`, `unread_count`,
+ * `participant_count`, `participant_names`) that the detail endpoint does not.
+ *
+ * Every nullable field here is required-and-nullable, not optional: the
+ * response struct has no `omitempty` on them, so the key is ALWAYS present and
+ * merely null when there is no last message or the viewer has never read the
+ * conversation. Fixtures that omitted them were describing a row the endpoint
+ * never sends.
+ */
+export function makeConversationListItem(
+  overrides: Partial<ConversationListItem> = {},
+): ConversationListItem {
+  return {
+    id: 1,
+    game_id: 1,
+    title: 'Test Conversation',
+    conversation_type: 'direct',
+    created_by_user_id: 100,
+    created_at: '2025-01-15T10:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z',
+    last_message: 'Hello',
+    last_message_at: '2025-01-15T10:00:00Z',
+    last_read_at: null,
+    last_read_message_id: null,
+    participant_count: 2,
+    participant_names: 'Alice, Bob',
+    unread_count: 0,
+    ...overrides,
+  };
+}
+
+/**
  * A conversation plus its participants, as the detail endpoint returns it.
  *
  * `participants` defaults to a single participant rather than `[]`: an empty
@@ -280,6 +416,30 @@ export function makeAxiosResponse<T>(
     config: { headers: new AxiosHeaders() },
     ...overrides,
   };
+}
+
+/**
+ * A partial React Query mutation result, for a component that takes a mutation
+ * as a prop.
+ *
+ * Same sanctioned escape as makeQueryResult below, for the same reason:
+ * UseMutationResult has ~15 fields and a component typically reads
+ * `mutateAsync` and `isPending`. Tests were passing bare
+ * `{ mutateAsync, isPending }` object literals into props declared as the full
+ * UseMutationResult, which does not type-check at all.
+ *
+ * `mutateAsync` resolves rather than returning undefined: callers await it, and
+ * a bare vi.fn() would reject-on-await differently than production.
+ */
+export function makeMutationResult<TData = unknown, TVariables = void>(
+  partial: Partial<UseMutationResult<TData, Error, TVariables, unknown>> = {},
+): UseMutationResult<TData, Error, TVariables, unknown> {
+  return {
+    mutateAsync: vi.fn().mockResolvedValue(undefined),
+    mutate: vi.fn(),
+    isPending: false,
+    ...partial,
+  } as unknown as UseMutationResult<TData, Error, TVariables, unknown>;
 }
 
 /**
