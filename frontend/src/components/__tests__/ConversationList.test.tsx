@@ -4,7 +4,6 @@ import { renderWithProviders } from '../../test-utils'
 import { ConversationList } from '../ConversationList'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import type { useAuth } from '../../contexts/AuthContext'
 import type { ConversationListItem } from '../../types/conversations'
 
 // Mock the auth hook

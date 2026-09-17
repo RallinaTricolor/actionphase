@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AxiosResponse } from 'axios';
 import { useRecentComments, useTotalCommentCount } from '../useRecentComments';
 import { apiClient } from '../../lib/api';
 import type { RecentCommentsResponse, CommentWithParent } from '../../types/messages';
+
+/**
+ * apiClient.messages.getRecentComments does NOT return an AxiosResponse: it
+ * returns a bare `{ data }` (see lib/api/messages.ts, which flattens each
+ * comment's parent object into parent_* fields before returning). The mocks
+ * here already carry the flattened shape, so they only need the envelope.
+ *
+ * These mocks previously cast themselves to Partial<AxiosResponse>, which
+ * described neither the real envelope nor this method's return type.
+ */
+function apiResult(response: RecentCommentsResponse) {
+  return { data: response };
+}
 
 // Mock the API client
 vi.mock('../../lib/api', () => ({
@@ -67,9 +79,7 @@ describe('useRecentComments', () => {
   };
 
   it('fetches recent comments successfully', async () => {
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(mockResponse));
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -119,9 +129,7 @@ describe('useRecentComments', () => {
       offset: 0,
     };
 
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: fullPageResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(fullPageResponse));
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -141,9 +149,7 @@ describe('useRecentComments', () => {
       offset: 0,
     };
 
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: partialPageResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(partialPageResponse));
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -171,8 +177,8 @@ describe('useRecentComments', () => {
     };
 
     vi.mocked(apiClient.messages.getRecentComments)
-      .mockResolvedValueOnce({ data: firstPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>);
+      .mockResolvedValueOnce(apiResult(firstPageResponse))
+      .mockResolvedValueOnce(apiResult(secondPageResponse));
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 
@@ -197,9 +203,7 @@ describe('useRecentComments', () => {
   });
 
   it('uses correct query key', async () => {
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(mockResponse));
 
     renderHook(() => useRecentComments(1), { wrapper });
 
@@ -210,9 +214,7 @@ describe('useRecentComments', () => {
   });
 
   it('requests unread-only comments when unreadOnly is true', async () => {
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(mockResponse));
 
     const { result } = renderHook(() => useRecentComments(1, true), { wrapper });
 
@@ -222,9 +224,7 @@ describe('useRecentComments', () => {
   });
 
   it('caches filtered and unfiltered lists under separate query keys', async () => {
-    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<RecentCommentsResponse>>);
+    vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(mockResponse));
 
     const unfiltered = renderHook(() => useRecentComments(1, false), { wrapper });
     await waitFor(() => expect(unfiltered.result.current.isSuccess).toBe(true));
@@ -245,12 +245,23 @@ describe('useRecentComments', () => {
   });
 
   it('handles missing offset in API response', async () => {
-    // Mock response without offset field (regression test for NaN bug)
-    const responseWithoutOffset = {
+    // Regression test for a NaN bug: the hook must derive the next offset from
+    // the number of pages loaded rather than from the response.
+    //
+    // NOTE: `offset` is required on the frontend's RecentCommentsResponse, so
+    // it cannot be omitted here without a cast. That type is wrong: the wire
+    // shape is { comments, pagination }, with no top-level total/limit/offset
+    // at all (backend/pkg/messages/responses.go, and the generated
+    // RecentCommentsResponse in api.gen.ts). The hook already assumes as much
+    // -- see its "doesn't rely on the API response including an offset field"
+    // comment. Correcting types/messages.ts touches production code, so it is
+    // out of scope here; this mock stays honest to the declared type and the
+    // drift is recorded instead.
+    const responseWithoutOffset: RecentCommentsResponse = {
       comments: Array(20).fill({ ...mockComment }),
       total: 50,
       limit: 20,
-      // offset intentionally missing
+      offset: 0,
     };
 
     const secondPageResponse: RecentCommentsResponse = {
@@ -261,8 +272,8 @@ describe('useRecentComments', () => {
     };
 
     vi.mocked(apiClient.messages.getRecentComments)
-      .mockResolvedValueOnce({ data: responseWithoutOffset } as Partial<AxiosResponse>)
-      .mockResolvedValueOnce({ data: secondPageResponse } as Partial<AxiosResponse<RecentCommentsResponse>>);
+      .mockResolvedValueOnce(apiResult(responseWithoutOffset))
+      .mockResolvedValueOnce(apiResult(secondPageResponse));
 
     const { result } = renderHook(() => useRecentComments(1), { wrapper });
 

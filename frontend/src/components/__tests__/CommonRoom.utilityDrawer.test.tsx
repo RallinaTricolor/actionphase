@@ -7,6 +7,7 @@ import { renderWithProviders } from '../../test-utils/render';
 import { CommonRoom } from '../CommonRoom';
 import { UtilityDrawerHarness } from '../../test-utils/utilityDrawer';
 import type { Character } from '../../types/characters';
+import { makeCharacter } from '../../test-utils/factories';
 
 /**
  * Integration tests for the Utility Drawer wired into CommonRoom, focused on the
@@ -54,16 +55,14 @@ vi.mock('../CharacterSheet', () => ({
 const PLAYER_USER_ID = 1;
 const GM_USER_ID = 2;
 
-const myCharacter: Character = {
+const myCharacter: Character = makeCharacter({
   id: 1,
   game_id: 1,
   name: 'Kael',
-  character_type: 'player_character',
   user_id: PLAYER_USER_ID,
   assigned_user_id: PLAYER_USER_ID,
-  status: 'approved',
   created_at: '2024-01-01T00:00:00Z',
-};
+});
 
 /**
  * Wire up a game the signed-in user plays in as a normal player, controlling a

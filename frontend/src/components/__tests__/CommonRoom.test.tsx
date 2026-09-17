@@ -8,31 +8,16 @@ import { renderWithProviders } from '../../test-utils/render';
 import { CommonRoom } from '../CommonRoom';
 import type { Message } from '../../types/messages';
 import type { Character } from '../../types/characters';
+import { makeCharacter, makeMessage } from '../../test-utils/factories';
 
 // Mock data
 const mockCharacters: Character[] = [
-  {
-    id: 1,
-    game_id: 1,
-    name: 'Test Character',
-    character_type: 'player_character',
-    user_id: 100,
-    status: 'approved',
-    created_at: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 2,
-    game_id: 1,
-    name: 'Another Character',
-    character_type: 'player_character',
-    user_id: 100,
-    status: 'approved',
-    created_at: '2024-01-01T00:00:00Z',
-  }
+  makeCharacter({ id: 1, game_id: 1, name: 'Test Character', user_id: 100 }),
+  makeCharacter({ id: 2, game_id: 1, name: 'Another Character', user_id: 100 }),
 ];
 
 const mockPosts: Message[] = [
-  {
+  makeMessage({
     id: 1,
     game_id: 1,
     character_id: 1,
@@ -41,8 +26,8 @@ const mockPosts: Message[] = [
     message_type: 'post',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-  },
-  {
+  }),
+  makeMessage({
     id: 2,
     game_id: 1,
     character_id: 2,
@@ -51,7 +36,7 @@ const mockPosts: Message[] = [
     message_type: 'post',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-  }
+  }),
 ];
 
 describe('CommonRoom', () => {
@@ -255,12 +240,12 @@ describe('CommonRoom', () => {
       renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
-        const post1Elements = screen.getAllByText((content, element) => {
+        const post1Elements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'This is a test post';
         });
         expect(post1Elements.length).toBeGreaterThan(0);
 
-        const post2Elements = screen.getAllByText((content, element) => {
+        const post2Elements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'Another test post';
         });
         expect(post2Elements.length).toBeGreaterThan(0);
@@ -272,12 +257,12 @@ describe('CommonRoom', () => {
 
       await waitFor(() => {
         // PostCards should be present (we can check for post content)
-        const post1Elements = screen.getAllByText((content, element) => {
+        const post1Elements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'This is a test post';
         });
         expect(post1Elements.length).toBeGreaterThan(0);
 
-        const post2Elements = screen.getAllByText((content, element) => {
+        const post2Elements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'Another test post';
         });
         expect(post2Elements.length).toBeGreaterThan(0);
@@ -446,11 +431,8 @@ describe('CommonRoom', () => {
 
   describe('Comment Creation', () => {
     it('handles comment creation without full reload', async () => {
-      let _commentCreated = false;
-
       server.use(
         http.post('/api/v1/games/:gameId/posts/:postId/comments', () => {
-          _commentCreated = true;
           return HttpResponse.json({
             id: 1,
             content: 'Test comment',
@@ -462,7 +444,7 @@ describe('CommonRoom', () => {
       renderWithProviders(<CommonRoom gameId={1} />, { gameId: 1 });
 
       await waitFor(() => {
-        const postElements = screen.getAllByText((content, element) => {
+        const postElements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'This is a test post';
         });
         expect(postElements.length).toBeGreaterThan(0);
@@ -479,7 +461,7 @@ describe('CommonRoom', () => {
 
       await waitFor(() => {
         // Posts should be displayed
-        const postElements = screen.getAllByText((content, element) => {
+        const postElements = screen.getAllByText((_content, element) => {
           return element?.textContent === 'This is a test post';
         });
         expect(postElements.length).toBeGreaterThan(0);
@@ -500,7 +482,7 @@ describe('CommonRoom', () => {
       , { gameId: 1 });
 
       await waitFor(() => {
-        const headings = screen.getAllByText((content, element) => {
+        const headings = screen.getAllByText((_content, element) => {
           return element?.textContent?.match(/common room - test phase/i);
         });
         expect(headings.length).toBeGreaterThan(0);
@@ -510,17 +492,16 @@ describe('CommonRoom', () => {
   });
 
   describe('Notification Deep Linking - Phase 1 Race Condition Fixes', () => {
-    const mockComment: Message = {
+    const mockComment: Message = makeMessage({
       id: 123,
       game_id: 1,
       phase_id: 1,
       character_id: 2,
       character_name: 'Player Character',
       content: 'Test comment content',
-      message_type: 'comment',
       created_at: '2024-01-01T01:00:00Z',
       updated_at: '2024-01-01T01:00:00Z',
-    };
+    });
 
     beforeEach(() => {
       // Mock scroll behavior
@@ -919,11 +900,11 @@ describe('CommonRoom', () => {
     describe('Cross-phase redirect', () => {
       it('redirects to History tab when comment belongs to a different phase', async () => {
         // Comment 123 is in phase 99, but CommonRoom is rendering phase 1
-        const commentInOtherPhase: Message = {
+        const commentInOtherPhase: Message = makeMessage({
           ...mockComment,
           id: 123,
           phase_id: 99,
-        };
+        });
 
         server.use(
           http.get('/api/v1/games/:gameId/messages/:messageId/thread-context', () => {
@@ -973,7 +954,7 @@ describe('CommonRoom', () => {
   });
 
   describe('Manual read mode - own comment auto-marked read', () => {
-    const rootPost: Message = {
+    const rootPost: Message = makeMessage({
       id: 10,
       game_id: 1,
       character_id: 1,
@@ -984,10 +965,9 @@ describe('CommonRoom', () => {
       message_type: 'post',
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
-      comment_count: 0,
-    };
+    });
 
-    const topLevelComment: Message = {
+    const topLevelComment: Message = makeMessage({
       id: 20,
       game_id: 1,
       character_id: 1,
@@ -995,14 +975,11 @@ describe('CommonRoom', () => {
       author_id: 1,
       author_username: 'testuser',
       content: 'A top-level comment',
-      message_type: 'comment',
       parent_id: 10,
       thread_depth: 1,
-      is_edited: false,
-      is_deleted: false,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
-    };
+    });
 
     function setupManualModeHandlers(overrides: Parameters<typeof server.use>[0][] = []) {
       server.use(
@@ -1160,7 +1137,7 @@ describe('CommonRoom', () => {
     const depth2Id = 30;
     const deepCommentId = 40; // depth 3 — past maxDepth=2, so findRootPostId must walk up
 
-    const rootPost: Message = {
+    const rootPost: Message = makeMessage({
       id: rootPostId,
       game_id: 1,
       phase_id: 1,
@@ -1169,43 +1146,36 @@ describe('CommonRoom', () => {
       content: 'Root post content',
       message_type: 'post',
       parent_id: undefined,
-      thread_depth: 0,
       author_id: 1,
       author_username: 'testuser',
-      is_edited: false,
-      is_deleted: false,
-      is_draft: false,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
-    };
+    });
 
-    const depth1Comment: Message = {
+    const depth1Comment: Message = makeMessage({
       ...rootPost,
       id: depth1Id,
       content: 'Depth 1 comment',
-      message_type: 'comment',
       parent_id: rootPostId,
       thread_depth: 1,
-    };
+    });
 
-    const depth2Comment: Message = {
+    const depth2Comment: Message = makeMessage({
       ...rootPost,
       id: depth2Id,
       content: 'Depth 2 comment',
-      message_type: 'comment',
       parent_id: depth1Id,
       thread_depth: 2,
-    };
+    });
 
-    const deepComment: Message = {
+    const deepComment: Message = makeMessage({
       ...rootPost,
       id: deepCommentId,
       content: 'Deep comment content',
-      message_type: 'comment',
       parent_id: depth2Id,
       thread_depth: 3,
       phase_id: 1,
-    };
+    });
 
     function setupDeepLinkHandlers() {
       Element.prototype.scrollIntoView = vi.fn();

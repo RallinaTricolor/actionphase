@@ -92,6 +92,8 @@ describe('useReplyToUnread', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 55,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useReplyToUnread(), { wrapper: createWrapper(queryClient) });
@@ -121,6 +123,8 @@ describe('useReplyToUnread', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 55,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useReplyToUnread(), { wrapper: createWrapper(queryClient) });
@@ -144,6 +148,8 @@ describe('useReplyToUnread', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 55,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useReplyToUnread(), { wrapper: createWrapper(queryClient) });

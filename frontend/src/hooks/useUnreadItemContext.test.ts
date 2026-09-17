@@ -94,6 +94,8 @@ describe('useUnreadItemContext', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 101,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForFirstMessage, true), {
@@ -118,6 +120,8 @@ describe('useUnreadItemContext', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 102,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForSecondMessage, true), {
@@ -138,7 +142,9 @@ describe('useUnreadItemContext', () => {
       notification: makeNotification({ id: 3 }),
       gameId: 12,
       conversationId: 34,
-      messageId: 999, // e.g. the message was deleted and no longer appears
+      messageId: 999,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1, // e.g. the message was deleted and no longer appears
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForDeletedMessage, true), {
@@ -165,6 +171,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 102,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {
@@ -187,6 +195,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 101,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {
@@ -211,6 +221,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 102,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {

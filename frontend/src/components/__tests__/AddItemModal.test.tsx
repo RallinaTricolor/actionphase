@@ -116,7 +116,7 @@ describe('AddItemModal', () => {
     it('calls onAdd with complete item data', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Iron Sword');
       fireEvent.change(screen.getByLabelText(/Quantity/), { target: { value: '3' } });
@@ -140,7 +140,7 @@ describe('AddItemModal', () => {
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Simple Item');
 
@@ -159,7 +159,7 @@ describe('AddItemModal', () => {
     it('trims whitespace from name', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '  Iron Sword  ');
       await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
@@ -172,7 +172,7 @@ describe('AddItemModal', () => {
     it('trims whitespace from category', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Category/), '  Weapon  ');
@@ -186,7 +186,7 @@ describe('AddItemModal', () => {
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Description/), '  A blade  ');
@@ -200,7 +200,7 @@ describe('AddItemModal', () => {
     it('sets empty category to undefined', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Category/), '   ');
@@ -214,7 +214,7 @@ describe('AddItemModal', () => {
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Description/), '   ');
@@ -228,7 +228,7 @@ describe('AddItemModal', () => {
     it('does not call onAdd when name is empty', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
 
@@ -238,7 +238,7 @@ describe('AddItemModal', () => {
     it('does not call onAdd when name is only whitespace', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '   ');
       await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
@@ -251,7 +251,7 @@ describe('AddItemModal', () => {
     it('does not write an equipped field', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
@@ -265,7 +265,7 @@ describe('AddItemModal', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={vi.fn()} onCancel={onCancel} />);
+      renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
 
@@ -275,7 +275,7 @@ describe('AddItemModal', () => {
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.click(screen.getByText('Cancel'));

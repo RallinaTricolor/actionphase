@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import type { useAuth } from '../../contexts/AuthContext'
 import { ProtectedRoute } from '../ProtectedRoute'
 
 // Mock the useAuth hook
@@ -10,6 +9,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }))
 
 import { useAuth } from '../../contexts/AuthContext'
+import { makeAuthContext, makeUser } from '../../test-utils'
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
@@ -18,16 +18,16 @@ describe('ProtectedRoute', () => {
 
   describe('When user is authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should render children when user is authenticated', () => {
@@ -80,7 +80,7 @@ describe('ProtectedRoute', () => {
 
   describe('When user is NOT authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: false,
         currentUser: null,
         isCheckingAuth: false,
@@ -89,7 +89,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should redirect to /login when user is not authenticated', () => {
@@ -115,11 +115,8 @@ describe('ProtectedRoute', () => {
 
     it('should save the original location in state when redirecting', () => {
       // This test verifies the state={{ from: location }} functionality
-      let _capturedState: unknown = null
 
       const LoginPage = () => {
-        const location = window.location as Record<string, unknown>
-        _capturedState = location.state
         return <div data-testid="login-page">Login Page</div>
       }
 
@@ -195,16 +192,16 @@ describe('ProtectedRoute', () => {
 
   describe('Edge cases', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should handle empty children', () => {
@@ -235,16 +232,16 @@ describe('ProtectedRoute', () => {
 
   describe('When requireAdmin is true', () => {
     it('should render children when user is an admin', () => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'adminuser', email: 'admin@example.com', is_admin: true, created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'adminuser', email: 'admin@example.com', is_admin: true }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       render(
         <MemoryRouter initialEntries={['/admin']}>
@@ -258,16 +255,16 @@ describe('ProtectedRoute', () => {
     })
 
     it('should redirect non-admin authenticated users to /', () => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 2, username: 'regularuser', email: 'user@example.com', is_admin: false, created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 2, username: 'regularuser', email: 'user@example.com', is_admin: false }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       render(
         <MemoryRouter initialEntries={['/admin']}>
@@ -287,7 +284,7 @@ describe('ProtectedRoute', () => {
     })
 
     it('should redirect unauthenticated users to /login, not /', () => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: false,
         currentUser: null,
         isCheckingAuth: false,
@@ -296,7 +293,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       render(
         <MemoryRouter initialEntries={['/admin']}>
@@ -320,16 +317,16 @@ describe('ProtectedRoute', () => {
   describe('Authentication state changes', () => {
     it('should update when authentication state changes from authenticated to unauthenticated', () => {
       // Start authenticated
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       const { unmount } = render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -344,7 +341,7 @@ describe('ProtectedRoute', () => {
       // Clean up and re-render with unauthenticated state
       unmount()
 
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: false,
         currentUser: null,
         isCheckingAuth: false,
@@ -353,7 +350,7 @@ describe('ProtectedRoute', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       render(
         <MemoryRouter initialEntries={['/dashboard']}>

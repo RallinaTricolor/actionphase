@@ -6,6 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { PostCard } from '../PostCard';
 import type { Message } from '../../types/messages';
+import { makeCharacter, makeMessage } from '../../test-utils/factories';
 import type { Character } from '../../types/characters';
 import * as useScreenshotModeHook from '../../hooks/useScreenshotMode';
 import { postCachingService } from '../../services/PostCachingService';
@@ -16,27 +17,11 @@ vi.mock('../../hooks/useScreenshotMode', () => ({
 
 // Mock data
 const mockCharacters: Character[] = [
-  {
-    id: 1,
-    game_id: 1,
-    name: 'Test Character',
-    character_type: 'player_character',
-    user_id: 100,
-    status: 'approved',
-    created_at: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 2,
-    game_id: 1,
-    name: 'Another Character',
-    character_type: 'player_character',
-    user_id: 100,
-    status: 'approved',
-    created_at: '2024-01-01T00:00:00Z',
-  }
+  makeCharacter({ id: 1, game_id: 1, name: 'Test Character', user_id: 100 }),
+  makeCharacter({ id: 2, game_id: 1, name: 'Another Character', user_id: 100 }),
 ];
 
-const mockPost: Message = {
+const mockPost: Message = makeMessage({
   id: 1,
   game_id: 1,
   character_id: 1,
@@ -48,23 +33,22 @@ const mockPost: Message = {
   comment_count: 2,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-  is_edited: false,
-};
+});
 
-const mockLongPost: Message = {
+const mockLongPost: Message = makeMessage({
   ...mockPost,
   id: 2,
   content: 'A'.repeat(600), // 600 characters to trigger collapse
-};
+});
 
-const mockEditedPost: Message = {
+const mockEditedPost: Message = makeMessage({
   ...mockPost,
   id: 3,
   is_edited: true,
-};
+});
 
 const mockComments: Message[] = [
-  {
+  makeMessage({
     id: 10,
     game_id: 1,
     character_id: 1,
@@ -76,8 +60,8 @@ const mockComments: Message[] = [
     parent_id: 1,
     created_at: '2024-01-01T01:00:00Z',
     updated_at: '2024-01-01T01:00:00Z',
-  },
-  {
+  }),
+  makeMessage({
     id: 11,
     game_id: 1,
     character_id: 2,
@@ -89,7 +73,7 @@ const mockComments: Message[] = [
     parent_id: 1,
     created_at: '2024-01-01T02:00:00Z',
     updated_at: '2024-01-01T02:00:00Z',
-  }
+  }),
 ];
 
 describe('PostCard', () => {
@@ -476,8 +460,10 @@ describe('PostCard', () => {
       expect(screen.getByText(/comments \(2\)/i)).toBeInTheDocument();
     });
 
-    it('displays 0 when comment_count is undefined', () => {
-      const postWithoutCount = { ...mockPost, comment_count: undefined };
+    it('displays 0 when the post has no comments', () => {
+      // comment_count is a required, non-omitempty field: the wire sends 0 for
+      // a post with no comments, never undefined.
+      const postWithoutCount = makeMessage({ ...mockPost, comment_count: 0 });
       renderWithProviders(
         <PostCard
           post={postWithoutCount}

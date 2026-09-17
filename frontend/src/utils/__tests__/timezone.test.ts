@@ -12,9 +12,6 @@ import {
 } from '../timezone';
 
 describe('timezone utilities', () => {
-  // Store original timezone (unused but kept for reference)
-  const _originalTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   beforeEach(() => {
     // Mock Date.now() to return a consistent timestamp for tests
     vi.useFakeTimers();

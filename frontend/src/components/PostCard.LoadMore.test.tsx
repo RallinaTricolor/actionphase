@@ -4,6 +4,12 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AxiosResponse } from 'axios';
+import {
+  makeAxiosResponse,
+  makeCharacter,
+  makeCommentWithDepth,
+  makeMessage,
+} from '../test-utils';
 import { PostCard } from './PostCard';
 import { ToastProvider } from '../contexts/ToastContext';
 import { stubIntersectionObserver } from '../test-utils/mockIntersectionObserver';
@@ -106,54 +112,34 @@ describe('PostCard - Load More Comments', () => {
     vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockReset();
   });
 
-  const mockPost: Message = {
-    id: 1,
-    game_id: 1,
+  // `character_avatar_url` is absent rather than null on a Message: it is an
+  // omitempty pointer, so the wire omits the key. (It IS required-and-nullable
+  // on the threaded-comment shape below -- a real difference between the two
+  // endpoints, which makeCommentWithDepth carries.)
+  const mockPost: Message = makeMessage({
     author_id: 1,
-    character_id: 1,
     content: 'Test post content',
     message_type: 'post',
-    thread_depth: 0,
-    author_username: 'testuser',
-    character_name: 'Test Character',
-    character_avatar_url: null,
     comment_count: 30,
-    reply_count: 0,
-    is_edited: false,
-    is_deleted: false,
     created_at: '2024-01-01T12:00:00Z',
     updated_at: '2024-01-01T12:00:00Z',
-  };
+  });
 
   const mockCharacters: Character[] = [
-    {
-      id: 1,
-      name: 'Test Character',
-      username: 'testuser',
-      character_type: 'player_character',
-      avatar_url: undefined,
-    } as Character,
+    makeCharacter({ id: 1, name: 'Test Character', username: 'testuser' }),
   ];
 
-  const createMockComment = (id: number, depth: number = 0, parentId?: number): CommentWithDepth => ({
-    id,
-    game_id: 1,
-    author_id: 1,
-    character_id: 1,
-    content: `Comment ${id}`,
-    message_type: 'comment',
-    parent_id: parentId,
-    thread_depth: depth + 1,
-    depth,
-    author_username: 'testuser',
-    character_name: 'Test Character',
-    character_avatar_url: null,
-    reply_count: 0,
-    is_edited: false,
-    is_deleted: false,
-    created_at: `2024-01-01T12:${String(id).padStart(2, '0')}:00Z`,
-    updated_at: `2024-01-01T12:${String(id).padStart(2, '0')}:00Z`,
-  });
+  // No `updated_at`: the threaded-comment endpoint does not send it.
+  const createMockComment = (id: number, depth: number = 0, parentId?: number): CommentWithDepth =>
+    makeCommentWithDepth({
+      id,
+      author_id: 1,
+      content: `Comment ${id}`,
+      parent_id: parentId,
+      thread_depth: depth + 1,
+      depth,
+      created_at: `2024-01-01T12:${String(id).padStart(2, '0')}:00Z`,
+    });
 
   const renderPostCard = (
     post: Message,
@@ -212,9 +198,7 @@ describe('PostCard - Load More Comments', () => {
       offset: 0,
     };
 
-    vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+    vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue(makeAxiosResponse(mockResponse));
 
     // Act
     renderPostCard(mockPost);
@@ -241,9 +225,7 @@ describe('PostCard - Load More Comments', () => {
       offset: 0,
     };
 
-    vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue({
-      data: mockResponse,
-    } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+    vi.mocked(apiClient.messages.getPostCommentsWithThreads).mockResolvedValue(makeAxiosResponse(mockResponse));
 
     // Act
     renderPostCard(mockPost);
@@ -282,8 +264,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
+      .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
     // Act
     renderPostCard(mockPost);
@@ -343,9 +325,9 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
       .mockImplementationOnce(() =>
-        new Promise(resolve => setTimeout(() => resolve({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>), 100))
+        new Promise(resolve => setTimeout(() => resolve(makeAxiosResponse(secondResponse)), 100))
       );
 
     // Act
@@ -410,8 +392,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
+      .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
     // Act
     renderPostCard(mockPost);
@@ -473,8 +455,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
+      .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
     // Act
     renderPostCard(mockPost);
@@ -527,8 +509,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
+      .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
     // Act: render
     renderPostCard(mockPost);
@@ -592,8 +574,8 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: secondResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
+      .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
     const user = userEvent.setup();
     renderPostCard(mockPost);
@@ -644,11 +626,11 @@ describe('PostCard - Load More Comments', () => {
 
     // Refresh response is deferred so we can assert the list stays mounted
     // while the refresh is in flight.
-    const refreshDeferred = deferred<Partial<AxiosResponse<PaginatedCommentsResponse>>>();
+    const refreshDeferred = deferred<AxiosResponse<PaginatedCommentsResponse>>();
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: makePageResponse(page1, 0, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: makePageResponse(page2, THREADS_PER_PAGE, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, true)))
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page2, THREADS_PER_PAGE, true)))
       // 3rd call = the silent refresh
       .mockImplementationOnce(() => refreshDeferred.promise as never);
 
@@ -679,7 +661,7 @@ describe('PostCard - Load More Comments', () => {
 
     // Resolve the refresh; all threads remain rendered
     await act(async () => {
-      refreshDeferred.resolve({ data: makePageResponse([...page1, ...page2], 0, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      refreshDeferred.resolve(makeAxiosResponse(makePageResponse([...page1, ...page2], 0, true)));
     });
     expect(screen.getByText('Comment 1')).toBeInTheDocument();
     expect(screen.getByText(`Comment ${THREADS_PER_PAGE * 2}`)).toBeInTheDocument();
@@ -695,15 +677,15 @@ describe('PostCard - Load More Comments', () => {
     const page1 = Array.from({ length: THREADS_PER_PAGE }, (_, i) => createMockComment(i + 1));
     const page2 = Array.from({ length: THREADS_PER_PAGE }, (_, i) => createMockComment(i + THREADS_PER_PAGE + 1));
 
-    const loadMoreDeferred = deferred<Partial<AxiosResponse<PaginatedCommentsResponse>>>();
-    const staleRefreshDeferred = deferred<Partial<AxiosResponse<PaginatedCommentsResponse>>>();
+    const loadMoreDeferred = deferred<AxiosResponse<PaginatedCommentsResponse>>();
+    const staleRefreshDeferred = deferred<AxiosResponse<PaginatedCommentsResponse>>();
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: makePageResponse(page1, 0, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, true)))
       .mockImplementationOnce(() => loadMoreDeferred.promise as never)
       .mockImplementationOnce(() => staleRefreshDeferred.promise as never)
       // 4th call = the corrective re-fetch with the grown window
-      .mockResolvedValueOnce({ data: makePageResponse([...page1, ...page2], 0, false) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse([...page1, ...page2], 0, false)));
 
     const user = userEvent.setup();
     renderPostCard(mockPost);
@@ -722,13 +704,13 @@ describe('PostCard - Load More Comments', () => {
 
     // Load-more lands first: threads 6-10 appear, window is now 10
     await act(async () => {
-      loadMoreDeferred.resolve({ data: makePageResponse(page2, THREADS_PER_PAGE, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      loadMoreDeferred.resolve(makeAxiosResponse(makePageResponse(page2, THREADS_PER_PAGE, true)));
     });
     await waitFor(() => expect(screen.getByText(`Comment ${THREADS_PER_PAGE + 1}`)).toBeInTheDocument());
 
     // Stale refresh lands second — must trigger a re-fetch of the grown window
     await act(async () => {
-      staleRefreshDeferred.resolve({ data: makePageResponse(page1, 0, true) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      staleRefreshDeferred.resolve(makeAxiosResponse(makePageResponse(page1, 0, true)));
     });
     await waitFor(() => {
       expect(apiClient.messages.getPostCommentsWithThreads).toHaveBeenCalledTimes(4);
@@ -752,8 +734,8 @@ describe('PostCard - Load More Comments', () => {
     const page2 = [4, 5, 6, 7, 8].map(id => createMockComment(id));
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: makePageResponse(page1, 0, true, 12) } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
-      .mockResolvedValueOnce({ data: makePageResponse(page2, THREADS_PER_PAGE, true, 14) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, true, 12)))
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page2, THREADS_PER_PAGE, true, 14)));
 
     const user = userEvent.setup();
     renderPostCard(mockPost);
@@ -774,7 +756,7 @@ describe('PostCard - Load More Comments', () => {
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
       .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({ data: makePageResponse(page1, 0, false) } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, false)));
 
     const user = userEvent.setup();
     renderPostCard(mockPost);
@@ -821,9 +803,9 @@ describe('PostCard - Load More Comments', () => {
     };
 
     vi.mocked(apiClient.messages.getPostCommentsWithThreads)
-      .mockResolvedValueOnce({ data: initialResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>)
+      .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
       .mockRejectedValueOnce(networkError)
-      .mockResolvedValueOnce({ data: retryResponse } as Partial<AxiosResponse<PaginatedCommentsResponse>>);
+      .mockResolvedValueOnce(makeAxiosResponse(retryResponse));
 
     renderPostCard(mockPost);
 

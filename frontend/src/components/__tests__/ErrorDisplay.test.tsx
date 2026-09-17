@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, fireEvent, render } from '@testing-library/react'
 import { ErrorDisplay, InlineError, ErrorToast } from '../ErrorDisplay'
-import { ErrorSeverity } from '../../types/errors'
-import type { AppError } from '../../types/errors'
+import { ErrorCategory, ErrorSeverity, ErrorType } from '../../types/errors'
+import type { AppError, ErrorContext } from '../../types/errors'
 
 // Mock the error utility functions
 vi.mock('../../lib/errors', () => ({
   getErrorMessage: vi.fn((error: AppError) => error.message),
   getRecoveryActions: vi.fn((error: AppError) => error.context?.recoveryActions || []),
-  isRecoverable: vi.fn((error: AppError) => error.context?.recoverable !== false),
+  isRecoverable: vi.fn((error: AppError) => error.context?.category === 'recoverable'),
   ErrorSeverity: {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -18,6 +18,29 @@ vi.mock('../../lib/errors', () => ({
 }))
 
 import { getRecoveryActions, isRecoverable } from '../../lib/errors'
+
+/**
+ * Builds a complete AppError. AppError extends Error, so the object must be a
+ * real Error instance -- a bare literal is not assignable. ErrorContext
+ * requires type/category/severity/userMessage/timestamp; tests override only
+ * the field under test.
+ */
+function makeAppError(
+  message: string,
+  context: Partial<ErrorContext> = {},
+): AppError {
+  return Object.assign(new Error(message), {
+    type: ErrorType.UNKNOWN_ERROR,
+    context: {
+      type: ErrorType.UNKNOWN_ERROR,
+      category: ErrorCategory.RECOVERABLE,
+      severity: ErrorSeverity.MEDIUM,
+      userMessage: message,
+      timestamp: new Date(),
+      ...context,
+    },
+  })
+}
 
 describe('ErrorDisplay', () => {
   const mockOnRetry = vi.fn()
@@ -33,11 +56,7 @@ describe('ErrorDisplay', () => {
   })
 
   it('displays error message', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Something went wrong',
-      context: {},
-    }
+    const error = makeAppError('Something went wrong')
 
     render(<ErrorDisplay error={error} />)
 
@@ -46,11 +65,7 @@ describe('ErrorDisplay', () => {
 
   describe('Severity Levels', () => {
     it('renders LOW severity with warning styling', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Warning message',
-        context: { severity: ErrorSeverity.LOW },
-      }
+      const error = makeAppError('Warning message', { severity: ErrorSeverity.LOW })
 
       render(<ErrorDisplay error={error} />)
 
@@ -60,11 +75,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('renders MEDIUM severity with error styling', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Error message',
-        context: { severity: ErrorSeverity.MEDIUM },
-      }
+      const error = makeAppError('Error message', { severity: ErrorSeverity.MEDIUM })
 
       render(<ErrorDisplay error={error} />)
 
@@ -74,11 +85,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('renders HIGH severity with stronger error styling', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'High priority error',
-        context: { severity: ErrorSeverity.HIGH },
-      }
+      const error = makeAppError('High priority error', { severity: ErrorSeverity.HIGH })
 
       render(<ErrorDisplay error={error} />)
 
@@ -88,11 +95,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('renders CRITICAL severity with strongest error styling', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Critical error',
-        context: { severity: ErrorSeverity.CRITICAL },
-      }
+      const error = makeAppError('Critical error', { severity: ErrorSeverity.CRITICAL })
 
       render(<ErrorDisplay error={error} />)
 
@@ -103,11 +106,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('defaults to MEDIUM severity when not specified', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Default severity',
-        context: {},
-      }
+      const error = makeAppError('Default severity')
 
       render(<ErrorDisplay error={error} />)
 
@@ -119,11 +118,7 @@ describe('ErrorDisplay', () => {
 
   describe('Compact Mode', () => {
     it('renders in compact mode with simplified layout', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Compact error',
-        context: {},
-      }
+      const error = makeAppError('Compact error')
 
       render(<ErrorDisplay error={error} compact={true} />)
 
@@ -132,11 +127,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('shows retry button in compact mode when recoverable', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Recoverable error',
-        context: { recoverable: true },
-      }
+      const error = makeAppError('Recoverable error', { category: 'recoverable' })
 
       render(<ErrorDisplay error={error} compact={true} onRetry={mockOnRetry} />)
 
@@ -148,11 +139,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('shows dismiss button in compact mode', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Dismissable error',
-        context: {},
-      }
+      const error = makeAppError('Dismissable error')
 
       render(<ErrorDisplay error={error} compact={true} onDismiss={mockOnDismiss} />)
 
@@ -166,15 +153,9 @@ describe('ErrorDisplay', () => {
 
   describe('Full Mode', () => {
     it('displays recovery actions when available', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Error with recovery',
-        context: {
-          recoveryActions: ['Try refreshing the page', 'Check your internet connection', 'Contact support'],
-        },
-      }
+      const error = makeAppError('Error with recovery', { recoveryActions: ['Try refreshing the page', 'Check your internet connection', 'Contact support'] })
 
-      vi.mocked(getRecoveryActions).mockReturnValue(error.context.recoveryActions!)
+      vi.mocked(getRecoveryActions).mockReturnValue(error.context!.recoveryActions!)
 
       render(<ErrorDisplay error={error} />)
 
@@ -185,11 +166,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('shows "Try Again" button in full mode when recoverable', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Recoverable error',
-        context: { recoverable: true },
-      }
+      const error = makeAppError('Recoverable error', { category: 'recoverable' })
 
       render(<ErrorDisplay error={error} onRetry={mockOnRetry} />)
 
@@ -201,11 +178,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('shows "Dismiss" button in full mode', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Dismissable error',
-        context: {},
-      }
+      const error = makeAppError('Dismissable error')
 
       render(<ErrorDisplay error={error} onDismiss={mockOnDismiss} />)
 
@@ -217,11 +190,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('hides retry button when error is not recoverable', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Non-recoverable error',
-        context: { recoverable: false },
-      }
+      const error = makeAppError('Non-recoverable error', { category: 'non_recoverable' })
 
       vi.mocked(isRecoverable).mockReturnValue(false)
 
@@ -232,11 +201,7 @@ describe('ErrorDisplay', () => {
     })
 
     it('hides buttons when callbacks are not provided', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'No callbacks',
-        context: {},
-      }
+      const error = makeAppError('No callbacks')
 
       render(<ErrorDisplay error={error} />)
 
@@ -247,11 +212,7 @@ describe('ErrorDisplay', () => {
 
   describe('Custom Styling', () => {
     it('applies custom className', () => {
-      const error: AppError = {
-        type: 'TEST_ERROR',
-        message: 'Custom class error',
-        context: {},
-      }
+      const error = makeAppError('Custom class error')
 
       render(<ErrorDisplay error={error} className="my-custom-class" />)
 
@@ -307,11 +268,7 @@ describe('ErrorToast', () => {
   })
 
   it('displays error message in toast', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Toast message',
-      context: {},
-    }
+    const error = makeAppError('Toast message')
 
     render(<ErrorToast error={error} onClose={mockOnClose} />)
 
@@ -319,11 +276,7 @@ describe('ErrorToast', () => {
   })
 
   it('automatically closes after default duration (5 seconds)', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Auto close toast',
-      context: {},
-    }
+    const error = makeAppError('Auto close toast')
 
     render(<ErrorToast error={error} onClose={mockOnClose} />)
 
@@ -335,11 +288,7 @@ describe('ErrorToast', () => {
   })
 
   it('automatically closes after custom duration', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Custom duration toast',
-      context: {},
-    }
+    const error = makeAppError('Custom duration toast')
 
     render(<ErrorToast error={error} onClose={mockOnClose} duration={3000} />)
 
@@ -349,11 +298,7 @@ describe('ErrorToast', () => {
   })
 
   it('does not auto-close when duration is 0', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'No auto-close toast',
-      context: {},
-    }
+    const error = makeAppError('No auto-close toast')
 
     render(<ErrorToast error={error} onClose={mockOnClose} duration={0} />)
 
@@ -363,11 +308,7 @@ describe('ErrorToast', () => {
   })
 
   it('allows manual close via button', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Manual close toast',
-      context: {},
-    }
+    const error = makeAppError('Manual close toast')
 
     render(<ErrorToast error={error} onClose={mockOnClose} />)
 
@@ -378,11 +319,7 @@ describe('ErrorToast', () => {
   })
 
   it('applies LOW severity styling', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Low severity toast',
-      context: { severity: ErrorSeverity.LOW },
-    }
+    const error = makeAppError('Low severity toast', { severity: ErrorSeverity.LOW })
 
     const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
@@ -391,11 +328,7 @@ describe('ErrorToast', () => {
   })
 
   it('applies CRITICAL severity styling', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Critical toast',
-      context: { severity: ErrorSeverity.CRITICAL },
-    }
+    const error = makeAppError('Critical toast', { severity: ErrorSeverity.CRITICAL })
 
     const { container } = render(<ErrorToast error={error} onClose={mockOnClose} />)
 
@@ -404,11 +337,7 @@ describe('ErrorToast', () => {
   })
 
   it('is positioned at top-right', () => {
-    const error: AppError = {
-      type: 'TEST_ERROR',
-      message: 'Positioned toast',
-      context: {},
-    }
+    const error = makeAppError('Positioned toast')
 
     render(<ErrorToast error={error} onClose={mockOnClose} />)
 

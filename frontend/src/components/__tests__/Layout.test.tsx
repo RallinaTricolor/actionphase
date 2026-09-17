@@ -3,7 +3,6 @@ import { screen, render, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { useAuth } from '../../contexts/AuthContext'
 import { Layout } from '../Layout'
 import { AdminModeProvider } from '../../contexts/AdminModeContext'
 import { ToastProvider } from '../../contexts/ToastContext'
@@ -14,6 +13,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }))
 
 import { useAuth } from '../../contexts/AuthContext'
+import { makeAuthContext, makeUser } from '../../test-utils'
 
 describe('Layout', () => {
   const mockLogout = vi.fn()
@@ -44,16 +44,16 @@ describe('Layout', () => {
 
   describe('When user is authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should render navigation bar', () => {
@@ -204,7 +204,7 @@ describe('Layout', () => {
 
   describe('When user is NOT authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: false,
         currentUser: null,
         isCheckingAuth: false,
@@ -213,7 +213,7 @@ describe('Layout', () => {
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should NOT render navigation bar', () => {
@@ -252,16 +252,16 @@ describe('Layout', () => {
 
   describe('Styling and structure', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should have proper layout structure', () => {
@@ -302,16 +302,16 @@ describe('Layout', () => {
 
   describe('Edge cases', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should handle empty children', () => {
@@ -342,16 +342,16 @@ describe('Layout', () => {
 
   describe('Accessibility', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         isAuthenticated: true,
-        currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
+        currentUser: makeUser({ id: 1, username: 'testuser', email: 'test@example.com' }),
         isCheckingAuth: false,
         isLoading: false,
         login: vi.fn(),
         register: vi.fn(),
         logout: mockLogout,
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('should have semantic nav element', () => {

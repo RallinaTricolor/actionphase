@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
-import type { useAuth } from '../../contexts/AuthContext';
 import { MessageThread } from '../MessageThread';
 import type { Character } from '../../types/characters';
 
@@ -15,28 +14,13 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 import { useAuth } from '../../contexts/AuthContext'
+import { makeAuthContext, makeUser, makeCharacter } from '../../test-utils'
 import { postCachingService } from '../../services/PostCachingService';
 
 describe('MessageThread', () => {
   const mockCharacters: Character[] = [
-    {
-      id: 1,
-      game_id: 1,
-      name: 'Hero Character',
-      character_type: 'player_character',
-      user_id: 100,
-      status: 'approved',
-      created_at: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: 2,
-      game_id: 1,
-      name: 'Companion Character',
-      character_type: 'player_character',
-      user_id: 100,
-      status: 'approved',
-      created_at: '2024-01-01T00:00:00Z',
-    },
+    makeCharacter({ id: 1, name: 'Hero Character', user_id: 100 }),
+    makeCharacter({ id: 2, name: 'Companion Character', user_id: 100 }),
   ];
 
   const mockConversation = {
@@ -79,8 +63,8 @@ describe('MessageThread', () => {
     localStorage.clear();
 
     // Set up authenticated user
-    vi.mocked(useAuth).mockReturnValue({
-      currentUser: { id: 100, username: 'player1', email: 'player1@example.com', created_at: '', updated_at: '' },
+    vi.mocked(useAuth).mockReturnValue(makeAuthContext({
+      currentUser: makeUser({ id: 100, username: 'player1', email: 'player1@example.com' }),
       isAuthenticated: true,
       isCheckingAuth: false,
       isLoading: false,
@@ -88,7 +72,7 @@ describe('MessageThread', () => {
       register: vi.fn(),
       logout: vi.fn(),
       error: null,
-    } as Partial<ReturnType<typeof useAuth>>);
+    }));
 
     // Setup default mocks
     server.use(
@@ -366,15 +350,11 @@ describe('MessageThread', () => {
     });
 
     it('shows message when user has no participating characters', async () => {
-      const nonParticipantCharacter: Character = {
+      const nonParticipantCharacter: Character = makeCharacter({
         id: 99,
-        game_id: 1,
         name: 'Non-Participant',
-        character_type: 'player_character',
         user_id: 100,
-        status: 'approved',
-        created_at: '2024-01-01T00:00:00Z',
-      };
+      });
 
       renderWithProviders(
         <MessageThread gameId={1} conversationId={1} characters={[nonParticipantCharacter]} currentPhaseType="common_room" />
@@ -679,15 +659,7 @@ describe('MessageThread', () => {
     it('filters characters to only show conversation participants', async () => {
       const mixedCharacters: Character[] = [
         ...mockCharacters,
-        {
-          id: 99,
-          game_id: 1,
-          name: 'Non-Participant',
-          character_type: 'player_character',
-          user_id: 100,
-          status: 'approved',
-          created_at: '2024-01-01T00:00:00Z',
-        },
+        makeCharacter({ id: 99, name: 'Non-Participant', user_id: 100 }),
       ];
 
       const user = userEvent.setup();

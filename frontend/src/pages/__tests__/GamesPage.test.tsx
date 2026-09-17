@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
-import { renderWithProviders } from '../../test-utils'
+import { renderWithProviders, makeAuthContext, makeUser, makeGameListItem } from '../../test-utils'
 import { GamesPage } from '../GamesPage'
+import type { ComponentProps } from 'react'
+import type { GamesList } from '../../components/GamesList'
+import type { CreateGameForm } from '../../components/CreateGameForm'
+import type { Modal } from '../../components/Modal'
+import type { ApplyToGameModal } from '../../components/ApplyToGameModal'
 
 // Mock react-router-dom
 const mockNavigate = vi.fn()
@@ -33,36 +38,40 @@ vi.mock('../../contexts/AuthContext', async () => {
   }
 })
 
-// Mock components
+// Mock components.
+//
+// Each stub takes the real component's prop type via ComponentProps, so a
+// renamed or removed prop breaks the stub. These were declared `: unknown`,
+// which cannot be destructured -- the props were effectively untyped.
 vi.mock('../../components/GamesList', () => ({
   GamesList: ({
     games,
     loading,
     error,
     onApplyToGame,
-  }: unknown) => (
+  }: ComponentProps<typeof GamesList>) => (
     <div data-testid="games-list">
       <div>Games Count: {games?.length || 0}</div>
       <div>Loading: {String(loading)}</div>
       <div>Error: {error || 'none'}</div>
       {onApplyToGame && (
-        <button onClick={() => onApplyToGame({ id: 456, title: 'Test Game' })}>Apply to Game</button>
+        <button onClick={() => onApplyToGame(makeGameListItem({ id: 456, title: 'Test Game' }))}>Apply to Game</button>
       )}
     </div>
   ),
 }))
 
 vi.mock('../../components/CreateGameForm', () => ({
-  CreateGameForm: ({ onSuccess, onCancel }: unknown) => (
+  CreateGameForm: ({ onSuccess, onCancel }: ComponentProps<typeof CreateGameForm>) => (
     <div data-testid="create-game-form">
-      <button onClick={() => onSuccess(789)}>Create Success</button>
+      <button onClick={() => onSuccess?.(789)}>Create Success</button>
       <button onClick={onCancel}>Cancel</button>
     </div>
   ),
 }))
 
 vi.mock('../../components/Modal', () => ({
-  Modal: ({ isOpen, onClose, title, children }: unknown) => (
+  Modal: ({ isOpen, onClose, title, children }: ComponentProps<typeof Modal>) => (
     isOpen ? (
       <div data-testid="modal">
         <h2>{title}</h2>
@@ -74,7 +83,7 @@ vi.mock('../../components/Modal', () => ({
 }))
 
 vi.mock('../../components/ApplyToGameModal', () => ({
-  ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: unknown) => (
+  ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: ComponentProps<typeof ApplyToGameModal>) => (
     isOpen ? (
       <div data-testid="apply-modal">
         <h2>Apply to {gameTitle}</h2>
@@ -89,27 +98,15 @@ vi.mock('../../components/ApplyToGameModal', () => ({
 import { apiClient } from '../../lib/api'
 import { useAuth } from '../../contexts/AuthContext'
 
-// Type for mocked useAuth return value
-type MockedAuthReturn = Partial<ReturnType<typeof useAuth>> & {
-  isAuthenticated: boolean;
-  user: { id: number; username: string } | null;
-  login: ReturnType<typeof vi.fn>;
-  logout: ReturnType<typeof vi.fn>;
-  isLoading: boolean;
-};
-
 describe('GamesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
     // Default mock implementations
-    vi.mocked(useAuth).mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue(makeAuthContext({
       isAuthenticated: true,
-      user: { id: 1, username: 'testuser' },
-      login: vi.fn(),
-      logout: vi.fn(),
-      isLoading: false,
-    } as MockedAuthReturn)
+      currentUser: makeUser({ id: 1, username: 'testuser' }),
+    }))
 
     vi.mocked(apiClient.getAuthToken).mockReturnValue('valid-token')
 

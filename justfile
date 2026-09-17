@@ -761,6 +761,14 @@ _dead-code-unix:
 type-check:
   {{FE}} npx tsc -b --force
 
+# Typecheck the test suite (in frontend container).
+# Separate from `type-check` because tsconfig.app.json deliberately excludes
+# tests; tsconfig.test.json re-includes them and adds the vitest/jest-dom
+# globals. Not yet in tsconfig.json's `references` — see
+# .claude/planning/TYPECHECK_FRONTEND_TESTS.md
+check-test-types:
+  {{FE}} npx tsc -p tsconfig.test.json --noEmit
+
 # Dead-export detection (in frontend container)
 knip:
   {{FE}} npx knip

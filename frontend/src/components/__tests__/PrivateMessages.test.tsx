@@ -6,6 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { PrivateMessages } from '../PrivateMessages';
 import type { Character } from '../../types/characters';
+import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils';
 
 // Mock the auth hook
 vi.mock('../../contexts/AuthContext', () => ({
@@ -17,35 +18,22 @@ import { useAuth } from '../../contexts/AuthContext'
 
 describe('PrivateMessages', () => {
   const mockCharacters: Character[] = [
-    {
-      id: 1,
-      game_id: 1,
-      name: 'Hero Character',
-      character_type: 'player_character',
-      user_id: 100,
-      status: 'approved',
-      created_at: '2024-01-01T00:00:00Z',
-    },
+    makeCharacter({ id: 1, name: 'Hero Character', user_id: 100 }),
   ];
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Mock the useAuth hook
-    vi.mocked(useAuth).mockReturnValue({
-      currentUser: {
+    vi.mocked(useAuth).mockReturnValue(makeAuthContext({
+      currentUser: makeUser({
         id: 100,
         username: 'testuser',
         email: 'test@example.com',
         avatar_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-      },
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-      isCheckingAuth: false,
-      authError: null,
-    });
+      }),
+      isAuthenticated: true,
+    }));
 
     // Mock the conversations API
     server.use(
@@ -64,6 +52,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="action"
         />
       , { gameId: 1 });
@@ -82,6 +71,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -100,6 +90,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="results"
         />
       , { gameId: 1 });
@@ -116,6 +107,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="action"
         />
       , { gameId: 1 });
@@ -132,6 +124,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -148,6 +141,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="interlude"
         />
       , { gameId: 1 });
@@ -166,6 +160,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType={undefined}
         />
       , { gameId: 1 });
@@ -185,6 +180,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -200,6 +196,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -239,6 +236,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -275,6 +273,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -322,6 +321,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -359,6 +359,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -404,6 +405,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -463,6 +465,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />,
         { gameId: 1, initialEntries: ['/?tab=messages&conversation=42'] }
@@ -480,6 +483,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />,
         { gameId: 1 }
@@ -514,6 +518,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />,
         { gameId: 1 }
@@ -554,6 +559,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />,
         { gameId: 1, initialEntries: ['/?tab=messages&conversation=42'] }
@@ -579,6 +585,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });
@@ -594,6 +601,7 @@ describe('PrivateMessages', () => {
           gameId={1}
           characters={mockCharacters}
           isAnonymous={false}
+          allowGroupConversations={true}
           currentPhaseType="common_room"
         />
       , { gameId: 1 });

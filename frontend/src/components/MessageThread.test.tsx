@@ -2,7 +2,16 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MessageThread } from './MessageThread';
-import type { PrivateMessage } from '../types/conversations';
+import type {
+  ConversationWithDetails,
+  PrivateMessage,
+} from '../types/conversations';
+import {
+  makeCharacter,
+  makeConversation,
+  makeConversationParticipant,
+  makeConversationWithDetails,
+} from '../test-utils';
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
@@ -25,10 +34,12 @@ const baseConversationContext = {
   conversations: [],
   selectedConversationId: 1,
   selectedConversationInfo: undefined,
-  conversation: {
-    conversation: { id: 1, game_id: 1, title: 'Test Chat', conversation_type: 'direct', created_by_user_id: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
+  // Annotated, not inferred: a bare `participants: []` widens to never[] and
+  // then rejects every participant the tests below assign into it.
+  conversation: makeConversationWithDetails({
+    conversation: makeConversation({ title: 'Test Chat', created_by_user_id: 1 }),
     participants: [],
-  },
+  }),
   messages: [] as PrivateMessage[],
   loadingConversations: false,
   loadingMessages: false,
@@ -79,12 +90,12 @@ const makeMessage = (overrides: Partial<PrivateMessage> = {}): PrivateMessage =>
 const defaultProps = {
   gameId: 1,
   conversationId: 1,
-  characters: [{ id: 10, name: 'TestChar', game_id: 1, user_id: 1, character_type: 'player_character', status: 'active', created_at: '2026-01-01', updated_at: '2026-01-01' }],
+  characters: [makeCharacter({ id: 10, name: 'TestChar', user_id: 1 })],
   currentPhaseType: 'common_room',
 };
 
-const defaultConversation = {
-  conversation: { id: 1, game_id: 1, title: 'Test Chat', conversation_type: 'direct', created_by_user_id: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
+const defaultConversation: ConversationWithDetails = {
+  conversation: makeConversation({ title: 'Test Chat', created_by_user_id: 1 }),
   participants: [],
 };
 
@@ -104,8 +115,8 @@ describe('MessageThread draft clearing on conversation change', () => {
 
     // Set up participants so the message form renders
     baseConversationContext.conversation = {
-      conversation: { id: 1, game_id: 1, title: 'Test Chat', conversation_type: 'direct', created_by_user_id: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
-      participants: [{ id: 1, conversation_id: 1, character_id: 10, character_name: 'TestChar', user_id: 1, username: 'testuser', joined_at: '2026-01-01' }],
+      conversation: makeConversation({ title: 'Test Chat', created_by_user_id: 1 }),
+      participants: [makeConversationParticipant({ character_id: 10, character_name: 'TestChar', user_id: 1 })],
     };
 
     const { rerender } = render(<MessageThread {...defaultProps} conversationId={1} />);
@@ -130,8 +141,8 @@ describe('MessageThread observability', () => {
   it('names the private-message send button for Faro user-action attribution', async () => {
     // Participants must be present for the send form (and its button) to render.
     baseConversationContext.conversation = {
-      conversation: { id: 1, game_id: 1, title: 'Test Chat', conversation_type: 'direct', created_by_user_id: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
-      participants: [{ id: 1, conversation_id: 1, character_id: 10, character_name: 'TestChar', user_id: 1, username: 'testuser', joined_at: '2026-01-01' }],
+      conversation: makeConversation({ title: 'Test Chat', created_by_user_id: 1 }),
+      participants: [makeConversationParticipant({ character_id: 10, character_name: 'TestChar', user_id: 1 })],
     };
 
     const user = userEvent.setup();

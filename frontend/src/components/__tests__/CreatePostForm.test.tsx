@@ -369,7 +369,6 @@ describe('CreatePostForm', () => {
     });
 
     it('shows error when submitting without content', async () => {
-      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm
