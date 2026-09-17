@@ -22,6 +22,7 @@ vi.mock('../hooks/useConflictingSheetDrafts', () => ({
 }));
 
 const basePhase: GamePhase = {
+  is_expired: false,
   id: 1,
   game_id: 100,
   phase_type: 'common_room',

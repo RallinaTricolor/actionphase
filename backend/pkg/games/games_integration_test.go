@@ -127,7 +127,6 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 			Description: "An updated comprehensive test campaign",
 			Genre:       "Sci-Fi RPG",
 			MaxPlayers:  8,
-			IsPublic:    true,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -154,7 +153,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 	for _, step := range []string{"recruitment", "character_creation", "in_progress"} {
 		step := step
 		t.Run("update_game_state_to_"+step, func(t *testing.T) {
-			stateData := UpdateGameStateRequest{State: step}
+			stateData := map[string]string{"state": step}
 			payload, _ := json.Marshal(stateData)
 			req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
 			req.Header.Set("Content-Type", "application/json")
@@ -163,18 +162,19 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 			router.ServeHTTP(w, req)
 			core.AssertEqual(t, 200, w.Code, "Game state update to "+step+" should succeed")
 
-			var response GameResponse
+			// GameStateChangedResponse, not GameResponse: this endpoint answers
+			// with the reduced shape, and decoding into the full one would
+			// quietly read zero values for the 21 fields it never sends.
+			var response GameStateChangedResponse
 			err := json.Unmarshal(w.Body.Bytes(), &response)
 			core.AssertNoError(t, err, "Response should be valid JSON")
-			core.AssertEqual(t, step, response.State, "Response body should reflect new state")
+			core.AssertEqual(t, core.GameState(step), response.State, "Response body should reflect new state")
 		})
 	}
 
 	// Step 6: Cancel game (required before deletion)
 	t.Run("cancel_game", func(t *testing.T) {
-		stateData := UpdateGameStateRequest{
-			State: "cancelled",
-		}
+		stateData := map[string]string{"state": core.GameStateCancelled}
 
 		payload, _ := json.Marshal(stateData)
 		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(createdGameID))+"/state", bytes.NewBuffer(payload))
@@ -231,11 +231,11 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		Genre:       "Action",
 		MaxPlayers:  4,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
-	// Update game to recruiting state for recruiting games test
+	// Move the game out of setup so it is visible to the listing endpoints
+	// below, which is the state a real game is in when anyone browses for it.
 	_, err = gameService.UpdateGameState(context.Background(), createdGame.ID, "recruitment")
 	core.AssertNoError(t, err, "Game state update should succeed")
 
@@ -271,31 +271,11 @@ func TestGameAPI_PublicEndpoints(t *testing.T) {
 		core.AssertTrue(t, found, "Created game should be in the response")
 	})
 
-	// Test get recruiting games (authenticated)
-	t.Run("get_recruiting_games", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/games/recruiting", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		core.AssertEqual(t, 200, w.Code, "Get recruiting games should succeed")
-
-		var response []map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		core.AssertNoError(t, err, "Response should be valid JSON")
-
-		// New games should be in recruiting state by default
-		found := false
-		for _, game := range response {
-			if int32(game["id"].(float64)) == createdGame.ID {
-				core.AssertEqual(t, "recruitment", game["state"].(string), "Game should be recruiting")
-				found = true
-				break
-			}
-		}
-		core.AssertTrue(t, found, "Recruiting game should be in the response")
-	})
+	// GET /games/recruiting was removed as redundant: the filtered listing
+	// answers the same question server-side via `GET /games/?states=recruitment`,
+	// with pagination and a typed response instead of []map[string]any. Its
+	// subtest went with it; get_all_games above covers the listing this game
+	// now appears in.
 
 	// Test get single game (authenticated)
 	t.Run("get_single_game", func(t *testing.T) {
@@ -355,7 +335,6 @@ func TestGameAPI_ParticipantManagement(t *testing.T) {
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		MaxPlayers:  3,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
@@ -449,7 +428,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		Description: "A game for testing authorization",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Test game creation should succeed")
 
@@ -473,7 +451,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		updateData := UpdateGameRequest{
 			Title:       "Unauthorized Update",
 			Description: "This should not work",
-			IsPublic:    false,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -489,9 +466,11 @@ func TestGameAPI_Authorization(t *testing.T) {
 
 	// Test that non-owner cannot update game state
 	t.Run("non_owner_cannot_update_state", func(t *testing.T) {
-		stateData := UpdateGameStateRequest{
-			State: "active",
-		}
+		// A REAL state, so authorization is what rejects this rather than
+		// schema validation. The payload used to say "active", which is not a
+		// game state at all -- it reached the 403 only because nothing
+		// validated it, and would have 422'd once `state` carried its enum.
+		stateData := map[string]string{"state": core.GameStateRecruitment}
 
 		payload, _ := json.Marshal(stateData)
 		req := httptest.NewRequest("PUT", "/api/v1/games/"+strconv.Itoa(int(testGame.ID))+"/state", bytes.NewBuffer(payload))
@@ -520,7 +499,6 @@ func TestGameAPI_Authorization(t *testing.T) {
 		updateData := UpdateGameRequest{
 			Title:       "Owner Update",
 			Description: "This should work",
-			IsPublic:    true,
 		}
 
 		payload, _ := json.Marshal(updateData)
@@ -761,49 +739,6 @@ func BenchmarkGameAPI_CreateGame(b *testing.B) {
 	}
 }
 
-func BenchmarkGameAPI_GetAllGames(b *testing.B) {
-	testDB := core.NewTestDatabase(b)
-	defer testDB.Close()
-	defer testDB.CleanupTables(b, "game_applications", "game_participants", "games", "sessions", "users")
-
-	app := core.NewTestApp(testDB.Pool)
-
-	router := setupGameTestRouter(app, testDB)
-	fixtures := testDB.SetupFixtures(b)
-
-	// Create auth token for test user
-	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
-	if err != nil {
-		b.Fatalf("Test token creation should succeed: %v", err)
-	}
-
-	// Create some test games
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	for i := 0; i < 10; i++ {
-		_, _ = gameService.CreateGame(context.Background(), core.CreateGameRequest{
-			Title:       "Benchmark Game " + strconv.Itoa(i),
-			Description: "A game for benchmark testing",
-			GMUserID:    int32(fixtures.TestUser.ID),
-			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
-		})
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("GET", "/api/v1/games/public", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, req)
-
-		if w.Code != 200 {
-			b.Fatalf("Get all games failed with status %d", w.Code)
-		}
-	}
-}
-
 // TestGameAPI_GameApplications tests the game application workflow
 func TestGameAPI_GameApplications(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
@@ -839,7 +774,6 @@ func TestGameAPI_GameApplications(t *testing.T) {
 		Description: "A game to test applications",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -1130,7 +1064,6 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 		Description: "A game to test audience features",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -1326,7 +1259,6 @@ func TestGameAPI_AudienceManagement(t *testing.T) {
 			Description: "A game to test audience joining during character creation",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
 

@@ -5,12 +5,12 @@ import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollsTab } from './PollsTab';
 import * as hooks from '../hooks';
-import type { Poll } from '../types/polls';
+import type { PollListItem } from '../types/polls';
 
 // Render a stand-in for PollCard carrying the same anchor id the real card
 // exposes, so the scroll target is exercised without PollCard's dependencies.
 vi.mock('./PollCard', () => ({
-  PollCard: ({ poll }: { poll: Poll }) => (
+  PollCard: ({ poll }: { poll: PollListItem }) => (
     <div id={`poll-${poll.id}`}>{poll.question}</div>
   ),
 }));
@@ -24,7 +24,7 @@ vi.mock('../contexts/GameContext', () => ({
   useGameContext: () => ({ currentPhaseId: 10 }),
 }));
 
-function makePoll(overrides: Partial<Poll> = {}): Poll {
+function makePoll(overrides: Partial<PollListItem> = {}): PollListItem {
   return {
     id: 1,
     game_id: 1,
@@ -36,6 +36,10 @@ function makePoll(overrides: Partial<Poll> = {}): Poll {
     deadline: '2026-12-31T23:59:59Z',
     show_individual_votes: false,
     allow_other_option: false,
+    hide_results_from_players: false,
+    allow_audience_voting: false,
+    show_running_totals_to_players: false,
+    is_deleted: false,
     is_expired: false,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

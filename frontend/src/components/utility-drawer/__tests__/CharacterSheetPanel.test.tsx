@@ -35,6 +35,8 @@ function makeCharacter(
     name: 'Kael Vance',
     status: 'approved',
     character_type: 'player_character',
+    // Always true on this endpoint: the query filters to active characters.
+    is_active: true,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     game_title: 'Alpha Game',

@@ -1,38 +1,21 @@
-export interface Notification {
-  id: number;
-  user_id: number;
-  game_id?: number;
-  type: string;
-  title: string;
-  content?: string;
-  related_type?: string;
-  related_id?: number;
-  link_url?: string;
-  /** The container this notification belongs to (e.g. 'conversation').
-   * Marking the notification read clears every sibling sharing this context. */
-  context_type?: string;
-  context_id?: number;
-  is_read: boolean;
-  read_at?: string;
-  created_at: string;
-}
+import type { components } from './api.gen';
 
-export interface NotificationListResponse {
-  data: Notification[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-  };
-}
+/**
+ * Generated from the OpenAPI spec (`just gen-api-types`).
+ *
+ * context_type/context_id are the CONTAINER (marking read clears every sibling
+ * sharing the context); related_type/related_id are the item itself, for the
+ * preview. The distinction is load-bearing and easy to invert -- see the schema
+ * docs on NotificationResponse.
+ */
+export type Notification = components['schemas']['NotificationResponse'];
 
-export interface UnreadCountResponse {
-  unread_count: number;
-}
+/** Generated. One page of the notification list. */
+export type NotificationListResponse = components['schemas']['NotificationListResponse'];
 
-export interface MarkAllReadResponse {
-  marked_count: number;
-}
+export type UnreadCountResponse = components['schemas']['UnreadCountResponse'];
+
+export type MarkAllReadResponse = components['schemas']['MarkAllReadResponse'];
 
 export interface GetNotificationsParams {
   limit?: number;

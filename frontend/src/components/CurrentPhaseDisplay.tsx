@@ -195,12 +195,14 @@ function CurrentPhaseCard({
 
         {/* Phase-specific information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-theme-default">
-          <div>
-            <span className="text-sm font-medium text-content-primary">Started:</span>
-            <div className="text-sm text-content-primary">
-              {new Date(phase.start_time).toLocaleString()}
+          {phase.start_time && (
+            <div>
+              <span className="text-sm font-medium text-content-primary">Started:</span>
+              <div className="text-sm text-content-primary">
+                {new Date(phase.start_time).toLocaleString()}
+              </div>
             </div>
-          </div>
+          )}
 
           {phase.deadline && (
             <div>
@@ -340,8 +342,8 @@ function PreviousPhaseCard({ phase }: PreviousPhaseCardProps) {
           <div>
             <h4 className="font-medium text-content-primary text-sm">{phaseLabel}</h4>
             <p className="text-xs text-content-secondary">
-              {new Date(phase.start_time).toLocaleDateString()} •
-              {phase.end_time ? ` Ended ${new Date(phase.end_time).toLocaleDateString()}` : ' Completed'}
+              {phase.start_time && `${new Date(phase.start_time).toLocaleDateString()} • `}
+              {phase.end_time ? `Ended ${new Date(phase.end_time).toLocaleDateString()}` : 'Completed'}
             </p>
           </div>
         </div>

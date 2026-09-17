@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils/render';
 import { AssignNPCModal } from '../AssignNPCModal';
 import { ReassignCharacterModal } from '../ReassignCharacterModal';
-import type { Character } from '../../types/characters';
+import type { Character, InactiveCharacter } from '../../types/characters';
 
 vi.mock('../../hooks/useCharacters', () => ({
   useAssignNPC: vi.fn(),
@@ -40,10 +40,24 @@ const baseCharacter: Character = {
   name: 'Elara',
   game_id: 10,
   character_type: 'npc',
-  status: 'active',
+  // 'approved', not the 'active' this fixture used to claim: status is an enum
+  // of pending|approved, and is_active is the separate flag. The `as unknown`
+  // cast that used to sit here hid the mismatch.
+  status: 'approved',
+  is_active: true,
   created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
+// ReassignCharacterModal takes the inactive-list shape, which adds the
+// ownership history the reassignment decision is made from. Deactivated by
+// definition, hence is_active: false.
+const baseInactiveCharacter: InactiveCharacter = {
+  ...baseCharacter,
+  is_active: false,
+  current_owner_username: null,
   original_owner_username: 'gmuser',
-} as unknown as Character;
+};
 
 const audienceParticipant = { id: 1, user_id: 99, username: 'watcher', role: 'audience' };
 const playerParticipant = { id: 2, user_id: 42, username: 'player1', role: 'player' };
@@ -130,12 +144,12 @@ describe('ReassignCharacterModal', () => {
   });
 
   it('renders character name in modal title', () => {
-    renderWithProviders(<ReassignCharacterModal character={baseCharacter} gameId={10} isOpen onClose={vi.fn()} />);
+    renderWithProviders(<ReassignCharacterModal character={baseInactiveCharacter} gameId={10} isOpen onClose={vi.fn()} />);
     expect(screen.getByText('Reassign Elara')).toBeInTheDocument();
   });
 
   it('shows all participants in dropdown', () => {
-    renderWithProviders(<ReassignCharacterModal character={baseCharacter} gameId={10} isOpen onClose={vi.fn()} />);
+    renderWithProviders(<ReassignCharacterModal character={baseInactiveCharacter} gameId={10} isOpen onClose={vi.fn()} />);
     expect(screen.getByRole('option', { name: /watcher/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /player1/i })).toBeInTheDocument();
   });
@@ -148,7 +162,7 @@ describe('ReassignCharacterModal', () => {
     const onClose = vi.fn();
 
     renderWithProviders(
-      <ReassignCharacterModal character={baseCharacter} gameId={10} isOpen onClose={onClose} onSuccess={onSuccess} />
+      <ReassignCharacterModal character={baseInactiveCharacter} gameId={10} isOpen onClose={onClose} onSuccess={onSuccess} />
     );
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: /reassign character/i }));
@@ -167,7 +181,7 @@ describe('ReassignCharacterModal', () => {
     const onClose = vi.fn();
 
     renderWithProviders(
-      <ReassignCharacterModal character={baseCharacter} gameId={10} isOpen onClose={onClose} />
+      <ReassignCharacterModal character={baseInactiveCharacter} gameId={10} isOpen onClose={onClose} />
     );
     await user.selectOptions(screen.getByRole('combobox'), '42');
     await user.click(screen.getByRole('button', { name: /reassign character/i }));

@@ -352,6 +352,7 @@ describe('PeopleView - Pending audience applications with no participants', () =
 
 describe('PeopleView - anonymous game former player display', () => {
   const formerPlayer: GameParticipant = {
+    avatar_url: null,
     id: 10,
     game_id: 1,
     user_id: 10,
@@ -386,6 +387,8 @@ describe('PeopleView - anonymous game former player display', () => {
   it('hides "Former Players" section from a regular player in an anonymous game', async () => {
     const user = userEvent.setup();
     const regularPlayer: GameParticipant = {
+      is_former_player: false,
+      avatar_url: null,
       id: 11, game_id: 1, user_id: 11, username: 'activePlayer',
       role: 'player', status: 'active', joined_at: '2024-01-01T00:00:00Z',
     };
@@ -453,6 +456,7 @@ describe('PeopleView - anonymous game former player display', () => {
   it('shows "Former Players" section to an audience member in an anonymous game', async () => {
     const user = userEvent.setup();
     const audienceMember: GameParticipant = {
+      avatar_url: null,
       id: 20, game_id: 1, user_id: 20, username: 'watcher',
       role: 'audience', status: 'active', joined_at: '2024-01-01T00:00:00Z',
       is_former_player: false,
@@ -479,6 +483,8 @@ describe('PeopleView - anonymous game former player display', () => {
 
 describe('PeopleView - participant profile links', () => {
   const mockPlayer: GameParticipant = {
+    is_former_player: false,
+    avatar_url: null,
     id: 1,
     game_id: 1,
     user_id: 1,

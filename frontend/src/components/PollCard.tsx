@@ -5,11 +5,11 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { PollVotingForm } from './PollVotingForm';
 import { PollResults } from './PollResults';
 import { ConfirmModal } from './ConfirmModal';
-import type { Poll } from '../types/polls';
+import type { PollListItem } from '../types/polls';
 import { isGameWritable } from '@/lib/gamePermissions';
 
 interface PollCardProps {
-  poll: Poll;
+  poll: PollListItem;
   gameId: number;
   isGM: boolean;
   isAudience?: boolean;
@@ -23,8 +23,10 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
   // Get delete mutation from usePolls hook
   const { deletePollMutation } = usePolls(gameId);
 
-  // Compute is_expired client-side (backend doesn't provide it)
-  const isExpired = new Date(poll.deadline) < new Date();
+  // Server-computed, so this card and PollsTab's active/expired split cannot
+  // disagree about the same poll. (They used to: this was derived from the
+  // deadline here, while PollsTab read an is_expired the API never sent.)
+  const isExpired = poll.is_expired;
 
   // Results of a hidden-results poll are withheld from players permanently — the
   // backend rejects the request, so never ask for them. GM/audience are exempt.
@@ -67,24 +69,15 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
   // Fetch results when showing results
   const { data: results, isLoading: resultsLoading } = usePollResults(showResults ? poll.id : null);
 
-  const formatDeadline = (deadline: string) => {
-    const date = new Date(deadline);
-    const now = new Date();
-    const isExpired = date < now;
-
-    return {
-      text: date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      }),
-      isExpired
-    };
-  };
-
-  const deadlineInfo = formatDeadline(poll.deadline);
+  // Formats the deadline only. Whether the poll has ended comes from
+  // `isExpired` above, so the badge and this label always agree.
+  const deadlineText = new Date(poll.deadline).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 
   const handleDeletePoll = async () => {
     try {
@@ -107,7 +100,7 @@ export function PollCard({ poll, gameId, isGM, isAudience = false, gameState }: 
             {/* Metadata row */}
             <div className="flex items-center gap-3 mt-2 text-sm text-content-secondary">
               <span>
-                {deadlineInfo.isExpired ? 'Ended' : 'Ends'}: {deadlineInfo.text}
+                {isExpired ? 'Ended' : 'Ends'}: {deadlineText}
               </span>
             </div>
           </div>

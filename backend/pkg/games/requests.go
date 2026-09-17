@@ -47,11 +47,6 @@ type CreateGameRequest struct {
 	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty"`
 }
 
-// UpdateGameStateRequest represents the request to update a game's state
-type UpdateGameStateRequest struct {
-	State string `json:"state"`
-}
-
 // UpdateGameRequest represents the request to update game details
 type UpdateGameRequest struct {
 	Title                   string                     `json:"title"`
@@ -61,7 +56,6 @@ type UpdateGameRequest struct {
 	EndDate                 *time.Time                 `json:"end_date,omitempty"`
 	RecruitmentDeadline     *time.Time                 `json:"recruitment_deadline,omitempty"`
 	MaxPlayers              int32                      `json:"max_players,omitempty"`
-	IsPublic                bool                       `json:"is_public"`
 	IsAnonymous             bool                       `json:"is_anonymous"`
 	AutoAcceptAudience      bool                       `json:"auto_accept_audience"`
 	AllowGroupConversations bool                       `json:"allow_group_conversations"`

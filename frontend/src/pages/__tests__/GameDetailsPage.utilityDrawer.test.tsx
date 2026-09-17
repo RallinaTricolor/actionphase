@@ -94,7 +94,6 @@ function setupGame({ state, phaseType = 'action', characters = [viewedGameCharac
         state,
         max_players: 4,
         current_players: 2,
-        is_public: true,
         is_anonymous: false,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

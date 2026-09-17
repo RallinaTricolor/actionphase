@@ -52,7 +52,6 @@ func TestGameAPI_ApplicationManagement(t *testing.T) {
 		Description: "Testing application endpoints",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -225,7 +224,6 @@ func TestGameAPI_AudienceMemberCanRejoinAfterLeaving(t *testing.T) {
 		Description: "Testing audience leave/reapply",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -384,7 +382,6 @@ func TestGameAPI_RejectedAudienceApplicationShowsRejected(t *testing.T) {
 		Description: "Testing audience rejection visibility",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -498,7 +495,6 @@ func TestGameAPI_ParticipantManagementAdvanced(t *testing.T) {
 		Description: "Testing participant endpoints",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -693,7 +689,6 @@ func TestGameAPI_RemovePlayer_DeactivatesCharacters(t *testing.T) {
 		Description: "Test game for player removal",
 		GMUserID:    int32(gm.ID),
 		CommunityID: community.ID,
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 
@@ -753,7 +748,6 @@ func TestGameAPI_ReviewGameApplication_ApprovesAndRejects(t *testing.T) {
 		Description: "Test game for application review",
 		GMUserID:    int32(gm.ID),
 		CommunityID: community.ID,
-		IsPublic:    true,
 	})
 	require.NoError(t, err)
 

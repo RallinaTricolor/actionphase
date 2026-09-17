@@ -131,7 +131,7 @@ describe('PostCard - Load More Comments', () => {
       name: 'Test Character',
       username: 'testuser',
       character_type: 'player_character',
-      avatar_url: null,
+      avatar_url: undefined,
     } as Character,
   ];
 

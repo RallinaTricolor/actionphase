@@ -71,7 +71,7 @@ const CommentList = memo(function CommentList({
   onToggleRead: (commentId: number, currentlyRead: boolean) => void;
   favoriteCommentIDs: number[];
   onToggleFavorite: (commentId: number, currentlyFavorited: boolean) => void;
-  onOpenThread: (comment: Message) => void;
+  onOpenThread: (comment: Message | CommentTreeNode) => void;
   readOnly: boolean;
   allowReadTracking: boolean;
 }) {
@@ -116,7 +116,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = usePostCollapseState(post.id);
-  const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
+  const [threadModalComment, setThreadModalComment] = useState<Message | CommentTreeNode | null>(null);
   const gameContext = useOptionalGameContext();
   const portraitAvatars = gameContext?.game?.portrait_avatars ?? false;
   const { screenshotModeEnabled } = useScreenshotMode();
@@ -351,7 +351,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   };
 
   // Stable callback for opening thread modal (prevents CommentList re-renders)
-  const handleOpenThread = useCallback((comment: Message) => {
+  const handleOpenThread = useCallback((comment: Message | CommentTreeNode) => {
     setThreadModalComment(comment);
   }, []);
 

@@ -16,7 +16,6 @@ import (
 	models "actionphase/pkg/db/models"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -120,7 +119,6 @@ func seedCompletedGame(t *testing.T, pool *pgxpool.Pool) int32 {
 		Title:       "Export Integration Game",
 		Description: "Integration fixture",
 		GmUserID:    user.ID,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	require.NoError(t, err)
 

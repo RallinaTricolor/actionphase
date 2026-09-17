@@ -42,7 +42,11 @@ type Community struct {
 	// normally sees "" here and gets "owner" only with admin mode enabled. That
 	// is precisely why the role rides on the response rather than on a cached
 	// login payload.
-	YourRole CommunityRole `json:"your_role"`
+	// Tagged so the generated TypeScript keeps the three-value union the
+	// hand-written CommunityRole carried; a named Go string type alone
+	// renders as bare `string` (huma only derives enums from a tag or a
+	// SchemaProvider). Values are the CommunityRole constants below.
+	YourRole CommunityRole `json:"your_role" enum:",moderator,owner"`
 
 	// IsBanned reports whether the REQUESTING user is currently barred from
 	// this community. Like YourRole it describes the request, not the
@@ -246,7 +250,9 @@ type CommunityBanEvent struct {
 	ActorUserID   *int32  `json:"actor_user_id,omitempty"`
 	ActorUsername *string `json:"actor_username,omitempty"`
 
-	Action    string     `json:"action"` // See ValidBanEventActions
+	// Tagged so the spec carries the closed set: the frontend had hand-written
+	// the same union as BanEventAction and keys two Record lookups off it.
+	Action    string     `json:"action" enum:"banned,unbanned,modified"` // See ValidBanEventActions
 	Reason    *string    `json:"reason,omitempty"`
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -316,7 +322,7 @@ type CommunityDocument struct {
 	// Status is "draft" or "published". Only published documents are visible to
 	// anyone but a moderator, so this is the whole visibility rule -- see
 	// ValidDocumentStatuses.
-	Status string `json:"status"`
+	Status string `json:"status" enum:"draft,published"`
 
 	// SortOrder is the display position, lowest first. Explicit because a
 	// community's documents have a deliberate reading order that neither the

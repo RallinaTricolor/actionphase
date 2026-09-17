@@ -100,10 +100,6 @@ export const simpleApi = {
   },
 
   // Games API
-  async getPublicGames() {
-    return api.get('/api/v1/games/public');
-  },
-
   async getGame(gameId: string) {
     return api.get(`/api/v1/games/${gameId}`);
   },

@@ -1,6 +1,7 @@
 import { BaseApiClient } from './client';
 import type {
-  AuthResponse,
+  LoginResponse,
+  RegisterResponse,
   LoginRequest,
   RegisterRequest,
   ChangePasswordRequest,
@@ -53,11 +54,11 @@ interface PreferencesResponse {
  */
 export class AuthApi extends BaseApiClient {
   async login(data: LoginRequest) {
-    return this.client.post<AuthResponse>('/api/v1/auth/login', data);
+    return this.client.post<LoginResponse>('/api/v1/auth/login', data);
   }
 
   async register(data: RegisterRequest) {
-    return this.client.post<AuthResponse>('/api/v1/auth/register', data);
+    return this.client.post<RegisterResponse>('/api/v1/auth/register', data);
   }
 
   async logout() {

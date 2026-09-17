@@ -35,6 +35,7 @@ vi.mock('../../contexts/AuthContext', async (importOriginal) => {
 
 describe('ActionSubmission', () => {
   const mockActionPhase: GamePhase = {
+    is_expired: false,
     id: 1,
     game_id: 1,
     phase_type: 'action',
@@ -49,6 +50,7 @@ describe('ActionSubmission', () => {
   };
 
   const mockCommonRoomPhase: GamePhase = {
+    is_expired: false,
     id: 2,
     game_id: 1,
     phase_type: 'common_room',
@@ -62,6 +64,7 @@ describe('ActionSubmission', () => {
 
   const mockCharacters: Character[] = [
     {
+      is_active: true,
       id: 1,
       game_id: 1,
       name: 'Hero Character',
@@ -72,6 +75,7 @@ describe('ActionSubmission', () => {
       updated_at: '2025-01-01T00:00:00Z',
     },
     {
+      is_active: true,
       id: 2,
       game_id: 1,
       name: 'Villain Character',
@@ -84,6 +88,7 @@ describe('ActionSubmission', () => {
   ];
 
   const mockCurrentAction: ActionWithDetails = {
+    username: 'testuser',
     id: 1,
     game_id: 1,
     user_id: 100,
@@ -99,6 +104,7 @@ describe('ActionSubmission', () => {
 
   const mockPreviousActions: ActionWithDetails[] = [
     {
+      username: 'testuser',
       id: 2,
       game_id: 1,
       user_id: 100,

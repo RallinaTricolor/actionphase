@@ -34,7 +34,7 @@ BEGIN
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
 
   -- Create game
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     701,
     'E2E Deep Linking Test',
@@ -43,7 +43,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '2 days',
     NOW() - INTERVAL '2 days'
   );

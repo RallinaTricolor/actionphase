@@ -38,7 +38,7 @@ BEGIN
   -- ============================================
   -- E2E Game: For Action Results Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_id,
     'E2E Test: Action Results',
@@ -47,7 +47,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     NOW() - INTERVAL '10 days',
     NOW()
   );

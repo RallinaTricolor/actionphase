@@ -114,7 +114,6 @@ func (m *SimpleMockGameRepository) CreateGame(ctx context.Context, params db.Cre
 		State:       "setup",
 		Genre:       params.Genre,
 		MaxPlayers:  params.MaxPlayers,
-		IsPublic:    params.IsPublic,
 		CreatedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		UpdatedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 	}
@@ -163,10 +162,6 @@ func (m *SimpleMockGameRepository) GetGamesByGM(ctx context.Context, gmUserID in
 	return games, nil
 }
 
-func (m *SimpleMockGameRepository) GetRecruitingGames(ctx context.Context) ([]db.GetRecruitingGamesRow, error) {
-	return []db.GetRecruitingGamesRow{}, nil
-}
-
 func (m *SimpleMockGameRepository) GetGameWithDetails(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error) {
 	return db.GetGameWithDetailsRow{}, nil
 }
@@ -180,7 +175,6 @@ func (m *SimpleMockGameRepository) UpdateGame(ctx context.Context, params db.Upd
 		game.EndDate = params.EndDate
 		game.RecruitmentDeadline = params.RecruitmentDeadline
 		game.MaxPlayers = params.MaxPlayers
-		game.IsPublic = params.IsPublic
 		game.UpdatedAt = pgtype.Timestamptz{Time: time.Now(), Valid: true}
 		m.games[params.ID] = game
 		return game, nil

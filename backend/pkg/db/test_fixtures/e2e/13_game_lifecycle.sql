@@ -36,7 +36,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -48,7 +47,6 @@ BEGIN
     gm_id,
     5,
     'character_creation',
-    true,
     NOW() - INTERVAL '7 days',
     NOW()
   );
@@ -68,7 +66,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -80,7 +77,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '30 days',
     NOW()
   );
@@ -99,7 +95,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -111,7 +106,6 @@ BEGIN
     gm_id,
     5,
     'paused',
-    true,
     NOW() - INTERVAL '45 days',
     NOW()
   );
@@ -130,7 +124,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -142,7 +135,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '90 days',
     NOW()
   );
@@ -161,7 +153,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -173,7 +164,6 @@ BEGIN
     gm_id,
     5,
     'recruitment',
-    true,
     NOW() - INTERVAL '14 days',
     NOW()
   );

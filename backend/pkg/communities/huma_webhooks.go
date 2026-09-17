@@ -55,7 +55,7 @@ type createWebhookInput struct {
 		IsEnabled *bool `json:"is_enabled,omitempty" doc:"Whether this webhook fires; defaults to true"`
 		// Omitted means no events -- a webhook that fires for everything by
 		// default would spam a channel the first time any game moved.
-		Events []string `json:"events,omitempty" doc:"Game states to announce"`
+		Events []core.WebhookEvent `json:"events,omitempty" doc:"Game states to announce"`
 	}
 }
 
@@ -68,10 +68,10 @@ type updateWebhookInput struct {
 	Slug      string `path:"slug" doc:"Community URL slug"`
 	WebhookID int32  `path:"webhookID" doc:"Webhook ID"`
 	Body      struct {
-		URL       *string  `json:"url,omitempty" doc:"Replacement Discord webhook URL; omit to keep the current one"`
-		Label     *string  `json:"label,omitempty" maxLength:"100" doc:"Name for this channel"`
-		IsEnabled *bool    `json:"is_enabled,omitempty" doc:"Whether this webhook fires"`
-		Events    []string `json:"events,omitempty" doc:"Game states to announce"`
+		URL       *string             `json:"url,omitempty" doc:"Replacement Discord webhook URL; omit to keep the current one"`
+		Label     *string             `json:"label,omitempty" maxLength:"100" doc:"Name for this channel"`
+		IsEnabled *bool               `json:"is_enabled,omitempty" doc:"Whether this webhook fires"`
+		Events    []core.WebhookEvent `json:"events,omitempty" doc:"Game states to announce"`
 	}
 }
 
@@ -136,7 +136,10 @@ func (h *Handler) humaCreateWebhook(ctx context.Context, in *createWebhookInput)
 			URL:       in.Body.URL,
 			Label:     in.Body.Label,
 			IsEnabled: in.Body.IsEnabled,
-			Events:    in.Body.Events,
+			// The service and sqlc both speak []string, and validateWebhookEvents
+			// is the authority on membership -- the typed slice is the wire
+			// contract, not a replacement for that check.
+			Events: core.WebhookEventStrings(in.Body.Events),
 		})
 	if err != nil {
 		if mapped := webhookError(err); mapped != nil {
@@ -162,7 +165,9 @@ func (h *Handler) humaUpdateWebhook(ctx context.Context, in *updateWebhookInput)
 			URL:       in.Body.URL,
 			Label:     in.Body.Label,
 			IsEnabled: in.Body.IsEnabled,
-			Events:    in.Body.Events,
+			// Nil means "leave events unchanged" here, which the nil-preserving
+			// conversion keeps intact; see core.WebhookEventStrings.
+			Events: core.WebhookEventStrings(in.Body.Events),
 		})
 	if err != nil {
 		if mapped := webhookError(err); mapped != nil {

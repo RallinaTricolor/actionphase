@@ -176,24 +176,34 @@ func TestWebhooksAPI_RejectsNonDiscordURLs(t *testing.T) {
 	}
 }
 
+// 422 rather than 400: `events` carries the ValidWebhookEvents enum in the
+// schema, so huma rejects an unknown member during validation and the handler
+// never runs. The service still validates independently (validateWebhookEvents)
+// -- that is defence in depth for non-HTTP callers, and its 400 mapping in
+// webhookError is kept for them.
 func TestWebhooksAPI_RejectsUnknownEvents(t *testing.T) {
 	h := newHarness(t)
 
 	body := []byte(`{"url":"` + validHookURL + `","events":["not_a_state"]}`)
 	rec := h.request(t, h.owner, http.MethodPost, webhooksPath("midnight-ravens"), body, false)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code, "body: %s", rec.Body.String())
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "body: %s", rec.Body.String())
 }
 
 // `setup` is a valid game state but NOT a notifiable one: a game in setup is
 // not yet public, and announcing it would leak an unlisted game.
+//
+// This is the assertion that proves the schema enum is ValidWebhookEvents and
+// not ValidGameStates -- the two differ by exactly this member, so a 200 here
+// would mean the narrower set had been widened somewhere. 422 for the same
+// reason as the unknown-event case above.
 func TestWebhooksAPI_RejectsSetupAsEvent(t *testing.T) {
 	h := newHarness(t)
 
 	body := []byte(`{"url":"` + validHookURL + `","events":["setup"]}`)
 	rec := h.request(t, h.owner, http.MethodPost, webhooksPath("midnight-ravens"), body, false)
 
-	assert.Equal(t, http.StatusBadRequest, rec.Code, "body: %s", rec.Body.String())
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "body: %s", rec.Body.String())
 }
 
 // ------------------------------------------------------------------ scoping

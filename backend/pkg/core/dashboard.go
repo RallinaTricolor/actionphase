@@ -5,14 +5,19 @@ import "time"
 // DashboardData represents the complete dashboard view for a user.
 // It aggregates games, recent activity, and upcoming deadlines.
 type DashboardData struct {
-	UserID              int32                `json:"user_id"`
-	HasGames            bool                 `json:"has_games"`
-	PlayerGames         []*DashboardGameCard `json:"player_games"`
-	GMGames             []*DashboardGameCard `json:"gm_games"`
-	AudienceGames       []*DashboardGameCard `json:"audience_games"`
-	MixedRoleGames      []*DashboardGameCard `json:"mixed_role_games"`
-	RecentMessages      []*DashboardMessage  `json:"recent_messages"`
-	UpcomingDeadlines   []*DashboardDeadline `json:"upcoming_deadlines"`
+	UserID   int32 `json:"user_id"`
+	HasGames bool  `json:"has_games"`
+	// nullable:"false" on all six: groupGamesByRole make()s its four return
+	// values with an explicit "ensure they serialize as [] not null" comment,
+	// and transformMessages / transformDeadlines both make(...,0,len). None can
+	// be nil, so without the tag huma's DefaultArrayNullable would force dead
+	// `?? []` handling at every .map() and .length site on the dashboard.
+	PlayerGames         []*DashboardGameCard `json:"player_games" nullable:"false"`
+	GMGames             []*DashboardGameCard `json:"gm_games" nullable:"false"`
+	AudienceGames       []*DashboardGameCard `json:"audience_games" nullable:"false"`
+	MixedRoleGames      []*DashboardGameCard `json:"mixed_role_games" nullable:"false"`
+	RecentMessages      []*DashboardMessage  `json:"recent_messages" nullable:"false"`
+	UpcomingDeadlines   []*DashboardDeadline `json:"upcoming_deadlines" nullable:"false"`
 	UnreadNotifications int                  `json:"unread_notifications"`
 	NotificationsByType map[string]int       `json:"notifications_by_type"`
 }
@@ -20,14 +25,14 @@ type DashboardData struct {
 // DashboardGameCard represents a game card on the dashboard.
 // It includes context-specific information based on user's role and game state.
 type DashboardGameCard struct {
-	GameID      int32   `json:"game_id"`
-	Title       string  `json:"title"`
-	Description *string `json:"description,omitempty"`
-	State       string  `json:"state"` // "recruitment", "in_progress", "paused", "completed"
-	Genre       *string `json:"genre,omitempty"`
-	GMUserID    int32   `json:"gm_user_id"`
-	GMUsername  string  `json:"gm_username"`
-	UserRole    string  `json:"user_role"` // "player", "gm", or "both"
+	GameID      int32     `json:"game_id"`
+	Title       string    `json:"title"`
+	Description *string   `json:"description,omitempty"`
+	State       GameState `json:"state"`
+	Genre       *string   `json:"genre,omitempty"`
+	GMUserID    int32     `json:"gm_user_id"`
+	GMUsername  string    `json:"gm_username"`
+	UserRole    string    `json:"user_role"` // "player", "gm", or "both"
 
 	// Current phase information
 	CurrentPhaseID       *int32     `json:"current_phase_id,omitempty"`
@@ -42,8 +47,11 @@ type DashboardGameCard struct {
 	UnvotedPolls        int  `json:"unvoted_polls"`
 
 	// Urgency indicators (calculated by service layer)
-	IsUrgent       bool   `json:"is_urgent"`       // Deadline <24h or pending action
-	DeadlineStatus string `json:"deadline_status"` // "critical", "warning", "normal"
+	IsUrgent bool `json:"is_urgent"` // Deadline <24h or pending action
+	// Values come from CalculateDeadlineStatus below, which has exactly these
+	// three returns. Tagged so the generated TypeScript keeps the union the
+	// hand-written type carried instead of widening to bare string.
+	DeadlineStatus string `json:"deadline_status" enum:"critical,warning,normal"`
 
 	// Metadata
 	UpdatedAt time.Time `json:"updated_at"`
@@ -52,15 +60,16 @@ type DashboardGameCard struct {
 
 // DashboardMessage represents a recent message preview for the dashboard.
 type DashboardMessage struct {
-	MessageID     int32     `json:"message_id"`
-	GameID        int32     `json:"game_id"`
-	GameTitle     string    `json:"game_title"`
-	AuthorName    string    `json:"author_name"`
-	CharacterName *string   `json:"character_name,omitempty"`
-	Content       string    `json:"content"` // Truncated to ~100 chars
-	MessageType   string    `json:"message_type"`
-	PhaseID       *int32    `json:"phase_id,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
+	MessageID     int32   `json:"message_id"`
+	GameID        int32   `json:"game_id"`
+	GameTitle     string  `json:"game_title"`
+	AuthorName    string  `json:"author_name"`
+	CharacterName *string `json:"character_name,omitempty"`
+	Content       string  `json:"content"` // Truncated to ~100 chars
+	// Pinned by the message_type Postgres ENUM (migration 20251015165715).
+	MessageType string    `json:"message_type" enum:"post,comment,private_message"`
+	PhaseID     *int32    `json:"phase_id,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // DashboardDeadline represents an upcoming deadline (phase or arbitrary).

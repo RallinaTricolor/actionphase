@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import * as hooks from '../hooks';
-import type { Poll } from '../types/polls';
+import type { PollListItem } from '../types/polls';
 
 // Mock the PollCard component to avoid needing to mock all its dependencies
 vi.mock('./PollCard', () => ({
-  PollCard: ({ poll }: { poll: Poll }) => (
+  PollCard: ({ poll }: { poll: PollListItem }) => (
     <div data-testid={`poll-${poll.id}`}>
       <h3>{poll.question}</h3>
     </div>
@@ -30,7 +30,7 @@ describe('PhaseHistoryPolls', () => {
     isAudience: false,
   };
 
-  const mockPolls: Poll[] = [
+  const mockPolls: PollListItem[] = [
     {
       id: 1,
       game_id: 1,
@@ -42,6 +42,10 @@ describe('PhaseHistoryPolls', () => {
       deadline: '2024-12-31T23:59:59Z',
       show_individual_votes: false,
       allow_other_option: false,
+      hide_results_from_players: false,
+      allow_audience_voting: false,
+      show_running_totals_to_players: false,
+      is_deleted: false,
       is_expired: true,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
@@ -58,6 +62,10 @@ describe('PhaseHistoryPolls', () => {
       deadline: '2024-12-31T23:59:59Z',
       show_individual_votes: true,
       allow_other_option: true,
+      hide_results_from_players: false,
+      allow_audience_voting: false,
+      show_running_totals_to_players: false,
+      is_deleted: false,
       is_expired: true,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',

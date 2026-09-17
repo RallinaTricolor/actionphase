@@ -44,7 +44,9 @@ const baseCharacter: Character = {
   name: 'Aelindra',
   character_type: 'player_character',
   status: 'approved',
-  avatar_url: null,
+  // Absent, not null: avatar_url is `*string` with omitempty, so a character
+  // with no portrait omits the key rather than sending an explicit null.
+  avatar_url: undefined,
   is_active: true,
   username: 'testplayer',
   created_at: '2025-01-01T00:00:00Z',

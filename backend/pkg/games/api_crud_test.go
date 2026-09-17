@@ -76,7 +76,6 @@ func TestGetFilteredGames_PaginationCustomValues(t *testing.T) {
 			Description: "Testing pagination",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
 	}
@@ -265,7 +264,6 @@ func TestGetFilteredGames_PaginationMetadata(t *testing.T) {
 			Description: "Testing metadata",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
 	}

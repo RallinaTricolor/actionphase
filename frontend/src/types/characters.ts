@@ -1,114 +1,114 @@
 // Character-related types for the frontend
 
-export interface Character {
-  id: number;
-  game_id: number;
-  user_id?: number;
-  username?: string;
-  name: string;
-  character_type?: 'player_character' | 'npc';
-  status: 'pending' | 'approved';
-  avatar_url?: string | null;
-  is_active: boolean;
-  original_owner_user_id?: number;
-  original_owner_username?: string;
-  current_owner_username?: string;
-  // NPC assignment fields (only present for NPCs)
-  assigned_user_id?: number;
-  assigned_username?: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { components } from './api.gen';
 
 /**
- * A controllable character returned by the cross-game endpoint, carrying the
- * game context its sheet needs. Surfaces with no game in scope (the global
- * Utility Drawer) have no GameContext to read role/state from, so the backend
- * sends them alongside each character.
+ * A character, as every character-shaped endpoint returns it — generated.
  *
- * `is_active` is omitted rather than optional: the endpoint filters to active
- * characters, so the field is absent from the payload and callers must not
- * branch on it. It's the only required `Character` field the endpoint drops.
+ * Create, get, approve, reassign, rename, the game roster and both controllable
+ * lists all answer with this exact shape. There is no per-endpoint variant to
+ * pick between.
  *
- * `username` and `assigned_username` come back for the GM's cast entries (a
- * GM/co-GM receives every character in games they run, not just the ones they
- * personally control), and stay optional because the rest of the payload — a
- * player's own characters — has no one else to credit.
+ * It used to be a hand-written interface standing in for four different backend
+ * structs, and it described a shape none of them returned:
+ *
+ *   - `is_active` was REQUIRED, but the controllable endpoints did not send it
+ *     at all (their query pre-filters to active characters). Every
+ *     `character.is_active` against that data read `undefined`.
+ *   - `username` was declared everywhere but joined almost nowhere. The
+ *     "Played by @…" block on CharacterPage was guarded on it and had never
+ *     rendered — GET /characters/{id} did not report it until this was fixed.
+ *   - `current_owner_username` / `original_owner_username` were typed
+ *     `string | undefined`; the inactive list sends explicit `null`.
+ *
+ * Optionality here now means one of two things, and the distinction matters:
+ *
+ *   - WITHHELD BY ENTITLEMENT. `user_id`, `username`, `assigned_user_id` and
+ *     `assigned_username` are dropped TOGETHER for a regular player in an
+ *     anonymous game, and `character_type` is dropped alongside them by
+ *     GET /characters/{id} for the same reason. Treat the identity fields as a
+ *     unit; never infer one from another's presence.
+ *   - GENUINELY ABSENT. `avatar_url` when the character has no portrait,
+ *     `user_id` for an unassigned NPC.
+ *
+ * `status` and `is_active` are required: both columns are NOT NULL and every
+ * handler sets them.
  */
+export type Character = components['schemas']['CharacterResponse'];
+
+/** Per-game character sheet configuration, as sent by the backend — generated. */
+export type CharacterSheetConfig = components['schemas']['CharacterSheetConfig'];
+
 /**
- * Per-game character sheet configuration, as sent by the backend.
+ * A controllable character from the cross-game endpoint, carrying the game
+ * context its sheet needs — generated.
  *
- * Every level is optional because that is the wire reality: the backend stores
- * only genuine GM overrides and omits the key entirely when there are none, so
- * most games send nothing at all. Defaults are NOT filled in server-side — the
- * frontend owns them so exactly one place knows them.
+ * Surfaces with no game in scope (the global Utility Drawer) have no
+ * GameContext to read role/state from, so the backend sends it per character.
+ * Everything a plain Character has, plus that context.
+ *
+ * `game_character_sheet` is absent when the GM set no overrides, which is the
+ * common case — the defaults live in the frontend, so absent means "use them",
+ * never "this game has no labels".
  */
-export interface CharacterSheetConfig {
-  labels?: {
-    skills?: string;
-    inventory?: string;
-    numbers?: string;
-  };
-}
+export type ControllableCharacterWithGame =
+  components['schemas']['ControllableCharacterWithGameResponse'];
 
-export interface ControllableCharacterWithGame extends Omit<Character, 'is_active'> {
-  game_title: string;
-  game_state: string;
-  game_is_anonymous: boolean;
-  game_portrait_avatars: boolean;
-  /**
-   * That game's character sheet config, for the same reason the flags above
-   * travel here: the drawer renders sheets outside a GameProvider and has no
-   * game context to read it from. Absent when the GM has set no overrides,
-   * which is the common case — the defaults live in the frontend, so an absent
-   * value means "use them", never "the game has no labels".
-   */
-  game_character_sheet?: CharacterSheetConfig;
-  /**
-   * The current user's role in that character's game. `audience` is reachable:
-   * an audience member assigned an NPC controls it, so it comes back here.
-   */
-  user_role: 'gm' | 'co_gm' | 'player' | 'audience';
-}
+/**
+ * One entry of the GM's inactive-character list — generated.
+ *
+ * The only character shape that is genuinely its own type: it adds the
+ * ownership history a reassignment decision needs, and the endpoint is GM-only.
+ * That makes it the WIDEST shape, not a narrowed one — it withholds nothing.
+ *
+ * Both owner usernames are REQUIRED but nullable, not optional: the handler
+ * always emits the key, sending `null` when that account is gone.
+ */
+export type InactiveCharacter = components['schemas']['InactiveCharacterResponse'];
 
-export interface CharacterData {
-  id: number;
-  character_id: number;
-  module_type: string;
-  field_name: string;
-  field_value?: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * One sheet field — generated.
+ *
+ * Two fields are weaker than the hand-written shape claimed, both because the
+ * underlying columns are nullable:
+ *
+ * `is_public` is OPTIONAL (`*bool` with `omitempty`, via ptrBool). It is absent
+ * for a legacy row whose column is NULL. Absent must be treated as PRIVATE --
+ * every read site here already does, since `!undefined` is true, so an unknown
+ * field stays hidden. Preserve that direction: this gates who may read a
+ * character's private sheet fields, and defaulting it to public would leak them.
+ *
+ * `field_type` is REQUIRED but nullable -- a legacy NULL row reports unknown
+ * rather than silently claiming to be text.
+ */
+export type CharacterData = components['schemas']['CharacterDataResponse'];
 
-export interface CreateCharacterRequest {
-  name: string;
-  character_type: 'player_character' | 'npc';
-  user_id?: number; // Optional: for GMs to assign player characters to specific players
-}
+// Request types
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
 
-export interface CharacterDataRequest {
-  module_type: string;
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  is_public: boolean;
-}
+/** POST /games/{gameID}/characters */
+export type CreateCharacterRequest = components['schemas']['CreateCharacterRequest'];
 
-export interface ApproveCharacterRequest {
-  status: 'approved';
-}
+/** PUT /characters/{id}/data — note field_value and is_public are optional on
+ *  the wire (an empty field_value clears the field). */
+export type CharacterDataRequest = components['schemas']['CharacterDataRequest'];
 
-export interface AssignNPCRequest {
-  assigned_user_id: number;
-}
+/** PUT /characters/{id}/approve */
+export type ApproveCharacterRequest = components['schemas']['ApproveCharacterRequest'];
 
-export interface CharacterActivityStats {
-  public_messages: number;
-  private_messages?: number;
-}
+/** PUT /characters/{id}/assign */
+export type AssignNPCRequest = components['schemas']['AssignNPCRequest'];
+
+/**
+ * Generated. Per-character message counts.
+ *
+ * `private_messages` is optional because it is WITHHELD from callers who may
+ * not see it -- this is the entitlement-within-a-shape pattern, not a value
+ * that happens to be missing. Absent means "not allowed to know", not "zero".
+ */
+export type CharacterActivityStats = components['schemas']['CharacterStatsResponse'];
 
 // Individual skill item structure for JSON fields.
 //

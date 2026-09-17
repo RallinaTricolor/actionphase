@@ -40,7 +40,6 @@ func TestDeadlineRequestValidation(t *testing.T) {
 		Description: "Testing deadline request validation",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 

@@ -110,7 +110,12 @@ describe('RecentActivityCard', () => {
   it('displays Private message type for private messages', () => {
     const message: DashboardMessage = {
       ...baseMessage,
-      message_type: 'private',
+      // 'private_message', not 'private'. The fixture used the latter, which is
+      // not a value the message_type ENUM permits; the assertion passed anyway
+      // because the component's final else renders "Private message" for
+      // anything that is not a post or a comment. So this test never actually
+      // exercised the private branch until the enum tag exposed it.
+      message_type: 'private_message',
     };
 
     renderWithProviders(<RecentActivityCard messages={[message]} />);
@@ -314,11 +319,13 @@ describe('RecentActivityCard', () => {
     });
   });
 
-  it('handles message with null character_name correctly', () => {
+  it('handles message with absent character_name correctly', () => {
     const message: DashboardMessage = {
       ...baseMessage,
       author_name: 'TestUser',
-      character_name: null,
+      // Absent, not null: the Go field is an omitempty pointer, so a nil value
+      // drops the key rather than marshalling null.
+      character_name: undefined,
     };
 
     renderWithProviders(<RecentActivityCard messages={[message]} />);

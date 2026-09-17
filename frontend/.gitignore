@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Working copy of backend/pkg/docs/openapi.gen.yaml, staged here by
+# `just gen-api-types` because this container mounts only ./frontend (no /repo).
+# Never commit it — a second copy of the spec is exactly the drift this generator
+# exists to eliminate.
+.openapi.gen.yaml
+
 # Playwright
 test-results/
 playwright-report/

@@ -36,6 +36,8 @@ const makeMutation = (overrides = {}) => ({
 });
 
 const baseParticipant: GameParticipant = {
+  is_former_player: false,
+  avatar_url: null,
   id: 1,
   game_id: 10,
   user_id: 42,

@@ -29,7 +29,7 @@ import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmation
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
 import { WithdrawApplicationConfirmationDialog } from '../components/WithdrawApplicationConfirmationDialog';
 import { DeadlineStrip } from '../components/DeadlineStrip';
-import type { CreateDeadlineRequest, UnifiedDeadline } from '../types/deadlines';
+import type { CreateDeadlineRequest, UpdateDeadlineRequest, UnifiedDeadline } from '../types/deadlines';
 import { getDeadlineTarget } from '../utils/deadlineTarget';
 import { clearForeignTabParams } from '../utils/tabParams';
 import { logger } from '@/services/LoggingService';
@@ -277,7 +277,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   // Update deadline mutation
   const updateDeadlineMutation = useMutation({
-    mutationFn: ({ deadlineId, data }: { deadlineId: number; data: CreateDeadlineRequest }) =>
+    mutationFn: ({ deadlineId, data }: { deadlineId: number; data: UpdateDeadlineRequest }) =>
       apiClient.deadlines.updateDeadline(deadlineId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deadlines', gameId] });
@@ -298,7 +298,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     await createDeadlineMutation.mutateAsync(data);
   };
 
-  const handleUpdateDeadline = async (deadlineId: number, data: CreateDeadlineRequest) => {
+  const handleUpdateDeadline = async (deadlineId: number, data: UpdateDeadlineRequest) => {
     await updateDeadlineMutation.mutateAsync({ deadlineId, data });
   };
 

@@ -41,7 +41,6 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 		Description: "Testing character functionality",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -249,7 +248,6 @@ func TestCharacterAPI_CompletedGamePlayersCanViewPrivateData(t *testing.T) {
 		Description: "A finished game",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -378,7 +376,6 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 		Description: "Testing NPC functionality",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -511,7 +508,6 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 		Description: "Testing character authorization",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -757,7 +753,6 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 		Description: "Testing error handling",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -984,7 +979,6 @@ func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
 		Description: "Testing controllable and inactive characters",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 

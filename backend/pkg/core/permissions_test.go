@@ -36,7 +36,6 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create anonymous test game: %v", err)
@@ -47,7 +46,6 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 		Title:       "Normal Test Game",
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create normal test game: %v", err)
@@ -59,7 +57,6 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create completed anonymous test game: %v", err)
@@ -73,7 +70,6 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create epilogue anonymous test game: %v", err)
@@ -86,7 +82,6 @@ func TestCanSeeUsernamesInAnonymousGame(t *testing.T) {
 		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create cancelled anonymous test game: %v", err)
