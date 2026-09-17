@@ -15,8 +15,20 @@ vi.mock('@/lib/api', () => ({
 }));
 
 const TABLES = [
-  { id: 11, game_id: 7, name: 'Common Loot' },
-  { id: 12, game_id: 7, name: 'Rare Loot' },
+  {
+    id: 11,
+    game_id: 7,
+    name: 'Common Loot',
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+  {
+    id: 12,
+    game_id: 7,
+    name: 'Rare Loot',
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
 ];
 
 const POTION: LootTableContent = {

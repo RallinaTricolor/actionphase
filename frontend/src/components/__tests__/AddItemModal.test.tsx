@@ -33,7 +33,7 @@ describe('AddItemModal', () => {
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       expect(screen.getByText('Cancel')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Add', exact: true })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
     });
 
     it('shows name field as required', () => {
@@ -116,7 +116,7 @@ describe('AddItemModal', () => {
     it('calls onAdd with complete item data', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Iron Sword');
       fireEvent.change(screen.getByLabelText(/Quantity/), { target: { value: '3' } });
@@ -125,7 +125,7 @@ describe('AddItemModal', () => {
       fireEvent.change(screen.getByLabelText(/Weight/), { target: { value: '5' } });
       await user.type(screen.getByLabelText(/Description/), 'A sturdy iron blade');
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith({
         name: 'Iron Sword',
@@ -140,11 +140,11 @@ describe('AddItemModal', () => {
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Simple Item');
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith({
         name: 'Simple Item',
@@ -159,10 +159,10 @@ describe('AddItemModal', () => {
     it('trims whitespace from name', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '  Iron Sword  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Iron Sword' })
@@ -172,11 +172,11 @@ describe('AddItemModal', () => {
     it('trims whitespace from category', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Category/), '  Weapon  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ category: 'Weapon' })
@@ -186,11 +186,11 @@ describe('AddItemModal', () => {
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.type(screen.getByLabelText(/Description/), '  A blade  ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ description: 'A blade' })
@@ -200,11 +200,11 @@ describe('AddItemModal', () => {
     it('sets empty category to undefined', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Category/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ category: undefined })
@@ -214,11 +214,11 @@ describe('AddItemModal', () => {
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
       await user.type(screen.getByLabelText(/Description/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ description: undefined })
@@ -228,9 +228,9 @@ describe('AddItemModal', () => {
     it('does not call onAdd when name is empty', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).not.toHaveBeenCalled();
     });
@@ -238,10 +238,10 @@ describe('AddItemModal', () => {
     it('does not call onAdd when name is only whitespace', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '   ');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).not.toHaveBeenCalled();
     });
@@ -251,10 +251,10 @@ describe('AddItemModal', () => {
     it('does not write an equipped field', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
-      await user.click(screen.getByRole('button', { name: 'Add', exact: true }));
+      await user.click(screen.getByRole('button', { name: 'Add' }));
 
       expect(onAdd).toHaveBeenCalledTimes(1);
       expect(onAdd.mock.calls[0][0]).not.toHaveProperty('equipped');
@@ -265,7 +265,7 @@ describe('AddItemModal', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={vi.fn()} onCancel={onCancel} />);
+      renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
 
@@ -275,7 +275,7 @@ describe('AddItemModal', () => {
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
       const user = userEvent.setup();
-      renderWithQuery(<AddItemModal onAdd={onAdd} onCancel={vi.fn()} />);
+      renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
       await user.click(screen.getByText('Cancel'));

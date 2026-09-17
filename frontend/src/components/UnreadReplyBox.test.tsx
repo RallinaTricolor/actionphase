@@ -2,18 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnreadReplyBox } from './UnreadReplyBox';
-import type { Character } from '../types/characters';
-
-function makeCharacter(overrides: Partial<Character> = {}): Character {
-  return {
-    id: 1,
-    game_id: 12,
-    name: 'My Character',
-    status: 'approved',
-    is_active: true,
-    ...overrides,
-  };
-}
+import { makeCharacter } from '../test-utils';
 
 describe('UnreadReplyBox', () => {
   it("shows a fallback message and no editor when the user controls no character", () => {

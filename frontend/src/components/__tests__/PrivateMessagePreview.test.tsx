@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { PrivateMessagePreview } from '../PrivateMessagePreview';
 import type { ConversationListItem } from '../../types/conversations';
+import { makeConversationListItem } from '../../test-utils';
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -14,7 +15,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const baseConversation: ConversationListItem = {
+const baseConversation: ConversationListItem = makeConversationListItem({
   id: 1,
   game_id: 10,
   title: 'Secret Plans',
@@ -26,7 +27,7 @@ const baseConversation: ConversationListItem = {
   participant_count: 2,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-};
+});
 
 describe('PrivateMessagePreview', () => {
   it('renders nothing when conversations list is empty', () => {
@@ -60,7 +61,7 @@ describe('PrivateMessagePreview', () => {
   });
 
   it('falls back to participant_names when title is absent', () => {
-    const noTitle = { ...baseConversation, title: undefined };
+    const noTitle = { ...baseConversation, title: null };
     renderWithProviders(
       <PrivateMessagePreview conversations={[noTitle]} gameId={10} />
     );

@@ -7,6 +7,8 @@ import { renderWithProviders, createTestQueryClient } from '../../test-utils';
 import { ActionsList } from '../ActionsList';
 import type { GamePhase, ActionWithDetails } from '../../types/phases';
 import { useGameActionResults } from '../../hooks/useActionResults';
+import type { ComponentProps } from 'react';
+import type { CreateActionResultForm } from '../CreateActionResultForm';
 
 /**
  * Stands in for the results list rendered next to ActionsList in the GM view,
@@ -20,7 +22,13 @@ function ResultsQueryProbe({ gameId }: { gameId: number }) {
 // Mock CreateActionResultForm component. It owns its own Cancel control (so it
 // can discard cached drafts before dismissing), so the mock renders one too.
 vi.mock('../CreateActionResultForm', () => ({
-  CreateActionResultForm: ({ gameId, userId, userName, onSuccess, onCancel }: unknown) => (
+  CreateActionResultForm: ({
+    gameId,
+    userId,
+    userName,
+    onSuccess,
+    onCancel,
+  }: ComponentProps<typeof CreateActionResultForm>) => (
     <div data-testid="create-action-result-form">
       <div>Create Action Result Form</div>
       <div>Game ID: {gameId}</div>

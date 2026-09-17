@@ -25,15 +25,17 @@ vi.mock('../../lib/api', () => ({
 
 import { usePromoteToCoGM, useDemoteFromCoGM, useTransitionPlayerToAudience, useRemovePlayer } from '../../hooks/usePlayerManagement';
 import { apiClient } from '../../lib/api';
+import { makeMutationResult } from '../../test-utils';
+import type { AxiosResponse } from 'axios';
 
-const makeMutation = (overrides = {}) => ({
-  mutateAsync: vi.fn().mockResolvedValue(undefined),
-  isPending: false,
-  isError: false,
-  error: null,
-  reset: vi.fn(),
-  ...overrides,
-});
+// Each of these hooks returns a full UseMutationResult; the component reads
+// only mutateAsync and isPending. See test-utils/factories for why the partial
+// envelope is sanctioned here.
+//
+// All four hooks take the participant id as their mutation variable and resolve
+// an AxiosResponse, so one alias covers every call site.
+const makeMutation = () =>
+  makeMutationResult<AxiosResponse, number>();
 
 const baseParticipant: GameParticipant = {
   is_former_player: false,

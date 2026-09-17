@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/api';
 import { AxiosError } from 'axios';
 import type { AxiosResponse } from 'axios';
 import type { Message } from '../../types/messages';
+import { makeMessage } from '../../test-utils/factories';
 
 function mockResponse<T>(data: T): AxiosResponse<T> {
   return { data } as AxiosResponse<T>;
@@ -28,31 +29,30 @@ vi.mock('@/services/LoggingService', () => ({
   },
 }));
 
-const mockMessage: Message = {
+const mockMessage: Message = makeMessage({
   id: 123,
   game_id: 1,
   phase_id: 1,
   character_id: 2,
   character_name: 'Test Character',
   content: 'Test comment',
-  message_type: 'comment',
   parent_id: 100,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-};
+});
 
-const mockParentMessage: Message = {
+const mockParentMessage: Message = makeMessage({
   id: 100,
   game_id: 1,
   phase_id: 1,
   character_id: 1,
   character_name: 'Parent Character',
   content: 'Parent comment',
-  message_type: 'comment',
-  parent_id: null, // Root comment
+  // Root comment: parent_id is an omitempty pointer, so the key is absent
+  // rather than null.
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-};
+});
 
 describe('threadUtils - Retry Logic', () => {
   beforeEach(() => {
@@ -298,24 +298,21 @@ describe('findRootPostId', () => {
     vi.useRealTimers();
   });
 
-  const baseComment = (overrides: Partial<Message>): Message => ({
-    id: 1,
-    game_id: 1,
-    phase_id: 1,
-    character_id: 1,
-    character_name: 'Test Character',
-    content: 'Test comment',
-    message_type: 'comment',
-    author_id: 1,
-    author_username: 'testuser',
-    thread_depth: 1,
-    is_edited: false,
-    is_deleted: false,
-    is_draft: false,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
-    ...overrides,
-  });
+  const baseComment = (overrides: Partial<Message>): Message =>
+    makeMessage({
+      id: 1,
+      game_id: 1,
+      phase_id: 1,
+      character_id: 1,
+      character_name: 'Test Character',
+      content: 'Test comment',
+      author_id: 1,
+      author_username: 'testuser',
+      thread_depth: 1,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      ...overrides,
+    });
 
   it('returns own id when the message has no parent (is a root post)', async () => {
     const rootPost = baseComment({ id: 100, parent_id: undefined, message_type: 'post' });

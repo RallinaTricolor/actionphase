@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils/render';
+import { makeAxiosResponse } from '../test-utils';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { apiClient } from '../lib/api';
 import type { GameParticipant } from '../types/games';
+import type { Character } from '../types/characters';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({
@@ -24,7 +26,8 @@ const mockPlayers: GameParticipant[] = [
     game_id: 604,
     user_id: 2,
     username: 'TestPlayer1',
-    email: 'test_player1@example.com',
+    avatar_url: null,
+    is_former_player: false,
     role: 'player',
     status: 'active',
     joined_at: '2025-10-27T00:00:00Z',
@@ -34,7 +37,8 @@ const mockPlayers: GameParticipant[] = [
     game_id: 604,
     user_id: 3,
     username: 'TestPlayer2',
-    email: 'test_player2@example.com',
+    avatar_url: null,
+    is_former_player: false,
     role: 'player',
     status: 'active',
     joined_at: '2025-10-27T00:00:00Z',
@@ -46,7 +50,8 @@ const mockAudience: GameParticipant = {
   game_id: 604,
   user_id: 5,
   username: 'TestAudience',
-  email: 'test_audience@example.com',
+  avatar_url: null,
+  is_former_player: false,
   role: 'audience',
   status: 'active',
   joined_at: '2025-10-27T00:00:00Z',
@@ -428,16 +433,18 @@ describe('CreateCharacterModal', () => {
 
     it('clears user_id when switching from player character to NPC', async () => {
       const user = userEvent.setup();
-      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue({
-        id: 433,
-        game_id: gameId,
-        name: 'Test NPC',
-        character_type: 'npc',
-        status: 'pending',
-        created_at: '2025-10-27T00:00:00Z',
-        updated_at: '2025-10-27T00:00:00Z',
-        is_active: true,
-      });
+      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
+        makeAxiosResponse<Character>({
+          id: 433,
+          game_id: gameId,
+          name: 'Test NPC',
+          character_type: 'npc',
+          status: 'pending',
+          created_at: '2025-10-27T00:00:00Z',
+          updated_at: '2025-10-27T00:00:00Z',
+          is_active: true,
+        }),
+      );
 
       renderWithProviders(
         <CreateCharacterModal
@@ -477,16 +484,18 @@ describe('CreateCharacterModal', () => {
   describe('Form Submission', () => {
     it('calls API with correct data for player creating player character', async () => {
       const user = userEvent.setup();
-      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue({
-        id: 433,
-        game_id: gameId,
-        name: 'Player Character',
-        character_type: 'player_character',
-        status: 'pending',
-        created_at: '2025-10-27T00:00:00Z',
-        updated_at: '2025-10-27T00:00:00Z',
-        is_active: true,
-      });
+      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
+        makeAxiosResponse<Character>({
+          id: 433,
+          game_id: gameId,
+          name: 'Player Character',
+          character_type: 'player_character',
+          status: 'pending',
+          created_at: '2025-10-27T00:00:00Z',
+          updated_at: '2025-10-27T00:00:00Z',
+          is_active: true,
+        }),
+      );
 
       renderWithProviders(
         <CreateCharacterModal
@@ -513,17 +522,19 @@ describe('CreateCharacterModal', () => {
 
     it('calls API with user_id for GM creating player character', async () => {
       const user = userEvent.setup();
-      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue({
-        id: 433,
-        game_id: gameId,
-        user_id: 2,
-        name: 'Test Character',
-        character_type: 'player_character',
-        status: 'pending',
-        created_at: '2025-10-27T00:00:00Z',
-        updated_at: '2025-10-27T00:00:00Z',
-        is_active: true,
-      });
+      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
+        makeAxiosResponse<Character>({
+          id: 433,
+          game_id: gameId,
+          user_id: 2,
+          name: 'Test Character',
+          character_type: 'player_character',
+          status: 'pending',
+          created_at: '2025-10-27T00:00:00Z',
+          updated_at: '2025-10-27T00:00:00Z',
+          is_active: true,
+        }),
+      );
 
       renderWithProviders(
         <CreateCharacterModal
@@ -555,16 +566,18 @@ describe('CreateCharacterModal', () => {
 
     it('calls API without user_id for GM creating NPC', async () => {
       const user = userEvent.setup();
-      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue({
-        id: 433,
-        game_id: gameId,
-        name: 'Test NPC',
-        character_type: 'npc',
-        status: 'pending',
-        created_at: '2025-10-27T00:00:00Z',
-        updated_at: '2025-10-27T00:00:00Z',
-        is_active: true,
-      });
+      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
+        makeAxiosResponse<Character>({
+          id: 433,
+          game_id: gameId,
+          name: 'Test NPC',
+          character_type: 'npc',
+          status: 'pending',
+          created_at: '2025-10-27T00:00:00Z',
+          updated_at: '2025-10-27T00:00:00Z',
+          is_active: true,
+        }),
+      );
 
       renderWithProviders(
         <CreateCharacterModal
@@ -595,16 +608,18 @@ describe('CreateCharacterModal', () => {
 
     it('closes modal on successful submission', async () => {
       const user = userEvent.setup();
-      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue({
-        id: 433,
-        game_id: gameId,
-        name: 'Test Character',
-        character_type: 'player_character',
-        status: 'pending',
-        created_at: '2025-10-27T00:00:00Z',
-        updated_at: '2025-10-27T00:00:00Z',
-        is_active: true,
-      });
+      vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
+        makeAxiosResponse<Character>({
+          id: 433,
+          game_id: gameId,
+          name: 'Test Character',
+          character_type: 'player_character',
+          status: 'pending',
+          created_at: '2025-10-27T00:00:00Z',
+          updated_at: '2025-10-27T00:00:00Z',
+          is_active: true,
+        }),
+      );
 
       renderWithProviders(
         <CreateCharacterModal

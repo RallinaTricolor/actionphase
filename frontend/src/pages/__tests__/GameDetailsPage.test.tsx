@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { GameDetailsPage } from '../GameDetailsPage'
 import { GameProvider } from '../../contexts/GameContext'
 import { renderWithProviders } from '../../test-utils/render'
+import { makeGameParticipant } from '../../test-utils'
 import { server } from '../../mocks/server'
 import type { GameWithDetails, GameParticipant } from '../../types/games'
 
@@ -30,26 +31,24 @@ describe('GameDetailsPage', () => {
   }
 
   const mockParticipants: GameParticipant[] = [
-    {
+    makeGameParticipant({
       id: 1,
       game_id: 1,
       user_id: 2,
       username: 'player1',
-      email: 'player1@example.com',
       role: 'player',
       status: 'active',
       joined_at: '2025-01-02T00:00:00Z',
-    },
-    {
+    }),
+    makeGameParticipant({
       id: 2,
       game_id: 1,
       user_id: 3,
       username: 'player2',
-      email: 'player2@example.com',
       role: 'player',
       status: 'active',
       joined_at: '2025-01-03T00:00:00Z',
-    },
+    }),
   ]
 
   // Helper function to set up default MSW handlers

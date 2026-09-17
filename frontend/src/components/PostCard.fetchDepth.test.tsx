@@ -47,6 +47,7 @@ vi.mock('../lib/api', () => ({
 }));
 
 import { apiClient } from '../lib/api';
+import { makeMessage } from '../test-utils';
 
 vi.mock('../hooks/useCommentMutations', () => ({
   useCreateComment: () => ({ mutateAsync: vi.fn() }),
@@ -90,7 +91,7 @@ vi.mock('../hooks/useUserPreferences', () => ({
   useCommentReadMode: () => 'auto',
 }));
 
-const mockPost: Message = {
+const mockPost: Message = makeMessage({
   id: 1,
   game_id: 1,
   author_id: 1,
@@ -100,14 +101,13 @@ const mockPost: Message = {
   thread_depth: 0,
   author_username: 'testuser',
   character_name: 'Test Character',
-  character_avatar_url: null,
   comment_count: 3,
   reply_count: 0,
   is_edited: false,
   is_deleted: false,
   created_at: '2024-01-01T12:00:00Z',
   updated_at: '2024-01-01T12:00:00Z',
-};
+});
 
 const mockCharacters: Character[] = [
   {

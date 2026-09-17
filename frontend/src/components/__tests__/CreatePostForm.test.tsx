@@ -2,29 +2,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils/render';
+import { makeCharacter } from '../../test-utils';
 import { CreatePostForm } from '../CreatePostForm';
 import type { Character } from '../../types/characters';
 import { postCachingService } from '../../services/PostCachingService';
 
 const mockCharacters: Character[] = [
-  {
+  makeCharacter({
     id: 1,
     game_id: 1,
     name: 'GM Character',
-    character_type: 'gm_character',
+    character_type: 'npc',
     user_id: 100,
     status: 'approved',
     created_at: '2024-01-01T00:00:00Z',
-  },
-  {
+  }),
+  makeCharacter({
     id: 2,
     game_id: 1,
     name: 'Second GM Character',
-    character_type: 'gm_character',
+    character_type: 'npc',
     user_id: 100,
     status: 'approved',
     created_at: '2024-01-01T00:00:00Z',
-  }
+  }),
 ];
 
 describe('CreatePostForm', () => {
@@ -369,7 +370,6 @@ describe('CreatePostForm', () => {
     });
 
     it('shows error when submitting without content', async () => {
-      const _user = userEvent.setup();
 
       renderWithProviders(
         <CreatePostForm

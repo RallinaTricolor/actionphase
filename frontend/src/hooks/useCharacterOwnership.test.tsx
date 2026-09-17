@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCharacterOwnership } from './useCharacterOwnership';
 import type { Character } from '../types/characters';
+import { makeCharacter } from '../test-utils';
 
 // Mock useUserCharacters since it now reads from GameContext
 vi.mock('./useUserCharacters');
@@ -16,8 +17,8 @@ describe('useCharacterOwnership', () => {
 
   it('should identify user-owned player characters', () => {
     const mockCharacters: Character[] = [
-      { id: 1, name: 'My Character', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { id: 2, name: 'NPC', character_type: 'npc', game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      makeCharacter({ id: 1, name: 'My Character', user_id: 100 }),
+      makeCharacter({ id: 2, name: 'NPC', character_type: 'npc', user_id: undefined, username: undefined }),
     ];
 
     mockUseUserCharacters.mockReturnValue({
@@ -40,16 +41,14 @@ describe('useCharacterOwnership', () => {
 
   it('should handle assigned NPCs', () => {
     const mockCharacters: Character[] = [
-      {
+      makeCharacter({
         id: 10,
         name: 'Assigned NPC',
         character_type: 'npc',
         assigned_user_id: 100,
-        game_id: 1,
-        status: 'approved',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
+        user_id: undefined,
+        username: undefined,
+      }),
     ];
 
     mockUseUserCharacters.mockReturnValue({
@@ -69,16 +68,13 @@ describe('useCharacterOwnership', () => {
     // In anonymous mode, the backend strips user_id from characters
     // But the controllable endpoint still works and returns your characters
     const mockCharacters: Character[] = [
-      {
+      makeCharacter({
         id: 20,
         name: 'Anonymous Character',
-        character_type: 'player_character',
-        // Note: no user_id field (as in anonymous mode)
-        game_id: 1,
-        status: 'approved',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
+        // Anonymous mode: the backend strips the identity fields as a unit.
+        user_id: undefined,
+        username: undefined,
+      }),
     ];
 
     mockUseUserCharacters.mockReturnValue({
@@ -111,9 +107,9 @@ describe('useCharacterOwnership', () => {
 
   it('should provide userCharacterIds as a Set', () => {
     const mockCharacters: Character[] = [
-      { id: 1, name: 'Char 1', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { id: 2, name: 'Char 2', character_type: 'player_character', user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-      { id: 3, name: 'Char 3', character_type: 'npc', assigned_user_id: 100, game_id: 1, status: 'approved', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      makeCharacter({ id: 1, name: 'Char 1', user_id: 100 }),
+      makeCharacter({ id: 2, name: 'Char 2', user_id: 100 }),
+      makeCharacter({ id: 3, name: 'Char 3', character_type: 'npc', assigned_user_id: 100, user_id: undefined, username: undefined }),
     ];
 
     mockUseUserCharacters.mockReturnValue({

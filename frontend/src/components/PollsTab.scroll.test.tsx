@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollsTab } from './PollsTab';
 import * as hooks from '../hooks';
 import type { PollListItem } from '../types/polls';
+import type { Mock } from 'vitest';
 
 // Render a stand-in for PollCard carrying the same anchor id the real card
 // exposes, so the scroll target is exercised without PollCard's dependencies.
@@ -67,10 +68,10 @@ function renderPollsTab(initialUrl: string) {
 }
 
 describe('PollsTab deep-link scrolling', () => {
-  let scrollSpy: ReturnType<typeof vi.fn>;
+  let scrollSpy: Mock<typeof Element.prototype.scrollIntoView>;
 
   beforeEach(() => {
-    scrollSpy = vi.fn();
+    scrollSpy = vi.fn<typeof Element.prototype.scrollIntoView>();
     Element.prototype.scrollIntoView = scrollSpy;
   });
 

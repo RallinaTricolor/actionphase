@@ -13,6 +13,8 @@ const mockGame: UserGame = {
   is_anonymous: false,
   created_at: '2024-01-15T00:00:00Z',
   updated_at: '2024-03-20T00:00:00Z',
+  start_date: null,
+  end_date: null,
   characters: [
     {
       id: 101,
@@ -170,11 +172,11 @@ describe('GameHistoryCard', () => {
 
   it('formats different game states correctly', () => {
     const states = [
-      { state: 'recruiting', expected: 'Recruiting' },
+      { state: 'recruitment', expected: 'Recruitment' },
       { state: 'character_creation', expected: 'Character Creation' },
       { state: 'completed', expected: 'Completed' },
       { state: 'cancelled', expected: 'Cancelled' },
-    ];
+    ] as const;
 
     states.forEach(({ state, expected }) => {
       const { unmount } = renderWithRouter(

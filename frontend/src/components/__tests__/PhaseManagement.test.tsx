@@ -4,11 +4,12 @@ import { http, HttpResponse } from 'msw'
 import { PhaseManagement } from '../PhaseManagement'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
+import { makeGamePhase } from '../../test-utils'
 import type { GamePhase } from '../../types/phases'
 
 describe('PhaseManagement', () => {
   const mockPhases: GamePhase[] = [
-    {
+    makeGamePhase({
       id: 1,
       game_id: 1,
       phase_number: 1,
@@ -18,9 +19,8 @@ describe('PhaseManagement', () => {
       deadline: '2025-12-31T23:59:59Z',
       is_active: true,
       created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    },
-    {
+    }),
+    makeGamePhase({
       id: 2,
       game_id: 1,
       phase_number: 2,
@@ -30,8 +30,7 @@ describe('PhaseManagement', () => {
       deadline: '2026-01-15T23:59:59Z',
       is_active: false,
       created_at: '2025-01-02T00:00:00Z',
-      updated_at: '2025-01-02T00:00:00Z',
-    },
+    }),
   ]
 
   const setupDefaultHandlers = (

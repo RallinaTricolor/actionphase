@@ -8,6 +8,7 @@ import type { UnreadCommentItem, UnreadPrivateMessageItem } from '@/types/unread
 import type { Notification } from '@/types/notifications';
 import type { PrivateMessage } from '@/types/conversations';
 import type { Message } from '@/types/messages';
+import { makeMessage as makeMessageFixture } from '../test-utils';
 
 vi.mock('@/utils/unreadInboxApi', () => ({
   fetchCommentContext: vi.fn(),
@@ -45,7 +46,7 @@ function makeMessage(overrides: Partial<PrivateMessage> = {}): PrivateMessage {
 }
 
 function makeComment(overrides: Partial<Message> = {}): Message {
-  return {
+  return makeMessageFixture({
     id: 1,
     game_id: 12,
     author_id: 5,
@@ -55,13 +56,10 @@ function makeComment(overrides: Partial<Message> = {}): Message {
     thread_depth: 1,
     author_username: 'player',
     character_name: 'Some Character',
-    is_edited: false,
-    is_deleted: false,
-    is_draft: false,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
-  };
+  });
 }
 
 function createWrapper() {
@@ -94,6 +92,8 @@ describe('useUnreadItemContext', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 101,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForFirstMessage, true), {
@@ -118,6 +118,8 @@ describe('useUnreadItemContext', () => {
       gameId: 12,
       conversationId: 34,
       messageId: 102,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1,
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForSecondMessage, true), {
@@ -138,7 +140,9 @@ describe('useUnreadItemContext', () => {
       notification: makeNotification({ id: 3 }),
       gameId: 12,
       conversationId: 34,
-      messageId: 999, // e.g. the message was deleted and no longer appears
+      messageId: 999,
+      // One notification, so this row stands for one unread message.
+      unreadCount: 1, // e.g. the message was deleted and no longer appears
     };
 
     const { result } = renderHook(() => useUnreadItemContext(itemForDeletedMessage, true), {
@@ -165,6 +169,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 102,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {
@@ -187,6 +193,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 101,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {
@@ -211,6 +219,8 @@ describe('useUnreadItemContext', () => {
         gameId: 12,
         conversationId: 34,
         messageId: 102,
+        // One notification, so this row stands for one unread message.
+        unreadCount: 1,
       };
 
       const { result } = renderHook(() => useUnreadItemContext(item, true), {

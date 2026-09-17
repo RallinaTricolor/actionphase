@@ -73,14 +73,3 @@ export function useHandouts(gameId: number) {
     unpublishHandoutMutation,
   };
 }
-
-/**
- * Hook for fetching a single handout
- */
-export function useHandout(gameId: number, handoutId: number) {
-  return useQuery({
-    queryKey: ['handout', gameId, handoutId],
-    queryFn: () => apiClient.handouts.getHandout(gameId, handoutId).then(res => res.data),
-    enabled: !!gameId && !!handoutId,
-  });
-}

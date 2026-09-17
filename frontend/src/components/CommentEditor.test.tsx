@@ -4,6 +4,8 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { CommentEditor } from './CommentEditor';
+import { makeCharacter } from '../test-utils';
+import type { SheetItem } from '../hooks/useCharacterSheetItems';
 
 /**
  * Renders CommentEditor inside a data router so useBlocker works.
@@ -111,7 +113,6 @@ describe('CommentEditor', () => {
     });
 
     it('updates preview as value changes', async () => {
-      const _user = userEvent.setup();
       const { rerender, container } = render(<CommentEditor {...defaultProps} value="Hello" showPreviewByDefault />);
 
       // Check that "Hello" appears in the preview div
@@ -517,7 +518,6 @@ describe('Tab Layout', () => {
 
   describe('Integration with MarkdownPreview', () => {
     it('passes content to MarkdownPreview', async () => {
-      const _user = userEvent.setup();
       render(<CommentEditor {...defaultProps} value="# Heading" showPreviewByDefault />);
 
       const heading = screen.getByText('Heading');
@@ -525,7 +525,6 @@ describe('Tab Layout', () => {
     });
 
     it('renders complex markdown correctly in preview', async () => {
-      const _user = userEvent.setup();
       const content = `# Title\n\n**Bold** and *italic*\n\n- Item 1\n- Item 2`;
       render(<CommentEditor {...defaultProps} value={content} showPreviewByDefault />);
 
@@ -575,9 +574,9 @@ describe('Tab Layout', () => {
 
   describe('Performance Optimizations', () => {
     const mockCharacters = [
-      { id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' },
-      { id: 2, name: 'Gandalf' },
-      { id: 3, name: 'Arwen' },
+      makeCharacter({ id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' }),
+      makeCharacter({ id: 2, name: 'Gandalf' }),
+      makeCharacter({ id: 3, name: 'Arwen' }),
     ];
 
     it('does not call getCaretCoordinates when typing regular text', () => {
@@ -620,9 +619,9 @@ describe('Tab Layout', () => {
 
   describe('Character Mention Autocomplete', () => {
     const mockCharacters = [
-      { id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' },
-      { id: 2, name: 'Gandalf' },
-      { id: 3, name: 'Arwen' },
+      makeCharacter({ id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' }),
+      makeCharacter({ id: 2, name: 'Gandalf' }),
+      makeCharacter({ id: 3, name: 'Arwen' }),
     ];
 
     it('shows autocomplete when @ is typed', () => {
@@ -831,10 +830,10 @@ describe('Tab Layout', () => {
   });
 
   describe('Sheet Item Autocomplete (%% trigger)', () => {
-    const mockSheetItems = [
-      { id: 'a1', name: 'Fire Bolt', type: 'ability' as const, description: 'Deals fire damage' },
-      { id: 's1', name: 'Stealth', type: 'skill' as const },
-      { id: 'i1', name: 'Longbow', type: 'item' as const },
+    const mockSheetItems: SheetItem[] = [
+      { id: 'a1', name: 'Fire Bolt', type: 'skill', description: 'Deals fire damage' },
+      { id: 's1', name: 'Stealth', type: 'skill' },
+      { id: 'i1', name: 'Longbow', type: 'item' },
     ];
 
     it('shows sheet autocomplete when %% is typed', () => {
@@ -872,7 +871,7 @@ describe('Tab Layout', () => {
 
       // onChange should have been called with the [[token]] replacing %%
       const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
-      expect(lastCall).toContain('[[Fire Bolt|ability:a1]]');
+      expect(lastCall).toContain('[[Fire Bolt|skill:a1]]');
       expect(lastCall).not.toContain('%%');
     });
 
@@ -899,7 +898,7 @@ describe('Tab Layout', () => {
     });
 
     it('%% and @ autocompletes are mutually exclusive', () => {
-      const mockCharacters = [{ id: 1, name: 'Gandalf' }];
+      const mockCharacters = [makeCharacter({ id: 1, name: 'Gandalf' })];
       render(
         <CommentEditor
           {...defaultProps}

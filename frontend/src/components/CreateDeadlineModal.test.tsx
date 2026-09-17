@@ -122,7 +122,6 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should allow selecting deadline date/time', async () => {
-      const _user = userEvent.setup();
 
       render(
         <CreateDeadlineModal

@@ -871,14 +871,14 @@ describe('MarkdownPreview', () => {
 
   describe('Sheet Item References ([[item]] syntax)', () => {
     const sheetItems = [
-      { id: 'abc-1', name: 'Fire Bolt', type: 'ability' as const, description: 'Deals fire damage', metadata: 'innate' },
+      { id: 'abc-1', name: 'Fire Bolt', type: 'skill' as const, description: 'Deals fire damage', metadata: 'innate' },
       { id: 'xyz-2', name: 'Longbow', type: 'item' as const, description: 'A fine bow' },
     ];
 
     it('renders [[item]] tokens as amber highlighted marks', () => {
       const { container } = render(
         <MarkdownPreview
-          content="I use [[Fire Bolt|ability:abc-1]]"
+          content="I use [[Fire Bolt|skill:abc-1]]"
           sheetItemRefs={sheetItems}
         />
       );
@@ -889,7 +889,7 @@ describe('MarkdownPreview', () => {
 
     it('renders [[item]] marks even without sheetItemRefs (no tooltip, but mark shown)', () => {
       const { container } = render(
-        <MarkdownPreview content="I use [[Fire Bolt|ability:abc-1]]" />
+        <MarkdownPreview content="I use [[Fire Bolt|skill:abc-1]]" />
       );
       const mark = container.querySelector('[data-sheet-ref-id="abc-1"]');
       expect(mark).toBeInTheDocument();
@@ -897,14 +897,14 @@ describe('MarkdownPreview', () => {
 
     it('does not process [[item]] syntax inside inline code', () => {
       const { container } = render(
-        <MarkdownPreview content="`[[Fire Bolt|ability:abc-1]]`" sheetItemRefs={sheetItems} />
+        <MarkdownPreview content="`[[Fire Bolt|skill:abc-1]]`" sheetItemRefs={sheetItems} />
       );
       expect(container.querySelector('[data-sheet-ref-id]')).not.toBeInTheDocument();
     });
 
     it('does not process [[item]] syntax inside fenced code blocks', () => {
       const { container } = render(
-        <MarkdownPreview content={'```\n[[Fire Bolt|ability:abc-1]]\n```'} sheetItemRefs={sheetItems} />
+        <MarkdownPreview content={'```\n[[Fire Bolt|skill:abc-1]]\n```'} sheetItemRefs={sheetItems} />
       );
       expect(container.querySelector('[data-sheet-ref-id]')).not.toBeInTheDocument();
     });
@@ -912,7 +912,7 @@ describe('MarkdownPreview', () => {
     it('renders multiple [[item]] references in one content string', () => {
       const { container } = render(
         <MarkdownPreview
-          content="I fire [[Fire Bolt|ability:abc-1]] with my [[Longbow|item:xyz-2]]"
+          content="I fire [[Fire Bolt|skill:abc-1]] with my [[Longbow|item:xyz-2]]"
           sheetItemRefs={sheetItems}
         />
       );
@@ -923,7 +923,7 @@ describe('MarkdownPreview', () => {
     it('shows hover tooltip for item when sheetItemRefs contains the item', () => {
       const { container } = render(
         <MarkdownPreview
-          content="I use [[Fire Bolt|ability:abc-1]]"
+          content="I use [[Fire Bolt|skill:abc-1]]"
           sheetItemRefs={sheetItems}
         />
       );
@@ -941,14 +941,14 @@ describe('MarkdownPreview', () => {
         {
           id: 'md-1',
           name: 'Power Attack',
-          type: 'ability' as const,
+          type: 'skill' as const,
           description: 'Deals **massive** damage.\n\n| Roll | Effect |\n| --- | --- |\n| 6 | Critical |',
           metadata: 'innate',
         },
       ];
       const { container } = render(
         <MarkdownPreview
-          content="I use [[Power Attack|ability:md-1]]"
+          content="I use [[Power Attack|skill:md-1]]"
           sheetItemRefs={markdownItems}
         />
       );
@@ -974,13 +974,13 @@ describe('MarkdownPreview', () => {
         {
           id: 'long-1',
           name: 'Epic Spell',
-          type: 'ability' as const,
+          type: 'skill' as const,
           description: longDescription,
         },
       ];
       render(
         <MarkdownPreview
-          content="I cast [[Epic Spell|ability:long-1]]"
+          content="I cast [[Epic Spell|skill:long-1]]"
           sheetItemRefs={longItems}
         />
       );

@@ -5,6 +5,7 @@ import type { AxiosResponse } from 'axios';
 import { useDraftPost, useCreateDraftPost, useDeleteDraftPost } from '../useDraftPost';
 import { apiClient } from '../../lib/api';
 import type { Message } from '../../types/messages';
+import { makeMessage } from '../../test-utils/factories';
 import React from 'react';
 
 vi.mock('../../lib/api', () => ({
@@ -18,7 +19,7 @@ vi.mock('../../lib/api', () => ({
   },
 }));
 
-const mockDraft: Message = {
+const mockDraft: Message = makeMessage({
   id: 42,
   game_id: 1,
   phase_id: 10,
@@ -26,15 +27,12 @@ const mockDraft: Message = {
   character_id: 5,
   content: 'The fog which surrounded you dissipates...',
   message_type: 'post',
-  thread_depth: 0,
   author_username: 'gm_user',
   character_name: 'Narrator',
-  is_edited: false,
-  is_deleted: false,
   is_draft: true,
   created_at: '2025-11-01T10:00:00Z',
   updated_at: '2025-11-01T10:00:00Z',
-};
+});
 
 function makeWrapper() {
   const queryClient = new QueryClient({

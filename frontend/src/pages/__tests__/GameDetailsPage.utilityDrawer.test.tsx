@@ -8,6 +8,7 @@ import { UtilityDrawerHarness } from '../../test-utils/utilityDrawer'
 import { GameProvider } from '../../contexts/GameContext'
 import { GameDetailsPage } from '../GameDetailsPage'
 import type { Character } from '../../types/characters'
+import { makeCharacter } from '../../test-utils'
 
 /**
  * The Utility Drawer is mounted at the app root and reachable from every page,
@@ -41,16 +42,13 @@ const USER_ID = 1
 const GM_USER_ID = 2
 
 /** The character the user controls in the game being VIEWED (game 7). */
-const viewedGameCharacter: Character = {
+const viewedGameCharacter: Character = makeCharacter({
   id: 70,
   game_id: 7,
   name: 'Archivist Vell',
-  character_type: 'player_character',
   user_id: USER_ID,
   assigned_user_id: USER_ID,
-  status: 'approved',
-  created_at: '2024-01-01T00:00:00Z',
-}
+})
 
 /**
  * The character the user controls in a DIFFERENT, still-active game. The

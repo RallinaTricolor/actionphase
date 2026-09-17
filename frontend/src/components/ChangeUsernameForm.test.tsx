@@ -34,9 +34,15 @@ vi.mock('../contexts/AuthContext', async (importOriginal) => {
 describe('ChangeUsernameForm', () => {
   beforeEach(() => {
     server.resetHandlers();
-    // Mock window.location.reload
-    delete (window as Record<string, unknown>).location;
-    (window as Record<string, unknown>).location = { reload: vi.fn() };
+    // jsdom makes location.reload non-configurable, so it cannot be spied on
+    // individually -- the whole object has to be redefined. defineProperty does
+    // this without a cast; `window as Record<string, unknown>` does not
+    // typecheck, because Window does not sufficiently overlap with it.
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, reload: vi.fn() },
+      writable: true,
+      configurable: true,
+    });
   });
 
   it('renders change username form with current username', () => {

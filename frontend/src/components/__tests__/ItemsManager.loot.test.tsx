@@ -5,7 +5,7 @@ import { ItemsManager } from '../ItemsManager';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { apiClient } from '@/lib/api';
-import { lootModes } from '../character-updates/ItemForm';
+import type { lootModes } from '../character-updates/ItemForm';
 
 // GameContext itself is not exported, so drive the optional hook directly: null
 // stands in for "rendered outside a GameProvider".

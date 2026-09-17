@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { AxiosResponse } from 'axios';
+import { makeAxiosResponse } from '../../test-utils';
 import { useDashboard } from '../useDashboard';
 import { simpleApi } from '../../lib/simple-api';
 import type { DashboardData } from '../../types/dashboard';
@@ -50,8 +50,9 @@ describe('useDashboard', () => {
         unvoted_polls: 0,
         deadline_status: 'normal',
         is_urgent: false,
-        updated_at: new Date(),
-        created_at: new Date(),
+        // ISO strings, not Date objects: JSON carries no Date type.
+        updated_at: '2025-01-15T10:00:00Z',
+        created_at: '2025-01-15T10:00:00Z',
       },
     ],
     gm_games: [],
@@ -64,9 +65,7 @@ describe('useDashboard', () => {
   };
 
   it('fetches dashboard data successfully', async () => {
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: mockDashboardData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(mockDashboardData));
 
     const { result } = renderHook(() => useDashboard(), { wrapper });
 
@@ -100,9 +99,7 @@ describe('useDashboard', () => {
   });
 
   it('uses correct query key', async () => {
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: mockDashboardData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(mockDashboardData));
 
     renderHook(() => useDashboard(), { wrapper });
 
@@ -125,9 +122,7 @@ describe('useDashboard', () => {
   });
 
   it('refetches when query is invalidated', async () => {
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: mockDashboardData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(mockDashboardData));
 
     const { result } = renderHook(() => useDashboard(), { wrapper });
 
@@ -148,9 +143,7 @@ describe('useDashboard', () => {
   });
 
   it('maintains previous data during refetch', async () => {
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: mockDashboardData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(mockDashboardData));
 
     const { result } = renderHook(() => useDashboard(), { wrapper });
 
@@ -165,9 +158,7 @@ describe('useDashboard', () => {
       unread_notifications: 5,
     };
 
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: updatedData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(updatedData));
 
     // Trigger refetch
     await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -182,9 +173,7 @@ describe('useDashboard', () => {
   });
 
   it('returns data with expected structure', async () => {
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: mockDashboardData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(mockDashboardData));
 
     const { result } = renderHook(() => useDashboard(), { wrapper });
 
@@ -220,9 +209,7 @@ describe('useDashboard', () => {
       notifications_by_type: {},
     };
 
-    vi.mocked(simpleApi.getDashboard).mockResolvedValue({
-      data: emptyData,
-    } as Partial<AxiosResponse<DashboardData>>);
+    vi.mocked(simpleApi.getDashboard).mockResolvedValue(makeAxiosResponse(emptyData));
 
     const { result } = renderHook(() => useDashboard(), { wrapper });
 

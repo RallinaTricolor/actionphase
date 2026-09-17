@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
-import { renderWithProviders } from '../../test-utils'
-import type { useAuth } from '../../contexts/AuthContext'
+import { renderWithProviders, makeAuthContext, makeUser } from '../../test-utils'
 import { GamesList } from '../GamesList'
 import type { EnrichedGameListItem } from '../../types/games'
 
@@ -21,7 +20,6 @@ import { useAuth } from '../../contexts/AuthContext'
 
 describe('GamesList', () => {
   const mockOnGameClick = vi.fn()
-  const _mockOnCreateClick = vi.fn()
   const mockOnApplyToGame = vi.fn()
 
   beforeEach(() => {
@@ -29,8 +27,8 @@ describe('GamesList', () => {
   })
 
   describe('GM Cannot Apply Bug - Regression Test', () => {
-    const gmUser = { id: 1, username: 'gm_user', email: 'gm@example.com', created_at: '', updated_at: '' }
-    const regularUser = { id: 2, username: 'player_user', email: 'player@example.com', created_at: '', updated_at: '' }
+    const gmUser = makeUser({ id: 1, username: 'gm_user', email: 'gm@example.com' })
+    const regularUser = makeUser({ id: 2, username: 'player_user', email: 'player@example.com' })
 
     const gmOwnedGame: EnrichedGameListItem = {
       id: 1,
@@ -73,7 +71,7 @@ describe('GamesList', () => {
 
     it('GM should NOT see apply button on their own game', () => {
       // Setup: GM is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: gmUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -82,7 +80,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -102,7 +100,7 @@ describe('GamesList', () => {
 
     it('GM should see apply button on other GMs games', () => {
       // Setup: GM is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: gmUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -111,7 +109,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -130,7 +128,7 @@ describe('GamesList', () => {
 
     it('Regular user should see apply button on all recruiting games', () => {
       // Setup: Regular player is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: regularUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -139,7 +137,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -160,7 +158,7 @@ describe('GamesList', () => {
 
     it('Apply button should call onApplyToGame with correct game ID', () => {
       // Setup: Regular player is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: regularUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -169,7 +167,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -192,7 +190,7 @@ describe('GamesList', () => {
 
     it('Apply button should not appear when onApplyToGame is not provided', () => {
       // Setup: Regular player is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: regularUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -201,7 +199,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -225,7 +223,7 @@ describe('GamesList', () => {
       }
 
       // Setup: Regular player is logged in
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: regularUser,
         isAuthenticated: true,
         isCheckingAuth: false,
@@ -234,7 +232,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
 
       renderWithProviders(
         <GamesList
@@ -254,7 +252,7 @@ describe('GamesList', () => {
 
   describe('Basic functionality', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
+      vi.mocked(useAuth).mockReturnValue(makeAuthContext({
         currentUser: null,
         isAuthenticated: false,
         isCheckingAuth: false,
@@ -263,7 +261,7 @@ describe('GamesList', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      } as Partial<ReturnType<typeof useAuth>>)
+      }))
     })
 
     it('renders loading state initially', () => {

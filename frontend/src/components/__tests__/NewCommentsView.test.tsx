@@ -2,10 +2,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
-import type { UseInfiniteQueryResult } from '@tanstack/react-query';
 import { NewCommentsView } from '../NewCommentsView';
 import * as useRecentCommentsModule from '../../hooks/useRecentComments';
-import type { CommentWithParent } from '../../types/messages';
+import { makeInfiniteQueryResult } from '../../test-utils';
+
+/**
+ * One page of useRecentComments, derived from the hook so it cannot drift.
+ * These mocks previously cast themselves to
+ * `Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>`, which named the
+ * wrong type: an infinite query's `data` is InfiniteData<page>, not a flat
+ * array. The mocks supply `{ pages: [...] }` -- correctly -- so the cast and the
+ * object disagreed, and Partial<> kept that quiet.
+ */
+type RecentCommentsPage = NonNullable<
+  ReturnType<typeof useRecentCommentsModule.useRecentComments>['data']
+>['pages'][number];
+
+/**
+ * One comment as the endpoint actually returns it.
+ *
+ * Deliberately NOT `types/messages.ts`'s hand-written `CommentWithParent`:
+ * that interface marks `parent_content` (and its siblings) optional, but the
+ * query selects `pm.content as parent_content` into a plain
+ * `json:"parent_content"` field -- no omitempty -- so the key is ALWAYS present
+ * and merely null when the LEFT JOIN finds no parent. Typing the fixtures
+ * against the hook keeps them honest about that; the local interface is a
+ * production drift recorded separately.
+ */
+type RecentComment = RecentCommentsPage['comments'][number];
 
 // Mock the useRecentComments hook
 vi.mock('../../hooks/useRecentComments');
@@ -46,7 +70,7 @@ vi.mock('../CommentWithParentCard', () => ({
     onNavigateToParent,
     onNavigateToComment
   }: {
-    comment: CommentWithParent;
+    comment: RecentComment;
     onNavigateToParent: () => void;
     onNavigateToComment: () => void;
   }) => (
@@ -77,7 +101,7 @@ const mockIntersectionObserver = vi.fn(class {
 });
 
 describe('NewCommentsView', () => {
-  const mockComment: CommentWithParent = {
+  const mockComment: RecentComment = {
     id: 1,
     game_id: 1,
     parent_id: 100,
@@ -99,6 +123,7 @@ describe('NewCommentsView', () => {
     parent_message_type: 'post',
     parent_author_username: 'parentuser',
     parent_character_name: 'Parent Character',
+    parent_character_avatar_url: null,
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -117,7 +142,7 @@ describe('NewCommentsView', () => {
   });
 
   it('shows loading spinner while loading', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -126,7 +151,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -135,7 +160,7 @@ describe('NewCommentsView', () => {
 
   it('shows error message when loading fails', () => {
     const error = new Error('Failed to load');
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: undefined,
       isLoading: false,
       isError: true,
@@ -144,7 +169,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -153,8 +178,8 @@ describe('NewCommentsView', () => {
   });
 
   it('shows empty state when there are no comments', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
-      data: { pages: [] },
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
+      data: { pages: [], pageParams: [] },
       isLoading: false,
       isError: false,
       error: null,
@@ -162,7 +187,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -177,9 +202,10 @@ describe('NewCommentsView', () => {
       { ...mockComment, id: 3, content: 'Comment 3' },
     ];
 
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments, total: 3, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -188,7 +214,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -208,12 +234,13 @@ describe('NewCommentsView', () => {
       { ...mockComment, id: 4, content: 'Comment 4' },
     ];
 
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [
           { comments: page1Comments, total: 4, limit: 2, offset: 0 },
           { comments: page2Comments, total: 4, limit: 2, offset: 2 },
         ],
+        pageParams: [0, 2],
       },
       isLoading: false,
       isError: false,
@@ -222,7 +249,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -233,9 +260,10 @@ describe('NewCommentsView', () => {
   });
 
   it('shows "No more comments" when all pages loaded', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -244,7 +272,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -252,9 +280,10 @@ describe('NewCommentsView', () => {
   });
 
   it('shows loading spinner when fetching next page', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -263,7 +292,7 @@ describe('NewCommentsView', () => {
       hasNextPage: true,
       isFetchingNextPage: true,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -273,9 +302,10 @@ describe('NewCommentsView', () => {
   });
 
   it('sets up intersection observer when hasNextPage is true', async () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -284,7 +314,7 @@ describe('NewCommentsView', () => {
       hasNextPage: true,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -297,9 +327,10 @@ describe('NewCommentsView', () => {
   });
 
   it('does not set up intersection observer when hasNextPage is false', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
@@ -308,7 +339,7 @@ describe('NewCommentsView', () => {
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -320,16 +351,21 @@ describe('NewCommentsView', () => {
   });
 
   it('handles unknown error gracefully', () => {
-    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+    vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: undefined,
       isLoading: false,
       isError: true,
-      error: 'String error',
+      // Deliberately not an Error. React Query's types say `error` is
+      // `Error | null`, but a queryFn that throws a string produces exactly
+      // this at runtime, which is what NewCommentsView's `error instanceof
+      // Error` fallback exists to handle. Covering that branch requires
+      // stepping outside the declared type.
+      error: 'String error' as unknown as Error,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
       refetch: vi.fn(),
-    } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+    }));
 
     render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -343,9 +379,10 @@ describe('NewCommentsView', () => {
     });
 
     it('generates correct deep link to comment when "View Comment" is clicked', () => {
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -354,7 +391,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -367,9 +404,10 @@ describe('NewCommentsView', () => {
     });
 
     it('generates correct deep link to parent comment when "View Parent" is clicked', () => {
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -378,7 +416,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -392,9 +430,10 @@ describe('NewCommentsView', () => {
 
     it('does not navigate to parent when parent_id is null', () => {
       const commentWithoutParent = { ...mockComment, parent_id: null };
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [commentWithoutParent], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -403,7 +442,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -421,9 +460,10 @@ describe('NewCommentsView', () => {
         { ...mockComment, id: 20, parent_id: 200, content: 'Second comment' },
       ];
 
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments, total: 2, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -432,7 +472,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -451,9 +491,10 @@ describe('NewCommentsView', () => {
   describe('Refresh Button', () => {
     it('renders refresh button with comments', () => {
       const refetch = vi.fn();
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -462,7 +503,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -471,9 +512,10 @@ describe('NewCommentsView', () => {
 
     it('calls refetch when refresh button is clicked', async () => {
       const refetch = vi.fn().mockResolvedValue({});
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -482,7 +524,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -498,9 +540,10 @@ describe('NewCommentsView', () => {
       const refetch = vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -509,7 +552,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -531,9 +574,10 @@ describe('NewCommentsView', () => {
       const refetch = vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
@@ -542,7 +586,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -562,7 +606,7 @@ describe('NewCommentsView', () => {
 
     it('disables refresh button while initially loading', () => {
       const refetch = vi.fn();
-      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue({
+      vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: undefined,
         isLoading: true,
         isError: false,
@@ -571,7 +615,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch,
-      } as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>);
+      }));
 
       render(<NewCommentsView gameId={1} />, { wrapper });
 
@@ -583,9 +627,9 @@ describe('NewCommentsView', () => {
   });
 
   describe('unread-only filter', () => {
-    const loadedComments = (comments: CommentWithParent[]) =>
-      ({
-        data: { pages: [{ comments, total: comments.length, limit: 20, offset: 0 }] },
+    const loadedComments = (comments: RecentComment[]) =>
+      makeInfiniteQueryResult<RecentCommentsPage>({
+        data: { pages: [{ comments, total: comments.length, limit: 20, offset: 0 }], pageParams: [0] },
         isLoading: false,
         isError: false,
         error: null,
@@ -593,7 +637,7 @@ describe('NewCommentsView', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         refetch: vi.fn(),
-      }) as Partial<UseInfiniteQueryResult<CommentWithParent[], Error>>;
+      });
 
     it('does not offer the filter in auto read mode', () => {
       mockReadMode = 'auto';
@@ -683,7 +727,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1 }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -702,7 +746,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -726,7 +770,7 @@ describe('NewCommentsView', () => {
         (_gameId, unreadOnly) =>
           loadedComments(
             unreadOnly ? [] : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
@@ -752,14 +796,14 @@ describe('NewCommentsView', () => {
                 ? [{ ...mockComment, id: 2, content: 'Fresh unread' }]
                 : []
               : [{ ...mockComment, id: 1, content: 'Only comment' }]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>;
+          );
           return {
             ...result,
             refetch: vi.fn(async () => {
               unreadArrived = true;
               return result;
             }),
-          } as UseInfiniteQueryResult<CommentWithParent[], Error>;
+          };
         }
       );
 
@@ -787,7 +831,7 @@ describe('NewCommentsView', () => {
                   { ...mockComment, id: 1, content: 'Read' },
                   { ...mockComment, id: 2, content: 'Unread' },
                 ]
-          ) as UseInfiniteQueryResult<CommentWithParent[], Error>
+          )
       );
 
       render(<NewCommentsView gameId={1} />, { wrapper });
