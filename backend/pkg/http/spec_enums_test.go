@@ -1,6 +1,9 @@
 package http
 
 import (
+	"slices"
+	"sort"
+	"strings"
 	"testing"
 
 	"actionphase/pkg/core"
@@ -435,22 +438,28 @@ func TestCommunityBanUsernameIsOptional(t *testing.T) {
 // This test pins the DECLARED schema to the fields actually assigned. If the
 // handler later starts sending the full game, update the expectation here --
 // after checking humaUpdateGameState, not by assuming.
+//
+// It asserts the exact property set rather than merely that the schema is not
+// GameResponse: "not that one wrong shape" would pass against any other
+// over-wide schema, including a future copy of GameResponse under a new name.
+// The failure it exists to catch is a field the handler never assigns, and only
+// naming the seven catches that.
 func TestUpdateGameStateResponseMatchesWhatItSends(t *testing.T) {
 	doc := specDocument(t)
 
-	paths, _ := doc["paths"].(map[string]any)
-	p, ok := paths["/games/{gameID}/state"].(map[string]any)
-	if !ok {
-		t.Fatal("/games/{gameID}/state is not in the rendered spec")
+	// Exactly the fields humaUpdateGameState assigns. Keep in sync with that
+	// handler and with games.GameStateChangedResponse.
+	want := []string{
+		"created_at", "description", "gm_user_id", "id", "state", "title", "updated_at",
 	}
-	put, _ := p["put"].(map[string]any)
-	responses, _ := put["responses"].(map[string]any)
-	ok200, _ := responses["200"].(map[string]any)
-	content, _ := ok200["content"].(map[string]any)
-	media, _ := content["application/json"].(map[string]any)
-	schema, _ := media["schema"].(map[string]any)
+
+	schema := responseSchema(t, doc, "/games/{gameID}/state", "put", "200")
 
 	ref, _ := schema["$ref"].(string)
+	if ref == "" {
+		t.Fatalf("PUT /games/{gameID}/state declares an inline response schema (%v), "+
+			"want a $ref to a named one", schema)
+	}
 	if ref == "#/components/schemas/GameResponse" {
 		t.Fatal("PUT /games/{gameID}/state still declares GameResponse, but " +
 			"humaUpdateGameState assigns only 7 of its 28 fields -- the four " +
@@ -458,6 +467,44 @@ func TestUpdateGameStateResponseMatchesWhatItSends(t *testing.T) {
 			"allow_group_conversations, portrait_avatars) serialize as false " +
 			"regardless of what the game has stored, so the spec tells every " +
 			"client something the server never promised")
+	}
+
+	name := strings.TrimPrefix(ref, "#/components/schemas/")
+	components, _ := doc["components"].(map[string]any)
+	schemas, _ := components["schemas"].(map[string]any)
+	target, ok := schemas[name].(map[string]any)
+	if !ok {
+		t.Fatalf("response schema %q is not in components.schemas", name)
+	}
+
+	props, _ := target["properties"].(map[string]any)
+	got := make([]string, 0, len(props))
+	for k := range props {
+		got = append(got, k)
+	}
+	sort.Strings(got)
+
+	if !slices.Equal(got, want) {
+		t.Errorf("%s declares properties %v, want exactly %v -- every field here "+
+			"must be one humaUpdateGameState actually assigns, or it serializes "+
+			"as a zero value the game does not have", name, got, want)
+	}
+
+	// All seven are plain non-pointer fields with no omitempty, so each is
+	// required. A field that drifted to optional would let a client treat an
+	// always-present value as maybe-absent.
+	required := make([]string, 0, len(want))
+	if raw, ok := target["required"].([]any); ok {
+		for _, v := range raw {
+			s, _ := v.(string)
+			required = append(required, s)
+		}
+	}
+	sort.Strings(required)
+
+	if !slices.Equal(required, want) {
+		t.Errorf("%s marks %v required, want all of %v -- the handler assigns "+
+			"every one unconditionally", name, required, want)
 	}
 }
 
