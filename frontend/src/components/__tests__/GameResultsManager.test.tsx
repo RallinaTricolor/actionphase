@@ -446,17 +446,17 @@ describe('GameResultsManager', () => {
 
     it('trims whitespace from content before saving', async () => {
       const user = userEvent.setup();
-      let requestBody: unknown = null;
+      let requestBody: { content: string } | undefined;
 
       server.use(
         http.get('/api/v1/games/:gameId/results', () => {
           return HttpResponse.json([mockUnpublishedResult]);
         }),
-        http.put('/api/v1/games/:gameId/results/:resultId', async ({ request }) => {
+        http.put<never, { content: string }>('/api/v1/games/:gameId/results/:resultId', async ({ request }) => {
           requestBody = await request.json();
           return HttpResponse.json({
             ...mockUnpublishedResult,
-            content: requestBody.content,
+            content: requestBody?.content,
           });
         })
       );

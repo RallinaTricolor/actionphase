@@ -430,7 +430,9 @@ describe('UnreadInboxSection', () => {
         }
       };
       server.events.on('request:start', recordRequest);
-      onTestFinished(() => server.events.removeListener('request:start', recordRequest));
+      onTestFinished(() => {
+        server.events.removeListener('request:start', recordRequest);
+      });
 
       renderWithProviders(<UnreadInboxSection />);
 

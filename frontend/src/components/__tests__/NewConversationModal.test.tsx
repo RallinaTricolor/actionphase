@@ -191,7 +191,7 @@ describe('NewConversationModal', () => {
       )
 
       // The auto-selected character display uses bg-interactive-primary-subtle
-      const selectedCharDiv = container.querySelector('.bg-interactive-primary-subtle')
+      const selectedCharDiv = container.querySelector<HTMLElement>('.bg-interactive-primary-subtle')
       expect(selectedCharDiv).toBeInTheDocument()
       expect(within(selectedCharDiv!).getByText('Alice')).toBeInTheDocument()
       expect(within(selectedCharDiv!).getByText('player character')).toBeInTheDocument()
@@ -267,7 +267,9 @@ describe('NewConversationModal', () => {
       expect(screen.getByText('The Mysterious NPC')).toBeInTheDocument()
 
       // Alice and Bob SHOULD be in the participants list (they can be selected as participants)
-      const participantsList = screen.getByText('Charlie').closest('div[class*="space-y-2"]')
+      const participantsList = screen
+        .getByText('Charlie')
+        .closest<HTMLElement>('div[class*="space-y-2"]')
       expect(participantsList).toBeInTheDocument()
 
       const aliceInParticipants = within(participantsList!).queryByText('Alice')

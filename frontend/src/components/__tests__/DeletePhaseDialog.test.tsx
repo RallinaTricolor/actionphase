@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeletePhaseDialog } from '../DeletePhaseDialog';
+import { makeGamePhase } from '../../test-utils';
 import type { GamePhase } from '../../types/phases';
 
-const mockPhase: GamePhase = {
+const mockPhase: GamePhase = makeGamePhase({
   id: 1,
   game_id: 100,
   phase_type: 'common_room',
@@ -13,8 +14,7 @@ const mockPhase: GamePhase = {
   description: 'A test phase description',
   is_active: false,
   created_at: '2025-01-01T00:00:00Z',
-  updated_at: '2025-01-01T00:00:00Z',
-};
+});
 
 describe('DeletePhaseDialog', () => {
   it('should render with phase information', () => {

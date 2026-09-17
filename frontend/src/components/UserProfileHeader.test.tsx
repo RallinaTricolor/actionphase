@@ -6,7 +6,6 @@ import type { UserProfile } from '../types/user-profiles';
 const mockProfile: UserProfile = {
   id: 1,
   username: 'testuser',
-  email: 'test@example.com',
   display_name: 'Test User',
   bio: 'This is a **test** bio',
   avatar_url: 'http://localhost:3000/uploads/avatar.jpg',

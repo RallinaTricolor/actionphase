@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { UseQueryResult } from '@tanstack/react-query';
-import type { AxiosResponse } from 'axios';
 import { renderWithProviders } from '../../test-utils/render';
 import { HandoutsList } from '../HandoutsList';
 import * as useHandoutsModule from '../../hooks/useHandouts';
 import type { Handout } from '../../types/handouts';
+
+type UseHandoutsResult = ReturnType<typeof useHandoutsModule.useHandouts>;
 
 // Mock the useHandouts hook
 vi.mock('../../hooks/useHandouts');
@@ -43,9 +43,16 @@ const mockHandouts: Handout[] = [
 
 describe('HandoutsList', () => {
   const mockMutateAsync = vi.fn();
+  // A deliberately partial useHandouts return: the mutation objects carry only
+  // the two fields HandoutsList reads, not the ~25 a real UseMutationResult has.
+  // `as unknown as` is the sanctioned escape for this shape -- see
+  // .claude/planning/TYPECHECK_FRONTEND_TESTS.md. It replaces a cast to
+  // Partial<AxiosResponse<Handout[]>>, which described neither this object nor
+  // the hook: useHandouts returns {handouts, isLoading, ...}, never a response.
   const mockUseHandouts = {
     handouts: mockHandouts,
     isLoading: false,
+    isError: false,
     createHandoutMutation: {
       mutateAsync: mockMutateAsync,
       isPending: false,
@@ -70,7 +77,7 @@ describe('HandoutsList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as UseQueryResult<AxiosResponse<Handout[]>, Error>);
+    vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue(mockUseHandouts as unknown as UseHandoutsResult);
     // Mock window.alert and window.confirm
     vi.spyOn(window, 'alert').mockImplementation(() => {});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -81,7 +88,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as Partial<AxiosResponse<Handout[]>>);
+      } as unknown as UseHandoutsResult);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -93,7 +100,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         isLoading: true,
-      } as Partial<AxiosResponse<Handout[]>>);
+      } as unknown as UseHandoutsResult);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -106,7 +113,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as Partial<AxiosResponse<Handout[]>>);
+      } as unknown as UseHandoutsResult);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={true} />);
 
@@ -117,7 +124,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [],
-      } as Partial<AxiosResponse<Handout[]>>);
+      } as unknown as UseHandoutsResult);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 
@@ -128,7 +135,7 @@ describe('HandoutsList', () => {
       vi.spyOn(useHandoutsModule, 'useHandouts').mockReturnValue({
         ...mockUseHandouts,
         handouts: [mockHandouts[2]], // Only draft handout
-      } as Partial<AxiosResponse<Handout[]>>);
+      } as unknown as UseHandoutsResult);
 
       renderWithProviders(<HandoutsList gameId={1} isGM={false} />);
 

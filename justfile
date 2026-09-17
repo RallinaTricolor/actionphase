@@ -761,6 +761,13 @@ _dead-code-unix:
 type-check:
   {{FE}} npx tsc -b --force
 
+# Typecheck the test suite (in frontend container).
+# Separate from `type-check` because tsconfig.app.json deliberately excludes
+# tests; tsconfig.test.json re-includes them and adds the vitest/jest-dom
+# globals. Referenced from tsconfig.json, so it must be built with -b.
+check-test-types:
+  {{FE}} npx tsc -b tsconfig.test.json --force
+
 # Dead-export detection (in frontend container)
 knip:
   {{FE}} npx knip
@@ -808,7 +815,7 @@ _verify-unix:
   just fmt
   fail=0
   for t in "vet" "check-game-states" "check-api-docs" "check-api-types" "dead-code" "build-backend" \
-           "lint-frontend" "knip" "build-frontend"; do
+           "lint-frontend" "knip" "build-frontend" "check-test-types"; do
     ( out=$(just $t 2>&1); code=$?; \
       if [ $code -ne 0 ]; then printf '\n=== FAILED: just %s ===\n%s\n' "$t" "$out" >&2; fi; \
       exit $code ) &
@@ -842,7 +849,7 @@ _verify-quick-unix:
     exit 0
   fi
   fail=0
-  for t in "tidy-check" "fmt-check" "vet" "check-game-states" "check-api-docs" "check-api-types" "type-check" "lint-frontend"; do
+  for t in "tidy-check" "fmt-check" "vet" "check-game-states" "check-api-docs" "check-api-types" "type-check" "check-test-types" "lint-frontend"; do
     ( out=$(just $t 2>&1); code=$?; \
       if [ $code -ne 0 ]; then printf '\n=== FAILED: just %s ===\n%s\n' "$t" "$out" >&2; fi; \
       exit $code ) &

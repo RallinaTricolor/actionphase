@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CharacterAutocomplete, Character } from './CharacterAutocomplete';
+import { CharacterAutocomplete } from './CharacterAutocomplete';
+import { makeCharacter } from '../test-utils';
+import type { Character } from '../types/characters';
 
 describe('CharacterAutocomplete', () => {
   const mockCharacters: Character[] = [
-    { id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' },
-    { id: 2, name: 'Gandalf', avatar_url: 'https://example.com/gandalf.jpg' },
-    { id: 3, name: 'Arwen' }, // No avatar
-    { id: 4, name: 'Legolas' },
+    makeCharacter({ id: 1, name: 'Aragorn', avatar_url: 'https://example.com/aragorn.jpg' }),
+    makeCharacter({ id: 2, name: 'Gandalf', avatar_url: 'https://example.com/gandalf.jpg' }),
+    makeCharacter({ id: 3, name: 'Arwen' }), // No avatar
+    makeCharacter({ id: 4, name: 'Legolas' }),
   ];
 
   const defaultProps = {
@@ -167,8 +169,8 @@ describe('CharacterAutocomplete', () => {
 
     it('handles characters with special characters in names', () => {
       const specialChars: Character[] = [
-        { id: 1, name: "O'Brien" },
-        { id: 2, name: 'Jean-Luc' },
+        makeCharacter({ id: 1, name: "O'Brien" }),
+        makeCharacter({ id: 2, name: 'Jean-Luc' }),
       ];
 
       render(<CharacterAutocomplete {...defaultProps} characters={specialChars} />);
@@ -179,7 +181,7 @@ describe('CharacterAutocomplete', () => {
 
     it('handles very long character names', () => {
       const longName: Character[] = [
-        { id: 1, name: 'A'.repeat(100) },
+        makeCharacter({ id: 1, name: 'A'.repeat(100) }),
       ];
 
       render(<CharacterAutocomplete {...defaultProps} characters={longName} />);
@@ -190,10 +192,9 @@ describe('CharacterAutocomplete', () => {
     it('scrolls selected item into view', () => {
       // This test verifies the useEffect that scrolls selected items
       // We just check that rendering with selectedIndex doesn't crash
-      const manyCharacters = Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        name: `Character ${i}`,
-      }));
+      const manyCharacters = Array.from({ length: 20 }, (_, i) =>
+        makeCharacter({ id: i, name: `Character ${i}` }),
+      );
 
       const { rerender } = render(
         <CharacterAutocomplete {...defaultProps} characters={manyCharacters} selectedIndex={0} />

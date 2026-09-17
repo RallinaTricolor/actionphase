@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { LinkProps } from 'react-router-dom';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { UpcomingDeadlinesCard } from '../UpcomingDeadlinesCard';
@@ -9,7 +10,9 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    Link: ({ to, children, className }: unknown) => (
+    // Narrowed to the string form of `to`: every call site in these components
+    // passes a template-literal path, never the Partial<Path> object form.
+    Link: ({ to, children, className }: Omit<LinkProps, 'to'> & { to: string }) => (
       <a href={to} className={className}>{children}</a>
     ),
   };

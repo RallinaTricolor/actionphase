@@ -6,8 +6,8 @@ import {
   FormErrorBoundary,
   AsyncErrorBoundary,
   withErrorBoundary,
-  ErrorBoundaryFallbackProps
 } from '../ErrorBoundary';
+import type { ErrorBoundaryFallbackProps } from '../ErrorBoundary';
 import { ErrorType, ErrorSeverity } from '../../types/errors';
 import type { AppError } from '../../types/errors';
 

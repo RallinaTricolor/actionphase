@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThreadedComment } from './ThreadedComment';
 import type { Message } from '../types/messages';
+import { makeMessage } from '../test-utils/factories';
 import { MemoryRouter } from 'react-router-dom';
 import { useScreenshotMode } from '../hooks/useScreenshotMode';
 import { useGamePermissions } from '../hooks/useGamePermissions';
@@ -61,7 +62,7 @@ vi.mock('../contexts/ToastContext', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-const baseComment: Message = {
+const baseComment: Message = makeMessage({
   id: 42,
   game_id: 1,
   author_id: 99,
@@ -69,15 +70,10 @@ const baseComment: Message = {
   character_name: 'Test Hero',
   author_username: 'testuser',
   content: 'This is a test comment',
-  message_type: 'comment',
   parent_id: 1,
   thread_depth: 1,
-  visibility: 'game',
-  is_edited: false,
-  is_deleted: false,
   created_at: '2026-01-01T00:00:00Z',
-  reply_count: 0,
-};
+});
 
 function renderComment(props: Partial<Parameters<typeof ThreadedComment>[0]> = {}) {
   return render(

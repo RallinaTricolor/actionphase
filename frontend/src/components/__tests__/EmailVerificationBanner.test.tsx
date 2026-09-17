@@ -13,6 +13,7 @@ vi.mock('../../lib/api', () => ({
 }));
 
 import { apiClient } from '../../lib/api';
+import { makeAxiosResponse } from '../../test-utils';
 
 describe('EmailVerificationBanner', () => {
   beforeEach(() => {
@@ -37,7 +38,9 @@ describe('EmailVerificationBanner', () => {
 
   it('calls resendVerificationEmail when Resend Email is clicked', async () => {
     const user = userEvent.setup();
-    vi.mocked(apiClient.auth.resendVerificationEmail).mockResolvedValue(undefined);
+    vi.mocked(apiClient.auth.resendVerificationEmail).mockResolvedValue(
+      makeAxiosResponse({ message: 'Verification email sent' }),
+    );
 
     renderWithProviders(<EmailVerificationBanner />);
     await user.click(screen.getByRole('button', { name: /resend email/i }));

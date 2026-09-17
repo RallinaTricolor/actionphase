@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeadlineStrip } from './DeadlineStrip';
 import type { UnifiedDeadline } from '../types/deadlines';
+import type { Mock } from 'vitest';
 
 vi.mock('./CreateDeadlineModal', () => ({
   CreateDeadlineModal: () => <div data-testid="create-deadline-modal" />,
@@ -56,10 +57,10 @@ function renderStrip(props: Partial<React.ComponentProps<typeof DeadlineStrip>> 
 }
 
 describe('DeadlineStrip navigation', () => {
-  let onDeadlineClick: ReturnType<typeof vi.fn>;
+  let onDeadlineClick: Mock<(deadline: UnifiedDeadline) => void>;
 
   beforeEach(() => {
-    onDeadlineClick = vi.fn();
+    onDeadlineClick = vi.fn<(deadline: UnifiedDeadline) => void>();
   });
 
   it('navigates to the deadline when a card with a destination is clicked', async () => {

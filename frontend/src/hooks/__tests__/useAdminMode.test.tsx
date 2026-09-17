@@ -4,7 +4,8 @@ import { useAdminMode } from '../useAdminMode';
 import * as AuthContext from '../../contexts/AuthContext'
 import type { User } from '../../types/auth';
 import { AdminModeProvider } from '../../contexts/AdminModeContext';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { makeAuthContext } from '../../test-utils';
 
 // Mock the AuthContext
 vi.mock('../../contexts/AuthContext', () => ({
@@ -45,7 +46,7 @@ describe('useAdminMode', () => {
 
   describe('for non-admin users', () => {
     it('returns isAdmin false and adminModeEnabled false', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockRegularUser,
         isAuthenticated: true,
         isLoading: false,
@@ -54,7 +55,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -63,7 +64,7 @@ describe('useAdminMode', () => {
     });
 
     it('cannot toggle admin mode', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockRegularUser,
         isAuthenticated: true,
         isLoading: false,
@@ -72,7 +73,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -88,7 +89,7 @@ describe('useAdminMode', () => {
     it('ignores localStorage value if user is not admin', () => {
       localStorage.setItem(ADMIN_MODE_STORAGE_KEY, 'true');
 
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockRegularUser,
         isAuthenticated: true,
         isLoading: false,
@@ -97,7 +98,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -108,7 +109,7 @@ describe('useAdminMode', () => {
 
   describe('for admin users', () => {
     it('returns isAdmin true and adminModeEnabled false by default', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -117,7 +118,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -126,7 +127,7 @@ describe('useAdminMode', () => {
     });
 
     it('can toggle admin mode on', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -135,7 +136,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -151,7 +152,7 @@ describe('useAdminMode', () => {
     });
 
     it('can toggle admin mode off', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -160,7 +161,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -185,7 +186,7 @@ describe('useAdminMode', () => {
     it('loads admin mode state from localStorage on mount', () => {
       localStorage.setItem(ADMIN_MODE_STORAGE_KEY, 'true');
 
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -194,7 +195,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -205,7 +206,7 @@ describe('useAdminMode', () => {
 
   describe('localStorage persistence', () => {
     it('persists admin mode enabled state to localStorage', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -214,7 +215,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -230,7 +231,7 @@ describe('useAdminMode', () => {
     it('removes from localStorage when toggling off', () => {
       localStorage.setItem(ADMIN_MODE_STORAGE_KEY, 'true');
 
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -239,7 +240,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -260,7 +261,7 @@ describe('useAdminMode', () => {
       });
 
       // Start as admin with admin mode enabled
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -269,7 +270,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       rerender();
 
@@ -281,7 +282,7 @@ describe('useAdminMode', () => {
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBe('true');
 
       // User loses admin status
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: { ...mockAdminUser, is_admin: false },
         isAuthenticated: true,
         isLoading: false,
@@ -290,7 +291,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       rerender();
 
@@ -303,7 +304,7 @@ describe('useAdminMode', () => {
       const { result, rerender } = renderHook(() => useAdminMode(), { wrapper });
 
       // Start as admin with admin mode enabled
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: mockAdminUser,
         isAuthenticated: true,
         isLoading: false,
@@ -312,7 +313,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       rerender();
 
@@ -324,7 +325,7 @@ describe('useAdminMode', () => {
       expect(localStorage.getItem(ADMIN_MODE_STORAGE_KEY)).toBe('true');
 
       // User logs out
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: null,
         isAuthenticated: false,
         isLoading: false,
@@ -333,7 +334,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       rerender();
 
@@ -345,7 +346,7 @@ describe('useAdminMode', () => {
 
   describe('edge cases', () => {
     it('handles null currentUser', () => {
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: null,
         isAuthenticated: false,
         isLoading: false,
@@ -354,7 +355,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 
@@ -370,7 +371,7 @@ describe('useAdminMode', () => {
         // is_admin is undefined
       };
 
-      vi.mocked(AuthContext.useAuth).mockReturnValue({
+      vi.mocked(AuthContext.useAuth).mockReturnValue(makeAuthContext({
         currentUser: userWithoutAdminField,
         isAuthenticated: true,
         isLoading: false,
@@ -379,7 +380,7 @@ describe('useAdminMode', () => {
         register: vi.fn(),
         logout: vi.fn(),
         error: null,
-      });
+      }));
 
       const { result } = renderHook(() => useAdminMode(), { wrapper });
 

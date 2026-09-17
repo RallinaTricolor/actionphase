@@ -129,10 +129,10 @@ describe('ForgotPasswordPage', () => {
   });
 
   it('trims whitespace from email', async () => {
-    let requestBody: unknown = null;
+    let requestBody: { email: string } | undefined;
 
     server.use(
-      http.post('http://localhost:3000/api/v1/auth/request-password-reset', async ({ request }) => {
+      http.post<never, { email: string }>('http://localhost:3000/api/v1/auth/request-password-reset', async ({ request }) => {
         requestBody = await request.json();
         return HttpResponse.json({ message: 'Password reset email sent' });
       })

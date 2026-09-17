@@ -6,6 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { ThreadViewModal } from '../ThreadViewModal';
 import type { Message } from '../../types/messages';
+import { makeCharacter, makeMessage } from '../../test-utils/factories';
 import type { Character } from '../../types/characters';
 
 describe('ThreadViewModal', () => {
@@ -16,35 +17,25 @@ describe('ThreadViewModal', () => {
   const mockCurrentUserId = 200;
 
   const mockCharacters: Character[] = [
-    {
+    makeCharacter({
       id: 1,
       game_id: mockGameId,
       user_id: mockCurrentUserId,
-      username: 'testuser',
       name: 'Hero',
-      character_type: 'player_character',
-      status: 'active',
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    },
+    }),
   ];
 
-  const mockComment: Message = {
+  const mockComment: Message = makeMessage({
     id: 1,
     game_id: mockGameId,
     author_id: mockCurrentUserId,
     character_id: 1,
     content: 'This is a test comment in modal',
-    message_type: 'comment',
-    thread_depth: 0,
     author_username: 'testuser',
     character_name: 'Hero',
-    reply_count: 0,
-    is_edited: false,
-    is_deleted: false,
     created_at: '2025-01-15T10:30:00Z',
     updated_at: '2025-01-15T10:30:00Z',
-  };
+  });
 
   beforeEach(() => {
     mockOnClose.mockClear();
@@ -113,28 +104,27 @@ describe('ThreadViewModal', () => {
 
     it('should propagate readOnly to parent chain comments', async () => {
       // Create a parent chain (3 levels deep)
-      const parentComment1: Message = {
+      const parentComment1: Message = makeMessage({
         ...mockComment,
         id: 10,
         content: 'Parent comment 1',
-        thread_depth: 0,
-      };
+      });
 
-      const parentComment2: Message = {
+      const parentComment2: Message = makeMessage({
         ...mockComment,
         id: 11,
         parent_id: 10,
         content: 'Parent comment 2',
         thread_depth: 1,
-      };
+      });
 
-      const targetComment: Message = {
+      const targetComment: Message = makeMessage({
         ...mockComment,
         id: 12,
         parent_id: 11,
         content: 'Target comment (deepest)',
         thread_depth: 2,
-      };
+      });
 
       renderWithProviders(
         <ThreadViewModal
@@ -188,22 +178,18 @@ describe('ThreadViewModal', () => {
     // A comment with a pre-loaded child — this is the scenario that was broken:
     // the user types a reply on the NESTED comment, not the root. The dirty state
     // must propagate up through onDirtyStateChange to ThreadViewModal.
-    const mockChildComment: Message = {
+    const mockChildComment: Message = makeMessage({
       id: 2,
       game_id: mockGameId,
       author_id: 999, // different user — gives us a reply button
       character_id: 2,
       content: 'A nested child comment',
-      message_type: 'comment',
       thread_depth: 1,
       author_username: 'otheruser',
       character_name: 'Sidekick',
-      reply_count: 0,
-      is_edited: false,
-      is_deleted: false,
       created_at: '2025-01-15T11:00:00Z',
       updated_at: '2025-01-15T11:00:00Z',
-    };
+    });
 
     const mockCommentWithChild = {
       ...mockComment,

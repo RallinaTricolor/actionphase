@@ -34,7 +34,7 @@ describe('useUrlParam', () => {
     it('updates URL when setValue is called', () => {
       const { result } = renderHook(
         () => ({
-          param: useUrlParam('subTab', 'submissions'),
+          param: useUrlParam<string>('subTab', 'submissions'),
           params: useCurrentParams(),
         }),
         { wrapper: makeWrapper('/') }
@@ -50,7 +50,7 @@ describe('useUrlParam', () => {
     it('removes param from URL when setValue called with empty string', () => {
       const { result } = renderHook(
         () => ({
-          param: useUrlParam('subTab', 'submissions'),
+          param: useUrlParam<string>('subTab', 'submissions'),
           params: useCurrentParams(),
         }),
         { wrapper: makeWrapper('/?subTab=results') }
@@ -148,7 +148,7 @@ describe('useUrlParam', () => {
     it('does not remove unrelated params when setting a value', () => {
       const { result } = renderHook(
         () => ({
-          param: useUrlParam('subTab', 'submissions'),
+          param: useUrlParam<string>('subTab', 'submissions'),
           params: useCurrentParams(),
         }),
         { wrapper: makeWrapper('/?tab=history&comment=99') }

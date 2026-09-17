@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DeadlineStrip } from './DeadlineStrip';
-import type { Deadline } from '../types/deadlines';
+import type { UnifiedDeadline } from '../types/deadlines';
 
 // Mock child components to simplify testing
 vi.mock('./DeadlineCard', () => ({
-  DeadlineCard: ({ deadline }: { deadline: Deadline }) => (
+  DeadlineCard: ({ deadline }: { deadline: UnifiedDeadline }) => (
     <div data-testid="deadline-card">{deadline.title}</div>
   ),
 }));
@@ -19,13 +19,17 @@ vi.mock('./EditDeadlineModal', () => ({
 }));
 
 describe('DeadlineStrip', () => {
-  const mockDeadlines: Deadline[] = [
+  const mockDeadlines: UnifiedDeadline[] = [
     {
-      id: 1,
       game_id: 1,
       title: 'Submit Actions',
       description: 'Submit your actions by this deadline',
       deadline: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+      // A GM-created free-text deadline: type "deadline", keyed by its row in
+      // the deadlines table, and deletable (not system-generated).
+      deadline_type: 'deadline',
+      source_id: 1,
+      is_system_deadline: false,
     },
   ];
 
@@ -163,24 +167,33 @@ describe('DeadlineStrip', () => {
     });
 
     it('should render multiple deadline cards', () => {
-      const multipleDeadlines: Deadline[] = [
+      const multipleDeadlines: UnifiedDeadline[] = [
         {
-          id: 1,
           game_id: 1,
           title: 'Deadline 1',
+          description: 'First deadline',
           deadline: new Date(Date.now() + 86400000).toISOString(),
+          deadline_type: 'deadline',
+          source_id: 1,
+          is_system_deadline: false,
         },
         {
-          id: 2,
           game_id: 1,
           title: 'Deadline 2',
+          description: 'Second deadline',
           deadline: new Date(Date.now() + 172800000).toISOString(),
+          deadline_type: 'deadline',
+          source_id: 2,
+          is_system_deadline: false,
         },
         {
-          id: 3,
           game_id: 1,
           title: 'Deadline 3',
+          description: 'Third deadline',
           deadline: new Date(Date.now() + 259200000).toISOString(),
+          deadline_type: 'deadline',
+          source_id: 3,
+          is_system_deadline: false,
         },
       ];
 

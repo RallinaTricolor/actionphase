@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePreviousPhaseResults } from '../usePreviousPhaseResults';
 import { apiClient } from '../../lib/api';
 import type { GamePhase, ActionResult } from '../../types/phases';
+import { makeAxiosResponse, makeGamePhase } from '../../test-utils';
 
 // Mock the API client
 vi.mock('../../lib/api', () => ({
@@ -36,7 +37,10 @@ describe('usePreviousPhaseResults', () => {
   );
 
   const mockPhases: GamePhase[] = [
-    {
+    // No `is_current` / `updated_at`: neither is a PhaseResponse field. The
+    // hook identifies the previous phase by sorting on phase_number, so the
+    // live one is marked with the real `is_active` flag.
+    makeGamePhase({
       id: 1,
       game_id: 100,
       phase_number: 1,
@@ -44,11 +48,10 @@ describe('usePreviousPhaseResults', () => {
       title: 'Investigation Phase',
       description: 'Investigate the mansion',
       deadline: '2025-10-30T00:00:00Z',
-      is_current: false,
+      is_active: false,
       created_at: '2025-10-20T00:00:00Z',
-      updated_at: '2025-10-20T00:00:00Z',
-    },
-    {
+    }),
+    makeGamePhase({
       id: 2,
       game_id: 100,
       phase_number: 2,
@@ -56,10 +59,9 @@ describe('usePreviousPhaseResults', () => {
       title: 'Discussion Phase',
       description: 'Discuss your findings',
       deadline: '2025-11-05T00:00:00Z',
-      is_current: true,
+      is_active: true,
       created_at: '2025-10-28T00:00:00Z',
-      updated_at: '2025-10-28T00:00:00Z',
-    },
+    }),
   ];
 
   const mockResults: ActionResult[] = [
@@ -78,8 +80,8 @@ describe('usePreviousPhaseResults', () => {
 
   describe('Basic Functionality', () => {
     it('should return default state when no current phase', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, null, false), { wrapper });
 
@@ -94,11 +96,11 @@ describe('usePreviousPhaseResults', () => {
     it('should return default state when current phase is not common_room', async () => {
       const actionPhase: GamePhase = {
         ...mockPhases[0],
-        is_current: true,
+        is_active: true,
       };
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, actionPhase, false), { wrapper });
 
@@ -108,7 +110,7 @@ describe('usePreviousPhaseResults', () => {
     });
 
     it('should return default state when there is no previous phase', async () => {
-      const firstPhase: GamePhase = {
+      const firstPhase: GamePhase = makeGamePhase({
         id: 1,
         game_id: 100,
         phase_number: 1,
@@ -116,13 +118,12 @@ describe('usePreviousPhaseResults', () => {
         title: 'First Discussion',
         description: 'Opening discussion',
         deadline: '2025-10-30T00:00:00Z',
-        is_current: true,
+        is_active: true,
         created_at: '2025-10-20T00:00:00Z',
-        updated_at: '2025-10-20T00:00:00Z',
-      };
+      });
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: [firstPhase] });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: [] });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse([firstPhase]));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse([]));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, firstPhase, false), { wrapper });
 
@@ -134,8 +135,8 @@ describe('usePreviousPhaseResults', () => {
 
   describe('Show Results Conditions', () => {
     it('should show results when current is common_room and previous is action with published results', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -156,8 +157,8 @@ describe('usePreviousPhaseResults', () => {
         mockPhases[1],
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: phasesWithCommonRoom });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(phasesWithCommonRoom));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, phasesWithCommonRoom[1], false), { wrapper });
 
@@ -174,8 +175,8 @@ describe('usePreviousPhaseResults', () => {
         },
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: unpublishedResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(unpublishedResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -187,7 +188,7 @@ describe('usePreviousPhaseResults', () => {
     it('should not show results when there is a newer action phase between previous and current', async () => {
       const phasesWithNewerAction: GamePhase[] = [
         mockPhases[0], // Phase 1: action
-        {
+        makeGamePhase({
           id: 2,
           game_id: 100,
           phase_number: 2,
@@ -195,15 +196,14 @@ describe('usePreviousPhaseResults', () => {
           title: 'Second Investigation',
           description: 'More investigation',
           deadline: '2025-10-29T00:00:00Z',
-          is_current: false,
+          is_active: false,
           created_at: '2025-10-27T00:00:00Z',
-          updated_at: '2025-10-27T00:00:00Z',
-        }, // Phase 2: action
+        }), // Phase 2: action
         mockPhases[1], // Phase 3: common_room (current)
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: phasesWithNewerAction });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(phasesWithNewerAction));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, phasesWithNewerAction[2], false), { wrapper });
 
@@ -215,8 +215,8 @@ describe('usePreviousPhaseResults', () => {
 
   describe('GM vs Player Endpoints', () => {
     it('should use getUserResults endpoint for players', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -227,8 +227,8 @@ describe('usePreviousPhaseResults', () => {
     });
 
     it('should use getGameResults endpoint for GMs', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getGameResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getGameResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       renderHook(() => usePreviousPhaseResults(100, mockPhases[1], true), { wrapper });
 
@@ -256,8 +256,8 @@ describe('usePreviousPhaseResults', () => {
         }, // published
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mixedResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mixedResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -271,8 +271,8 @@ describe('usePreviousPhaseResults', () => {
 
   describe('Phase Title Handling', () => {
     it('should use phase title when available', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -290,8 +290,8 @@ describe('usePreviousPhaseResults', () => {
         mockPhases[1],
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: phasesWithoutTitle });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(phasesWithoutTitle));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, phasesWithoutTitle[1], false), { wrapper });
 
@@ -304,7 +304,7 @@ describe('usePreviousPhaseResults', () => {
   describe('Data Loading States', () => {
     it('should return default state when phases are still loading', async () => {
       vi.mocked(apiClient.phases.getGamePhases).mockImplementation(() => new Promise(() => {})); // Never resolves
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: mockResults });
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(mockResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 
@@ -314,7 +314,7 @@ describe('usePreviousPhaseResults', () => {
     });
 
     it('should return default state when results are still loading', async () => {
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
       vi.mocked(apiClient.phases.getUserResults).mockImplementation(() => new Promise(() => {})); // Never resolves
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
@@ -345,8 +345,8 @@ describe('usePreviousPhaseResults', () => {
         },
       ];
 
-      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue({ data: mockPhases });
-      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue({ data: multipleResults });
+      vi.mocked(apiClient.phases.getGamePhases).mockResolvedValue(makeAxiosResponse(mockPhases));
+      vi.mocked(apiClient.phases.getUserResults).mockResolvedValue(makeAxiosResponse(multipleResults));
 
       const { result } = renderHook(() => usePreviousPhaseResults(100, mockPhases[1], false), { wrapper });
 

@@ -20,6 +20,7 @@ const baseGame: GameUtilityContext = {
   isAnonymous: false,
   userCharacters: [],
   allGameCharacters: [],
+  portraitAvatars: false,
   commentReadMode: 'manual',
 };
 

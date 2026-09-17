@@ -1,36 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import { renderWithProviders } from '../../test-utils'
+import { renderWithProviders, makeConversationListItem } from '../../test-utils'
 import { ConversationList } from '../ConversationList'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import type { useAuth } from '../../contexts/AuthContext'
 import type { ConversationListItem } from '../../types/conversations'
-
-// Mock the auth hook
-vi.mock('../../hooks/useAuth', () => ({
-  useAuth: vi.fn(),
-}))
-
-import { useAuth } from '../../hooks/useAuth'
 
 describe('ConversationList', () => {
   const mockOnSelectConversation = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Set up authenticated user
-    vi.mocked(useAuth).mockReturnValue({
-      currentUser: { id: 1, username: 'testuser', email: 'test@example.com', created_at: '', updated_at: '' },
-      isAuthenticated: true,
-      isCheckingAuth: false,
-      isLoading: false,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-      error: null,
-    } as Partial<ReturnType<typeof useAuth>>)
 
     // Mock localStorage
     const mockLocalStorage = {
@@ -53,7 +33,7 @@ describe('ConversationList', () => {
       // participating in the same conversation, the backend API returns the same conversation
       // twice (once for each character). The frontend must deduplicate these by conversation ID.
 
-      const duplicatedConversation: ConversationListItem = {
+      const duplicatedConversation: ConversationListItem = makeConversationListItem({
         id: 1,
         title: 'Shared Conversation',
         game_id: 123,
@@ -64,7 +44,7 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T10:00:00Z',
         unread_count: 2,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
       // Simulate backend returning the same conversation twice
       const apiResponse = {
@@ -113,7 +93,7 @@ describe('ConversationList', () => {
     })
 
     it('should handle multiple distinct conversations correctly', async () => {
-      const conversation1: ConversationListItem = {
+      const conversation1: ConversationListItem = makeConversationListItem({
         id: 1,
         title: 'Conversation 1',
         game_id: 123,
@@ -124,9 +104,9 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T10:00:00Z',
         unread_count: 1,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
-      const conversation2: ConversationListItem = {
+      const conversation2: ConversationListItem = makeConversationListItem({
         id: 2,
         title: 'Conversation 2',
         game_id: 123,
@@ -137,7 +117,7 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T11:00:00Z',
         unread_count: 2,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
       const apiResponse = {
         conversations: [conversation1, conversation2]
@@ -178,7 +158,7 @@ describe('ConversationList', () => {
 
     it('should deduplicate mixed duplicates and distinct conversations', async () => {
       // Realistic scenario: 3 distinct conversations, but one appears twice
-      const conversation1: ConversationListItem = {
+      const conversation1: ConversationListItem = makeConversationListItem({
         id: 1,
         title: 'Conversation 1',
         game_id: 123,
@@ -189,9 +169,9 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T10:00:00Z',
         unread_count: 0,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
-      const conversation2: ConversationListItem = {
+      const conversation2: ConversationListItem = makeConversationListItem({
         id: 2,
         title: 'Duplicated Conversation',
         game_id: 123,
@@ -202,9 +182,9 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T11:00:00Z',
         unread_count: 1,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
-      const conversation3: ConversationListItem = {
+      const conversation3: ConversationListItem = makeConversationListItem({
         id: 3,
         title: 'Conversation 3',
         game_id: 123,
@@ -215,7 +195,7 @@ describe('ConversationList', () => {
         last_message_at: '2025-01-15T12:00:00Z',
         unread_count: 0,
         created_at: '2025-01-01T00:00:00Z',
-      }
+      })
 
       // API returns: [conv1, conv2, conv2 (duplicate), conv3]
       const apiResponse = {
@@ -285,7 +265,7 @@ describe('ConversationList', () => {
   })
 
   describe('Basic functionality', () => {
-    const singleConversation: ConversationListItem = {
+    const singleConversation: ConversationListItem = makeConversationListItem({
       id: 1,
       title: 'Test Conversation',
       game_id: 123,
@@ -296,7 +276,7 @@ describe('ConversationList', () => {
       last_message_at: '2025-01-15T10:00:00Z',
       unread_count: 1,
       created_at: '2025-01-01T00:00:00Z',
-    }
+    })
 
     it('should render loading state initially', () => {
       server.use(

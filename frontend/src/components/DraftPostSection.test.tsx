@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils/render';
+import { makeMessage, makeMutationResult, makeQueryResult } from '../test-utils';
 import { DraftPostSection } from './DraftPostSection';
 import type { Message } from '../types/messages';
 
@@ -28,7 +29,21 @@ vi.mock('../contexts/GameContext', async () => {
 
 const { useDraftPost, useCreateDraftPost, useUpdateDraftPost, useDeleteDraftPost } = await import('../hooks');
 
-const mockDraft: Message = {
+/**
+ * The "no draft" case is mocked as `undefined`, not `null`.
+ *
+ * The endpoint really answers null: "A phase with no draft answers 200 with a
+ * null body, not 404" (the getDraftPost operation's own description in
+ * messages/huma_api.go), and DraftPostSection branches on
+ * `draft === null || draft === undefined` accordingly. But neither the API
+ * client (`client.get<Message>`) nor the generated spec (MessageResponse, not
+ * nullable) admits null, so the declared data type is `Message`. That is a
+ * backend-spec drift -- the Go handler should mark the 200 body nullable --
+ * recorded rather than fixed here, since it is production code. `undefined`
+ * exercises the same component branch and stays honest to the declared type.
+ */
+
+const mockDraft: Message = makeMessage({
   id: 42,
   game_id: 1,
   phase_id: 10,
@@ -44,49 +59,39 @@ const mockDraft: Message = {
   is_draft: true,
   created_at: '2025-11-01T10:00:00Z',
   updated_at: '2025-11-01T10:00:00Z',
-};
+});
 
-function makeMutationStub(overrides = {}) {
-  return {
-    mutate: vi.fn(),
-    mutateAsync: vi.fn().mockResolvedValue(undefined),
-    isPending: false,
-    isSuccess: false,
-    isError: false,
-    reset: vi.fn(),
-    ...overrides,
-  };
-}
+const makeMutationStub = makeMutationResult;
 
 describe('DraftPostSection', () => {
   const mockOnCreateDraft = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useCreateDraftPost).mockReturnValue(makeMutationStub() as ReturnType<typeof useCreateDraftPost>);
-    vi.mocked(useUpdateDraftPost).mockReturnValue(makeMutationStub() as ReturnType<typeof useUpdateDraftPost>);
-    vi.mocked(useDeleteDraftPost).mockReturnValue(makeMutationStub() as ReturnType<typeof useDeleteDraftPost>);
+    vi.mocked(useCreateDraftPost).mockReturnValue(makeMutationStub());
+    vi.mocked(useUpdateDraftPost).mockReturnValue(makeMutationStub());
+    vi.mocked(useDeleteDraftPost).mockReturnValue(makeMutationStub());
   });
 
   it('shows loading state while fetching', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
       data: undefined,
       isLoading: true,
       isSuccess: false,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
     // Loading state shows an animated placeholder (no text to assert, just no crash)
   });
 
   it('shows "No draft post" and add button when no draft exists', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
-      data: null,
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+      data: undefined,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 
@@ -95,12 +100,12 @@ describe('DraftPostSection', () => {
   });
 
   it('shows draft preview when draft exists', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 
@@ -111,12 +116,12 @@ describe('DraftPostSection', () => {
   });
 
   it('opens create modal when add button is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
-      data: null,
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+      data: undefined,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 
@@ -125,12 +130,12 @@ describe('DraftPostSection', () => {
   });
 
   it('shows delete confirmation when delete is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 
@@ -139,15 +144,15 @@ describe('DraftPostSection', () => {
   });
 
   it('calls delete mutation when confirmation is accepted', async () => {
-    const mockDelete = makeMutationStub();
-    vi.mocked(useDeleteDraftPost).mockReturnValue(mockDelete as ReturnType<typeof useDeleteDraftPost>);
+    const mockDelete = makeMutationResult<void, void>();
+    vi.mocked(useDeleteDraftPost).mockReturnValue(mockDelete);
 
-    vi.mocked(useDraftPost).mockReturnValue({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 
@@ -158,12 +163,12 @@ describe('DraftPostSection', () => {
   });
 
   it('opens preview modal when preview is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
       isError: false,
-    } as ReturnType<typeof useDraftPost>);
+    }));
 
     renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
 

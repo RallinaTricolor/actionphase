@@ -9,6 +9,7 @@ import { UtilityDrawerProvider } from '../../contexts/UtilityDrawerContext';
 import { GlobalUtilityDrawer } from '../utility-drawer/GlobalUtilityDrawer';
 import { __resetBodyScrollLockForTests } from '../../hooks/useBodyScrollLock';
 import type { Message } from '../../types/messages';
+import { makeCharacter, makeMessage } from '../../test-utils/factories';
 import type { Character } from '../../types/characters';
 
 /**
@@ -47,35 +48,25 @@ const POST_ID = 100;
 const USER_ID = 200;
 
 const characters: Character[] = [
-  {
+  makeCharacter({
     id: 1,
     game_id: GAME_ID,
     user_id: USER_ID,
-    username: 'testuser',
     name: 'Hero',
-    character_type: 'player_character',
-    status: 'active',
-    created_at: '2025-01-01T00:00:00Z',
-    updated_at: '2025-01-01T00:00:00Z',
-  },
+  }),
 ];
 
-const comment: Message = {
+const comment: Message = makeMessage({
   id: 1,
   game_id: GAME_ID,
   author_id: USER_ID,
   character_id: 1,
   content: 'A comment inside the thread',
-  message_type: 'comment',
-  thread_depth: 0,
   author_username: 'testuser',
   character_name: 'Hero',
-  reply_count: 0,
-  is_edited: false,
-  is_deleted: false,
   created_at: '2025-01-15T10:30:00Z',
   updated_at: '2025-01-15T10:30:00Z',
-};
+});
 
 function renderThreadWithDrawer() {
   return renderWithProviders(

@@ -1,32 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../test-utils';
+import {
+  renderWithProviders,
+  makeQueryResult,
+  makeDashboardGameCard,
+  makeDashboardDeadline,
+} from '../../test-utils';
 import { DashboardPage } from '../DashboardPage';
-import type { UseQueryResult } from '@tanstack/react-query';
-import type { DashboardData } from '../../hooks/useDashboard';
+import type { ComponentProps } from 'react';
+import type { DashboardData } from '../../types/dashboard';
+import type { DashboardGameCard } from '../../components/DashboardGameCard';
+import type { UrgentActionsCard } from '../../components/UrgentActionsCard';
+import type { RecentActivityCard } from '../../components/RecentActivityCard';
+import type { UpcomingDeadlinesCard } from '../../components/UpcomingDeadlinesCard';
+import type { ActivityTabs } from '../../components/Dashboard/ActivityTabs';
 
 // Mock the useDashboard hook
 vi.mock('../../hooks/useDashboard', () => ({
   useDashboard: vi.fn(),
 }));
 
-// Mock dashboard child components
+// Mock dashboard child components.
+//
+// Each stub takes the real component's prop type via ComponentProps, so a prop
+// rename breaks the stub instead of being silently ignored. These were declared
+// `: unknown`, which cannot be destructured at all -- the props were untyped in
+// practice and every field access was unchecked.
 vi.mock('../../components/DashboardGameCard', () => ({
-  DashboardGameCard: ({ game }: unknown) => (
+  DashboardGameCard: ({ game }: ComponentProps<typeof DashboardGameCard>) => (
     <div data-testid="dashboard-game-card">{game.title}</div>
   ),
 }));
 
 vi.mock('../../components/UrgentActionsCard', () => ({
-  UrgentActionsCard: ({ games }: unknown) => (
+  UrgentActionsCard: ({ games }: ComponentProps<typeof UrgentActionsCard>) => (
     <div data-testid="urgent-actions-card">
-      Urgent games: {games.filter((g: unknown) => g.is_urgent).length}
+      Urgent games: {games.filter((g) => g.is_urgent).length}
     </div>
   ),
 }));
 
 vi.mock('../../components/RecentActivityCard', () => ({
-  RecentActivityCard: ({ messages }: unknown) => (
+  RecentActivityCard: ({ messages }: ComponentProps<typeof RecentActivityCard>) => (
     <div data-testid="recent-activity-card">
       Messages: {messages.length}
     </div>
@@ -34,7 +49,7 @@ vi.mock('../../components/RecentActivityCard', () => ({
 }));
 
 vi.mock('../../components/UpcomingDeadlinesCard', () => ({
-  UpcomingDeadlinesCard: ({ deadlines }: unknown) => (
+  UpcomingDeadlinesCard: ({ deadlines }: ComponentProps<typeof UpcomingDeadlinesCard>) => (
     <div data-testid="upcoming-deadlines-card">
       Deadlines: {deadlines.length}
     </div>
@@ -42,7 +57,7 @@ vi.mock('../../components/UpcomingDeadlinesCard', () => ({
 }));
 
 vi.mock('../../components/Dashboard/ActivityTabs', () => ({
-  ActivityTabs: ({ deadlines, messages }: unknown) => (
+  ActivityTabs: ({ deadlines, messages }: ComponentProps<typeof ActivityTabs>) => (
     <div data-testid="activity-tabs">
       Deadlines: {deadlines.length}, Messages: {messages.length}
     </div>
@@ -69,11 +84,11 @@ describe('DashboardPage', () => {
   });
 
   it('shows loading state while fetching dashboard data', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: undefined,
       isLoading: true,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -81,11 +96,11 @@ describe('DashboardPage', () => {
   });
 
   it('shows error state when dashboard fetch fails', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: undefined,
       isLoading: false,
       error: new Error('Failed to load'),
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -94,7 +109,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows empty state when user has no games', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: {
         user_id: 1,
         has_games: false,
@@ -107,7 +122,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -117,12 +132,12 @@ describe('DashboardPage', () => {
   });
 
   it('displays dashboard when user has games', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: {
         user_id: 1,
         has_games: true,
         player_games: [
-          {
+          makeDashboardGameCard({
             game_id: 1,
             title: 'Test Player Game',
             state: 'in_progress',
@@ -132,10 +147,10 @@ describe('DashboardPage', () => {
             unread_comments: 0,
             is_urgent: false,
             deadline_status: 'normal',
-          },
+          }),
         ],
         gm_games: [
-          {
+          makeDashboardGameCard({
             game_id: 2,
             title: 'Test GM Game',
             state: 'recruitment',
@@ -145,7 +160,7 @@ describe('DashboardPage', () => {
             unread_comments: 0,
             is_urgent: false,
             deadline_status: 'normal',
-          },
+          }),
         ],
         audience_games: [], mixed_role_games: [],
         recent_messages: [
@@ -160,7 +175,7 @@ describe('DashboardPage', () => {
           },
         ],
         upcoming_deadlines: [
-          {
+          makeDashboardDeadline({
             phase_id: 1,
             game_id: 1,
             game_title: 'Test Game',
@@ -170,14 +185,14 @@ describe('DashboardPage', () => {
             end_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             has_pending_submission: false,
             hours_remaining: 24,
-          },
+          }),
         ],
         unread_notifications: 5,
         notifications_by_type: {},
       },
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -189,23 +204,18 @@ describe('DashboardPage', () => {
   });
 
   it('shows urgent actions card when user has urgent games', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: {
         user_id: 1,
         has_games: true,
         player_games: [
-          {
-            game_id: 1,
+          makeDashboardGameCard({
             title: 'Urgent Game',
-            state: 'in_progress',
-            user_role: 'player',
             has_pending_action: true,
-            pending_applications: 0,
-            unread_comments: 0,
             is_urgent: true,
             deadline_status: 'critical',
             current_phase_deadline: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
-          },
+          }),
         ],
         gm_games: [],
         audience_games: [], mixed_role_games: [],
@@ -215,7 +225,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -224,7 +234,7 @@ describe('DashboardPage', () => {
   });
 
   it('displays recent activity and upcoming deadlines sidebars', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: {
         user_id: 1,
         has_games: true,
@@ -252,7 +262,7 @@ describe('DashboardPage', () => {
           },
         ],
         upcoming_deadlines: [
-          {
+          makeDashboardDeadline({
             phase_id: 1,
             game_id: 1,
             game_title: 'Test Game',
@@ -262,8 +272,8 @@ describe('DashboardPage', () => {
             end_time: new Date().toISOString(),
             has_pending_submission: true,
             hours_remaining: 12,
-          },
-          {
+          }),
+          makeDashboardDeadline({
             phase_id: 2,
             game_id: 2,
             game_title: 'Another Game',
@@ -273,13 +283,13 @@ describe('DashboardPage', () => {
             end_time: new Date().toISOString(),
             has_pending_submission: false,
             hours_remaining: 48,
-          },
+          }),
         ],
         unread_notifications: 0, notifications_by_type: {},
       },
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -292,7 +302,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows mixed role games section when user has games with both roles', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: {
         user_id: 1,
         has_games: true,
@@ -300,7 +310,7 @@ describe('DashboardPage', () => {
         gm_games: [],
         audience_games: [],
         mixed_role_games: [
-          {
+          makeDashboardGameCard({
             game_id: 1,
             title: 'Mixed Role Game',
             state: 'in_progress',
@@ -310,7 +320,7 @@ describe('DashboardPage', () => {
             unread_comments: 0,
             is_urgent: false,
             deadline_status: 'normal',
-          },
+          }),
         ],
         recent_messages: [],
         upcoming_deadlines: [],
@@ -318,7 +328,7 @@ describe('DashboardPage', () => {
       },
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     renderWithProviders(<DashboardPage />);
 
@@ -327,11 +337,11 @@ describe('DashboardPage', () => {
   });
 
   it('returns null when data is undefined and not loading', () => {
-    vi.mocked(useDashboard).mockReturnValue({
+    vi.mocked(useDashboard).mockReturnValue(makeQueryResult<DashboardData>({
       data: undefined,
       isLoading: false,
       error: null,
-    } as Partial<UseQueryResult<DashboardData>>);
+    }));
 
     const { container } = renderWithProviders(<DashboardPage />);
 

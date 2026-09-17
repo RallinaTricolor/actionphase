@@ -5,11 +5,17 @@ import { http, HttpResponse } from 'msw';
 import { CurrentPhaseDisplay } from '../CurrentPhaseDisplay';
 import { renderWithProviders } from '../../test-utils/render';
 import { server } from '../../mocks/server';
+import type { ComponentProps } from 'react';
+import type { CountdownTimer } from '../CountdownTimer';
 import type { GamePhase } from '../../types/phases';
 
 // Mock the CountdownTimer component to avoid time-dependent test complexity
 vi.mock('../CountdownTimer', () => ({
-  CountdownTimer: ({ deadline, onExpired, className }: unknown) => (
+  CountdownTimer: ({
+    deadline,
+    onExpired,
+    className,
+  }: ComponentProps<typeof CountdownTimer>) => (
     <div className={className} data-testid="countdown-timer">
       Timer: {deadline}
       {onExpired && <button onClick={onExpired}>Trigger Expired</button>}

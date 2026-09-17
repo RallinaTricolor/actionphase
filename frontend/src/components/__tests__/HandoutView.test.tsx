@@ -26,9 +26,6 @@ const mockComments: HandoutComment[] = [
     edit_count: 0,
     created_at: '2024-01-01T10:00:00Z',
     updated_at: '2024-01-01T10:00:00Z',
-    edited_at: null,
-    deleted_at: null,
-    deleted_by_user_id: null,
   },
   {
     id: 2,
@@ -39,8 +36,6 @@ const mockComments: HandoutComment[] = [
     created_at: '2024-01-01T11:00:00Z',
     updated_at: '2024-01-01T12:00:00Z',
     edited_at: '2024-01-01T12:00:00Z',
-    deleted_at: null,
-    deleted_by_user_id: null,
   },
   {
     id: 3,
@@ -50,7 +45,6 @@ const mockComments: HandoutComment[] = [
     edit_count: 0,
     created_at: '2024-01-01T09:00:00Z',
     updated_at: '2024-01-01T09:00:00Z',
-    edited_at: null,
     deleted_at: '2024-01-01T13:00:00Z',
     deleted_by_user_id: 1,
   },
@@ -85,9 +79,6 @@ describe('HandoutView', () => {
           edit_count: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          edited_at: null,
-          deleted_at: null,
-          deleted_by_user_id: null,
         });
       }),
       http.patch('/api/v1/games/:gameId/handouts/:handoutId/comments/:commentId', async ({ request }) => {
@@ -103,8 +94,6 @@ describe('HandoutView', () => {
           created_at: '2024-01-01T10:00:00Z',
           updated_at: new Date().toISOString(),
           edited_at: new Date().toISOString(),
-          deleted_at: null,
-          deleted_by_user_id: null,
         });
       }),
       http.delete('/api/v1/games/:gameId/handouts/:handoutId/comments/:commentId', () => {

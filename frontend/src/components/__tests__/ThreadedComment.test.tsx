@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
+import { makeCharacter, makeMessage } from '../../test-utils/factories';
 import { ThreadedComment } from '../ThreadedComment';
 import type { Message } from '../../types/messages';
 import type { Character } from '../../types/characters';
@@ -16,87 +17,52 @@ describe('ThreadedComment', () => {
   const mockCurrentUserId = 100;
 
   const mockCharacters: Character[] = [
-    {
-      id: 1,
-      game_id: mockGameId,
-      user_id: mockCurrentUserId,
-      username: 'testuser',
-      name: 'Hero',
-      character_type: 'player_character',
-      status: 'active',
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    },
-    {
-      id: 2,
-      game_id: mockGameId,
-      user_id: mockCurrentUserId,
-      username: 'testuser',
-      name: 'Villain',
-      character_type: 'player_character',
-      status: 'active',
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    },
+    makeCharacter({ id: 1, game_id: mockGameId, user_id: mockCurrentUserId, name: 'Hero' }),
+    makeCharacter({ id: 2, game_id: mockGameId, user_id: mockCurrentUserId, name: 'Villain' }),
   ];
 
-  const mockComment: Message = {
+  const mockComment: Message = makeMessage({
     id: 1,
     game_id: mockGameId,
     author_id: 200,
     character_id: 3,
     content: 'This is a test comment',
-    message_type: 'comment',
-    thread_depth: 0,
     author_username: 'otheruser',
     character_name: 'Other Character',
-    reply_count: 0,
-    is_edited: false,
-    is_deleted: false,
-    created_at: '2025-01-15T10:30:00Z',
-    updated_at: '2025-01-15T10:30:00Z',
-  };
+  });
 
-  const mockCommentWithReplies: Message = {
+  const mockCommentWithReplies: Message = makeMessage({
     ...mockComment,
     reply_count: 2,
-  };
+  });
 
   const mockReplies: Message[] = [
-    {
+    makeMessage({
       id: 2,
       game_id: mockGameId,
       parent_id: 1,
       author_id: mockCurrentUserId,
       character_id: 1,
       content: 'This is a reply',
-      message_type: 'comment',
       thread_depth: 1,
       author_username: 'testuser',
       character_name: 'Hero',
-      reply_count: 0,
-      is_edited: false,
-      is_deleted: false,
       created_at: '2025-01-15T11:00:00Z',
       updated_at: '2025-01-15T11:00:00Z',
-    },
-    {
+    }),
+    makeMessage({
       id: 3,
       game_id: mockGameId,
       parent_id: 1,
       author_id: 300,
       character_id: 4,
       content: 'Another reply',
-      message_type: 'comment',
       thread_depth: 1,
       author_username: 'thirduser',
       character_name: 'Third Character',
-      reply_count: 0,
-      is_edited: false,
-      is_deleted: false,
       created_at: '2025-01-15T11:30:00Z',
       updated_at: '2025-01-15T11:30:00Z',
-    },
+    }),
   ];
 
   const setupDefaultHandlers = () => {
@@ -121,6 +87,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -136,6 +103,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -151,6 +119,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -166,6 +135,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -186,6 +156,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -202,6 +173,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -213,16 +185,17 @@ describe('ThreadedComment', () => {
     });
 
     it('shows "You" badge when user is the author', () => {
-      const ownComment: Message = {
+      const ownComment: Message = makeMessage({
         ...mockComment,
         author_id: mockCurrentUserId,
         author_username: 'testuser',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={ownComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -238,6 +211,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -249,15 +223,16 @@ describe('ThreadedComment', () => {
     });
 
     it('shows edited indicator when comment is edited', () => {
-      const editedComment: Message = {
+      const editedComment: Message = makeMessage({
         ...mockComment,
         is_edited: true,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={editedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -273,6 +248,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -288,6 +264,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -306,6 +283,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -324,6 +302,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -336,6 +315,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -360,6 +340,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -371,15 +352,16 @@ describe('ThreadedComment', () => {
     });
 
     it('shows singular form for single reply', () => {
-      const commentWithOneReply: Message = {
+      const commentWithOneReply: Message = makeMessage({
         ...mockComment,
         reply_count: 1,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={commentWithOneReply}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -395,6 +377,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -410,6 +393,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -426,6 +410,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -446,6 +431,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -462,6 +448,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -481,6 +468,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -503,6 +491,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -524,6 +513,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -545,6 +535,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={[mockCharacters[0]]}
           controllableCharacters={[mockCharacters[0]]}
           onCreateReply={mockOnCreateReply}
@@ -563,6 +554,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={[]}
           controllableCharacters={[]}
           onCreateReply={mockOnCreateReply}
@@ -580,6 +572,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -600,34 +593,31 @@ describe('ThreadedComment', () => {
       const user = userEvent.setup();
 
       // Parent comment authored by character ID 2 (Villain)
-      const parentComment: Message = {
+      const parentComment: Message = makeMessage({
         id: 100,
         game_id: mockGameId,
         author_id: 200,
         character_id: 2, // Villain - user controls this character
         content: 'Parent comment as Villain',
-        message_type: 'comment',
         thread_depth: 1,
         author_username: 'otheruser',
         character_name: 'Villain',
-        reply_count: 0,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T10:00:00Z',
         updated_at: '2025-01-15T10:00:00Z',
-      };
+      });
 
       // Current comment is a reply to the parent comment
-      const nestedComment: Message = {
+      const nestedComment: Message = makeMessage({
         ...mockComment,
         parent_id: 100,
         thread_depth: 2,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={nestedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -651,6 +641,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -671,33 +662,30 @@ describe('ThreadedComment', () => {
       const user = userEvent.setup();
 
       // Parent comment authored by character ID 99 (not in controllableCharacters)
-      const parentComment: Message = {
+      const parentComment: Message = makeMessage({
         id: 100,
         game_id: mockGameId,
         author_id: 200,
         character_id: 99, // Not controllable by current user
         content: 'Parent comment as NPC',
-        message_type: 'comment',
         thread_depth: 1,
         author_username: 'otheruser',
         character_name: 'NPC Guard',
-        reply_count: 0,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T10:00:00Z',
         updated_at: '2025-01-15T10:00:00Z',
-      };
+      });
 
-      const nestedComment: Message = {
+      const nestedComment: Message = makeMessage({
         ...mockComment,
         parent_id: 100,
         thread_depth: 2,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={nestedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -720,6 +708,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -742,6 +731,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -765,6 +755,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -788,6 +779,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -811,6 +803,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -829,6 +822,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -851,6 +845,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -876,6 +871,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -899,6 +895,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -988,6 +985,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1019,6 +1017,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1049,6 +1048,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1079,6 +1079,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1111,6 +1112,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1141,6 +1143,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1166,6 +1169,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1187,6 +1191,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1217,6 +1222,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1236,6 +1242,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1267,6 +1274,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1301,6 +1309,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1328,6 +1337,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1353,6 +1363,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1377,15 +1388,16 @@ describe('ThreadedComment', () => {
 
   describe('Date Formatting', () => {
     it('formats recent timestamps with "ago" suffix', () => {
-      const recentComment: Message = {
+      const recentComment: Message = makeMessage({
         ...mockComment,
         created_at: new Date().toISOString(),
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={recentComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1399,15 +1411,16 @@ describe('ThreadedComment', () => {
 
     it('formats timestamps within an hour as "X minutes ago"', () => {
       const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      const recentComment: Message = {
+      const recentComment: Message = makeMessage({
         ...mockComment,
         created_at: thirtyMinsAgo,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={recentComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1421,15 +1434,16 @@ describe('ThreadedComment', () => {
 
     it('formats timestamps within a day as "X hours ago"', () => {
       const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
-      const recentComment: Message = {
+      const recentComment: Message = makeMessage({
         ...mockComment,
         created_at: fiveHoursAgo,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={recentComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1443,15 +1457,16 @@ describe('ThreadedComment', () => {
 
     it('formats timestamps within a week as "X days ago"', () => {
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-      const recentComment: Message = {
+      const recentComment: Message = makeMessage({
         ...mockComment,
         created_at: threeDaysAgo,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={recentComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1465,15 +1480,16 @@ describe('ThreadedComment', () => {
 
     it('formats old timestamps with relative time', () => {
       // Using a date from 2023 to ensure it's more than a week ago
-      const oldComment: Message = {
+      const oldComment: Message = makeMessage({
         ...mockComment,
         created_at: '2023-01-01T00:00:00Z',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={oldComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1500,6 +1516,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1523,6 +1540,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1645,23 +1663,24 @@ describe('ThreadedComment', () => {
   });
 
   describe('Deleted Comments', () => {
-    const mockDeletedComment: Message = {
+    const mockDeletedComment: Message = makeMessage({
       ...mockComment,
       is_deleted: true,
       deleted_at: '2025-01-15T12:00:00Z',
       deleted_by_user_id: mockCurrentUserId,
-    };
+    });
 
-    const mockDeletedCommentWithReplies: Message = {
+    const mockDeletedCommentWithReplies: Message = makeMessage({
       ...mockDeletedComment,
       reply_count: 2,
-    };
+    });
 
     it('renders "[Comment deleted]" placeholder for deleted comments', () => {
       renderWithProviders(
         <ThreadedComment
           comment={mockDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1678,6 +1697,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1689,15 +1709,16 @@ describe('ThreadedComment', () => {
     });
 
     it('does not show Edit button for deleted comments owned by user', () => {
-      const ownDeletedComment: Message = {
+      const ownDeletedComment: Message = makeMessage({
         ...mockDeletedComment,
         author_id: mockCurrentUserId,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={ownDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1709,15 +1730,16 @@ describe('ThreadedComment', () => {
     });
 
     it('does not show Delete button for deleted comments owned by user', () => {
-      const ownDeletedComment: Message = {
+      const ownDeletedComment: Message = makeMessage({
         ...mockDeletedComment,
         author_id: mockCurrentUserId,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={ownDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1733,6 +1755,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1744,16 +1767,17 @@ describe('ThreadedComment', () => {
     });
 
     it('still shows Parent link for deleted comments with parent', () => {
-      const deletedCommentWithParent: Message = {
+      const deletedCommentWithParent: Message = makeMessage({
         ...mockDeletedComment,
         parent_id: 999,
         thread_depth: 2,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={deletedCommentWithParent}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1769,6 +1793,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockDeletedCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1784,6 +1809,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockDeletedCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1806,6 +1832,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockDeletedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1819,15 +1846,16 @@ describe('ThreadedComment', () => {
     });
 
     it('does not show edited indicator for deleted comments', () => {
-      const deletedEditedComment: Message = {
+      const deletedEditedComment: Message = makeMessage({
         ...mockDeletedComment,
         is_edited: true,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={deletedEditedComment}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1841,59 +1869,49 @@ describe('ThreadedComment', () => {
 
     it('preserves thread structure with deleted middle comment', async () => {
       // Create a scenario: Comment A (active) → Comment B (deleted with replies) → Comment C (active)
-      const commentA: Message = {
+      const commentA: Message = makeMessage({
         id: 100,
         game_id: mockGameId,
         author_id: 200,
         character_id: 3,
         content: 'Comment A - top level',
-        message_type: 'comment',
-        thread_depth: 0,
         author_username: 'user1',
         character_name: 'Character 1',
         reply_count: 1, // Has one reply (deleted comment B)
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T10:00:00Z',
         updated_at: '2025-01-15T10:00:00Z',
-      };
+      });
 
-      const commentB: Message = {
+      const commentB: Message = makeMessage({
         id: 101,
         game_id: mockGameId,
         parent_id: 100,
         author_id: 300,
         character_id: 4,
         content: 'Comment B - deleted middle',
-        message_type: 'comment',
         thread_depth: 1,
         author_username: 'user2',
         character_name: 'Character 2',
         reply_count: 1, // Has one reply (comment C)
-        is_edited: false,
         is_deleted: true,
         deleted_at: '2025-01-15T11:30:00Z',
         created_at: '2025-01-15T11:00:00Z',
         updated_at: '2025-01-15T11:00:00Z',
-      };
+      });
 
-      const commentC: Message = {
+      const commentC: Message = makeMessage({
         id: 102,
         game_id: mockGameId,
         parent_id: 101,
         author_id: 400,
         character_id: 5,
         content: 'Comment C - nested under deleted B',
-        message_type: 'comment',
         thread_depth: 2,
         author_username: 'user3',
         character_name: 'Character 3',
-        reply_count: 0,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T12:00:00Z',
         updated_at: '2025-01-15T12:00:00Z',
-      };
+      });
 
       // Mock API responses
       server.use(
@@ -1909,6 +1927,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={commentA}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1938,23 +1957,20 @@ describe('ThreadedComment', () => {
 
   describe('Hide deleted comments with no children', () => {
     it('does not render a deleted reply with reply_count=0 in the lazy-load path', async () => {
-      const deletedLeafReply: Message = {
+      const deletedLeafReply: Message = makeMessage({
         id: 50,
         game_id: mockGameId,
         parent_id: 1,
         author_id: 200,
         character_id: 3,
         content: 'Deleted leaf',
-        message_type: 'comment',
         thread_depth: 1,
         author_username: 'someone',
         character_name: 'Ghost',
-        reply_count: 0,
         is_deleted: true,
-        is_edited: false,
         created_at: '2025-01-15T11:00:00Z',
         updated_at: '2025-01-15T11:00:00Z',
-      };
+      });
 
       server.use(
         http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
@@ -1966,6 +1982,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -1983,23 +2000,21 @@ describe('ThreadedComment', () => {
     });
 
     it('still renders a deleted reply that has replies (reply_count > 0)', async () => {
-      const deletedWithChildren: Message = {
+      const deletedWithChildren: Message = makeMessage({
         id: 51,
         game_id: mockGameId,
         parent_id: 1,
         author_id: 200,
         character_id: 3,
         content: 'Deleted middle',
-        message_type: 'comment',
         thread_depth: 1,
         author_username: 'someone',
         character_name: 'Ghost',
         reply_count: 1,
         is_deleted: true,
-        is_edited: false,
         created_at: '2025-01-15T11:00:00Z',
         updated_at: '2025-01-15T11:00:00Z',
-      };
+      });
 
       server.use(
         http.get('/api/v1/games/:gameId/posts/:postId/comments', () => {
@@ -2011,6 +2026,7 @@ describe('ThreadedComment', () => {
         <ThreadedComment
           comment={mockCommentWithReplies}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -2027,28 +2043,25 @@ describe('ThreadedComment', () => {
   describe('Bug #2: Parent link navigation', () => {
     it('should link to post in common room when parent is a post (thread_depth === 1)', () => {
       // Top-level reply to a post (thread_depth === 1)
-      const topLevelReply: Message = {
+      const topLevelReply: Message = makeMessage({
         id: 100,
         game_id: mockGameId,
         parent_id: 50, // Parent is a POST with ID 50
         author_id: mockCurrentUserId,
         character_id: 1,
         content: 'Reply to post',
-        message_type: 'comment',
         thread_depth: 1, // Top-level reply to post
         author_username: 'testuser',
         character_name: 'Hero',
-        reply_count: 0,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T11:00:00Z',
         updated_at: '2025-01-15T11:00:00Z',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={topLevelReply}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -2063,28 +2076,25 @@ describe('ThreadedComment', () => {
 
     it('should link to parent comment when parent is a comment (thread_depth > 1)', () => {
       // Nested reply to another comment (thread_depth > 1)
-      const nestedReply: Message = {
+      const nestedReply: Message = makeMessage({
         id: 101,
         game_id: mockGameId,
         parent_id: 100, // Parent is a COMMENT with ID 100
         author_id: mockCurrentUserId,
         character_id: 1,
         content: 'Reply to comment',
-        message_type: 'comment',
         thread_depth: 2, // Nested reply to comment
         author_username: 'testuser',
         character_name: 'Hero',
-        reply_count: 0,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T11:30:00Z',
         updated_at: '2025-01-15T11:30:00Z',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={nestedReply}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -2099,7 +2109,7 @@ describe('ThreadedComment', () => {
 
     it('should not show parent link when parent_id is undefined', () => {
       // Top-level post (no parent)
-      const topLevelPost: Message = {
+      const topLevelPost: Message = makeMessage({
         id: 50,
         game_id: mockGameId,
         // No parent_id
@@ -2107,20 +2117,18 @@ describe('ThreadedComment', () => {
         character_id: 1,
         content: 'This is a post',
         message_type: 'post',
-        thread_depth: 0,
         author_username: 'testuser',
         character_name: 'Hero',
         comment_count: 5,
-        is_edited: false,
-        is_deleted: false,
         created_at: '2025-01-15T10:00:00Z',
         updated_at: '2025-01-15T10:00:00Z',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
           comment={topLevelPost}
           gameId={mockGameId}
+          postId={1}
           characters={mockCharacters}
           controllableCharacters={mockCharacters}
           onCreateReply={mockOnCreateReply}
@@ -2136,13 +2144,13 @@ describe('ThreadedComment', () => {
   describe('Read-Only Mode', () => {
     it('should not show edit/delete buttons when readOnly=true', async () => {
       // Create a comment owned by current user (so edit/delete buttons would normally show)
-      const myComment: Message = {
+      const myComment: Message = makeMessage({
         ...mockComment,
         author_id: mockCurrentUserId,
         character_id: mockCharacters[0].id,
         character_name: mockCharacters[0].name,
         author_username: 'testuser',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
@@ -2185,13 +2193,13 @@ describe('ThreadedComment', () => {
 
     it('should allow edit/delete buttons when readOnly=false (default)', async () => {
       // Create a comment owned by current user
-      const myComment: Message = {
+      const myComment: Message = makeMessage({
         ...mockComment,
         author_id: mockCurrentUserId,
         character_id: mockCharacters[0].id,
         character_name: mockCharacters[0].name,
         author_username: 'testuser',
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment
@@ -2268,10 +2276,10 @@ describe('ThreadedComment', () => {
       );
 
       const maxDepth = 5;
-      const commentAtContinueDepth: Message = {
+      const commentAtContinueDepth: Message = makeMessage({
         ...mockCommentWithReplies, // reply_count: 2, but no preloaded children
         id: 99,
-      };
+      });
 
       renderWithProviders(
         <ThreadedComment

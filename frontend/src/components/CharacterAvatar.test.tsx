@@ -182,8 +182,8 @@ describe('CharacterAvatar', () => {
     );
 
     // Both should have the same background color classes
-    const avatar1 = container1.firstChild;
-    const avatar2 = container2.firstChild;
+    const avatar1 = container1.firstElementChild;
+    const avatar2 = container2.firstElementChild;
 
     expect(avatar1?.className).toBe(avatar2?.className);
   });

@@ -10,6 +10,7 @@ import {
   COMMENT_MAX_DEPTH_MOBILE,
 } from '../../config/comments';
 import type { Message } from '../../types/messages';
+import { makeMessage } from '../../test-utils/factories';
 
 /**
  * Regression tests for deep-linked (notification) comment fetching.
@@ -45,7 +46,7 @@ describe('parentContextForDepth', () => {
 
 // A post so CommonRoom finishes loading (loading=false) and runs the scroll/fetch effect.
 const mockPosts: Message[] = [
-  {
+  makeMessage({
     id: 1,
     game_id: 1,
     character_id: 1,
@@ -54,7 +55,7 @@ const mockPosts: Message[] = [
     message_type: 'post',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-  },
+  }),
 ];
 
 // The deep-linked target comment id (not present in the DOM, forcing a fetch).
