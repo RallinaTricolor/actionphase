@@ -13,6 +13,7 @@ describe('HistoryView', () => {
 
   const mockPhases: GamePhase[] = [
     {
+      is_expired: false,
       id: 1,
       game_id: mockGameId,
       phase_number: 1,
@@ -27,6 +28,7 @@ describe('HistoryView', () => {
       created_at: '2025-01-01T00:00:00Z',
     },
     {
+      is_expired: false,
       id: 2,
       game_id: mockGameId,
       phase_number: 2,
@@ -39,6 +41,7 @@ describe('HistoryView', () => {
       created_at: '2025-01-03T00:00:00Z',
     },
     {
+      is_expired: false,
       id: 3,
       game_id: mockGameId,
       phase_number: 3,
@@ -132,6 +135,7 @@ describe('HistoryView', () => {
   describe('future phase visibility', () => {
     it('does not show unactivated phases in the history list', async () => {
       const futurePhase: GamePhase = {
+        is_expired: false,
         id: 99,
         game_id: mockGameId,
         phase_number: 4,

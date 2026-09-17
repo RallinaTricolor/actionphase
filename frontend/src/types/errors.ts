@@ -1,38 +1,24 @@
-// A single field-level failure from an RFC 7807 `errors[]` array.
-export interface ApiErrorDetail {
-  message?: string;
-  location?: string;
-  value?: unknown;
-}
+import type { components } from './api.gen';
+
+/** A single field-level failure from an RFC 7807 `errors[]` array. Generated. */
+export type ApiErrorDetail = components['schemas']['ErrorDetail'];
 
 /**
- * The body of an API error response.
- *
- * This covers BOTH shapes the API can currently return, because the backend
- * migrates to RFC 7807 in a later step and both are live in the meantime:
- *
- *   legacy    {"status": "Forbidden.", "error": "admin privileges required"}
- *   RFC 7807  {"title": "Forbidden", "status": 403, "detail": "...", ...}
- *
- * Note `status` is a *string* in the legacy shape and a *number* in RFC 7807.
- * That difference is the trap this migration exists to defuse: reading `status`
- * as a message renders a bare `403` to the user without throwing. Never display
- * it — go through `extractApiErrorMessage` in lib/errors.ts.
- */
-/**
- * An RFC 7807 problem document, the single error shape the API emits.
+ * An RFC 7807 problem document, the single error shape the API emits. Generated
+ * from huma's own ErrorModel.
  *
  * `status` is the numeric HTTP status, never a display string — see
  * extractApiErrorMessage, which deliberately refuses to fall back to it.
+ *
+ * A stale doc block above this described a legacy `{status: string, error}`
+ * shape living alongside RFC 7807 "in the meantime". That migration is done;
+ * the legacy shape is gone and the warning it carried no longer applies.
+ *
+ * `errors` is `| null` here rather than merely optional. It comes from huma's
+ * built-in ErrorModel, which this repo cannot tag, so the array keeps
+ * DefaultArrayNullable. Callers already guard it.
  */
-export interface ApiError {
-  type?: string;
-  title?: string;
-  status?: number;
-  detail?: string;
-  instance?: string;
-  errors?: ApiErrorDetail[];
-}
+export type ApiError = components['schemas']['ErrorModel'];
 
 export const ErrorType = {
   // Network/API errors

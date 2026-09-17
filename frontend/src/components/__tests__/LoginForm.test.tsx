@@ -40,14 +40,11 @@ describe('LoginForm', () => {
     // Override the login and /me handlers to confirm they're working
     server.use(
       http.post('http://localhost:3000/api/v1/auth/login', async () => {
+        // POST /auth/login answers with a bare token and nothing else. The
+        // `user` object this fixture used to carry has never been on the wire
+        // for this route -- the caller learns who it is from /auth/me, which
+        // the next handler serves.
         return HttpResponse.json({
-          user: {
-            id: 1,
-            username: 'testuser',
-            email: 'test@example.com',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
           Token: 'mock-jwt-token-from-test',
         })
       }),

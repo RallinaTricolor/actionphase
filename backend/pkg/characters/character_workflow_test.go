@@ -25,7 +25,6 @@ func TestCharacterWorkflow_CompleteApprovalFlow(t *testing.T) {
 		Description: "Testing character approval workflow",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -122,7 +121,6 @@ func TestCharacterWorkflow_NPCAssignmentFlow(t *testing.T) {
 		Description: "Testing NPC assignment workflow",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -208,7 +206,6 @@ func TestCharacterWorkflow_PermissionMatrix(t *testing.T) {
 		Description: "Testing all permission combinations",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 

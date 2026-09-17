@@ -204,7 +204,8 @@ func (h *Handler) createPoll(ctx context.Context, in *createPollInput) (*pollOut
 
 	h.notifyPollCreated(ctx, in.GameID, userID, pollWithOptions)
 
-	return &pollOutput{Body: toPollResponse(pollWithOptions.Poll, pollWithOptions.Options)}, nil
+	// A poll cannot have been voted on in the moment it was created.
+	return &pollOutput{Body: toPollResponse(pollWithOptions.Poll, pollWithOptions.Options, false)}, nil
 }
 
 // notifyPollCreated tells the other participants a poll went up. Notification
@@ -357,8 +358,7 @@ func (h *Handler) getPoll(ctx context.Context, in *pollIDInput) (*pollOutput, er
 		}
 	}
 
-	resp := toPollResponse(pollWithOptions.Poll, pollWithOptions.Options)
-	resp.HasVoted = hasVoted
+	resp := toPollResponse(pollWithOptions.Poll, pollWithOptions.Options, hasVoted)
 	resp.UserVoteOptionID = userVoteOptionID
 	resp.UserVoteOtherResponse = userVoteOtherResponse
 	return &pollOutput{Body: resp}, nil
@@ -582,7 +582,11 @@ func (h *Handler) updatePoll(ctx context.Context, in *updatePollInput) (*pollOut
 
 	// The chi handler rendered the bare updated poll here (no options array),
 	// unlike create/get which wrap it in PollResponse.
-	return &pollOutput{Body: toPollResponse(*updatedPoll, nil)}, nil
+	//
+	// user_has_voted is false rather than looked up: only the GM may update a
+	// poll, and a GM never votes on their own. It was absent from this response
+	// before user_has_voted became a required field.
+	return &pollOutput{Body: toPollResponse(*updatedPoll, nil, false)}, nil
 }
 
 func (h *Handler) deletePoll(ctx context.Context, in *pollIDInput) (*struct{}, error) {

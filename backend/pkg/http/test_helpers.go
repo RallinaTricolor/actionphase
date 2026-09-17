@@ -254,6 +254,14 @@ func (ctx *HandlerTestContext) AssertStatusUnauthorized(resp *httptest.ResponseR
 	ctx.AssertStatus(resp, http.StatusUnauthorized)
 }
 
+// AssertStatusUnprocessableEntity asserts 422 Unprocessable Entity status,
+// which is what huma returns when a request body fails schema validation --
+// a missing required property, or a value outside an enum. Distinct from 400,
+// which handlers return for input the schema permits but the domain rejects.
+func (ctx *HandlerTestContext) AssertStatusUnprocessableEntity(resp *httptest.ResponseRecorder) {
+	ctx.AssertStatus(resp, http.StatusUnprocessableEntity)
+}
+
 // AssertStatusForbidden asserts 403 Forbidden status
 func (ctx *HandlerTestContext) AssertStatusForbidden(resp *httptest.ResponseRecorder) {
 	ctx.AssertStatus(resp, http.StatusForbidden)

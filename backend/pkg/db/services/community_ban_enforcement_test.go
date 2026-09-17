@@ -69,7 +69,6 @@ func newBanEnforcementFixture(t *testing.T) *banEnforcementFixture {
 			Description: "ban enforcement fixture",
 			GmUserID:    int32(gm.ID),
 			MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-			IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 			CommunityID: communityID,
 		})
 		require.NoError(t, err)
@@ -352,7 +351,6 @@ func TestBanEnforcement_CreateGame(t *testing.T) {
 				Description: "created during ban enforcement tests",
 				GMUserID:    int32(tc.user.ID),
 				CommunityID: f.community.ID,
-				IsPublic:    true,
 			})
 
 			if tc.wantRefuse {
@@ -376,7 +374,6 @@ func TestBanEnforcement_ScopedToOneCommunity(t *testing.T) {
 		Description: "banned community",
 		GMUserID:    int32(f.banned.ID),
 		CommunityID: f.community.ID,
-		IsPublic:    true,
 	})
 	require.ErrorIs(t, err, core.ErrUserBannedFromCommunity)
 
@@ -385,7 +382,6 @@ func TestBanEnforcement_ScopedToOneCommunity(t *testing.T) {
 		Description: "unrelated community",
 		GMUserID:    int32(f.banned.ID),
 		CommunityID: f.otherComm.ID,
-		IsPublic:    true,
 	})
 	require.NoError(t, err, "a ban in one community must not reach another")
 }

@@ -208,7 +208,7 @@ export function useGameForm(initialData?: GameWithDetails) {
     // Timezone is captured from the browser at submission time rather than stored in form state.
     // On re-edit the stored timezone is discarded — the next save uses whatever the GM's browser reports.
     // This is intentional: we assume GMs configure schedules from their home timezone.
-    const scheduleTimezone = hasSchedule ? Intl.DateTimeFormat().resolvedOptions().timeZone : null;
+    const scheduleTimezone = hasSchedule ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
     if (hasSchedule && !scheduleTimezone) {
       return { payload: null, error: 'Could not detect your timezone. Please try again.' };
     }
@@ -230,10 +230,14 @@ export function useGameForm(initialData?: GameWithDetails) {
       allow_group_conversations: formData.allow_group_conversations ?? true,
       portrait_avatars: formData.portrait_avatars ?? false,
       character_sheet: buildCharacterSheetConfig(formData),
-      common_room_open_day: hasSchedule ? Number(formData.common_room_open_day) : null,
-      common_room_open_time: hasSchedule ? String(formData.common_room_open_time) : null,
-      common_room_close_day: hasSchedule ? Number(formData.common_room_close_day) : null,
-      common_room_close_time: hasSchedule ? String(formData.common_room_close_time) : null,
+      // undefined, not null, when there is no schedule. These are `*T` with
+      // omitempty on the Go side, so the wire contract is an ABSENT key; JSON
+      // null happens to unmarshal to the same nil pointer, but the generated
+      // type spells it `?: T` and undefined is what actually matches.
+      common_room_open_day: hasSchedule ? Number(formData.common_room_open_day) : undefined,
+      common_room_open_time: hasSchedule ? String(formData.common_room_open_time) : undefined,
+      common_room_close_day: hasSchedule ? Number(formData.common_room_close_day) : undefined,
+      common_room_close_time: hasSchedule ? String(formData.common_room_close_time) : undefined,
       schedule_timezone: scheduleTimezone,
     };
 

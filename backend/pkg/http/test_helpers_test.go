@@ -141,7 +141,11 @@ func TestHandlerTestContext_ErrorResponses(t *testing.T) {
 			"username": "testuser",
 		})
 
-		// Missing credentials return 401 Unauthorized
-		ctx.AssertStatusUnauthorized(resp)
+		// 422, unlike the missing-username case above: `password` is a required
+		// property, so huma rejects the body before the handler runs. Username
+		// is optional in the schema (an identifier may arrive in `email`
+		// instead), so its absence is an authentication failure, not a schema
+		// one.
+		ctx.AssertStatusUnprocessableEntity(resp)
 	})
 }

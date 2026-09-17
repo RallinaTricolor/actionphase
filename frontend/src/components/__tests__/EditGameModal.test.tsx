@@ -31,6 +31,9 @@ describe('EditGameModal', () => {
     start_date: '2026-01-01T00:00:00Z',
     end_date: '2026-12-31T23:59:00Z',
     is_anonymous: false,
+    auto_accept_audience: false,
+    allow_group_conversations: false,
+    portrait_avatars: false,
     current_players: 3,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -562,17 +565,26 @@ describe('EditGameModal', () => {
           recruitment_deadline: expect.any(String),
           start_date: expect.any(String),
           end_date: expect.any(String),
-          is_public: true,
           is_anonymous: true,
           auto_accept_audience: true,
           allow_group_conversations: expect.any(Boolean),
           portrait_avatars: expect.any(Boolean),
-          common_room_open_day: null,
-          common_room_open_time: null,
-          common_room_close_day: null,
-          common_room_close_time: null,
-          schedule_timezone: null,
         });
+        // The five schedule keys are now ABSENT rather than null. They are `*T`
+        // with omitempty on the Go side, and the service clears a schedule on
+        // `CommonRoomOpenDay != nil` -- which JSON null and an omitted key both
+        // produce -- so this is a spelling change, not a behaviour change.
+        // Asserted explicitly because toEqual above treats an absent key and an
+        // explicit undefined as equal, and would not catch one reappearing.
+        for (const key of [
+          'common_room_open_day',
+          'common_room_open_time',
+          'common_room_close_day',
+          'common_room_close_time',
+          'schedule_timezone',
+        ]) {
+          expect(requestBody).not.toHaveProperty(key);
+        }
         // banner_url must NOT be in the payload — the upload/delete mutations manage it
         // independently, and including it here would overwrite a freshly uploaded banner
         expect(requestBody).not.toHaveProperty('banner_url');

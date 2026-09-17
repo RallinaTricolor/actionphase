@@ -32,7 +32,7 @@ BEGIN
   -- ============================================
   -- E2E Game: For Phase Lifecycle Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_id,
     'E2E Test: Phase Lifecycle',
@@ -41,7 +41,6 @@ BEGIN
     gm_id,
     3,
     'in_progress',
-    true,
     NOW() - INTERVAL '5 days',
     NOW()
   );

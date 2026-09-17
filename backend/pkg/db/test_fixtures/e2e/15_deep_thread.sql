@@ -15,7 +15,6 @@ INSERT INTO games (
   genre,
   max_players,
   state,
-  is_public,
   created_at,
   updated_at
 )
@@ -27,7 +26,6 @@ SELECT
   'Test',
   5,
   'in_progress',
-  false,
   NOW() - INTERVAL '10 days',
   NOW() - INTERVAL '10 days'
 FROM users WHERE username = 'TestGM';

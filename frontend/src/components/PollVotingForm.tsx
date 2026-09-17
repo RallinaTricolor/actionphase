@@ -55,7 +55,11 @@ export function PollVotingForm({ poll, onSuccess, onCancel }: PollVotingFormProp
           Select your response
         </label>
         <div className="space-y-2">
-          {poll.options.map((option) => (
+          {/* `options` is nullable because PUT /polls/{id} answers with the
+              updated poll and no options loaded. This form is only ever given a
+              poll from GET /polls/{id}, which always loads them, so the fallback
+              is unreachable rather than a real empty state. */}
+          {(poll.options ?? []).map((option) => (
             <label
               key={option.id}
               className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${

@@ -29,7 +29,7 @@ BEGIN
 
   INSERT INTO games (
     id, title, description, genre, gm_user_id, max_players,
-    state, is_public, created_at, updated_at
+    state, created_at, updated_at
   ) VALUES (
     707,
     'E2E Test: Favorite Comments',
@@ -38,7 +38,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '7 days',
     NOW()
   );

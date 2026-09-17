@@ -12,9 +12,14 @@ import (
 // them before the handler returns. Anything constructing a PhaseResponse for a
 // response body must go through that helper or the countdown UI gets nothing.
 type PhaseResponse struct {
-	ID          int32      `json:"id"`
-	GameID      int32      `json:"game_id"`
-	PhaseType   string     `json:"phase_type"`
+	ID     int32 `json:"id"`
+	GameID int32 `json:"game_id"`
+	// Tagged to match CreatePhaseBody's enum. Tagging only the request half
+	// leaves the response rendering as bare `string`, so the frontend either
+	// re-declares the union by hand or silently widens to `string` when it
+	// aliases this schema. The values are pinned by a CHECK constraint on
+	// game_phases.phase_type (migration 20260605174513).
+	PhaseType   string     `json:"phase_type" enum:"common_room,action,interlude"`
 	PhaseNumber int32      `json:"phase_number"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`
@@ -116,14 +121,19 @@ type ActionResultWithDetailsResponse struct {
 
 // DraftCharacterUpdateResponse represents a draft character update
 type DraftCharacterUpdateResponse struct {
-	ID             int32     `json:"id"`
-	ActionResultID int32     `json:"action_result_id"`
-	CharacterID    int32     `json:"character_id"`
-	ModuleType     string    `json:"module_type"`
-	FieldName      string    `json:"field_name"`
-	FieldValue     string    `json:"field_value"`
-	FieldType      string    `json:"field_type"`
-	Operation      string    `json:"operation"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             int32 `json:"id"`
+	ActionResultID int32 `json:"action_result_id"`
+	CharacterID    int32 `json:"character_id"`
+	// The three enums mirror createDraftUpdateBody, which has carried them since
+	// the huma conversion. Only the request half was tagged, so the response
+	// rendered as a bare string and the frontend hand-wrote the same unions to
+	// compensate. The values match the check constraints on
+	// action_result_character_updates.
+	ModuleType string    `json:"module_type" enum:"skills,inventory,numbers"`
+	FieldName  string    `json:"field_name"`
+	FieldValue string    `json:"field_value"`
+	FieldType  string    `json:"field_type" enum:"text,number,boolean,json"`
+	Operation  string    `json:"operation" enum:"upsert,delete"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }

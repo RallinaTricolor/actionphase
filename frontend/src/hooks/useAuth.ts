@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { LoginRequest, RegisterRequest } from '../types/auth';
+import { isRegisterCreated } from '../types/auth';
 import { logger } from '@/services/LoggingService';
 
 export const useAuth = () => {
@@ -9,8 +10,7 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (data: LoginRequest) => apiClient.auth.login(data),
     onSuccess: (response) => {
-      // Handle both Token (backend) and token (lowercase) formats
-      const token = response.data.Token || response.data.token;
+      const token = response.data.Token;
       logger.info('Login success', { hasToken: !!token });
       if (token) {
         apiClient.setAuthToken(token);
@@ -23,8 +23,9 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: (data: RegisterRequest) => apiClient.auth.register(data),
     onSuccess: (response) => {
-      // Handle both Token (backend) and token (lowercase) formats
-      const token = response.data.Token || response.data.token;
+      // 202 is the pending-approval path: no token, and a {status, error}
+      // body rather than a user. See AuthContext's copy of this mutation.
+      const token = isRegisterCreated(response.data) ? response.data.Token : undefined;
       logger.info('Registration success', { hasToken: !!token });
       if (token) {
         apiClient.setAuthToken(token);

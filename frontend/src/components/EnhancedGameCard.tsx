@@ -56,7 +56,9 @@ export function EnhancedGameCard({
               so "you are in this game" is carried entirely by this badge. It is
               given a solid border so it stays distinguishable from the state
               tint behind it. */}
-          {game.user_relationship && game.user_relationship !== 'none' && (
+          {/* No `!== 'none'` guard: the backend maps both '' and 'none' to
+              absent, so presence alone means the viewer has a relationship. */}
+          {game.user_relationship && (
             <span
               className={`ml-2 px-2 py-1 rounded-full border text-xs font-semibold whitespace-nowrap surface-base ${
                 USER_RELATIONSHIP_BADGE_STYLES[game.user_relationship]

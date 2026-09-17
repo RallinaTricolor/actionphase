@@ -32,30 +32,30 @@ DECLARE
 BEGIN
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     810,
     'E2E Test: Ban Enforcement - Blocked',
     'Recruitment game in Midnight Ravens. A user banned there must be refused.',
-    'Test', gm_id, 6, 'recruitment', true,
+    'Test', gm_id, 6, 'recruitment',
     NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'
   );
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     811,
     'E2E Test: Ban Enforcement - Other Community',
     'Recruitment game moved to Harbor Lights. A user banned only in Midnight Ravens must still get in.',
-    'Test', gm_id, 6, 'recruitment', true,
+    'Test', gm_id, 6, 'recruitment',
     NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'
   );
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     812,
     'E2E Test: Ban Enforcement - Expired Ban',
     'Recruitment game in Midnight Ravens. A user whose ban there has expired must still get in.',
-    'Test', gm_id, 6, 'recruitment', true,
+    'Test', gm_id, 6, 'recruitment',
     NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'
   );
 

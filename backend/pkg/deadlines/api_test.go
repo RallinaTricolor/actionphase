@@ -105,7 +105,6 @@ func TestCreateDeadline_Success(t *testing.T) {
 		Description: "Testing deadline creation",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -176,7 +175,6 @@ func TestCreateDeadline_Unauthorized(t *testing.T) {
 		Description: "Testing unauthorized access",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -263,7 +261,6 @@ func TestGetGameDeadlines_Success(t *testing.T) {
 		Description: "Testing deadline retrieval",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -339,7 +336,6 @@ func TestGetGameDeadlines_NonParticipant(t *testing.T) {
 		Description: "Testing non-participant access",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    false,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -379,7 +375,6 @@ func TestUpdateDeadline_Success(t *testing.T) {
 		Description: "Testing deadline update",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -448,7 +443,6 @@ func TestUpdateDeadline_Unauthorized(t *testing.T) {
 		Description: "Testing unauthorized update",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -543,7 +537,6 @@ func TestDeleteDeadline_Success(t *testing.T) {
 		Description: "Testing deadline deletion",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -599,7 +592,6 @@ func TestDeleteDeadline_Unauthorized(t *testing.T) {
 		Description: "Testing unauthorized deletion",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -676,7 +668,6 @@ func TestGetUpcomingDeadlines_Success(t *testing.T) {
 		Description: "First game",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game 1 creation should succeed")
 
@@ -685,7 +676,6 @@ func TestGetUpcomingDeadlines_Success(t *testing.T) {
 		Description: "Second game",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game 2 creation should succeed")
 
@@ -765,7 +755,6 @@ func TestGetUpcomingDeadlines_WithLimit(t *testing.T) {
 		Description: "Testing limit parameter",
 		GMUserID:    int32(gmUser.ID),
 		CommunityID: gmCommunity.ID,
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 

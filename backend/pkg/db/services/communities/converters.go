@@ -212,12 +212,15 @@ func documentFromDB(row models.CommunityDocument) *core.CommunityDocument {
 // caller can leak it.
 func webhookFromDB(row models.CommunityWebhook) *core.CommunityWebhook {
 	return &core.CommunityWebhook{
-		ID:            row.ID,
-		CommunityID:   row.CommunityID,
-		URL:           core.MaskWebhookURL(row.Url),
-		Label:         textPtr(row.Label),
-		IsEnabled:     row.IsEnabled,
-		Events:        row.Events,
+		ID:          row.ID,
+		CommunityID: row.CommunityID,
+		URL:         core.MaskWebhookURL(row.Url),
+		Label:       textPtr(row.Label),
+		IsEnabled:   row.IsEnabled,
+		// Converted, not validated: rows written before validateWebhookEvents
+		// existed can hold anything, and silently dropping an unrecognised
+		// event here would hide a bad row instead of surfacing it.
+		Events:        core.WebhookEvents(row.Events),
 		LastSuccessAt: timePtr(row.LastSuccessAt),
 		LastError:     textPtr(row.LastError),
 		LastErrorAt:   timePtr(row.LastErrorAt),

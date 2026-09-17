@@ -39,7 +39,7 @@ BEGIN
 
   INSERT INTO games (
     id, title, description, genre, gm_user_id, max_players,
-    state, is_public, created_at, updated_at
+    state, created_at, updated_at
   ) VALUES (
     706,
     'E2E Test: Unread Inbox',
@@ -48,7 +48,6 @@ BEGIN
     gm_id,
     6,
     'in_progress',
-    true,
     NOW() - INTERVAL '7 days',
     NOW()
   );

@@ -85,7 +85,6 @@ Usage Example:
 		Description: "A thrilling D&D campaign",
 		GMUserID:    int32(user.ID),
 		MaxPlayers:  6,
-		IsPublic:    true,
 	})
 
 Performance Considerations:

@@ -9,7 +9,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import CharacterAvatar from './CharacterAvatar';
 import { AudienceConversationCard } from './audience/AudienceConversationCard';
 import { AudienceConversationHeader } from './audience/AudienceConversationHeader';
-import type { AudienceConversationListItem } from '../types/conversations';
+import type { AudienceConversationListItem, AudienceConversationMessage } from '../types/conversations';
 import { useGameContext } from '../contexts/GameContext';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 
@@ -38,14 +38,10 @@ const participantFilterParamOptions = {
 } as const;
 
 
-interface MessageType {
-  id: number;
-  created_at: string;
-  content: string;
-  sender_character_id?: number;
-  sender_character_name?: string | null;
-  sender_username: string;
-}
+// A local copy of this shape used to live here, declaring sender_character_id
+// as `?: number` where the wire sends an explicit null. Using the generated
+// type instead means this view cannot drift from the endpoint feeding it.
+type MessageType = AudienceConversationMessage;
 
 /**
  * Read-only view of all private message conversations for audience members and GM
@@ -319,7 +315,7 @@ function MessageViewer({
   const { allGameCharacters, game } = useGameContext();
   const portraitAvatars = game?.portrait_avatars ?? false;
 
-  const getAvatarUrl = useCallback((characterId: number | undefined): string | null =>
+  const getAvatarUrl = useCallback((characterId: number | null | undefined): string | null =>
     allGameCharacters.find(c => c.id === characterId)?.avatar_url ?? null,
   [allGameCharacters]);
 
@@ -343,7 +339,7 @@ function MessageViewer({
     const groups: Array<{
       date: Date;
       messageGroups: Array<{
-        senderId: number | undefined;
+        senderId: number | null | undefined;
         senderName: string;
         senderUsername: string;
         senderAvatar: string | null;
@@ -352,7 +348,9 @@ function MessageViewer({
     }> = [];
 
     let currentDate: Date | null = null;
-    let currentSenderId: number | undefined = undefined;
+    // `| null`: sender_character_id is a bare pointer on the wire, so an
+    // absent sender arrives as an explicit null rather than a missing key.
+    let currentSenderId: number | null | undefined = undefined;
     let currentMessageGroup: MessageType[] = [];
     let currentSenderName = '';
     let currentSenderUsername = '';

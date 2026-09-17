@@ -41,7 +41,6 @@ func TestGameService_CreateGame(t *testing.T) {
 				StartDate:   core.TimePtr(time.Now().Add(24 * time.Hour)),
 				EndDate:     core.TimePtr(time.Now().Add(7 * 24 * time.Hour)),
 				MaxPlayers:  6,
-				IsPublic:    true,
 			},
 			expectError: false,
 			checkState:  "setup",
@@ -53,7 +52,6 @@ func TestGameService_CreateGame(t *testing.T) {
 				Description: "Minimal test game",
 				GMUserID:    int32(fixtures.TestUser.ID),
 				CommunityID: int32(fixtures.TestCommunity.ID),
-				IsPublic:    false,
 			},
 			expectError: false,
 			checkState:  "setup",
@@ -94,7 +92,6 @@ func TestGameService_UpdateGameState(t *testing.T) {
 		Description: "Testing state transitions",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    false,
 	}
 
 	game, err := gameService.CreateGame(context.Background(), req)
@@ -224,7 +221,6 @@ func TestGameService_LeaveGame(t *testing.T) {
 		Description: "Testing game leaving",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	}
 
 	game, err := gameService.CreateGame(context.Background(), req)
@@ -360,7 +356,6 @@ func TestGameService_UpdateGame(t *testing.T) {
 		Description: "Updated description",
 		Genre:       "Updated Genre",
 		MaxPlayers:  8,
-		IsPublic:    false,
 	}
 
 	updatedGame, err := gameService.UpdateGame(context.Background(), updateReq)
@@ -369,7 +364,6 @@ func TestGameService_UpdateGame(t *testing.T) {
 	core.AssertEqual(t, updateReq.Title, updatedGame.Title, "Title not updated")
 	core.AssertEqual(t, updateReq.Description, updatedGame.Description, "Description not updated")
 	core.AssertEqual(t, updateReq.MaxPlayers, updatedGame.MaxPlayers.Int32, "MaxPlayers not updated")
-	core.AssertEqual(t, updateReq.IsPublic, updatedGame.IsPublic.Bool, "IsPublic not updated")
 }
 
 func TestGameService_DeleteGame(t *testing.T) {
@@ -387,7 +381,6 @@ func TestGameService_DeleteGame(t *testing.T) {
 		Description: "A test game to be deleted",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
 
@@ -401,7 +394,6 @@ func TestGameService_DeleteGame(t *testing.T) {
 		Description: "Should not be deletable",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create active game")
 
@@ -412,7 +404,6 @@ func TestGameService_DeleteGame(t *testing.T) {
 		Description: "Owned by different GM",
 		GMUserID:    int32(otherGM.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Failed to create other GM's game")
 	otherGMGame, err = gameService.UpdateGameState(context.Background(), otherGMGame.ID, core.GameStateCancelled)
@@ -495,7 +486,6 @@ func BenchmarkGameService_CreateGame(b *testing.B) {
 			Description: "Benchmark test game",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: int32(fixtures.TestCommunity.ID),
-			IsPublic:    true,
 		}
 
 		_, err := gameService.CreateGame(context.Background(), req)
@@ -604,60 +594,23 @@ func TestGameService_GetGamesByUser(t *testing.T) {
 // TestGameService_GetAllGames removed - GetAllGames method no longer exists.
 // Use GetFilteredGames with empty filters instead.
 
-func TestGameService_GetRecruitingGames(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	app := core.NewTestApp(testDB.Pool)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "sessions", "users")
-
-	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-
-	// Create test user
-	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-
-	// Create games in different states
-	setupGame := testDB.CreateTestGame(t, int32(gm.ID), "Setup Game")
-	recruitingGame := testDB.CreateTestGame(t, int32(gm.ID), "Recruiting Game")
-	inProgressGame := testDB.CreateTestGame(t, int32(gm.ID), "In Progress Game")
-
-	// Update states
-	_, err := gameService.UpdateGameState(context.Background(), recruitingGame.ID, "recruitment")
-	core.AssertNoError(t, err, "Failed to set game to recruitment")
-
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "recruitment")
-	core.AssertNoError(t, err, "Failed to set game to recruitment")
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "character_creation")
-	core.AssertNoError(t, err, "Failed to set game to character_creation")
-	_, err = gameService.UpdateGameState(context.Background(), inProgressGame.ID, "in_progress")
-	core.AssertNoError(t, err, "Failed to set game to in_progress")
-
-	t.Run("returns only games in recruitment state", func(t *testing.T) {
-		games, err := gameService.GetRecruitingGames(context.Background())
-
-		core.AssertNoError(t, err, "Failed to get recruiting games")
-
-		// Verify recruiting game is in the list
-		foundRecruiting := false
-		foundSetup := false
-		foundInProgress := false
-
-		for _, g := range games {
-			if g.ID == recruitingGame.ID {
-				foundRecruiting = true
-			}
-			if g.ID == setupGame.ID {
-				foundSetup = true
-			}
-			if g.ID == inProgressGame.ID {
-				foundInProgress = true
-			}
-		}
-
-		core.AssertTrue(t, foundRecruiting, "Recruiting game should be in the list")
-		core.AssertEqual(t, false, foundSetup, "Setup game should NOT be in the list")
-		core.AssertEqual(t, false, foundInProgress, "In-progress game should NOT be in the list")
-	})
-}
+// TestGameService_GetRecruitingGames removed - GetRecruitingGames no longer
+// exists. GET /games/recruiting was redundant with the filtered listing, so the
+// endpoint, the service method and the SQL query were all removed.
+// TestGameService_GetFilteredGames/"filters by state - recruitment only" covers
+// the same behaviour, and asserts the stronger property: EVERY returned game is
+// in recruitment, not merely that the recruiting one appears.
+//
+// One behaviour was deliberately NOT carried over. The old query also excluded
+// games whose recruitment_deadline had passed; the listing returns them with
+// deadline_urgency 'critical' instead.
+//
+// That is correct. recruitment_deadline is ADVISORY -- it is how a GM tells
+// prospective players when they should expect recruitment to close, not a rule
+// the server enforces. A game stays open until the GM moves it, so hiding it
+// from the listing on an arbitrary date would have been the bug. Same for
+// end_date on in-progress games. The unused GetGamesNeedingStateUpdate query,
+// which would have auto-transitioned both, was removed alongside this.
 
 func TestGameService_GetGameWithDetails(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
@@ -851,7 +804,6 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 		GMUserID:    int32(gm.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		Genre:       "Fantasy",
-		IsPublic:    true,
 		MaxPlayers:  5,
 	})
 	core.AssertNoError(t, err, "Failed to create fantasy game")
@@ -862,7 +814,6 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 		GMUserID:    int32(gm.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		Genre:       "Sci-Fi",
-		IsPublic:    true,
 		MaxPlayers:  4,
 	})
 	core.AssertNoError(t, err, "Failed to create sci-fi game")
@@ -873,7 +824,6 @@ func TestGameService_GetFilteredGames(t *testing.T) {
 		GMUserID:    int32(gm.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		Genre:       "Horror",
-		IsPublic:    true,
 		MaxPlayers:  3,
 	})
 	core.AssertNoError(t, err, "Failed to create horror game")
@@ -1092,7 +1042,6 @@ func TestGameService_AudienceParticipation(t *testing.T) {
 		Description:        "Testing audience participation",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create test game")
@@ -1312,7 +1261,6 @@ func TestGameService_CancelledGameRejectsPendingApplications(t *testing.T) {
 		Description: "Testing cancelled game application handling",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	}
 
 	game, err := gameService.CreateGame(context.Background(), req)
@@ -1378,7 +1326,6 @@ func TestGameService_PromoteToCoGM(t *testing.T) {
 		Description:        "Testing co-GM promotion",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           false,
 		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
@@ -1478,7 +1425,6 @@ func TestGameService_PromoteToCoGM_OnlyOneCoGMAllowed(t *testing.T) {
 		Description:        "Testing single co-GM limit",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           false,
 		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
@@ -1520,7 +1466,6 @@ func TestGameService_PromoteToCoGM_OnlyAudienceCanBePromoted(t *testing.T) {
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
 		MaxPlayers:  5,
-		IsPublic:    false,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
 
@@ -1552,7 +1497,6 @@ func TestGameService_DemoteFromCoGM(t *testing.T) {
 		Description:        "Testing co-GM demotion",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           false,
 		AutoAcceptAudience: true,
 	})
 	core.AssertNoError(t, err, "Failed to create game")
@@ -1664,7 +1608,6 @@ func TestGameService_DatabaseConstraintViolations(t *testing.T) {
 			Description: "Testing FK constraint",
 			GMUserID:    99999, // Non-existent user ID
 			CommunityID: community.ID,
-			IsPublic:    true,
 		}
 
 		_, err := gameService.CreateGame(context.Background(), req)
@@ -1678,7 +1621,6 @@ func TestGameService_DatabaseConstraintViolations(t *testing.T) {
 			Description: "Testing zero FK",
 			GMUserID:    0, // Invalid user ID
 			CommunityID: community.ID,
-			IsPublic:    true,
 		}
 
 		_, err := gameService.CreateGame(context.Background(), req)
@@ -1691,7 +1633,6 @@ func TestGameService_DatabaseConstraintViolations(t *testing.T) {
 			Description: "Testing negative FK",
 			GMUserID:    -1, // Invalid user ID
 			CommunityID: community.ID,
-			IsPublic:    true,
 		}
 
 		_, err := gameService.CreateGame(context.Background(), req)
@@ -2207,7 +2148,6 @@ func TestGameService_UpdateGame_Community(t *testing.T) {
 			Title:       "Edited Title",
 			Description: "An edited description",
 			MaxPlayers:  6,
-			IsPublic:    true,
 		}
 	}
 
@@ -2335,7 +2275,6 @@ func TestGameService_GetFilteredGames_ByCommunity(t *testing.T) {
 			Description: "A game for community filtering",
 			GMUserID:    int32(fixtures.TestUser.ID),
 			CommunityID: communityID,
-			IsPublic:    true,
 		})
 		core.AssertNoError(t, err, "creation should succeed")
 		return g.ID

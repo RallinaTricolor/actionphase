@@ -39,81 +39,28 @@ import (
 //     a poll with no options loaded and emits `"options": null`; create and get
 //     populate it. Adding omitempty would drop the key on update.
 type PollResponse struct {
-	ID                         int32     `json:"id"`
-	GameID                     int32     `json:"game_id"`
-	PhaseID                    *int32    `json:"phase_id"`
-	CreatedByUserID            int32     `json:"created_by_user_id"`
-	CreatedByCharacterID       *int32    `json:"created_by_character_id"`
-	Question                   string    `json:"question"`
-	Description                *string   `json:"description"`
-	Deadline                   time.Time `json:"deadline"`
-	ShowIndividualVotes        bool      `json:"show_individual_votes"`
-	AllowOtherOption           bool      `json:"allow_other_option"`
-	HideResultsFromPlayers     bool      `json:"hide_results_from_players"`
-	AllowAudienceVoting        bool      `json:"allow_audience_voting"`
-	ShowRunningTotalsToPlayers bool      `json:"show_running_totals_to_players"`
-	IsDeleted                  bool      `json:"is_deleted"`
-	CreatedAt                  time.Time `json:"created_at"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	PollSummary
 
 	// Additional response fields, not columns on the poll row.
 	Options               []PollOptionResponse `json:"options"`
-	HasVoted              bool                 `json:"has_voted,omitempty"`
+	UserHasVoted          bool                 `json:"user_has_voted"`
 	UserVoteOptionID      *int32               `json:"user_vote_option_id,omitempty"`
 	UserVoteOtherResponse *string              `json:"user_vote_other_response,omitempty"`
 }
 
-// PollListItem represents a poll in the list response with the caller's vote status.
+// PollListItem is a poll as it appears in a list response.
 //
-// It carries the same poll fields as PollResponse minus the options array, so the
-// same poll cannot present two different shapes across the list and detail
-// endpoints.
+// EMBEDS PollSummary rather than restating it. The two were verbatim copies of
+// the same sixteen fields; embedding makes it impossible for a field added to
+// one to go missing from the other. huma merges anonymous fields into the parent
+// object, so the wire shape stays flat exactly as before.
+//
+// It carries no options array: a list entry is the poll row plus the caller's
+// vote status, and the options come from the detail endpoint.
 type PollListItem struct {
-	ID                         int32     `json:"id"`
-	GameID                     int32     `json:"game_id"`
-	PhaseID                    *int32    `json:"phase_id"`
-	CreatedByUserID            int32     `json:"created_by_user_id"`
-	CreatedByCharacterID       *int32    `json:"created_by_character_id"`
-	Question                   string    `json:"question"`
-	Description                *string   `json:"description"`
-	Deadline                   time.Time `json:"deadline"`
-	ShowIndividualVotes        bool      `json:"show_individual_votes"`
-	AllowOtherOption           bool      `json:"allow_other_option"`
-	HideResultsFromPlayers     bool      `json:"hide_results_from_players"`
-	AllowAudienceVoting        bool      `json:"allow_audience_voting"`
-	ShowRunningTotalsToPlayers bool      `json:"show_running_totals_to_players"`
-	IsDeleted                  bool      `json:"is_deleted"`
-	CreatedAt                  time.Time `json:"created_at"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	PollSummary
 
 	UserHasVoted bool `json:"user_has_voted"`
-}
-
-// pollDetails holds the poll-row fields shared by every poll-shaped response.
-//
-// It exists to decode the pgtype columns exactly once, in pollRowDetails, so the
-// three converters cannot disagree about how a NULL becomes a pointer. It does
-// not keep the response structs themselves in sync -- each one is flat by design,
-// to hold the wire shape the embedded sqlc model produced, so a field added to
-// one and not the others still compiles. The parity tests in responses_test.go
-// are what catch that.
-type pollDetails struct {
-	ID                         int32
-	GameID                     int32
-	PhaseID                    *int32
-	CreatedByUserID            int32
-	CreatedByCharacterID       *int32
-	Question                   string
-	Description                *string
-	Deadline                   time.Time
-	ShowIndividualVotes        bool
-	AllowOtherOption           bool
-	HideResultsFromPlayers     bool
-	AllowAudienceVoting        bool
-	ShowRunningTotalsToPlayers bool
-	IsDeleted                  bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
 }
 
 // PollOptionResponse is one selectable option on a poll.
@@ -138,92 +85,32 @@ type PollVoteResponse struct {
 
 // PollResultsResponse is the API response for poll results.
 type PollResultsResponse struct {
-	Poll                PollSummary     `json:"poll"`
-	OptionResults       []OptionResult  `json:"option_results"`
-	OtherResponses      []OtherResponse `json:"other_responses"` // Always include even if empty array
+	Poll PollSummary `json:"poll"`
+	// nullable:"false" on both: huma renders every bare []T as nullable because
+	// a nil Go slice marshals to `null`, but these are make()'d to a known
+	// length before the response is built, so neither can be nil. Without it the
+	// generated client type is `T[] | null` and PollResults.tsx has to guard a
+	// case that cannot happen.
+	OptionResults       []OptionResult  `json:"option_results" nullable:"false"`
+	OtherResponses      []OtherResponse `json:"other_responses" nullable:"false"` // Always include even if empty array
 	TotalVotes          int32           `json:"total_votes"`
 	ShowIndividualVotes bool            `json:"show_individual_votes"`
 }
 
-// pollRowDetails flattens the sqlc poll model into the shared field set.
-func pollRowDetails(p db.CommonRoomPoll) pollDetails {
-	d := pollDetails{
-		ID:                         p.ID,
-		GameID:                     p.GameID,
-		CreatedByUserID:            p.CreatedByUserID,
-		Question:                   p.Question,
-		Deadline:                   p.Deadline.Time,
-		ShowIndividualVotes:        p.ShowIndividualVotes.Bool,
-		AllowOtherOption:           p.AllowOtherOption.Bool,
-		HideResultsFromPlayers:     p.HideResultsFromPlayers,
-		AllowAudienceVoting:        p.AllowAudienceVoting,
-		ShowRunningTotalsToPlayers: p.ShowRunningTotalsToPlayers,
-		IsDeleted:                  p.IsDeleted.Bool,
-		CreatedAt:                  p.CreatedAt.Time,
-		UpdatedAt:                  p.UpdatedAt.Time,
-	}
-
-	if p.PhaseID.Valid {
-		phaseID := p.PhaseID.Int32
-		d.PhaseID = &phaseID
-	}
-	if p.CreatedByCharacterID.Valid {
-		charID := p.CreatedByCharacterID.Int32
-		d.CreatedByCharacterID = &charID
-	}
-	if p.Description.Valid {
-		desc := p.Description.String
-		d.Description = &desc
-	}
-
-	return d
-}
-
 // toPollResponse converts a poll row and its options into the detail response.
-func toPollResponse(p db.CommonRoomPoll, options []db.PollOption) *PollResponse {
-	d := pollRowDetails(p)
+func toPollResponse(p db.CommonRoomPoll, options []db.PollOption, userHasVoted bool) *PollResponse {
 	return &PollResponse{
-		ID:                         d.ID,
-		GameID:                     d.GameID,
-		PhaseID:                    d.PhaseID,
-		CreatedByUserID:            d.CreatedByUserID,
-		CreatedByCharacterID:       d.CreatedByCharacterID,
-		Question:                   d.Question,
-		Description:                d.Description,
-		Deadline:                   d.Deadline,
-		ShowIndividualVotes:        d.ShowIndividualVotes,
-		AllowOtherOption:           d.AllowOtherOption,
-		HideResultsFromPlayers:     d.HideResultsFromPlayers,
-		AllowAudienceVoting:        d.AllowAudienceVoting,
-		ShowRunningTotalsToPlayers: d.ShowRunningTotalsToPlayers,
-		IsDeleted:                  d.IsDeleted,
-		CreatedAt:                  d.CreatedAt,
-		UpdatedAt:                  d.UpdatedAt,
-		Options:                    toPollOptionResponses(options),
+		PollSummary:  toPollSummary(p),
+		Options:      toPollOptionResponses(options),
+		UserHasVoted: userHasVoted,
 	}
 }
 
 // toPollListItem converts a poll row plus the caller's vote status into a list entry.
 func toPollListItem(p db.CommonRoomPoll, userHasVoted bool) PollListItem {
-	d := pollRowDetails(p)
 	return PollListItem{
-		ID:                         d.ID,
-		GameID:                     d.GameID,
-		PhaseID:                    d.PhaseID,
-		CreatedByUserID:            d.CreatedByUserID,
-		CreatedByCharacterID:       d.CreatedByCharacterID,
-		Question:                   d.Question,
-		Description:                d.Description,
-		Deadline:                   d.Deadline,
-		ShowIndividualVotes:        d.ShowIndividualVotes,
-		AllowOtherOption:           d.AllowOtherOption,
-		HideResultsFromPlayers:     d.HideResultsFromPlayers,
-		AllowAudienceVoting:        d.AllowAudienceVoting,
-		ShowRunningTotalsToPlayers: d.ShowRunningTotalsToPlayers,
-		IsDeleted:                  d.IsDeleted,
-		CreatedAt:                  d.CreatedAt,
-		UpdatedAt:                  d.UpdatedAt,
-		UserHasVoted:               userHasVoted,
+		PollSummary:  toPollSummary(p),
+		UserHasVoted: userHasVoted,
 	}
 }
 
@@ -246,9 +133,28 @@ func toPollOptionResponses(options []db.PollOption) []PollOptionResponse {
 	return out
 }
 
-// PollSummary is the poll row as it appears nested under poll results. It is the
-// same field set as PollListItem without the caller-specific user_has_voted flag,
-// matching what the results endpoint emitted when it embedded the sqlc model.
+// PollSummary is the poll row itself: every column on `common_room_polls`, plus
+// the one field computed from them.
+//
+// It is the BASE SHAPE for every poll-shaped response. PollListItem and
+// PollResponse both embed it and add only what their endpoint genuinely knows
+// that the others do not -- the caller's vote status, and the options array.
+// Nothing here is role-conditional: a poll exposes the same row to every caller
+// entitled to see it at all. What varies between the three responses is how much
+// has been *loaded*, never what the viewer is *allowed* to see. (Result
+// visibility is enforced by rejecting the results request outright, not by
+// trimming fields from this struct.)
+//
+// IsExpired is calculated, not stored -- the same pattern as PhaseResponse,
+// which computes is_expired and time_remaining in withCalculatedFields. Deadline
+// is NOT NULL here, so unlike a phase there is no "no deadline set" case and the
+// flag is unconditional.
+//
+// It is computed server-side on purpose. Every client otherwise has to
+// re-derive "is this poll over?" from the deadline, and the frontend proved how
+// that goes: PollCard computed it correctly from the deadline while PollsTab
+// read a poll.is_expired that no endpoint ever sent, so its expired/active split
+// silently put every poll in "active" and left "expired" permanently empty.
 type PollSummary struct {
 	ID                         int32     `json:"id"`
 	GameID                     int32     `json:"game_id"`
@@ -266,29 +172,52 @@ type PollSummary struct {
 	IsDeleted                  bool      `json:"is_deleted"`
 	CreatedAt                  time.Time `json:"created_at"`
 	UpdatedAt                  time.Time `json:"updated_at"`
+
+	// Calculated, not a column. See the type doc.
+	IsExpired bool `json:"is_expired"`
 }
 
-// toPollSummary converts a poll row for nesting under results.
+// toPollSummary converts a poll row into the shared base shape.
+//
+// This is the ONLY place a db.CommonRoomPoll becomes a poll response. The three
+// endpoints previously each had their own converter repeating the same sixteen
+// assignments and the same three null-unwrapping blocks; they now all funnel
+// through here, so a column can no longer reach one response and miss another.
 func toPollSummary(p db.CommonRoomPoll) PollSummary {
-	d := pollRowDetails(p)
-	return PollSummary{
-		ID:                         d.ID,
-		GameID:                     d.GameID,
-		PhaseID:                    d.PhaseID,
-		CreatedByUserID:            d.CreatedByUserID,
-		CreatedByCharacterID:       d.CreatedByCharacterID,
-		Question:                   d.Question,
-		Description:                d.Description,
-		Deadline:                   d.Deadline,
-		ShowIndividualVotes:        d.ShowIndividualVotes,
-		AllowOtherOption:           d.AllowOtherOption,
-		HideResultsFromPlayers:     d.HideResultsFromPlayers,
-		AllowAudienceVoting:        d.AllowAudienceVoting,
-		ShowRunningTotalsToPlayers: d.ShowRunningTotalsToPlayers,
-		IsDeleted:                  d.IsDeleted,
-		CreatedAt:                  d.CreatedAt,
-		UpdatedAt:                  d.UpdatedAt,
+	s := PollSummary{
+		ID:                         p.ID,
+		GameID:                     p.GameID,
+		CreatedByUserID:            p.CreatedByUserID,
+		Question:                   p.Question,
+		Deadline:                   p.Deadline.Time,
+		ShowIndividualVotes:        p.ShowIndividualVotes.Bool,
+		AllowOtherOption:           p.AllowOtherOption.Bool,
+		HideResultsFromPlayers:     p.HideResultsFromPlayers,
+		AllowAudienceVoting:        p.AllowAudienceVoting,
+		ShowRunningTotalsToPlayers: p.ShowRunningTotalsToPlayers,
+		IsDeleted:                  p.IsDeleted.Bool,
+		CreatedAt:                  p.CreatedAt.Time,
+		UpdatedAt:                  p.UpdatedAt.Time,
 	}
+
+	// Deadline is NOT NULL, so this is unconditional -- there is no
+	// "no deadline set" case the way there is for a phase.
+	s.IsExpired = time.Now().After(s.Deadline)
+
+	if p.PhaseID.Valid {
+		phaseID := p.PhaseID.Int32
+		s.PhaseID = &phaseID
+	}
+	if p.CreatedByCharacterID.Valid {
+		charID := p.CreatedByCharacterID.Int32
+		s.CreatedByCharacterID = &charID
+	}
+	if p.Description.Valid {
+		desc := p.Description.String
+		s.Description = &desc
+	}
+
+	return s
 }
 
 // toPollVoteResponse converts a recorded vote row.

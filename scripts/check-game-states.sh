@@ -2,21 +2,32 @@
 
 # Game State Consistency Check
 #
-# Four places independently define the set of valid game states, in three
-# languages, with nothing connecting them at compile time:
+# Three places independently define the set of valid game states, with nothing
+# connecting them at compile time:
 #
-#   1. core.ValidGameStates            backend/pkg/core/constants.go
-#   2. allowedTransitions              backend/pkg/db/services/games.go
+#   1. core.ValidGameStates             backend/pkg/core/constants.go
+#   2. allowedTransitions               backend/pkg/db/services/games.go
 #   3. the games.state CHECK constraint backend/pkg/db/migrations/*.sql
-#   4. the GameState union             frontend/src/types/games.ts
 #
 # A state added to some but not all of them fails in ways that only surface in
-# a running app: the UI offers a transition the API rejects, or the API accepts
-# a state the UI cannot render, or Postgres rejects the write outright.
+# a running app: a transition the API rejects, or a state Postgres refuses to
+# store.
 #
-# This runs as a script rather than a unit test because it spans two trees in
-# different languages. `just check-game-states` executes it inside the backend
-# container, where the repo root is bind-mounted read-only at /repo (the
+# The fourth source used to be the hand-written GameState union in
+# frontend/src/types/games.ts. It is gone: that union is now derived from the
+# OpenAPI spec, which huma renders from core.GameState, which enumerates
+# core.ValidGameStates. Those three legs are linked by the compiler and the
+# generator, so they cannot drift -- there is nothing left to compare.
+#
+# What IS still worth checking is that the committed spec matches the Go slice,
+# because the spec is a generated ARTIFACT that can go stale if someone edits
+# the states and does not run `just gen-openapi`. That is source 4 below. It
+# proves the frontend's inherited union is current without reading the frontend
+# tree at all.
+#
+# This runs as a script rather than a unit test because it spans Go, SQL and a
+# generated YAML document. `just check-game-states` executes it inside the
+# backend container, where the repo root is bind-mounted read-only at /repo (the
 # service's own /app mount only covers backend/). Keeping it in the container
 # means contributors without a POSIX shell on the host — e.g. Windows — run the
 # same check as everyone else.
@@ -34,9 +45,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 CONSTANTS="$ROOT/backend/pkg/core/constants.go"
 TRANSITIONS="$ROOT/backend/pkg/db/services/games.go"
-TYPES="$ROOT/frontend/src/types/games.ts"
+SPEC="$ROOT/backend/pkg/docs/openapi.gen.yaml"
 
-for f in "$CONSTANTS" "$TRANSITIONS" "$TYPES"; do
+for f in "$CONSTANTS" "$TRANSITIONS" "$SPEC"; do
     if [ ! -f "$f" ]; then
         echo -e "${RED}✗ missing file: $f${NC}"
         exit 1
@@ -54,10 +65,28 @@ backend_states=$(
     done | sort -u
 )
 
-# --- 2. Frontend: the GameState union members -------------------------------
-frontend_states=$(
-    awk '/^export type GameState =/{flag=1} flag{print; if (/;/) exit}' "$TYPES" |
-    sed -n "s/.*'\([a-z_]*\)'.*/\1/p" | sort -u
+# --- 2. Spec: the UpdateGameStateBody.state enum -----------------------------
+# The committed OpenAPI document, which the frontend's GameState union is
+# generated from. Rendered by huma from core.GameState, so a mismatch here means
+# the spec is STALE rather than that someone typed a different list.
+#
+# UpdateGameStateBody is the schema the frontend indexes for its union, so it is
+# the one to check -- the response schemas carry the same enum from the same Go
+# type, and checking one of them instead would leave the union's own source
+# unverified.
+#
+# Parsed with awk rather than a YAML library: the backend container has neither
+# yq nor python3-yaml. That is tolerable because this file is machine-generated,
+# so its indentation is stable -- but see the empty-extraction guard below,
+# which is what catches a generator reformat instead of silently passing.
+spec_states=$(
+    awk '
+        /^        UpdateGameStateBody:/      { inbody = 1; next }
+        inbody && /^        [A-Za-z]/        { exit }
+        inbody && /^                    enum:/ { inenum = 1; next }
+        inenum && /^                        - / { sub(/^ *- /, ""); print; next }
+        inenum                               { exit }
+    ' "$SPEC" | sort -u
 )
 
 # --- 3. Backend: the allowedTransitions map keys ----------------------------
@@ -121,7 +150,7 @@ compare() {
     fi
 }
 
-compare "frontend GameState union (frontend/src/types/games.ts)" "$frontend_states"
+compare "UpdateGameStateBody.state enum (backend/pkg/docs/openapi.gen.yaml)" "$spec_states"
 compare "allowedTransitions (backend/pkg/db/services/games.go)" "$transition_states"
 
 if [ -z "$constraint_states" ]; then
@@ -133,13 +162,16 @@ fi
 
 if [ "$fail" -ne 0 ]; then
     echo ""
-    echo "Game state definitions are out of sync. Update all four:"
+    echo "Game state definitions are out of sync. Update:"
     echo "  - backend/pkg/core/constants.go       (const + ValidGameStates)"
     echo "  - backend/pkg/db/services/games.go    (allowedTransitions)"
     echo "  - backend/pkg/db/migrations/          (new migration for the CHECK)"
-    echo "  - frontend/src/types/games.ts         (GameState union)"
+    echo ""
+    echo "Then run 'just gen-openapi' and 'just gen-api-types' and commit both."
+    echo "Do NOT hand-edit the spec or frontend/src/types/games.ts: the GameState"
+    echo "union is derived from core.ValidGameStates through the generated spec."
     exit 1
 fi
 
-echo -e "${GREEN}✓ game states consistent across constants, transitions, migration, and frontend${NC}"
+echo -e "${GREEN}✓ game states consistent across constants, transitions, migration, and spec${NC}"
 echo "  $(echo "$backend_states" | tr '\n' ' ')"

@@ -22,6 +22,23 @@ import type { CommentTreeNode } from '../lib/utils/commentTree';
 import { COMMENT_MAX_DEPTH_MOBILE } from '@/config/comments';
 import { postCachingService } from '@/services/PostCachingService';
 
+/**
+ * Reads the edit/delete audit fields, which exist only on the Message arm.
+ *
+ * `comment` is `Message | CommentTreeNode`, and a tree node comes from the
+ * paginated threaded endpoint, which does not send edited_at, edit_count or
+ * deleted_at. These reads were always `undefined` for a tree node and are
+ * `&&`-guarded accordingly; the types only started saying so once
+ * CommentWithDepth stopped claiming to extend Message.
+ */
+function auditFields(comment: Message | CommentTreeNode): {
+  edited_at?: string | null;
+  edit_count?: number;
+  deleted_at?: string | null;
+} {
+  return comment as Message;
+}
+
 interface ThreadedCommentProps {
   comment: Message | CommentTreeNode; // Supports both individual messages and pre-loaded tree nodes
   gameId: number;
@@ -39,7 +56,10 @@ interface ThreadedCommentProps {
   onToggleRead?: (commentId: number, currentlyRead: boolean) => void; // Callback to toggle manual read state
   favoriteCommentIDs?: number[]; // IDs of comments the viewer has privately starred
   onToggleFavorite?: (commentId: number, currentlyFavorited: boolean) => void; // Callback to toggle favorite state
-  onOpenThread?: (comment: Message) => void; // Callback to open thread modal with comment object
+  // Accepts either arm of the `comment` union: the button that calls this is
+  // rendered for tree nodes as well as Messages. It was typed `Message`, which
+  // only compiled while CommentWithDepth claimed to extend Message.
+  onOpenThread?: (comment: Message | CommentTreeNode) => void;
   readOnly?: boolean; // Disable all interactive features (for history view)
   allowFavoriting?: boolean; // Show the star even when readOnly (default true)
   allowReadTracking?: boolean; // Show faded read state and toggle button (default true)
@@ -389,6 +409,12 @@ export const ThreadedComment = memo(function ThreadedComment({
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       reply_count: 0,
+      // Required on the wire: both are plain ints with no `omitempty`, so the
+      // server always sends them (0 included). A brand-new reply has neither
+      // comments nor edits. The hand-written Message type made them optional,
+      // which is why this literal omitted them.
+      comment_count: 0,
+      edit_count: 0,
       is_deleted: false,
       is_edited: false,
       is_draft: false,
@@ -560,8 +586,8 @@ export const ThreadedComment = memo(function ThreadedComment({
               <span className="text-xs text-content-secondary ml-2">
                 {comment.author_username && !screenshotModeEnabled ? <><Link to={`/users/${comment.author_username}`} className="hover:underline">@{comment.author_username}</Link>{' · '}</> : ''}{formatDate(comment.created_at)}
                 {comment.is_edited && !comment.is_deleted && (
-                  <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
-                    (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
+                  <span className="ml-1 text-content-tertiary" title={auditFields(comment).edited_at ? `Last edited ${formatDate(auditFields(comment).edited_at!)}` : undefined}>
+                    (edited{(auditFields(comment).edit_count ?? 0) > 1 ? ` ${auditFields(comment).edit_count}x` : ''})
                   </span>
                 )}
               </span>
@@ -587,8 +613,8 @@ export const ThreadedComment = memo(function ThreadedComment({
                 {comment.author_username && !screenshotModeEnabled && <><Link to={`/users/${comment.author_username}`} className="hover:underline">@{comment.author_username}</Link>{' · '}</>}
                 <span className="text-content-tertiary">{formatDate(comment.created_at)}</span>
                 {comment.is_edited && !comment.is_deleted && (
-                  <span className="ml-1 text-content-tertiary" title={comment.edited_at ? `Last edited ${formatDate(comment.edited_at)}` : undefined}>
-                    (edited{comment.edit_count && comment.edit_count > 1 ? ` ${comment.edit_count}x` : ''})
+                  <span className="ml-1 text-content-tertiary" title={auditFields(comment).edited_at ? `Last edited ${formatDate(auditFields(comment).edited_at!)}` : undefined}>
+                    (edited{(auditFields(comment).edit_count ?? 0) > 1 ? ` ${auditFields(comment).edit_count}x` : ''})
                   </span>
                 )}
               </div>
@@ -601,9 +627,9 @@ export const ThreadedComment = memo(function ThreadedComment({
           // Deleted comment - show placeholder to preserve thread structure
           <div className="text-sm text-content-tertiary italic mb-2 py-1">
             <span className="opacity-60">[Comment deleted]</span>
-            {comment.deleted_at && (
+            {auditFields(comment).deleted_at && (
               <span className="ml-2 text-xs opacity-50">
-                {formatDate(comment.deleted_at)}
+                {formatDate(auditFields(comment).deleted_at!)}
               </span>
             )}
           </div>

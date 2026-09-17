@@ -124,7 +124,7 @@ func (s *UserProfileService) GetUserGames(ctx context.Context, userID int32, lim
 			game = &core.UserGame{
 				GameID:      row.GameID,
 				Title:       row.Title,
-				State:       row.State,
+				State:       core.GameState(row.State),
 				IsAnonymous: row.IsAnonymous,
 				UserRole:    row.UserRole,
 				GMUsername:  row.GmUsername,

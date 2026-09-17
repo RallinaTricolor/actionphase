@@ -2,14 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { GameHeader } from '../GameHeader';
-import type { GameListItem } from '../../types/games';
+import type { GameWithDetails } from '../../types/games';
 
-const mockGame: GameListItem = {
+const mockGame: GameWithDetails = {
   id: 1,
   title: 'Test Game',
   description: 'A test game',
   gm_user_id: 42,
   gm_username: 'theGM',
+  is_anonymous: false,
+  auto_accept_audience: false,
+  allow_group_conversations: false,
+  portrait_avatars: false,
   state: 'recruitment',
   current_players: 2,
   created_at: '2024-01-01T00:00:00Z',
@@ -39,6 +43,8 @@ describe('GameHeader - profile links', () => {
       role: 'co_gm' as const,
       status: 'active' as const,
       joined_at: '2024-01-01T00:00:00Z',
+      avatar_url: null,
+      is_former_player: false,
     };
 
     renderInRouter(<GameHeader game={mockGame} participants={[coGMParticipant]} />);

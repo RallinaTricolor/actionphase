@@ -7,55 +7,29 @@
  * mechanism.
  */
 
-export interface Community {
-  id: number;
-  name: string;
-  /** URL identifier. Immutable after creation. */
-  slug: string;
-  description: string | null;
-  /**
-   * Read-only here. Banners are uploaded objects, not typed-in URLs, so they
-   * are written through a dedicated upload/delete endpoint rather than the
-   * general update request.
-   */
-  banner_url: string | null;
-  owner_user_id: number;
-  /** Populated by list endpoints, absent on single-record reads. */
-  owner_username?: string;
-  /** Inactive communities accept no new games. */
-  is_active: boolean;
-  /**
-   * The REQUESTING user's standing in this community -- '' | 'moderator' |
-   * 'owner'. A property of the response, not of the community.
-   *
-   * Gate moderation UI on this rather than comparing against owner_user_id:
-   * that comparison misses moderators entirely, and misses a site admin with
-   * admin mode on. The server recomputes it per request, so it tracks the
-   * admin-mode toggle that a cached login payload could not.
-   *
-   * Optional in the type only so fixtures and older cached payloads that
-   * predate the field still typecheck; treat a missing value as ''.
-   */
-  your_role?: CommunityRole;
-  /**
-   * Whether the REQUESTING user is currently banned from this community.
-   * A property of the response, not of the community -- computed per request
-   * like your_role.
-   *
-   * "Currently" matters: an expired ban leaves its row behind deliberately, so
-   * this is false once a ban lapses. Never infer a ban from a row's presence.
-   *
-   * Use it to filter the game-creation picker, not the browse listing -- a ban
-   * blocks joining, not looking. It is convenience only; the ban check on game
-   * creation is the enforcement.
-   *
-   * Optional in the type only so fixtures and older cached payloads still
-   * typecheck; treat a missing value as false.
-   */
-  is_banned?: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import type { components } from './api.gen';
+
+/**
+ * Generated. A community as any read endpoint returns it.
+ *
+ * `your_role` and `is_banned` describe the REQUESTING USER, not the community:
+ * both are recomputed per request, which is why they ride on the response
+ * rather than a cached login payload. They were declared optional here "so
+ * fixtures and older cached payloads still typecheck" -- the server always
+ * sends them, so that optionality only ever hid inaccurate fixtures.
+ *
+ * Gate moderation UI on `your_role`, never on `owner_user_id`: that comparison
+ * misses moderators entirely, and misses a site admin with admin mode on.
+ *
+ * `is_banned` means CURRENTLY banned -- an expired ban leaves its row behind
+ * deliberately, so never infer a ban from a row's presence. Use it to filter
+ * the game-creation picker, not the browse listing: a ban blocks joining, not
+ * looking, and the check on game creation is the real enforcement.
+ *
+ * `banner_url` is read-only here; banners are uploaded objects written through
+ * a dedicated upload/delete endpoint. `slug` is immutable after creation.
+ */
+export type Community = components['schemas']['Community'];
 
 /**
  * A user's standing within one community.
@@ -63,38 +37,27 @@ export interface Community {
  * Owner and moderator are two tiers, not one ranked enum: moderators may do
  * everything an owner can EXCEPT manage the moderator roster.
  */
-type CommunityRole = '' | 'moderator' | 'owner';
+// The module-private CommunityRole that used to sit here typed Community's
+// your_role field by hand. That type is generated now and carries the union
+// itself (from an enum tag on the Go field), leaving this with no consumers.
+// Recover it as Community['your_role'] if one is ever needed.
 
-export interface CommunityModerator {
-  id: number;
-  community_id: number;
-  user_id: number;
-  username: string;
-  display_name?: string;
-  avatar_url?: string;
-  granted_by_user_id?: number;
-  granted_by_username?: string;
-  granted_at: string;
-}
+export type CommunityModerator = components['schemas']['CommunityModerator'];
 
 /** Admin-only: creating a community and assigning its owner. */
-export interface CreateCommunityRequest {
-  name: string;
-  slug: string;
-  description?: string;
-  owner_user_id: number;
-}
+/**
+ * POST /admin/communities — generated from the OpenAPI spec
+ * (`just gen-api-types`), so an unknown property is a build failure rather than
+ * a 422 at runtime.
+ */
+export type CreateCommunityRequest = components['schemas']['CreateCommunityInputBody'];
 
 /**
  * Partial update. An omitted field is left unchanged.
  * `slug` is absent on purpose -- it is immutable after creation.
  */
-export interface UpdateCommunityRequest {
-  name?: string;
-  description?: string;
-  owner_user_id?: number;
-  is_active?: boolean;
-}
+/** PATCH /admin/communities/{id} — the site-admin edit. Generated, as above. */
+export type UpdateCommunityRequest = components['schemas']['UpdateCommunityInputBody'];
 
 /**
  * Moderator-level profile edit: name and description only.
@@ -106,16 +69,12 @@ export interface UpdateCommunityRequest {
  *
  * `description: ''` CLEARS the blurb; omitting the key leaves it unchanged.
  */
-export interface UpdateCommunityProfileRequest {
-  name?: string;
-  description?: string;
-}
+export type UpdateCommunityProfileRequest = components['schemas']['UpdateCommunityProfileInputBody'];
 
 
-/** Owner-only: granting a user moderation powers. */
-export interface AddModeratorRequest {
-  user_id: number;
-}
+/** Owner-only: granting a user moderation powers.
+ *  POST /communities/{slug}/moderators. Generated, as above. */
+export type AddModeratorRequest = components['schemas']['AddModeratorInputBody'];
 
 /**
  * One user's exclusion from one community's games.
@@ -124,29 +83,21 @@ export interface AddModeratorRequest {
  * never ejects them from games already in progress. Removing an existing
  * participant stays the GM's decision.
  */
-export interface CommunityBan {
-  id: number;
-  community_id: number;
-  user_id: number;
-  username: string;
-  display_name?: string;
-  avatar_url?: string;
-  reason?: string;
-  banned_by_user_id?: number;
-  banned_by_username?: string;
-  banned_at: string;
-  /**
-   * Absent means PERMANENT. An expired ban is NOT deleted -- it stays on the
-   * list so a moderator can see it lapsed rather than watching it vanish.
-   */
-  expires_at?: string;
-  /**
-   * Whether the ban is being ENFORCED right now. Computed server-side from the
-   * clock, so never infer "banned" from a row's presence -- an expired ban is
-   * still a row. Render from this field alone.
-   */
-  is_active: boolean;
-}
+/**
+ * Generated.
+ *
+ * `expires_at` absent means PERMANENT. An expired ban is NOT deleted -- it stays
+ * on the list so a moderator can see it lapsed rather than watching it vanish,
+ * so never infer "banned" from a row's presence. Render from `is_active`, which
+ * the server computes from the clock at read time.
+ *
+ * `username` is OPTIONAL, which the hand-written type got wrong by requiring it.
+ * Two endpoints answer with this shape and only one fills it in: the banlist
+ * joins the users table, while POST .../bans returns the bare INSERT row via
+ * banFromDB, whose doc comment says "Callers needing the username re-list."
+ * Pinned by TestCommunityBanUsernameIsOptional.
+ */
+export type CommunityBan = components['schemas']['CommunityBan'];
 
 /**
  * One entry in a community's append-only ban audit log.
@@ -156,19 +107,7 @@ export interface CommunityBan {
  * `reason` and `expires_at` are SNAPSHOTS as they stood at event time, not
  * live references to a row that may be gone.
  */
-export interface CommunityBanEvent {
-  id: number;
-  community_id: number;
-  target_user_id: number;
-  target_username?: string;
-  /** Nullable: a deleted moderator's events outlive them. */
-  actor_user_id?: number;
-  actor_username?: string;
-  action: BanEventAction;
-  reason?: string;
-  expires_at?: string;
-  created_at: string;
-}
+export type CommunityBanEvent = components['schemas']['CommunityBanEvent'];
 
 /**
  * What happened in a ban audit entry.
@@ -177,7 +116,7 @@ export interface CommunityBanEvent {
  * extended expiry. Distinguished from 'banned' so the log reads as a history of
  * decisions rather than implying the user was unbanned and re-banned between.
  */
-export type BanEventAction = 'banned' | 'unbanned' | 'modified';
+export type BanEventAction = CommunityBanEvent['action'];
 
 /**
  * Ban a user, or edit an existing ban in place.
@@ -189,11 +128,9 @@ export type BanEventAction = 'banned' | 'unbanned' | 'modified';
  * future; the server rejects a past expiry rather than writing a ban that is
  * inert on arrival.
  */
-export interface CreateCommunityBanRequest {
-  user_id: number;
-  reason?: string;
-  expires_at?: string;
-}
+/** POST /communities/{slug}/bans — named CreateBanInputBody after the Go
+ *  struct. Generated, as above. */
+export type CreateCommunityBanRequest = components['schemas']['CreateBanInputBody'];
 
 /**
  * One of a community's rules or reference pages.
@@ -202,48 +139,25 @@ export interface CreateCommunityBanRequest {
  * evolve, and a slug frozen at creation would strand a renamed document at its
  * old URL. See the plan's §3.5 for the full reasoning.
  */
-export interface CommunityDocument {
-  id: number;
-  community_id: number;
-  title: string;
-  /** Markdown, rendered through MarkdownPreview. */
-  content: string;
-  status: DocumentStatus;
-  /** Display position, lowest first. Ties break by id. */
-  sort_order: number;
-  /** Nullable: the moderator who wrote it may since have been deleted. */
-  created_by_user_id?: number;
-  created_at: string;
-  updated_at: string;
-  // No community_name / community_slug. The per-game list used to carry them so
-  // the Info tab could label its section, back when GET /games/{id}/details did
-  // not join communities. It does now, so identity comes from the GAME -- which
-  // it must, since the section has to name a community that has published no
-  // documents at all.
-}
+// No community_name / community_slug. The per-game list used to carry them so
+// the Info tab could label its section, back when GET /games/{id}/details did
+// not join communities. It does now, so identity comes from the GAME -- which
+// it must, since the section has to name a community that has published no
+// documents at all.
+export type CommunityDocument = components['schemas']['CommunityDocument'];
 
-/**
- * Whether a document is visible to anyone but a moderator.
- *
- * A draft is moderator-only, and the server answers 404 rather than 403 for
- * everyone else -- so an outsider cannot enumerate unpublished work by walking
- * ids. Drafts let a moderator write rules over several sittings before they
- * bind anyone.
- */
-// Not exported: every consumer reaches it through CommunityDocument.status or
-// the request types below. Exporting it would be an unused public surface.
-type DocumentStatus = 'draft' | 'published';
+// A document's status ('draft' | 'published') is no longer named here: it comes
+// off CommunityDocument['status'], which the spec now enumerates. The rule it
+// encodes is unchanged -- a draft is moderator-only, and the server answers 404
+// rather than 403 for everyone else, so an outsider cannot enumerate
+// unpublished work by walking ids.
 
 /**
  * Create a document. Omit `status` for a draft, which is the default -- a
  * half-written page should bind nobody until its author says otherwise.
  */
-export interface CreateCommunityDocumentRequest {
-  title: string;
-  content: string;
-  status?: DocumentStatus;
-  sort_order?: number;
-}
+/** POST /communities/{slug}/documents. Generated, as above. */
+export type CreateCommunityDocumentRequest = components['schemas']['CreateDocumentInputBody'];
 
 /**
  * Partial update; an omitted field is left unchanged.
@@ -254,28 +168,23 @@ export interface CreateCommunityDocumentRequest {
  * Unlike a community description, `content` is NOT tri-state: the column is NOT
  * NULL, so an empty string is a blank page rather than a clear.
  */
-export interface UpdateCommunityDocumentRequest {
-  title?: string;
-  content?: string;
-  status?: DocumentStatus;
-  sort_order?: number;
-}
+export type UpdateCommunityDocumentRequest = components['schemas']['UpdateDocumentInputBody'];
 
 /**
  * A game state a webhook can announce.
  *
- * Mirrors core.ValidWebhookEvents. `setup` is deliberately absent: a game in
- * setup is not yet public, and announcing it would leak an unlisted game into a
- * Discord channel before its GM has shown it to anyone.
+ * DERIVED from core.ValidWebhookEvents in Go, through the OpenAPI spec. `setup`
+ * is absent because that slice excludes it: a game in setup is not yet public,
+ * and announcing it would leak an unlisted game into a Discord channel before
+ * its GM has shown it to anyone. That exclusion is now enforced by the type,
+ * not by a comment asking the next person to preserve it.
+ *
+ * NonNullable + [number] because the schema types `events` as an optional,
+ * nullable array; this names the element type of what it holds.
  */
-export type WebhookEvent =
-  | 'recruitment'
-  | 'character_creation'
-  | 'in_progress'
-  | 'paused'
-  | 'epilogue'
-  | 'completed'
-  | 'cancelled';
+export type WebhookEvent = NonNullable<
+  components['schemas']['CreateWebhookInputBody']['events']
+>[number];
 
 /** Every notifiable event, in lifecycle order, for rendering the picker. */
 export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
@@ -307,55 +216,38 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEvent, string> = {
  * the server never returns it on any endpoint. Never display this as though it
  * were re-usable, and never send it back as the `url` of an update: doing so
  * would overwrite the stored credential with bullet characters.
+ *
+ * The three `last_*` fields are the entire observability story, since there is
+ * no delivery history table. All three absent means "never used yet", a distinct
+ * UI state from a failure; `last_success_at` survives a later failure on purpose,
+ * because "worked at 09:00, broken since 14:00" is the diagnosis a moderator
+ * needs.
+ *
+ * Generated. `events` needed a backend `nullable:"false"` first: its converter
+ * opens with `if values == nil { return nil }`, but the column is
+ * `TEXT[] NOT NULL DEFAULT '{}'` and pgx scans an empty array to a non-nil
+ * slice, so that branch is unreachable here and `hook.events.length` is correct
+ * to read unguarded.
  */
-export interface CommunityWebhook {
-  id: number;
-  community_id: number;
-  /** Masked. See the warning above. */
-  url: string;
-  label?: string;
-  is_enabled: boolean;
-  events: WebhookEvent[];
-  /**
-   * Delivery status — the entire observability story, since there is no
-   * delivery history table. All three null means "never used yet", which is a
-   * distinct UI state from a failure.
-   *
-   * `last_success_at` survives a later failure on purpose: "worked at 09:00,
-   * broken since 14:00" is the diagnosis a moderator needs.
-   */
-  last_success_at?: string;
-  last_error?: string;
-  last_error_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/** Register a webhook. `is_enabled` omitted means enabled. */
-export interface CreateCommunityWebhookRequest {
-  /** The REAL Discord webhook URL. This is the only direction it travels. */
-  url: string;
-  label?: string;
-  is_enabled?: boolean;
-  events?: WebhookEvent[];
-}
+export type CommunityWebhook = components['schemas']['CommunityWebhook'];
 
 /**
- * Partial update; an omitted field is unchanged.
+ * Register a webhook. `is_enabled` omitted means enabled.
+ *
+ * Generated. `url` is the REAL Discord webhook URL -- this is the only
+ * direction it travels in cleartext. `events` carries the enum, so `setup`
+ * cannot be sent.
+ */
+export type CreateCommunityWebhookRequest = components['schemas']['CreateWebhookInputBody'];
+
+/**
+ * Partial update; an omitted field is unchanged. Generated.
  *
  * 🔴 OMIT `url` unless the moderator typed a new one. Omitting it keeps the
  * stored credential, which is what lets this form save a label or event change
  * without ever holding the secret. Sending the masked URL back would destroy it.
  */
-export interface UpdateCommunityWebhookRequest {
-  url?: string;
-  label?: string;
-  is_enabled?: boolean;
-  events?: WebhookEvent[];
-}
+export type UpdateCommunityWebhookRequest = components['schemas']['UpdateWebhookInputBody'];
 
-/** Result of the synchronous "send a test message" button. */
-export interface WebhookTestResult {
-  success: boolean;
-  message: string;
-}
+/** Result of the synchronous "send a test message" button. Generated. */
+export type WebhookTestResult = components['schemas']['WebhookTestOutputBody'];

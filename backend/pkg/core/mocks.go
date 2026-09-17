@@ -163,7 +163,6 @@ type MockGameService struct {
 	GetUserRoleFunc           func(ctx context.Context, gameID, userID int32) (string, error)
 	IsUserInGameFunc          func(ctx context.Context, gameID, userID int32) (bool, error)
 	GetGameWithDetailsFunc    func(ctx context.Context, gameID int32) (*models.GetGameWithDetailsRow, error)
-	GetRecruitingGamesFunc    func(ctx context.Context) ([]models.GetRecruitingGamesRow, error)
 	CanUserJoinGameFunc       func(ctx context.Context, gameID, userID int32) (string, error)
 	AddGameParticipantFunc    func(ctx context.Context, gameID, userID int32, role string) (*models.GameParticipant, error)
 	RemoveGameParticipantFunc func(ctx context.Context, gameID, userID int32) error
@@ -236,13 +235,6 @@ func (m *MockGameService) IsUserInGame(ctx context.Context, gameID, userID int32
 func (m *MockGameService) GetGameWithDetails(ctx context.Context, gameID int32) (*models.GetGameWithDetailsRow, error) {
 	if m.GetGameWithDetailsFunc != nil {
 		return m.GetGameWithDetailsFunc(ctx, gameID)
-	}
-	return nil, nil
-}
-
-func (m *MockGameService) GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error) {
-	if m.GetRecruitingGamesFunc != nil {
-		return m.GetRecruitingGamesFunc(ctx)
 	}
 	return nil, nil
 }

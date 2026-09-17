@@ -5,80 +5,40 @@
  * game history, and profile updates.
  */
 
-/**
- * User profile information
- */
-export interface UserProfile {
-  id: number;
-  username: string;
-  display_name: string | null;
-  bio: string | null;
-  avatar_url: string | null;
-  created_at: string; // ISO 8601 timestamp
-  timezone: string;
-  is_admin: boolean;
-}
+import type { components } from './api.gen';
 
 /**
- * Character within a game (for game history)
- * Only populated for non-anonymous games
+ * User profile information. Generated.
  */
-interface UserGameCharacter {
-  id: number;
-  name: string;
-  avatar_url: string | null;
-  character_type: string;
-}
+export type UserProfile = components['schemas']['UserProfile'];
 
 /**
- * Game in user's game history
+ * Game in user's game history. Generated.
+ *
+ * `state` carries the GameState enum rather than a bare string, and
+ * `characters` is non-nullable -- an anonymous game yields an empty array, not
+ * null.
  */
-export interface UserGame {
-  game_id: number;
-  title: string;
-  state: string;
-  is_anonymous: boolean;
-  user_role: string; // "player", "gm", "co_gm"
-  gm_username: string;
-  created_at: string; // ISO 8601 timestamp
-  updated_at: string; // ISO 8601 timestamp
-  start_date: string | null;
-  end_date: string | null;
-  characters: UserGameCharacter[]; // Empty array for anonymous games
-}
+export type UserGame = components['schemas']['UserGame'];
 
 /**
- * Pagination metadata for user game history
+ * Pagination metadata for user game history. Generated.
  */
-export interface UserGameHistoryMetadata {
-  page: number;
-  page_size: number;
-  total_pages: number;
-  total_count: number;
-  has_next_page: boolean;
-  has_previous_page: boolean;
-}
+export type UserGameHistoryMetadata = components['schemas']['UserGameHistoryMetadata'];
 
 /**
- * Complete user profile response from API
+ * Complete user profile response from API. Generated.
  */
-export interface UserProfileResponse {
-  user: UserProfile;
-  games: UserGame[];
-  metadata: UserGameHistoryMetadata;
-}
+export type UserProfileResponse = components['schemas']['UserProfileResponse'];
 
 /**
- * Request payload for updating user profile
+ * PATCH /users/me/profile — generated from the OpenAPI spec
+ * (`just gen-api-types`), so an unknown property is a build failure rather than
+ * a 422 at runtime. The schema is named UpdateProfileBody after the Go struct.
  */
-export interface UpdateUserProfileRequest {
-  display_name?: string;
-  bio?: string;
-}
+export type UpdateUserProfileRequest = components['schemas']['UpdateProfileBody'];
 
 /**
- * Response from avatar upload
+ * Response from avatar upload. Generated.
  */
-export interface UploadAvatarResponse {
-  avatar_url: string;
-}
+export type UploadAvatarResponse = components['schemas']['UploadAvatarResponse'];

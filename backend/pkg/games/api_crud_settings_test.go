@@ -83,7 +83,6 @@ func TestCreateGame_AllowGroupConversations(t *testing.T) {
 			Description:             "Testing toggle",
 			GMUserID:                int32(fixtures.TestUser.ID),
 			CommunityID:             int32(fixtures.TestCommunity.ID),
-			IsPublic:                true,
 			AllowGroupConversations: true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
@@ -92,7 +91,6 @@ func TestCreateGame_AllowGroupConversations(t *testing.T) {
 		requestBody := UpdateGameRequest{
 			Title:                   game.Title,
 			Description:             game.Description,
-			IsPublic:                true,
 			AllowGroupConversations: false,
 		}
 		bodyBytes, _ := json.Marshal(requestBody)
@@ -238,7 +236,6 @@ func TestUpdateGame_WithSettings(t *testing.T) {
 		Description:        "Testing game update with settings",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		IsAnonymous:        false,
 		AutoAcceptAudience: false,
 	})
@@ -292,7 +289,6 @@ func TestUpdateGame_WithSettings(t *testing.T) {
 			requestBody := UpdateGameRequest{
 				Title:              game.Title,
 				Description:        game.Description,
-				IsPublic:           true,
 				IsAnonymous:        tt.isAnonymous,
 				AutoAcceptAudience: tt.autoAcceptAudience,
 			}
@@ -346,7 +342,6 @@ func TestCreateGame_SettingsPersistAfterRefresh(t *testing.T) {
 		Description:        "Testing settings persistence",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		IsAnonymous:        true,
 		AutoAcceptAudience: true,
 	})
@@ -365,7 +360,6 @@ func TestCreateGame_SettingsPersistAfterRefresh(t *testing.T) {
 		ID:                 game.ID,
 		Title:              game.Title,
 		Description:        game.Description,
-		IsPublic:           true,
 		IsAnonymous:        false,
 		AutoAcceptAudience: false,
 	})
@@ -491,7 +485,6 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:              game.Title,
 			Description:        game.Description,
-			IsPublic:           true,
 			CommonRoomOpenDay:  &openDay,
 			CommonRoomOpenTime: &openTime,
 		}
@@ -508,7 +501,6 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
 			Description:         game.Description,
-			IsPublic:            true,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
 			CommonRoomCloseDay:  &closeDay,
@@ -559,7 +551,6 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
 			Description:         game.Description,
-			IsPublic:            true,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
 			CommonRoomCloseDay:  &closeDay,
@@ -594,7 +585,6 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:       game.Title,
 			Description: game.Description,
-			IsPublic:    true,
 		}
 		bodyBytes, _ := json.Marshal(updateBody)
 		req := httptest.NewRequest(http.MethodPut, "/api/v1/games/"+strconv.Itoa(int(game.ID)), bytes.NewBuffer(bodyBytes))

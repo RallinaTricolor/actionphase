@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api";
-import type { CreateLootTableRequest, UpdateLootTableContentsRequest, UpdateLootTableRequest } from "@/types/games";
+import type { CreateLootTableArgs, UpdateLootTableContentsArgs, UpdateLootTableArgs } from "@/types/games";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useLootTableManagement(gameId: number) {
@@ -15,21 +15,21 @@ export function useLootTableManagement(gameId: number) {
     });
 
     const createLootTableMutation = useMutation({
-      mutationFn: (data: CreateLootTableRequest) => apiClient.games.createLootTable(gameId, data),
+      mutationFn: (data: CreateLootTableArgs) => apiClient.games.createLootTable(gameId, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['lootTables', gameId] });
       }
     });
 
     const updateLootTableMutation = useMutation({
-      mutationFn: (data: UpdateLootTableRequest) => apiClient.games.updateLootTable(gameId, data.id, data),
+      mutationFn: (data: UpdateLootTableArgs) => apiClient.games.updateLootTable(gameId, data.id, data),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['lootTables', gameId]})
       }
     });
 
     const updateLootTableContentsMutation = useMutation({
-      mutationFn: (data: UpdateLootTableContentsRequest) => apiClient.games.setLootTableContents(gameId, data.id, data.items),
+      mutationFn: (data: UpdateLootTableContentsArgs) => apiClient.games.setLootTableContents(gameId, data.id, data.items),
       onSuccess: (_, v) => {
         queryClient.invalidateQueries({ queryKey: ['lootTableContents', v.id] });
       }

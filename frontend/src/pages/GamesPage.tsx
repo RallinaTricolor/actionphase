@@ -131,7 +131,7 @@ export const GamesPage = () => {
         hasOpenSpots={filters.has_open_spots}
         communityId={filters.community_id}
         sortBy={filters.sort_by || 'recent_activity'}
-        availableStates={metadata.available_states}
+        availableStates={metadata.available_states ?? []}
         communities={communities}
         onStatesChange={setStates}
         onParticipationChange={setParticipation}

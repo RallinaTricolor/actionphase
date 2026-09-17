@@ -91,9 +91,11 @@ export function PollResults({ results, poll, isGM = false, isAudience = false, i
                         ) : (
                           voter.character_name
                         )}
-                        {voter.other_response && (
-                          <span className="italic"> - "{voter.other_response}"</span>
-                        )}
+                        {/* No per-voter write-in text: VoterInfo carries only
+                            user_id/character_name/is_anonymous. The removed
+                            `voter.other_response` was never a real field, so it
+                            was always undefined and rendered nothing. Write-ins
+                            are the `other_responses` list rendered below. */}
                         {idx < (option.voters?.length ?? 0) - 1 && ', '}
                       </span>
                     ))}

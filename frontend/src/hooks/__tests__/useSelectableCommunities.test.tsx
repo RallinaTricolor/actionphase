@@ -14,8 +14,15 @@ vi.mock('../../lib/api', () => ({
   },
 }));
 
+// `as Community` because of the is_banned omission below. The field is now
+// REQUIRED on the generated type -- the server always sends it -- but the hook
+// deliberately tolerates its absence for an older CACHED payload predating the
+// field, and the test at "treats a missing is_banned as not banned" exercises
+// exactly that. The cast keeps that case representable without weakening the
+// type for everything the server actually sends.
 function community(id: number, slug: string, isBanned?: boolean): Community {
   return {
+    your_role: 'moderator',
     id,
     name: slug,
     slug,
@@ -26,7 +33,7 @@ function community(id: number, slug: string, isBanned?: boolean): Community {
     ...(isBanned === undefined ? {} : { is_banned: isBanned }),
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
-  };
+  } as Community;
 }
 
 function wrapper({ children }: { children: ReactNode }) {

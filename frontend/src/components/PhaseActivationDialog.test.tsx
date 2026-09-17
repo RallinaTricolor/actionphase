@@ -11,6 +11,7 @@ const makePhase = (overrides: Partial<GamePhase> = {}): GamePhase => ({
   phase_number: 3,
   is_active: false,
   is_published: false,
+  is_expired: false,
   start_time: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5min from now
   created_at: new Date().toISOString(),
   ...overrides,

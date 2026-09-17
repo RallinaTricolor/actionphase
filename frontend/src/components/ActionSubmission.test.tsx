@@ -24,6 +24,7 @@ vi.mock('../lib/api', () => ({
 }));
 
 const baseActionPhase: GamePhase = {
+  is_expired: false,
   id: 42,
   game_id: 1,
   phase_type: 'action',

@@ -21,11 +21,12 @@ describe('EnhancedGameCard', () => {
     max_players: 6,
     deadline_urgency: 'normal',
     has_recent_activity: false,
-    user_relationship: 'none',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
-    is_public: true,
     is_anonymous: false,
+    auto_accept_audience: false,
+    allow_group_conversations: false,
+    portrait_avatars: false,
   };
 
   describe('Basic Rendering', () => {
@@ -60,8 +61,10 @@ describe('EnhancedGameCard', () => {
       expect(screen.getByText('Fantasy')).toBeInTheDocument();
     });
 
-    it('should not render genre badge when genre is null', () => {
-      const gameWithoutGenre = { ...mockGame, genre: null };
+    it('should not render genre badge when genre is absent', () => {
+      // ABSENT, not null: the column is omitempty on the Go side, so a game
+      // with no genre drops the key rather than sending null.
+      const gameWithoutGenre = { ...mockGame, genre: undefined };
       render(<EnhancedGameCard game={gameWithoutGenre} />, { wrapper });
 
       // Should still render title but no genre badge
@@ -236,7 +239,9 @@ describe('EnhancedGameCard', () => {
 
     it('should style the card by state independently of relationship', () => {
       const asGm = { ...mockGame, user_relationship: 'gm' as const };
-      const asStranger = { ...mockGame, user_relationship: 'none' as const };
+      // A stranger has the field ABSENT, not 'none': the backend maps both ''
+      // and 'none' to nil, so 'none' never reaches the wire.
+      const asStranger = { ...mockGame, user_relationship: undefined };
 
       const { container: gmContainer } = render(<EnhancedGameCard game={asGm} />, { wrapper });
       const { container: strangerContainer } = render(

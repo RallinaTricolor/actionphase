@@ -55,7 +55,13 @@ export interface OpenCharacterSheetOptions {
   canEditStats: boolean;
   isAnonymous: boolean;
   userRole: string;
-  gameState: string;
+  /**
+   * Optional because the cross-game character payload models it as a nullable
+   * column (`*string`), even though that handler always fills it in. Every
+   * consumer already routes it through isEditableGameState, which accepts
+   * undefined and treats it as not-writable — the safe direction.
+   */
+  gameState: string | undefined;
   /**
    * Whether that game shows avatars as portraits. Required rather than optional
    * so a new call site can't silently fall through to circles — the sheet has no

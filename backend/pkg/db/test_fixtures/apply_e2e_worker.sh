@@ -191,7 +191,7 @@ with open('$temp_file', 'w') as f:
     fi
 
     # Apply the modified SQL (with error checking)
-    if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$temp_file"; then
+    if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -v ON_ERROR_STOP=1 -f "$temp_file"; then
         echo "❌ ERROR: Failed to apply $filename for worker $WORKER_INDEX"
         # Keep temp file for debugging
         echo "   Temp file saved at: $temp_file"
@@ -213,7 +213,7 @@ fi
 
 # First, apply worker setup to create helper functions
 echo "  📄 Applying worker setup (creates helper functions)..."
-if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$SCRIPT_DIR/e2e/00_worker_setup.sql"; then
+if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -v ON_ERROR_STOP=1 -f "$SCRIPT_DIR/e2e/00_worker_setup.sql"; then
     echo "❌ ERROR: Failed to apply worker setup"
     exit 1
 fi
@@ -230,8 +230,9 @@ for file in "$SCRIPT_DIR"/e2e/*.sql; do
             if [[ "$filename" == "17_private_message_deletion_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "18_co_gm_management_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "18_co_gm_action_results_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "19_player_multiple_characters_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "21_audience_private_messages_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "23_private_message_editing_w${WORKER_INDEX}.sql" ]] || [[ "$filename" == "26_player_to_audience_w${WORKER_INDEX}.sql" ]]; then
                 echo "  📄 Processing $filename for worker $WORKER_INDEX (no transformation)..."
                 # Apply directly without transformation
-                if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$file"; then
+                if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -v ON_ERROR_STOP=1 -f "$file"; then
                     echo "❌ ERROR: Failed to apply $filename for worker $WORKER_INDEX"
+                    exit 1
                 fi
             fi
         else
@@ -253,7 +254,7 @@ done
 # Re-syncing here, after every file for this worker, keeps the sequence ahead of
 # whatever has been loaded so far regardless of file or worker ordering.
 echo "  🔢 Re-syncing ID sequences past fixture rows..."
-if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -q -c "
+if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -q -v ON_ERROR_STOP=1 -c "
 SELECT setval('games_id_seq',    (SELECT COALESCE(MAX(id), 0) + 1 FROM games));
 SELECT setval('messages_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM messages));
 "; then

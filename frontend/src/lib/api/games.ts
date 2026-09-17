@@ -1,12 +1,13 @@
 import { BaseApiClient } from './client';
 import type {
-  Game,
+  GameWritten,
   GameWithDetails,
-  GameListItem,
   GameParticipant,
+  AudienceMembersResponse,
   CreateGameRequest,
   UpdateGameRequest,
   UpdateGameStateRequest,
+  GameStateChangedResponse,
   ApplyToGameRequest,
   GameApplication,
   PublicGameApplicant,
@@ -16,8 +17,8 @@ import type {
   GameLog,
   LootTable,
   LootTableContent,
-  CreateLootTableRequest,
-  UpdateLootTableRequest
+  CreateLootTableArgs,
+  UpdateLootTableArgs
 } from '../../types/games';
 import type {
   AudienceConversationListItem,
@@ -33,14 +34,6 @@ import type { GameStats } from '../../types/gameStats';
  */
 export class GamesApi extends BaseApiClient {
   // Game CRUD endpoints
-  async getAllGames() {
-    return this.client.get<GameListItem[]>('/api/v1/games/public');
-  }
-
-  async getRecruitingGames() {
-    return this.client.get<GameListItem[]>('/api/v1/games/recruiting');
-  }
-
   async getFilteredGames(filters?: GameListingFilters) {
     // Build query string from filters
     const params = new URLSearchParams();
@@ -63,9 +56,6 @@ export class GamesApi extends BaseApiClient {
     if (filters?.sort_by) {
       params.append('sort_by', filters.sort_by);
     }
-    if (filters?.admin_mode === true) {
-      params.append('admin_mode', 'true');
-    }
     if (filters?.page) {
       params.append('page', filters.page.toString());
     }
@@ -79,8 +69,13 @@ export class GamesApi extends BaseApiClient {
     return this.client.get<GameListingResponse>(url);
   }
 
+  /**
+   * Both game reads answer with the SAME shape from the same query — there is
+   * no field a caller of one is entitled to and a caller of the other is not.
+   * `/details` is kept only so existing callers keep working.
+   */
   async getGame(id: number) {
-    return this.client.get<Game>(`/api/v1/games/${id}`);
+    return this.client.get<GameWithDetails>(`/api/v1/games/${id}`);
   }
 
   async getGameWithDetails(id: number) {
@@ -92,19 +87,33 @@ export class GamesApi extends BaseApiClient {
   }
 
   async createGame(data: CreateGameRequest) {
-    return this.client.post<Game>('/api/v1/games', data);
+    return this.client.post<GameWritten>('/api/v1/games', data);
   }
 
   async updateGame(id: number, data: UpdateGameRequest) {
-    return this.client.put<Game>(`/api/v1/games/${id}`, data);
+    return this.client.put<GameWritten>(`/api/v1/games/${id}`, data);
   }
 
   async deleteGame(id: number) {
     return this.client.delete(`/api/v1/games/${id}`);
   }
 
+  /**
+   * Move a game to a new state.
+   *
+   * Answers with GameStateChangedResponse, NOT a full game: the endpoint sends
+   * id, title, description, gm_user_id, state and the timestamps, and nothing
+   * else. It used to declare the full GameResponse, which meant the four
+   * settings booleans read as `false` on every response regardless of what the
+   * game had stored.
+   *
+   * Refetch the game if you need its settings -- useGameStateManagement does.
+   */
   async updateGameState(id: number, data: UpdateGameStateRequest) {
-    return this.client.put<Game>(`/api/v1/games/${id}/state`, data);
+    return this.client.put<GameStateChangedResponse>(
+      `/api/v1/games/${id}/state`,
+      data
+    );
   }
 
   async leaveGame(id: number) {
@@ -159,8 +168,18 @@ export class GamesApi extends BaseApiClient {
   }
 
   // Audience Participation endpoints
+
+  /**
+   * Annotated with the endpoint's own schema, not GameParticipant.
+   *
+   * This said `{ audience_members: GameParticipant[] }`, which claimed two
+   * fields the route does not send: AudienceMemberResponse is a strict subset
+   * with no `avatar_url` and no `is_former_player`. No live bug -- the method
+   * has no callers -- but the annotation would have handed the first one two
+   * permanently-undefined properties the type promised were there.
+   */
   async listAudienceMembers(gameId: number) {
-    return this.client.get<{ audience_members: GameParticipant[] }>(`/api/v1/games/${gameId}/audience`);
+    return this.client.get<AudienceMembersResponse>(`/api/v1/games/${gameId}/audience`);
   }
 
   async setAutoAcceptAudience(gameId: number, autoAccept: boolean) {
@@ -260,11 +279,11 @@ export class GamesApi extends BaseApiClient {
     return contents?.map(({ name, data }) => ({ name, data }));
   }
 
-  async createLootTable(gameId: number, data: CreateLootTableRequest) {
+  async createLootTable(gameId: number, data: CreateLootTableArgs) {
     return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, { name: data.name, items: this.toLootItemPayload(data.items) });
   }
 
-  async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableRequest) {
+  async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableArgs) {
     return this.client.put(`/api/v1/games/${gameId}/loot-tables/${lootTableId}`, { name: data.name });
   }
 

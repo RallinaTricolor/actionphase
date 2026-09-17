@@ -68,13 +68,11 @@ func setupApplicationsTestRouter(app *core.App, testDB *core.TestDatabase) *chi.
 	return r
 }
 
-// PublicApplicantResponse matches the response from GetPublicGameApplicants
-type PublicApplicantResponse struct {
-	ID        int32  `json:"id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	AppliedAt string `json:"applied_at"`
-}
+// The local PublicApplicantResponse this file used to declare is gone: the
+// handler now returns a real PublicApplicantResponse, so the test decodes into
+// the production type and a field rename breaks the test instead of silently
+// decoding to a zero value. Note the hand-written copy typed applied_at as a
+// string where the real one is a time.Time.
 
 // TestGetPublicGameApplicants_Success tests successful retrieval of public applicants
 func TestGetPublicGameApplicants_Success(t *testing.T) {
@@ -115,7 +113,6 @@ func TestGetPublicGameApplicants_Success(t *testing.T) {
 		Description: "Testing public applicants",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -159,7 +156,7 @@ func TestGetPublicGameApplicants_Success(t *testing.T) {
 		core.AssertTrue(t, applicant.ID > 0, "Should have applicant ID")
 		core.AssertTrue(t, applicant.Username != "", "Should have username")
 		core.AssertTrue(t, applicant.Role == core.RolePlayer || applicant.Role == core.RoleAudience, "Should have valid role")
-		core.AssertTrue(t, applicant.AppliedAt != "", "Should have applied_at timestamp")
+		core.AssertTrue(t, !applicant.AppliedAt.IsZero(), "Should have applied_at timestamp")
 	}
 
 	// Verify applicant 1
@@ -235,7 +232,6 @@ func TestGetPublicGameApplicants_ForbiddenWhenNotRecruiting(t *testing.T) {
 				Description: "Testing forbidden access",
 				GMUserID:    int32(fixtures.TestUser.ID),
 				CommunityID: int32(fixtures.TestCommunity.ID),
-				IsPublic:    true,
 			})
 			core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -284,7 +280,6 @@ func TestGetPublicGameApplicants_EmptyList(t *testing.T) {
 		Description: "Testing empty applicant list",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -327,7 +322,6 @@ func TestGetPublicGameApplicants_NoStatusExposed(t *testing.T) {
 		Description: "Testing status privacy",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 
@@ -420,7 +414,6 @@ func TestGetPublicGameApplicants_OrderedByAppliedAt(t *testing.T) {
 		Description: "Testing ordering",
 		GMUserID:    int32(fixtures.TestUser.ID),
 		CommunityID: int32(fixtures.TestCommunity.ID),
-		IsPublic:    true,
 	})
 	core.AssertNoError(t, err, "Game creation should succeed")
 

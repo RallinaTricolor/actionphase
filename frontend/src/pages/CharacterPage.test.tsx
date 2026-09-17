@@ -54,7 +54,7 @@ const mockCharacter: Character = {
   name: 'Aelindra',
   character_type: 'player_character',
   status: 'active',
-  avatar_url: null,
+  avatar_url: undefined,
   is_active: true,
   username: 'testplayer',
   created_at: '2025-01-01T00:00:00Z',
@@ -92,6 +92,7 @@ const mockComment: CharacterMessage = {
     message_type: 'post',
     author_username: 'someone',
     character_name: 'Other Character',
+    character_avatar_url: null,
   },
 };
 
