@@ -100,12 +100,12 @@ BEGIN
 
     DELETE FROM games WHERE id = game_id;
 
-    INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+    INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
     VALUES (
       game_id, game_title,
       'Fixture for the in_progress -> epilogue -> completed disclosure flow.',
       'Test Framework',
-      gm_id, 5, game_state, true,
+      gm_id, 5, game_state,
       NOW() - INTERVAL '20 days', NOW()
     );
 

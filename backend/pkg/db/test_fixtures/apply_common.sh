@@ -15,8 +15,20 @@ DB_PASSWORD="${DB_PASSWORD:-example}"
 echo "🧹 Loading common base data for database: $DB_NAME"
 
 # Helper function for psql commands
+# ON_ERROR_STOP=1 is what makes a fixture error an actual failure. Without it
+# psql prints the error to stderr and still exits 0, so `set -e` sees success and
+# the script runs to completion announcing "applied successfully" over a database
+# that is missing rows. That is how the games.is_public drop went unnoticed: 93
+# failed INSERTs, exit code 0.
 run_psql() {
-    PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$1" --quiet
+    if ! PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME \
+            -v ON_ERROR_STOP=1 -f "$1" --quiet; then
+        echo "" >&2
+        echo "❌ FIXTURE FAILED: $1" >&2
+        echo "   The database is now incomplete. Fix the error above and re-run;" >&2
+        echo "   do not run tests against this database." >&2
+        exit 1
+    fi
 }
 
 # Reset and load common data

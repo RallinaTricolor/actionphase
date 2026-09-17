@@ -539,12 +539,12 @@ _test-data-windows action="reload":
   switch ("{{action}}") {
     "reset" {
       Write-Host "Resetting test data..."
-      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/00_reset.sql'
+      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/common/00_reset.sql'
       Write-Host "✅ Test data reset complete"
     }
     "reload" {
       Write-Host "Resetting test data..."
-      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/00_reset.sql'
+      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/common/00_reset.sql'
       Write-Host "Applying test data fixtures..."
       {{BE}} env DB_HOST=db bash pkg/db/test_fixtures/apply_all.sh
       Write-Host "🎉 Test data reloaded!
@@ -568,12 +568,12 @@ _test-data-unix action="reload":
   case "{{action}}" in
     reset)
       echo "Resetting test data..."
-      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/00_reset.sql'
+      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/common/00_reset.sql'
       echo "✅ Test data reset complete"
       ;;
     reload)
       echo "Resetting test data..."
-      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/00_reset.sql'
+      {{BE}} sh -c 'PGPASSWORD=example psql -h db -U postgres -d actionphase -f pkg/db/test_fixtures/common/00_reset.sql'
       echo "Applying test data fixtures..."
       {{BE}} env DB_HOST=db bash pkg/db/test_fixtures/apply_all.sh
       echo "🎉 Test data reloaded!"

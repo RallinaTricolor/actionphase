@@ -46,7 +46,7 @@ BEGIN
   -- ============================================
   -- GAME #350: For Completion Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_complete_id,
     'E2E Test: Game to Complete',
@@ -55,7 +55,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     NOW() - INTERVAL '5 days',
     NOW()
   );
@@ -84,7 +83,7 @@ BEGIN
   -- ============================================
   -- GAME #351: For Cancellation Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_cancel_id,
     'E2E Test: Game to Cancel',
@@ -93,7 +92,6 @@ BEGIN
     gm_id,
     4,
     'recruitment',
-    true,
     NOW() - INTERVAL '2 days',
     NOW()
   );
@@ -107,7 +105,7 @@ BEGIN
   -- ============================================
   -- GAME #352: For Pause/Resume Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_pause_id,
     'E2E Test: Game to Pause',
@@ -116,7 +114,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     NOW() - INTERVAL '10 days',
     NOW()
   );
@@ -145,7 +142,7 @@ BEGIN
   -- ============================================
   -- GAME #353: For Action Submission Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_action_id,
     'E2E Test: Action Submission',
@@ -154,7 +151,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '8 days',
     NOW()
   );
@@ -243,7 +239,7 @@ BEGIN
   -- ============================================
   -- GAME #354: For Private Messages Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_messages_id,
     'E2E Test: Private Messages',
@@ -252,7 +248,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '8 days',
     NOW()
   );
@@ -297,7 +292,7 @@ BEGIN
   -- ============================================
   -- GAME #355: For Game Settings Testing
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_settings_id,
     'E2E Test: Game Settings',
@@ -306,7 +301,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     NOW() - INTERVAL '5 days',
     NOW()
   );

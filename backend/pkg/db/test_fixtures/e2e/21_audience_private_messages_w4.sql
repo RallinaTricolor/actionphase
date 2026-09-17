@@ -20,13 +20,13 @@ BEGIN
   SELECT id INTO p2_id  FROM users WHERE email = 'test_player2_4@example.com';
   SELECT id INTO aud_id FROM users WHERE email = 'test_audience_4@example.com';
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     40360,
     'E2E Test: Audience Private Messages',
     'Isolated game for audience-private-messages.spec.ts',
     'Test Framework',
-    gm_id, 5, 'in_progress', true,
+    gm_id, 5, 'in_progress',
     NOW() - INTERVAL '5 days', NOW()
   );
 
