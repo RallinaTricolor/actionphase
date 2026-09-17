@@ -309,6 +309,54 @@ components:
                 - content
                 - delay_minutes
             type: object
+        ApplicationListItemResponse:
+            additionalProperties: false
+            properties:
+                applied_at:
+                    format: date-time
+                    type: string
+                avatar_url:
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                message:
+                    type: string
+                reviewed_at:
+                    format: date-time
+                    type: string
+                reviewed_by_user_id:
+                    format: int32
+                    type: integer
+                role:
+                    enum:
+                        - player
+                        - audience
+                    type: string
+                status:
+                    enum:
+                        - pending
+                        - approved
+                        - rejected
+                        - withdrawn
+                    type: string
+                user_id:
+                    format: int32
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - game_id
+                - user_id
+                - username
+                - role
+                - status
+                - applied_at
+            type: object
         ApplyToGameBody:
             additionalProperties: false
             properties:
@@ -696,6 +744,9 @@ components:
                     type: boolean
                 message_type:
                     description: '"post" or "comment"'
+                    enum:
+                        - post
+                        - comment
                     type: string
                 parent:
                     $ref: '#/components/schemas/ParentContextResponse'
@@ -729,9 +780,7 @@ components:
                 messages:
                     items:
                         $ref: '#/components/schemas/CharacterMessageResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationResponse'
             required:
@@ -1030,6 +1079,10 @@ components:
                     format: date-time
                     type: string
                 your_role:
+                    enum:
+                        - ""
+                        - moderator
+                        - owner
                     type: string
             required:
                 - id
@@ -1218,9 +1271,7 @@ components:
                             - completed
                             - cancelled
                         type: string
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 id:
                     format: int32
                     type: integer
@@ -1346,9 +1397,7 @@ components:
                 participants:
                     items:
                         $ref: '#/components/schemas/ConversationParticipantResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - conversation
                 - participants
@@ -2116,23 +2165,17 @@ components:
                 audience_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 gm_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_games:
                     type: boolean
                 mixed_role_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 notifications_by_type:
                     additionalProperties:
                         format: int64
@@ -2141,24 +2184,18 @@ components:
                 player_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 recent_messages:
                     items:
                         $ref: '#/components/schemas/DashboardMessage'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 unread_notifications:
                     format: int64
                     type: integer
                 upcoming_deadlines:
                     items:
                         $ref: '#/components/schemas/DashboardDeadline'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 user_id:
                     format: int32
                     type: integer
@@ -2238,6 +2275,10 @@ components:
                 current_phase_type:
                     type: string
                 deadline_status:
+                    enum:
+                        - critical
+                        - warning
+                        - normal
                     type: string
                 description:
                     type: string
@@ -2320,6 +2361,10 @@ components:
                     format: int32
                     type: integer
                 message_type:
+                    enum:
+                        - post
+                        - comment
+                        - private_message
                     type: string
                 phase_id:
                     format: int32
@@ -2689,6 +2734,11 @@ components:
                     format: int64
                     type: integer
                 status:
+                    enum:
+                        - pending
+                        - running
+                        - complete
+                        - failed
                     type: string
             required:
                 - id
@@ -2810,9 +2860,7 @@ components:
                 favorites:
                     items:
                         $ref: '#/components/schemas/FavoriteCommentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/FavoritesPaginationResponse'
             required:
@@ -2961,6 +3009,29 @@ components:
             required:
                 - games
                 - metadata
+            type: object
+        GameLogEntryResponse:
+            additionalProperties: false
+            properties:
+                created_at:
+                    format: date-time
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                message:
+                    type: string
+                type:
+                    type: string
+            required:
+                - id
+                - game_id
+                - type
+                - message
+                - created_at
             type: object
         GameLootTableContentResponse:
             additionalProperties: false
@@ -3540,6 +3611,21 @@ components:
             required:
                 - password
             type: object
+        LootTableContentResponse:
+            additionalProperties: false
+            properties:
+                data:
+                    type: string
+                id:
+                    format: int32
+                    type: integer
+                name:
+                    type: string
+            required:
+                - id
+                - name
+                - data
+            type: object
         LootTableItemBody:
             additionalProperties: false
             properties:
@@ -3565,9 +3651,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - post_id
                 - read_comment_ids
@@ -3729,9 +3813,7 @@ components:
                 data:
                     items:
                         $ref: '#/components/schemas/NotificationResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationInfo'
             required:
@@ -3828,9 +3910,7 @@ components:
                     description: Top-level comments and their nested replies, flattened
                     items:
                         $ref: '#/components/schemas/ThreadedCommentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_more:
                     description: Whether more top-level comments exist beyond this page
                     type: boolean
@@ -3950,6 +4030,52 @@ components:
                 - character_name
                 - character_avatar_url
             type: object
+        ParticipantListItemResponse:
+            additionalProperties: false
+            properties:
+                avatar_url:
+                    type:
+                        - string
+                        - "null"
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                is_former_player:
+                    type: boolean
+                joined_at:
+                    format: date-time
+                    type: string
+                role:
+                    enum:
+                        - player
+                        - co_gm
+                        - audience
+                    type: string
+                status:
+                    enum:
+                        - active
+                        - inactive
+                        - removed
+                    type: string
+                user_id:
+                    format: int32
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - game_id
+                - user_id
+                - username
+                - role
+                - status
+                - joined_at
+                - avatar_url
+                - is_former_player
+            type: object
         PendingApprovalBody:
             additionalProperties: false
             properties:
@@ -3994,6 +4120,10 @@ components:
                     format: int32
                     type: integer
                 phase_type:
+                    enum:
+                        - common_room
+                        - action
+                        - interlude
                     type: string
                 start_time:
                     format: date-time
@@ -4616,6 +4746,30 @@ components:
                 - is_edited
                 - edited_at
                 - edit_count
+            type: object
+        PublicApplicantResponse:
+            additionalProperties: false
+            properties:
+                applied_at:
+                    format: date-time
+                    type: string
+                avatar_url:
+                    type: string
+                id:
+                    format: int32
+                    type: integer
+                role:
+                    enum:
+                        - player
+                        - audience
+                    type: string
+                username:
+                    type: string
+            required:
+                - id
+                - username
+                - role
+                - applied_at
             type: object
         ReadMarkerResponse:
             additionalProperties: false
@@ -8764,11 +8918,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/PublicApplicantResponse'
+                                type: array
                     description: OK
                 "403":
                     description: The game is not recruiting
@@ -8853,11 +9004,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/ApplicationListItemResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10488,11 +10636,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/GameLogEntryResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10529,11 +10674,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/GameLootTableResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10688,11 +10830,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/LootTableContentResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10934,8 +11073,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
+                                    $ref: '#/components/schemas/ParticipantListItemResponse'
                                 type:
                                     - array
                                     - "null"

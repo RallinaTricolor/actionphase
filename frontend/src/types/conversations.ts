@@ -9,16 +9,11 @@ import type { components } from './api.gen';
  */
 export type Conversation = components['schemas']['ConversationResponse'];
 
-interface ConversationParticipant {
-  id: number;
-  conversation_id: number;
-  user_id: number;
-  character_id?: number;
-  joined_at: string;
-  username: string;
-  character_name?: string;
-  character_avatar_url?: string | null;
-}
+// The module-private ConversationParticipant that used to sit here existed
+// only to type ConversationWithDetails.participants. That type is generated
+// now and carries the element shape itself, leaving this with no consumers --
+// so it is deleted rather than kept as a parallel definition that could drift.
+// Recover it as ConversationWithDetails['participants'][number] if needed.
 
 export interface PrivateMessage {
   id: number;
@@ -46,10 +41,16 @@ export interface PrivateMessage {
  */
 export type ConversationListItem = components['schemas']['ConversationListItemResponse'];
 
-export interface ConversationWithDetails {
-  conversation: Conversation;
-  participants: ConversationParticipant[];
-}
+/**
+ * Generated. A conversation plus its participant list.
+ *
+ * `participants` needed a backend `nullable:"false"` first. Its converter opens
+ * `if rows == nil { return nil }` and sqlc does return nil for zero rows, so
+ * the branch is reachable in principle -- but every participant insert runs in
+ * the transaction that creates the conversation, so a zero-participant
+ * conversation cannot be committed. See the tag's comment before relying on it.
+ */
+export type ConversationWithDetails = components['schemas']['ConversationDetailOutputBody'];
 
 // Request types
 //
@@ -70,6 +71,20 @@ export type AddParticipantRequest = components['schemas']['AddParticipantRequest
 export type UpdateMessageRequest = components['schemas']['UpdateMessageRequest'];
 
 // Audience viewing types (read-only conversation access for audience members)
+
+/**
+ * NOT generated, deliberately.
+ *
+ * Its schema (PrivateConversationResponse) declares four fields as Go
+ * `interface{}` -- last_message_at, participant_names, participant_usernames
+ * and participant_character_ids -- which huma renders as an untyped `{}` and
+ * openapi-typescript emits as `unknown`. Aliasing would therefore make this
+ * type strictly WORSE than the hand-written one, turning four usable fields
+ * into values every call site has to cast.
+ *
+ * The fix is on the Go side: give those four real types. Until then this stays
+ * hand-written, and the fields below are the shape the wire actually sends.
+ */
 export interface AudienceConversationListItem {
   conversation_id: number;
   subject?: string | null;
@@ -86,18 +101,15 @@ export interface AudienceConversationListItem {
   last_sender_character_id?: number | null;
 }
 
-export interface AudienceConversationMessage {
-  id: number;
-  conversation_id: number;
-  sender_user_id?: number;
-  sender_character_id?: number;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  is_deleted: boolean;
-  sender_username: string;
-  sender_character_name?: string | null;
-}
+/**
+ * Generated. One message in an audience-visible conversation.
+ *
+ * `sender_user_id` and `sender_character_id` were declared optional and are in
+ * fact required-and-nullable: both are bare `*int32` with NO omitempty, so a
+ * nil marshals as an explicit null rather than dropping the key. Absent and
+ * null mean different things and the wire sends the latter.
+ */
+export type AudienceConversationMessage = components['schemas']['AudienceMessageResponse'];
 
 /**
  * A character appearing in at least one conversation, used for the audience

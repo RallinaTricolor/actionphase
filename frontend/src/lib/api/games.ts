@@ -3,6 +3,7 @@ import type {
   GameWritten,
   GameWithDetails,
   GameParticipant,
+  AudienceMembersResponse,
   CreateGameRequest,
   UpdateGameRequest,
   UpdateGameStateRequest,
@@ -167,8 +168,18 @@ export class GamesApi extends BaseApiClient {
   }
 
   // Audience Participation endpoints
+
+  /**
+   * Annotated with the endpoint's own schema, not GameParticipant.
+   *
+   * This said `{ audience_members: GameParticipant[] }`, which claimed two
+   * fields the route does not send: AudienceMemberResponse is a strict subset
+   * with no `avatar_url` and no `is_former_player`. No live bug -- the method
+   * has no callers -- but the annotation would have handed the first one two
+   * permanently-undefined properties the type promised were there.
+   */
   async listAudienceMembers(gameId: number) {
-    return this.client.get<{ audience_members: GameParticipant[] }>(`/api/v1/games/${gameId}/audience`);
+    return this.client.get<AudienceMembersResponse>(`/api/v1/games/${gameId}/audience`);
   }
 
   async setAutoAcceptAudience(gameId: number, autoAccept: boolean) {

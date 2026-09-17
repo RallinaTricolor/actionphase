@@ -42,7 +42,11 @@ type Community struct {
 	// normally sees "" here and gets "owner" only with admin mode enabled. That
 	// is precisely why the role rides on the response rather than on a cached
 	// login payload.
-	YourRole CommunityRole `json:"your_role"`
+	// Tagged so the generated TypeScript keeps the three-value union the
+	// hand-written CommunityRole carried; a named Go string type alone
+	// renders as bare `string` (huma only derives enums from a tag or a
+	// SchemaProvider). Values are the CommunityRole constants below.
+	YourRole CommunityRole `json:"your_role" enum:",moderator,owner"`
 
 	// IsBanned reports whether the REQUESTING user is currently barred from
 	// this community. Like YourRole it describes the request, not the

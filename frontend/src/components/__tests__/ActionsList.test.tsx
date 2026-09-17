@@ -34,6 +34,7 @@ vi.mock('../CreateActionResultForm', () => ({
 
 describe('ActionsList', () => {
   const mockActionPhase1: GamePhase = {
+    is_expired: false,
     id: 1,
     game_id: 1,
     phase_type: 'action',
@@ -48,6 +49,7 @@ describe('ActionsList', () => {
   };
 
   const mockActionPhase2: GamePhase = {
+    is_expired: false,
     id: 2,
     game_id: 1,
     phase_type: 'action',
@@ -62,6 +64,7 @@ describe('ActionsList', () => {
   };
 
   const mockCommonRoomPhase: GamePhase = {
+    is_expired: false,
     id: 3,
     game_id: 1,
     phase_type: 'common_room',
@@ -333,22 +336,6 @@ describe('ActionsList', () => {
       });
     });
 
-    it('shows phase title in action card phase info', async () => {
-      const actionsWithTitle: ActionWithDetails[] = [
-        {
-          ...mockActions[0],
-          phase_title: 'The Great Heist',
-        },
-      ];
-      setupDefaultHandlers(actionsWithTitle);
-
-      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
-
-      await waitFor(() => {
-        expect(screen.getAllByText(/The Great Heist/i)[0]).toBeInTheDocument();
-      });
-    });
-
     it('falls back to "Action Phase" in dropdown when phase has no title', async () => {
       const phaseWithoutTitle: GamePhase = { ...mockActionPhase1, title: undefined };
       setupDefaultHandlers(mockActions, [phaseWithoutTitle]);
@@ -361,7 +348,12 @@ describe('ActionsList', () => {
       });
     });
 
-    it('falls back to "action phase" in action card when action has no phase_title', async () => {
+    // The action card shows the phase TYPE, not a per-action title. A sibling
+    // test used to assert a `phase_title` on the action body; no Go struct has
+    // ever carried that field, so it was asserting a shape the server cannot
+    // send -- it passed only because MSW fixture bodies are untyped. The
+    // dropdown above reads the phase's own `title`, which is real.
+    it('shows the phase type in the action card', async () => {
       setupDefaultHandlers([mockActions[0]]);
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });

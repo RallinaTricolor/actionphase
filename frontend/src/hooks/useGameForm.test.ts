@@ -32,9 +32,9 @@ describe('useGameForm — buildApiPayload', () => {
     const { payload, error } = result.current.buildApiPayload();
     expect(error).toBeNull();
     expect(payload).not.toBeNull();
-    expect(payload!.common_room_open_day).toBeNull();
-    expect(payload!.common_room_close_day).toBeNull();
-    expect(payload!.schedule_timezone).toBeNull();
+    expect(payload!.common_room_open_day).toBeUndefined();
+    expect(payload!.common_room_close_day).toBeUndefined();
+    expect(payload!.schedule_timezone).toBeUndefined();
   });
 
   it('treats Sunday (day 0) as a filled schedule field, not absent', () => {
@@ -86,17 +86,22 @@ describe('useGameForm — buildApiPayload', () => {
     expect(payload!.schedule_timezone).toBeTruthy();
   });
 
-  it('sends all nulls when schedule fields are left blank', () => {
+  it('omits all schedule fields when they are left blank', () => {
+    // Was "sends all nulls". The schedule fields are `*T` with omitempty on the
+    // Go side, so the wire contract is an ABSENT key, and the service clears a
+    // schedule on `req.CommonRoomOpenDay != nil` -- which JSON null and an
+    // omitted key both produce. Behaviour is identical; this now asserts the
+    // spelling the generated request type actually declares.
     const { result } = renderHook(() => useGameForm());
     act(() => {
       result.current.handleChange('title', 'My Game');
       result.current.handleChange('description', 'A description');
     });
     const { payload } = result.current.buildApiPayload();
-    expect(payload!.common_room_open_day).toBeNull();
-    expect(payload!.common_room_open_time).toBeNull();
-    expect(payload!.common_room_close_day).toBeNull();
-    expect(payload!.common_room_close_time).toBeNull();
-    expect(payload!.schedule_timezone).toBeNull();
+    expect(payload!.common_room_open_day).toBeUndefined();
+    expect(payload!.common_room_open_time).toBeUndefined();
+    expect(payload!.common_room_close_day).toBeUndefined();
+    expect(payload!.common_room_close_time).toBeUndefined();
+    expect(payload!.schedule_timezone).toBeUndefined();
   });
 });

@@ -43,6 +43,8 @@ describe('GameHeader - profile links', () => {
       role: 'co_gm' as const,
       status: 'active' as const,
       joined_at: '2024-01-01T00:00:00Z',
+      avatar_url: null,
+      is_former_player: false,
     };
 
     renderInRouter(<GameHeader game={mockGame} participants={[coGMParticipant]} />);

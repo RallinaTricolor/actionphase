@@ -18,10 +18,11 @@ export type Handout = components['schemas']['HandoutResponse'];
  * A handout together with the game it belongs to, as returned by the cross-game
  * list. Used by the global Utility Drawer, where there is no game in scope to
  * resolve the title from.
+ *
+ * Generated: the backend declares this as its own schema, so the
+ * `extends Handout` that mirrored it by hand is redundant.
  */
-export interface HandoutWithGame extends Handout {
-  game_title: string;
-}
+export type HandoutWithGame = components['schemas']['HandoutWithGameResponse'];
 
 /**
  * Generated. The nullable-looking fields are absent, never null: every one is an

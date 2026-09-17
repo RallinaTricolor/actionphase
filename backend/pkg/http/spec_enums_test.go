@@ -311,6 +311,20 @@ func TestCurrentUserResponseHasASchema(t *testing.T) {
 //	PostUnreadCommentsResponse.unread_comment_ids  unreadIDs := []int32{} per row
 //	FavoriteCommentIDsResponse.favorite_comment_ids  explicit nil guard
 //	UserGame.characters                  []core.UserGameCharacter{} on map insert
+//	ManualReadCommentIDsResponse.read_comment_ids  []int32{} on map insert
+//	CommunityWebhook.events              TEXT[] NOT NULL DEFAULT '{}'
+//
+// The last two were found later, while aliasing the list responses that carry
+// them. This list is an allowlist, so it pins what is known and cannot discover
+// a new one -- read_comment_ids sat six lines below unread_comment_ids in the
+// same file, tagged differently, for a whole pass. When adding a nullable:"false"
+// tag, add the pin here too.
+//
+// CommunityWebhook.events is the one whose converter LOOKS nullable:
+// core.WebhookEvents opens with `if values == nil { return nil }`. That branch is
+// unreachable on the read path -- the column is NOT NULL DEFAULT '{}' and pgx
+// scans an empty array to a non-nil zero-length slice (verified by probe, not
+// assumed). Trace to the column, not just to the converter.
 //
 // NOT included, deliberately: GameListingMetadataResponse.available_states is
 // genuinely nullable -- core.GameStates returns nil for a nil input, and the
@@ -334,6 +348,8 @@ func TestResponseArraysAreNotNullable(t *testing.T) {
 		{"PostUnreadCommentsResponse", "unread_comment_ids"},
 		{"FavoriteCommentIDsResponse", "favorite_comment_ids"},
 		{"UserGame", "characters"},
+		{"ManualReadCommentIDsResponse", "read_comment_ids"},
+		{"CommunityWebhook", "events"},
 	} {
 		t.Run(tc.schema+"."+tc.prop, func(t *testing.T) {
 			p := schemaProperty(t, doc, tc.schema, tc.prop)
@@ -443,4 +459,87 @@ func TestUpdateGameStateResponseMatchesWhatItSends(t *testing.T) {
 			"regardless of what the game has stored, so the spec tells every " +
 			"client something the server never promised")
 	}
+}
+
+// TestListEndpointArrayNullability pins which of the six game list endpoints
+// may answer with `null` instead of an empty array.
+//
+// These six built `[]map[string]any` by hand until their shapes were named. The
+// handlers disagree about the empty case and always have: five build with
+// make(...,0) and send `[]`, while participants appends to a bare `var` and
+// sends `null`. That difference was inherited from the chi handlers and is a
+// live wire contract, so it is preserved rather than normalised -- but it is
+// only discoverable by reading each handler, which is why it is pinned here.
+//
+// The direction matters more than the values. A wrong `nullable:"false"` makes
+// the spec claim a null can never arrive when it can, so the generated
+// TypeScript drops the `| null` and a `.map()` on the empty case throws at
+// runtime. The opposite error is merely noisy. Do not add the tag to an
+// endpoint without checking that its handler uses make(...).
+func TestListEndpointArrayNullability(t *testing.T) {
+	doc := specDocument(t)
+
+	for _, tc := range []struct {
+		path     string
+		nullable bool
+		why      string
+	}{
+		{"/games/{gameID}/participants", true,
+			"handler appends to `var response []T`, so an empty list marshals as null"},
+		{"/games/{gameID}/applications", false, "make([]T, 0)"},
+		{"/games/{gameID}/applicants", false, "make([]T, 0)"},
+		{"/games/{gameID}/logs", false, "make([]T, 0)"},
+		{"/games/{gameID}/loot-tables", false, "make([]T, 0)"},
+		{"/games/{gameID}/loot-tables/{tableId}/contents", false, "make([]T, 0)"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			schema := responseSchema(t, doc, tc.path, "get", "200")
+
+			// A nullable array renders as type: [array, null]; a non-nullable
+			// one as the bare string "array".
+			_, isPlainString := schema["type"].(string)
+			gotNullable := !isPlainString
+
+			if gotNullable != tc.nullable {
+				t.Errorf("GET %s renders type %v (nullable=%v), want nullable=%v -- %s",
+					tc.path, schema["type"], gotNullable, tc.nullable, tc.why)
+			}
+
+			// Each must reference a named element schema; an inline object
+			// means the []map[string]any regressed back in.
+			items, _ := schema["items"].(map[string]any)
+			if _, ok := items["$ref"]; !ok {
+				t.Errorf("GET %s items is %v, want a $ref -- an unnamed element "+
+					"generates as an index signature and cannot be aliased",
+					tc.path, items)
+			}
+		})
+	}
+}
+
+// responseSchema returns the JSON response schema for one operation.
+func responseSchema(t *testing.T, doc map[string]any, path, method, code string) map[string]any {
+	t.Helper()
+
+	paths, _ := doc["paths"].(map[string]any)
+	p, ok := paths[path].(map[string]any)
+	if !ok {
+		t.Fatalf("path %q is not in the rendered spec", path)
+	}
+	op, ok := p[method].(map[string]any)
+	if !ok {
+		t.Fatalf("path %q has no %s operation", path, method)
+	}
+	responses, _ := op["responses"].(map[string]any)
+	resp, ok := responses[code].(map[string]any)
+	if !ok {
+		t.Fatalf("%s %s has no %s response", method, path, code)
+	}
+	content, _ := resp["content"].(map[string]any)
+	media, ok := content["application/json"].(map[string]any)
+	if !ok {
+		t.Fatalf("%s %s %s has no application/json content", method, path, code)
+	}
+	schema, _ := media["schema"].(map[string]any)
+	return schema
 }

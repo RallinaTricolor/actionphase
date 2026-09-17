@@ -101,10 +101,14 @@ export type ApproveCharacterRequest = components['schemas']['ApproveCharacterReq
 /** PUT /characters/{id}/assign */
 export type AssignNPCRequest = components['schemas']['AssignNPCRequest'];
 
-export interface CharacterActivityStats {
-  public_messages: number;
-  private_messages?: number;
-}
+/**
+ * Generated. Per-character message counts.
+ *
+ * `private_messages` is optional because it is WITHHELD from callers who may
+ * not see it -- this is the entitlement-within-a-shape pattern, not a value
+ * that happens to be missing. Absent means "not allowed to know", not "zero".
+ */
+export type CharacterActivityStats = components['schemas']['CharacterStatsResponse'];
 
 // Individual skill item structure for JSON fields.
 //

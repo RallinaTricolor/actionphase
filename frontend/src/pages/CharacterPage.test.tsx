@@ -92,6 +92,7 @@ const mockComment: CharacterMessage = {
     message_type: 'post',
     author_username: 'someone',
     character_name: 'Other Character',
+    character_avatar_url: null,
   },
 };
 

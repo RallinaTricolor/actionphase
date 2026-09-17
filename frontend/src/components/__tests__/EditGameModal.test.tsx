@@ -569,12 +569,22 @@ describe('EditGameModal', () => {
           auto_accept_audience: true,
           allow_group_conversations: expect.any(Boolean),
           portrait_avatars: expect.any(Boolean),
-          common_room_open_day: null,
-          common_room_open_time: null,
-          common_room_close_day: null,
-          common_room_close_time: null,
-          schedule_timezone: null,
         });
+        // The five schedule keys are now ABSENT rather than null. They are `*T`
+        // with omitempty on the Go side, and the service clears a schedule on
+        // `CommonRoomOpenDay != nil` -- which JSON null and an omitted key both
+        // produce -- so this is a spelling change, not a behaviour change.
+        // Asserted explicitly because toEqual above treats an absent key and an
+        // explicit undefined as equal, and would not catch one reappearing.
+        for (const key of [
+          'common_room_open_day',
+          'common_room_open_time',
+          'common_room_close_day',
+          'common_room_close_time',
+          'schedule_timezone',
+        ]) {
+          expect(requestBody).not.toHaveProperty(key);
+        }
         // banner_url must NOT be in the payload — the upload/delete mutations manage it
         // independently, and including it here would overwrite a freshly uploaded banner
         expect(requestBody).not.toHaveProperty('banner_url');

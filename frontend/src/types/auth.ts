@@ -93,9 +93,8 @@ export function isRegisterCreated(
 /** POST /auth/change-password — generated, as above. */
 export type ChangePasswordRequest = components['schemas']['ChangePasswordRequest'];
 
-export interface ChangePasswordResponse {
-  message: string;
-}
+/** POST /auth/change-password, 200 — generated. Just a confirmation message. */
+export type ChangePasswordResponse = components['schemas']['MessageBody'];
 
 interface Session {
   id: number;

@@ -33,7 +33,8 @@ type NotificationResponse struct {
 }
 
 type NotificationListResponse struct {
-	Data       []*NotificationResponse `json:"data"`
+	// nullable:"false": built with make(..., len(notifications)).
+	Data       []*NotificationResponse `json:"data" nullable:"false"`
 	Pagination *PaginationInfo         `json:"pagination"`
 }
 

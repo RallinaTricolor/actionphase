@@ -9,55 +9,27 @@
 
 import type { components } from './api.gen';
 
-export interface Community {
-  id: number;
-  name: string;
-  /** URL identifier. Immutable after creation. */
-  slug: string;
-  description: string | null;
-  /**
-   * Read-only here. Banners are uploaded objects, not typed-in URLs, so they
-   * are written through a dedicated upload/delete endpoint rather than the
-   * general update request.
-   */
-  banner_url: string | null;
-  owner_user_id: number;
-  /** Populated by list endpoints, absent on single-record reads. */
-  owner_username?: string;
-  /** Inactive communities accept no new games. */
-  is_active: boolean;
-  /**
-   * The REQUESTING user's standing in this community -- '' | 'moderator' |
-   * 'owner'. A property of the response, not of the community.
-   *
-   * Gate moderation UI on this rather than comparing against owner_user_id:
-   * that comparison misses moderators entirely, and misses a site admin with
-   * admin mode on. The server recomputes it per request, so it tracks the
-   * admin-mode toggle that a cached login payload could not.
-   *
-   * Optional in the type only so fixtures and older cached payloads that
-   * predate the field still typecheck; treat a missing value as ''.
-   */
-  your_role?: CommunityRole;
-  /**
-   * Whether the REQUESTING user is currently banned from this community.
-   * A property of the response, not of the community -- computed per request
-   * like your_role.
-   *
-   * "Currently" matters: an expired ban leaves its row behind deliberately, so
-   * this is false once a ban lapses. Never infer a ban from a row's presence.
-   *
-   * Use it to filter the game-creation picker, not the browse listing -- a ban
-   * blocks joining, not looking. It is convenience only; the ban check on game
-   * creation is the enforcement.
-   *
-   * Optional in the type only so fixtures and older cached payloads still
-   * typecheck; treat a missing value as false.
-   */
-  is_banned?: boolean;
-  created_at: string;
-  updated_at: string;
-}
+/**
+ * Generated. A community as any read endpoint returns it.
+ *
+ * `your_role` and `is_banned` describe the REQUESTING USER, not the community:
+ * both are recomputed per request, which is why they ride on the response
+ * rather than a cached login payload. They were declared optional here "so
+ * fixtures and older cached payloads still typecheck" -- the server always
+ * sends them, so that optionality only ever hid inaccurate fixtures.
+ *
+ * Gate moderation UI on `your_role`, never on `owner_user_id`: that comparison
+ * misses moderators entirely, and misses a site admin with admin mode on.
+ *
+ * `is_banned` means CURRENTLY banned -- an expired ban leaves its row behind
+ * deliberately, so never infer a ban from a row's presence. Use it to filter
+ * the game-creation picker, not the browse listing: a ban blocks joining, not
+ * looking, and the check on game creation is the real enforcement.
+ *
+ * `banner_url` is read-only here; banners are uploaded objects written through
+ * a dedicated upload/delete endpoint. `slug` is immutable after creation.
+ */
+export type Community = components['schemas']['Community'];
 
 /**
  * A user's standing within one community.
@@ -65,7 +37,10 @@ export interface Community {
  * Owner and moderator are two tiers, not one ranked enum: moderators may do
  * everything an owner can EXCEPT manage the moderator roster.
  */
-type CommunityRole = '' | 'moderator' | 'owner';
+// The module-private CommunityRole that used to sit here typed Community's
+// your_role field by hand. That type is generated now and carries the union
+// itself (from an enum tag on the Go field), leaving this with no consumers.
+// Recover it as Community['your_role'] if one is ever needed.
 
 export type CommunityModerator = components['schemas']['CommunityModerator'];
 
@@ -241,29 +216,20 @@ export const WEBHOOK_EVENT_LABELS: Record<WebhookEvent, string> = {
  * the server never returns it on any endpoint. Never display this as though it
  * were re-usable, and never send it back as the `url` of an update: doing so
  * would overwrite the stored credential with bullet characters.
+ *
+ * The three `last_*` fields are the entire observability story, since there is
+ * no delivery history table. All three absent means "never used yet", a distinct
+ * UI state from a failure; `last_success_at` survives a later failure on purpose,
+ * because "worked at 09:00, broken since 14:00" is the diagnosis a moderator
+ * needs.
+ *
+ * Generated. `events` needed a backend `nullable:"false"` first: its converter
+ * opens with `if values == nil { return nil }`, but the column is
+ * `TEXT[] NOT NULL DEFAULT '{}'` and pgx scans an empty array to a non-nil
+ * slice, so that branch is unreachable here and `hook.events.length` is correct
+ * to read unguarded.
  */
-export interface CommunityWebhook {
-  id: number;
-  community_id: number;
-  /** Masked. See the warning above. */
-  url: string;
-  label?: string;
-  is_enabled: boolean;
-  events: WebhookEvent[];
-  /**
-   * Delivery status — the entire observability story, since there is no
-   * delivery history table. All three null means "never used yet", which is a
-   * distinct UI state from a failure.
-   *
-   * `last_success_at` survives a later failure on purpose: "worked at 09:00,
-   * broken since 14:00" is the diagnosis a moderator needs.
-   */
-  last_success_at?: string;
-  last_error?: string;
-  last_error_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+export type CommunityWebhook = components['schemas']['CommunityWebhook'];
 
 /**
  * Register a webhook. `is_enabled` omitted means enabled.
@@ -283,8 +249,5 @@ export type CreateCommunityWebhookRequest = components['schemas']['CreateWebhook
  */
 export type UpdateCommunityWebhookRequest = components['schemas']['UpdateWebhookInputBody'];
 
-/** Result of the synchronous "send a test message" button. */
-export interface WebhookTestResult {
-  success: boolean;
-  message: string;
-}
+/** Result of the synchronous "send a test message" button. Generated. */
+export type WebhookTestResult = components['schemas']['WebhookTestOutputBody'];

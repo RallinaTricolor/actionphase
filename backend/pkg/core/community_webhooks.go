@@ -34,7 +34,12 @@ type CommunityWebhook struct {
 	// Events are the game states this webhook fires on. Empty means it fires for
 	// nothing -- a valid configuration (a moderator staging a webhook before
 	// choosing its events), not an error.
-	Events []WebhookEvent `json:"events"`
+	//
+	// nullable:"false": the column is TEXT[] NOT NULL DEFAULT '{}' and pgx scans
+	// an empty array to a non-nil zero-length slice, so WebhookEvents' nil
+	// branch is unreachable on this path. Without the tag huma reports `| null`
+	// and the frontend has to dead-guard `hook.events.length`.
+	Events []WebhookEvent `json:"events" nullable:"false"`
 
 	// Delivery status. LastSuccessAt survives a later failure on purpose:
 	// "worked at 09:00, broken since 14:00" is the useful diagnosis, and

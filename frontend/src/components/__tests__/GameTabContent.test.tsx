@@ -81,6 +81,7 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
   const mockParticipants: GameParticipant[] = [];
 
   const mockPhase: GamePhase = {
+    is_expired: false,
     id: 1,
     game_id: 326,
     phase_type: 'action',

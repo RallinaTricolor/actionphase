@@ -3741,6 +3741,27 @@ export interface components {
              */
             delay_minutes: number;
         };
+        ApplicationListItemResponse: {
+            /** Format: date-time */
+            applied_at: string;
+            avatar_url?: string;
+            /** Format: int32 */
+            game_id: number;
+            /** Format: int32 */
+            id: number;
+            message?: string;
+            /** Format: date-time */
+            reviewed_at?: string;
+            /** Format: int32 */
+            reviewed_by_user_id?: number;
+            /** @enum {string} */
+            role: "player" | "audience";
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "withdrawn";
+            /** Format: int32 */
+            user_id: number;
+            username: string;
+        };
         ApplyToGameBody: {
             message?: string;
             /** @enum {string} */
@@ -3921,8 +3942,11 @@ export interface components {
              */
             id: number;
             is_deleted: boolean;
-            /** @description "post" or "comment" */
-            message_type: string;
+            /**
+             * @description "post" or "comment"
+             * @enum {string}
+             */
+            message_type: "post" | "comment";
             /** @description The message being replied to, for comments */
             parent?: components["schemas"]["ParentContextResponse"];
             /**
@@ -3932,7 +3956,7 @@ export interface components {
             parent_id: number | null;
         };
         CharacterMessagesResponse: {
-            messages: components["schemas"]["CharacterMessageResponse"][] | null;
+            messages: components["schemas"]["CharacterMessageResponse"][];
             pagination: components["schemas"]["PaginationResponse"];
         };
         CharacterResponse: {
@@ -4117,7 +4141,8 @@ export interface components {
             slug: string;
             /** Format: date-time */
             updated_at: string;
-            your_role: string;
+            /** @enum {string} */
+            your_role: "" | "moderator" | "owner";
         };
         CommunityBan: {
             avatar_url?: string;
@@ -4197,7 +4222,7 @@ export interface components {
             community_id: number;
             /** Format: date-time */
             created_at: string;
-            events: ("recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[] | null;
+            events: ("recruitment" | "character_creation" | "in_progress" | "paused" | "epilogue" | "completed" | "cancelled")[];
             /** Format: int32 */
             id: number;
             is_enabled: boolean;
@@ -4274,7 +4299,7 @@ export interface components {
         };
         ConversationDetailOutputBody: {
             conversation: components["schemas"]["ConversationResponse"];
-            participants: components["schemas"]["ConversationParticipantResponse"][] | null;
+            participants: components["schemas"]["ConversationParticipantResponse"][];
         };
         ConversationListItemResponse: {
             conversation_type: string;
@@ -4647,18 +4672,18 @@ export interface components {
             phase: components["schemas"]["PhaseResponse"];
         };
         DashboardData: {
-            audience_games: components["schemas"]["DashboardGameCard"][] | null;
-            gm_games: components["schemas"]["DashboardGameCard"][] | null;
+            audience_games: components["schemas"]["DashboardGameCard"][];
+            gm_games: components["schemas"]["DashboardGameCard"][];
             has_games: boolean;
-            mixed_role_games: components["schemas"]["DashboardGameCard"][] | null;
+            mixed_role_games: components["schemas"]["DashboardGameCard"][];
             notifications_by_type: {
                 [key: string]: number;
             };
-            player_games: components["schemas"]["DashboardGameCard"][] | null;
-            recent_messages: components["schemas"]["DashboardMessage"][] | null;
+            player_games: components["schemas"]["DashboardGameCard"][];
+            recent_messages: components["schemas"]["DashboardMessage"][];
             /** Format: int64 */
             unread_notifications: number;
-            upcoming_deadlines: components["schemas"]["DashboardDeadline"][] | null;
+            upcoming_deadlines: components["schemas"]["DashboardDeadline"][];
             /** Format: int32 */
             user_id: number;
         };
@@ -4691,7 +4716,8 @@ export interface components {
             current_phase_id?: number;
             current_phase_title?: string;
             current_phase_type?: string;
-            deadline_status: string;
+            /** @enum {string} */
+            deadline_status: "critical" | "warning" | "normal";
             description?: string;
             /** Format: int32 */
             game_id: number;
@@ -4728,7 +4754,8 @@ export interface components {
             game_title: string;
             /** Format: int32 */
             message_id: number;
-            message_type: string;
+            /** @enum {string} */
+            message_type: "post" | "comment" | "private_message";
             /** Format: int32 */
             phase_id?: number;
         };
@@ -4918,7 +4945,8 @@ export interface components {
             progress?: string;
             /** Format: int64 */
             size_bytes?: number;
-            status: string;
+            /** @enum {string} */
+            status: "pending" | "running" | "complete" | "failed";
         };
         FavoriteCommentIDsResponse: {
             /** @description Comments the caller has starred */
@@ -4973,7 +5001,7 @@ export interface components {
             post_id: number | null;
         };
         FavoriteCommentsResponse: {
-            favorites: components["schemas"]["FavoriteCommentResponse"][] | null;
+            favorites: components["schemas"]["FavoriteCommentResponse"][];
             pagination: components["schemas"]["FavoritesPaginationResponse"];
         };
         FavoritesPaginationResponse: {
@@ -5035,6 +5063,16 @@ export interface components {
         GameListingResponse: {
             games: components["schemas"]["EnrichedGameListItemResponse"][];
             metadata: components["schemas"]["GameListingMetadataResponse"];
+        };
+        GameLogEntryResponse: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int32 */
+            game_id: number;
+            /** Format: int32 */
+            id: number;
+            message: string;
+            type: string;
         };
         GameLootTableContentResponse: {
             data: string | null;
@@ -5361,6 +5399,12 @@ export interface components {
             /** @description Username or email address */
             username?: string;
         };
+        LootTableContentResponse: {
+            data: string;
+            /** Format: int32 */
+            id: number;
+            name: string;
+        };
         LootTableItemBody: {
             /** @description GM-authored JSON blob describing the item */
             data: string;
@@ -5370,7 +5414,7 @@ export interface components {
             /** Format: int32 */
             post_id: number;
             /** @description Comments the caller explicitly marked read */
-            read_comment_ids: number[] | null;
+            read_comment_ids: number[];
         };
         MarkAllReadResponse: {
             /** Format: int64 */
@@ -5440,7 +5484,7 @@ export interface components {
             messages: components["schemas"]["ConversationMessageResponse"][] | null;
         };
         NotificationListResponse: {
-            data: components["schemas"]["NotificationResponse"][] | null;
+            data: components["schemas"]["NotificationResponse"][];
             pagination: components["schemas"]["PaginationInfo"];
         };
         NotificationResponse: {
@@ -5483,7 +5527,7 @@ export interface components {
         };
         PaginatedCommentsResponse: {
             /** @description Top-level comments and their nested replies, flattened */
-            comments: components["schemas"]["ThreadedCommentResponse"][] | null;
+            comments: components["schemas"]["ThreadedCommentResponse"][];
             /** @description Whether more top-level comments exist beyond this page */
             has_more: boolean;
             /**
@@ -5552,6 +5596,23 @@ export interface components {
             /** @description "post" or "comment" */
             message_type: string | null;
         };
+        ParticipantListItemResponse: {
+            avatar_url: string | null;
+            /** Format: int32 */
+            game_id: number;
+            /** Format: int32 */
+            id: number;
+            is_former_player: boolean;
+            /** Format: date-time */
+            joined_at: string;
+            /** @enum {string} */
+            role: "player" | "co_gm" | "audience";
+            /** @enum {string} */
+            status: "active" | "inactive" | "removed";
+            /** Format: int32 */
+            user_id: number;
+            username: string;
+        };
         PendingApprovalBody: {
             error: string;
             status: string;
@@ -5575,7 +5636,8 @@ export interface components {
             is_published: boolean;
             /** Format: int32 */
             phase_number: number;
-            phase_type: string;
+            /** @enum {string} */
+            phase_type: "common_room" | "action" | "interlude";
             /** Format: date-time */
             start_time?: string;
             /** Format: int64 */
@@ -5854,6 +5916,16 @@ export interface components {
             sender_user_id: number;
             /** Format: date-time */
             updated_at: string;
+        };
+        PublicApplicantResponse: {
+            /** Format: date-time */
+            applied_at: string;
+            avatar_url?: string;
+            /** Format: int32 */
+            id: number;
+            /** @enum {string} */
+            role: "player" | "audience";
+            username: string;
         };
         ReadMarkerResponse: {
             /** Format: date-time */
@@ -10641,9 +10713,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["PublicApplicantResponse"][];
                 };
             };
             /** @description The game is not recruiting */
@@ -10766,9 +10836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["ApplicationListItemResponse"][];
                 };
             };
             /** @description Not authenticated */
@@ -12588,9 +12656,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["GameLogEntryResponse"][];
                 };
             };
             /** @description Not authenticated */
@@ -12630,9 +12696,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["GameLootTableResponse"][];
                 };
             };
             /** @description Not authenticated */
@@ -12827,9 +12891,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["LootTableContentResponse"][];
                 };
             };
             /** @description Not authenticated */
@@ -13108,9 +13170,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[] | null;
+                    "application/json": components["schemas"]["ParticipantListItemResponse"][] | null;
                 };
             };
             /** @description Not authenticated */

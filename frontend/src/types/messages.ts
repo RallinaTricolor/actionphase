@@ -61,26 +61,42 @@ export type MarkPostReadRequest = components['schemas']['MarkPostReadRequest'];
 // Unread comment IDs for posts (new since last visit). Generated.
 export type PostUnreadComments = components['schemas']['PostUnreadCommentsResponse'];
 
-// Manually read comment IDs for a post (user-controlled, persisted)
-export interface ManualCommentReads {
-  post_id: number;
-  read_comment_ids: number[];
-}
+// Manually read comment IDs for a post (user-controlled, persisted). Generated.
+//
+// `read_comment_ids` needed a backend `nullable:"false"` first, exactly as its
+// sibling PostUnreadComments did -- the two structs sit six lines apart and only
+// one had been tagged. The service seeds every map entry with []int32{} and only
+// appends, so the null the spec reported was unreachable.
+export type ManualCommentReads = components['schemas']['ManualReadCommentIDsResponse'];
 
-// Paginated comments with threads (includes depth for tree building)
-export interface CommentWithDepth extends Message {
-  depth: number; // Nesting depth (0 = top-level, 1+ = nested replies)
-}
+/**
+ * Generated. One comment in the paginated tree view, with the depth the client
+ * needs to nest it.
+ *
+ * Was `extends Message`, which claimed SEVEN fields this endpoint does not
+ * send: comment_count, edit_count, is_draft, updated_at, deleted_at,
+ * deleted_by_user_id and edited_at. The threaded list is deliberately narrower
+ * than the detail response.
+ *
+ * ThreadedComment.tsx reads edited_at / edit_count / deleted_at, which looks
+ * like a bug but is not: its `comment` prop is `Message | CommentTreeNode`, so
+ * those reads serve the Message arm and are `&&`-guarded for the tree arm. They
+ * were simply never reachable through a tree node, and now the type says so.
+ */
+export type CommentWithDepth = components['schemas']['ThreadedCommentResponse'];
 
-export interface PaginatedCommentsResponse {
-  comments: CommentWithDepth[];
-  total_top_level: number;      // Total top-level comments
-  returned_top_level: number;   // Top-level comments in this response
-  returned_total: number;       // Total comments including nested
-  has_more: boolean;            // More pages available?
-  limit: number;
-  offset: number;
-}
+/**
+ * Generated. One page of the threaded comment view.
+ *
+ * Four counts because they answer different questions: total_top_level drives
+ * the pager, returned_top_level / returned_total describe this page (which
+ * holds nested replies as well as top-level comments), and has_more says
+ * whether paging further is worthwhile.
+ *
+ * `comments` needed a backend `nullable:"false"` first -- it is make()d before
+ * the loop, so the null huma inferred was unreachable.
+ */
+export type PaginatedCommentsResponse = components['schemas']['PaginatedCommentsResponse'];
 
 // Deep-link thread context (for jumping to a nested comment).
 // Returned by GET /games/{id}/messages/{messageId}/thread-context.
@@ -180,57 +196,33 @@ export interface FavoriteComment {
   } | null;
 }
 
-export interface FavoriteCommentsResponse {
-  favorites: FavoriteComment[];
-  // Cursor-paginated, not {limit, offset, total}: unfavoriting removes a row
-  // from the middle of the ordered set, which shifts every later offset
-  // boundary and skips a favorite. No total -- nothing renders one.
-  pagination: {
-    limit: number;
-    // Opaque -- hand it back verbatim. Null on the last page.
-    next_cursor: string | null;
-  };
-}
+/**
+ * Generated. One page of the cross-game favorites list.
+ *
+ * Cursor-paginated, not {limit, offset, total}: unfavoriting removes a row from
+ * the middle of the ordered set, which shifts every later offset boundary and
+ * skips a favorite. There is no total -- nothing renders one.
+ */
+export type FavoriteCommentsResponse = components['schemas']['FavoriteCommentsResponse'];
 
 export type FavoriteCommentIDsResponse =
   components['schemas']['FavoriteCommentIDsResponse'];
 
 // A post or comment by a specific character (for Character Page)
-export interface CharacterMessage {
-  id: number;
-  game_id: number;
-  parent_id?: number | null;
-  author_id: number;
-  character_id: number;
-  content: string;
-  message_type: 'post' | 'comment';
-  created_at: string;
-  edited_at?: string | null;
-  edit_count: number;
-  deleted_at?: string | null;
-  is_deleted: boolean;
-  author_username: string;
-  character_name?: string | null;
-  character_avatar_url?: string | null;
+/**
+ * Generated. A post or comment attributed to a character, for the character
+ * page feed.
+ *
+ * `message_type` keeps its `'post' | 'comment'` union because the Go field is
+ * now enum-tagged: the query filters on visibility='game', so the ENUM's third
+ * member (private_message) cannot reach this endpoint. Untagged it rendered as
+ * bare `string`, and aliasing would have widened it.
+ *
+ * The many `?: T | null` fields collapse to required-and-nullable. Every one is
+ * a bare pointer without omitempty on the Go side, so the key is always present
+ * and carries an explicit null -- "absent" was never a state the wire produced.
+ */
+export type CharacterMessage = components['schemas']['CharacterMessageResponse'];
 
-  // Parent context (only set for comments)
-  parent?: {
-    content?: string | null;
-    created_at?: string | null;
-    deleted_at?: string | null;
-    is_deleted?: boolean | null;
-    message_type?: string | null;
-    author_username?: string | null;
-    character_name?: string | null;
-    character_avatar_url?: string | null;
-  } | null;
-}
-
-export interface CharacterMessagesResponse {
-  messages: CharacterMessage[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-  };
-}
+/** Generated. One page of a character's posts and comments. */
+export type CharacterMessagesResponse = components['schemas']['CharacterMessagesResponse'];

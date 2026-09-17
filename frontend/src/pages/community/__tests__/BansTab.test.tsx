@@ -56,6 +56,7 @@ vi.mock('../../../components/UserSearchSelect', () => ({
 }))
 
 const community: Community = {
+  is_banned: false,
   id: 1,
   name: 'Midnight Ravens',
   slug: 'midnight-ravens',

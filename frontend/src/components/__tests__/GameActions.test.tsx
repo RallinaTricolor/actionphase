@@ -77,6 +77,7 @@ describe('GameActions - stale application after leaving (regression)', () => {
   // 'pending') and the Apply/Join buttons (which hid whenever any application existed,
   // regardless of status), leaving the user with no way to fix their own stuck state.
   const staleApprovedApplication: GameApplication = {
+    username: 'testuser',
     id: 1,
     game_id: baseGame.id,
     user_id: 42,
@@ -142,6 +143,7 @@ describe('GameActions - rejected application is terminal, not stale', () => {
   // able to re-apply (they'd just re-apply repeatedly) or withdraw the rejection (they can't
   // un-reject themselves). The backend enforces this; the UI must not offer either action.
   const rejectedApplication: GameApplication = {
+    username: 'testuser',
     id: 1,
     game_id: baseGame.id,
     user_id: 42,

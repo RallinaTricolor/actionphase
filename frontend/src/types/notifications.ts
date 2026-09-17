@@ -10,14 +10,8 @@ import type { components } from './api.gen';
  */
 export type Notification = components['schemas']['NotificationResponse'];
 
-export interface NotificationListResponse {
-  data: Notification[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-  };
-}
+/** Generated. One page of the notification list. */
+export type NotificationListResponse = components['schemas']['NotificationListResponse'];
 
 export type UnreadCountResponse = components['schemas']['UnreadCountResponse'];
 

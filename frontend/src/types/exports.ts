@@ -1,3 +1,5 @@
+import type { components } from './api.gen';
+
 /**
  * Status of an archive export job.
  *
@@ -6,36 +8,24 @@
  * - complete: artifact stored and downloadable
  * - failed: assembly or upload failed; `error` explains why
  */
-export type GameExportStatus = 'pending' | 'running' | 'complete' | 'failed';
+export type GameExportStatus = GameExport['status'];
 
-/** An archive export job as returned by the API. */
-export interface GameExport {
-  id: number;
-  game_id: number;
-  status: GameExportStatus;
-  /** Human-readable step, present only while running. */
-  progress?: string;
-  /** Failure reason, present only when status is 'failed'. */
-  error?: string;
-  size_bytes?: number;
-  file_count?: number;
-  /** Present only when status is 'complete' and the artifact still exists. */
-  download_url?: string;
-  created_at?: string;
-  completed_at?: string;
-  /** When the stored archive will be reclaimed. */
-  expires_at?: string;
-  /**
-   * True for a completed export whose archive has passed its retention window
-   * and been deleted.
-   *
-   * Reported by the API but deliberately not surfaced in the UI: an expired
-   * export and a never-created one call for the same action — generate the
-   * archive — so distinguishing them would only add a label the reader cannot
-   * act on. Absence of `download_url` is what drives the UI.
-   */
-  expired?: boolean;
-}
+/**
+ * An archive export job as returned by the API. Generated.
+ *
+ * `status` carries its four-value union because the Go field is now enum-tagged
+ * (pinned by the CHECK constraint on game_exports.status); it rendered as bare
+ * `string` until then, so aliasing would have silently widened it.
+ *
+ * `expired` is reported by the API but deliberately not surfaced in the UI: an
+ * expired export and a never-created one call for the same action -- generate
+ * the archive -- so distinguishing them would add a label the reader cannot act
+ * on. Absence of `download_url` is what drives the UI.
+ *
+ * `progress` is present only while running, `error` only on failure, and
+ * `download_url` only when complete and the artifact still exists.
+ */
+export type GameExport = components['schemas']['ExportResponse'];
 
 /** True when the job is still being worked on and should be polled. */
 export function isExportInProgress(status: GameExportStatus): boolean {

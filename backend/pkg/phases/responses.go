@@ -12,9 +12,14 @@ import (
 // them before the handler returns. Anything constructing a PhaseResponse for a
 // response body must go through that helper or the countdown UI gets nothing.
 type PhaseResponse struct {
-	ID          int32      `json:"id"`
-	GameID      int32      `json:"game_id"`
-	PhaseType   string     `json:"phase_type"`
+	ID     int32 `json:"id"`
+	GameID int32 `json:"game_id"`
+	// Tagged to match CreatePhaseBody's enum. Tagging only the request half
+	// leaves the response rendering as bare `string`, so the frontend either
+	// re-declares the union by hand or silently widens to `string` when it
+	// aliases this schema. The values are pinned by a CHECK constraint on
+	// game_phases.phase_type (migration 20260605174513).
+	PhaseType   string     `json:"phase_type" enum:"common_room,action,interlude"`
 	PhaseNumber int32      `json:"phase_number"`
 	Title       *string    `json:"title,omitempty"`
 	Description *string    `json:"description,omitempty"`

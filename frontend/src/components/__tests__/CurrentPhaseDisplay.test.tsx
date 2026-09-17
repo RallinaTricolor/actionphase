@@ -19,6 +19,7 @@ vi.mock('../CountdownTimer', () => ({
 
 describe('CurrentPhaseDisplay', () => {
   const mockCommonRoomPhase: GamePhase = {
+    is_expired: false,
     id: 1,
     game_id: 1,
     phase_type: 'common_room',
@@ -33,6 +34,7 @@ describe('CurrentPhaseDisplay', () => {
   };
 
   const mockActionPhase: GamePhase = {
+    is_expired: false,
     id: 2,
     game_id: 1,
     phase_type: 'action',
@@ -314,6 +316,7 @@ describe('CurrentPhaseDisplay', () => {
 
   describe('Previous Phases Section', () => {
     const previousPhase1: GamePhase = {
+      is_expired: false,
       id: 10,
       game_id: 1,
       phase_type: 'common_room',
@@ -326,6 +329,7 @@ describe('CurrentPhaseDisplay', () => {
     };
 
     const previousPhase2: GamePhase = {
+      is_expired: false,
       id: 11,
       game_id: 1,
       phase_type: 'action',
@@ -513,6 +517,41 @@ describe('CurrentPhaseDisplay', () => {
       });
 
       expect(screen.queryByTestId('countdown-timer')).not.toBeInTheDocument();
+    });
+
+    it('should omit the Started row when the phase has no start_time', async () => {
+      // Regression: this rendered `new Date(undefined).toLocaleString()`, i.e.
+      // the literal string "Invalid Date". `start_time` means "auto-activate
+      // at", not "when this phase began" -- migration 20260401152638 dropped
+      // its NOT NULL and cleared it on inactive phases, and POST /phases leaves
+      // it optional, so a GM who activates a phase by hand produces this row.
+      // The `deadline` field beside it was already guarded on exactly this
+      // pattern; start_time was missed because the hand-written GamePhase type
+      // declared it required, which the wire has not matched since that
+      // migration.
+      const phaseWithoutStartTime = { ...mockCommonRoomPhase, start_time: undefined };
+      setupDefaultHandlers(phaseWithoutStartTime);
+
+      renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Common Room')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Started:')).not.toBeInTheDocument();
+    });
+
+    it('should show the Started row when the phase has a start_time', async () => {
+      setupDefaultHandlers(mockCommonRoomPhase);
+
+      renderWithProviders(<CurrentPhaseDisplay gameId={1} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Started:')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
     });
 
     it('should handle phase with custom title', async () => {

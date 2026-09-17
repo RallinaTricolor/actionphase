@@ -467,15 +467,25 @@ type gameListingOutput struct {
 	Body *GameListingResponse
 }
 
-// participantsOutput is likewise a nil-able slice of maps: null when empty.
+// participantsOutput is a nil-able slice: null when empty, because the handler
+// appends to a `var response []T`. That is the wire contract the chi handler
+// set, so it is left alone rather than normalised to [].
 type participantsOutput struct {
-	Body []map[string]any
+	Body []ParticipantListItemResponse
 }
 
 // applicationsOutput is built with make(...,0), so an empty list is [].
 // The difference from participantsOutput is inherited from the chi handlers.
 type applicationsOutput struct {
-	Body []map[string]any
+	Body []ApplicationListItemResponse `nullable:"false"`
+}
+
+// publicApplicantsOutput is the unauthenticated recruitment view. It was
+// sharing applicationsOutput while both were []map[string]any, but the two
+// endpoints send different shapes -- this one withholds status and review
+// information -- so they need separate types now that the shapes are named.
+type publicApplicantsOutput struct {
+	Body []PublicApplicantResponse `nullable:"false"`
 }
 
 type applicationOutput struct {
@@ -530,15 +540,19 @@ type actionSubmissionsOutput struct {
 }
 
 type gameLogsOutput struct {
-	Body []map[string]any
+	Body []GameLogEntryResponse `nullable:"false"`
 }
 
 type gameStatsOutput struct {
 	Body any
 }
 
+// lootTablesOutput reuses GameLootTableResponse, the same type the create
+// endpoint answers with. The handler's own comment asked for these keys to be
+// kept in sync with AddGameLootTable "because both are typed as LootTable on the
+// frontend"; sharing the struct makes that structural instead of a request.
 type lootTablesOutput struct {
-	Body []map[string]any
+	Body []GameLootTableResponse `nullable:"false"`
 }
 
 type lootTableOutput struct {
@@ -546,7 +560,7 @@ type lootTableOutput struct {
 }
 
 type lootContentsOutput struct {
-	Body []map[string]any
+	Body []LootTableContentResponse `nullable:"false"`
 }
 
 type lootContentOutput struct {
@@ -1191,7 +1205,9 @@ func (h *Handler) humaGetGameParticipants(ctx context.Context, in *gameScopedInp
 		}
 	}
 
-	var response []map[string]any
+	// var, not make(...,0): an empty list serializes as null here. Preserved
+	// from the chi handler -- see participantsOutput.
+	var response []ParticipantListItemResponse
 	for _, participant := range participants {
 		role := participant.Role
 		isFormerPlayer := participant.IsFormerPlayer
@@ -1202,27 +1218,26 @@ func (h *Handler) humaGetGameParticipants(ctx context.Context, in *gameScopedInp
 			isFormerPlayer = false
 		}
 
-		participantData := map[string]any{
-			"id":       participant.ID,
-			"game_id":  participant.GameID,
-			"user_id":  participant.UserID,
-			"username": participant.Username,
+		item := ParticipantListItemResponse{
+			ID:       participant.ID,
+			GameID:   participant.GameID,
+			UserID:   participant.UserID,
+			Username: participant.Username,
 			// Email is intentionally omitted for privacy.
-			"role":             role,
-			"status":           participant.Status,
-			"joined_at":        participant.JoinedAt.Time,
-			"is_former_player": isFormerPlayer,
+			Role:           role,
+			Status:         participant.Status,
+			JoinedAt:       participant.JoinedAt.Time,
+			IsFormerPlayer: isFormerPlayer,
 		}
 
 		// Explicit null rather than an absent key: the client reads this
-		// directly to decide whether to render an avatar.
+		// directly to decide whether to render an avatar. AvatarURL has no
+		// omitempty, so a nil pointer marshals as null.
 		if participant.AvatarUrl.Valid {
-			participantData["avatar_url"] = participant.AvatarUrl.String
-		} else {
-			participantData["avatar_url"] = nil
+			item.AvatarURL = &participant.AvatarUrl.String
 		}
 
-		response = append(response, participantData)
+		response = append(response, item)
 	}
 
 	return &participantsOutput{Body: response}, nil
@@ -1521,31 +1536,33 @@ func (h *Handler) humaGetGameApplications(ctx context.Context, in *gameScopedInp
 	}
 
 	// make(...,0): an empty list is [] here, unlike the participants endpoint.
-	response := make([]map[string]any, 0)
+	response := make([]ApplicationListItemResponse, 0)
 	for _, app := range applications {
-		appData := map[string]any{
-			"id":       app.ID,
-			"game_id":  app.GameID,
-			"user_id":  app.UserID,
-			"username": app.Username,
+		item := ApplicationListItemResponse{
+			ID:       app.ID,
+			GameID:   app.GameID,
+			UserID:   app.UserID,
+			Username: app.Username,
 			// Email is intentionally omitted for privacy.
-			"role":       app.Role,
-			"status":     app.Status,
-			"applied_at": app.AppliedAt.Time,
+			Role:      app.Role,
+			Status:    app.Status,
+			AppliedAt: app.AppliedAt.Time,
 		}
+		// Each of these four is omitempty, so leaving the pointer nil drops the
+		// key entirely -- matching the `if x.Valid` blocks these replace.
 		if app.AvatarUrl.Valid {
-			appData["avatar_url"] = app.AvatarUrl.String
+			item.AvatarURL = &app.AvatarUrl.String
 		}
 		if app.Message.Valid {
-			appData["message"] = app.Message.String
+			item.Message = &app.Message.String
 		}
 		if app.ReviewedAt.Valid {
-			appData["reviewed_at"] = app.ReviewedAt.Time
+			item.ReviewedAt = &app.ReviewedAt.Time
 		}
 		if app.ReviewedByUserID.Valid {
-			appData["reviewed_by_user_id"] = app.ReviewedByUserID.Int32
+			item.ReviewedByUserID = &app.ReviewedByUserID.Int32
 		}
-		response = append(response, appData)
+		response = append(response, item)
 	}
 
 	return &applicationsOutput{Body: response}, nil
@@ -1692,7 +1709,7 @@ func (h *Handler) humaGetMyGameApplication(ctx context.Context, in *gameScopedIn
 	return &myApplicationOutput{Body: response}, nil
 }
 
-func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScopedInput) (*applicationsOutput, error) {
+func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScopedInput) (*publicApplicantsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_public_game_applicants")()
 
 	gameID, err := gameIDFromCtx(ctx)
@@ -1718,21 +1735,21 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 
 	// Username and role only — no status, no review information. This endpoint
 	// is readable by anyone.
-	response := make([]map[string]any, 0)
+	response := make([]PublicApplicantResponse, 0)
 	for _, applicant := range applicants {
-		applicantData := map[string]any{
-			"id":         applicant.ID,
-			"username":   applicant.Username,
-			"role":       applicant.Role,
-			"applied_at": applicant.AppliedAt.Time,
+		item := PublicApplicantResponse{
+			ID:        applicant.ID,
+			Username:  applicant.Username,
+			Role:      applicant.Role,
+			AppliedAt: applicant.AppliedAt.Time,
 		}
 		if applicant.AvatarUrl.Valid {
-			applicantData["avatar_url"] = applicant.AvatarUrl.String
+			item.AvatarURL = &applicant.AvatarUrl.String
 		}
-		response = append(response, applicantData)
+		response = append(response, item)
 	}
 
-	return &applicationsOutput{Body: response}, nil
+	return &publicApplicantsOutput{Body: response}, nil
 }
 
 func (h *Handler) humaWithdrawGameApplication(ctx context.Context, in *gameScopedInput) (*noContentOutput, error) {
@@ -2157,14 +2174,16 @@ func (h *Handler) humaGetGameLogs(ctx context.Context, in *gameScopedInput) (*ga
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game logs", "error", err, "game_id", gameID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]GameLogEntryResponse, 0)
 	for _, log := range logs {
-		response = append(response, map[string]any{
-			"id":         log.ID,
-			"game_id":    log.GameID,
-			"type":       log.Type,
-			"message":    log.Message.String,
-			"created_at": log.CreatedAt.Time,
+		response = append(response, GameLogEntryResponse{
+			ID:     log.ID,
+			GameID: log.GameID,
+			Type:   log.Type,
+			// .String, not a pointer: a NULL message flattens to "", which is
+			// what this endpoint has always sent.
+			Message:   log.Message.String,
+			CreatedAt: log.CreatedAt.Time,
 		})
 	}
 
@@ -2259,17 +2278,16 @@ func (h *Handler) humaGetGameLootTables(ctx context.Context, in *lootTablesInput
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game loot tables", "error", err, "game_id", gameID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]GameLootTableResponse, 0)
 	for _, lootTable := range lootTables {
-		// Keep these keys in sync with the model returned by AddGameLootTable —
-		// both are typed as LootTable on the frontend, so a field present in one
-		// and missing from the other is a shape mismatch the types do not catch.
-		response = append(response, map[string]any{
-			"id":         lootTable.ID,
-			"game_id":    lootTable.GameID,
-			"name":       lootTable.Name,
-			"created_at": lootTable.CreatedAt.Time,
-			"updated_at": lootTable.UpdatedAt.Time,
+		// Same struct AddGameLootTable returns, so the two endpoints cannot
+		// drift apart. They previously had to be kept in sync by hand.
+		response = append(response, GameLootTableResponse{
+			ID:        lootTable.ID,
+			GameID:    lootTable.GameID,
+			Name:      lootTable.Name,
+			CreatedAt: lootTable.CreatedAt.Time,
+			UpdatedAt: lootTable.UpdatedAt.Time,
 		})
 	}
 
@@ -2380,12 +2398,13 @@ func (h *Handler) humaGetGameLootTableContents(ctx context.Context, in *tableSco
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table contents", "error", err, "table_id", in.TableID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]LootTableContentResponse, 0)
 	for _, item := range contents {
-		response = append(response, map[string]any{
-			"id":   item.ID,
-			"name": item.Name,
-			"data": item.Data.String,
+		response = append(response, LootTableContentResponse{
+			ID:   item.ID,
+			Name: item.Name,
+			// .String, not a pointer: a NULL data column flattens to "".
+			Data: item.Data.String,
 		})
 	}
 

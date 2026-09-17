@@ -1,4 +1,3 @@
-import type { CharacterSheetConfig } from './characters';
 import type { components } from './api.gen';
 
 /**
@@ -38,17 +37,34 @@ export type Game = GameWithDetails;
  */
 export type GameWritten = components['schemas']['GameResponse'];
 
-export interface GameParticipant {
-  id: number;
-  game_id: number;
-  user_id: number;
-  username: string;
-  avatar_url?: string | null;
-  role: ParticipantRole;
-  status: ParticipantStatus;
-  joined_at: string;
-  is_former_player?: boolean;
-}
+/**
+ * Generated. One entry of GET /games/{id}/participants.
+ *
+ * The endpoint built a `map[string]any` until 2026-09-16, so there was no schema
+ * and this shape was hand-maintained against it. Two fields were declared
+ * optional that the server always sends: `avatar_url` (explicit null, never an
+ * absent key -- the client reads it directly to decide whether to render an
+ * avatar) and `is_former_player`. The three PeopleView filters that read the
+ * latter truthily are unaffected by the narrowing.
+ *
+ * `email` is deliberately absent: this list withholds it for privacy, which is
+ * why it is a different shape from the single-participant write response.
+ *
+ * In an anonymous game a viewer who may not see former-player status gets those
+ * participants reported as ordinary players -- `role` spoofed to "player",
+ * `is_former_player` cleared -- so neither field can be trusted to reveal that
+ * status to an unprivileged viewer. That is the point.
+ */
+export type GameParticipant = components['schemas']['ParticipantListItemResponse'];
+
+/**
+ * Generated. GET /games/{id}/audience.
+ *
+ * Its members are a strict SUBSET of GameParticipant: no `avatar_url` and no
+ * `is_former_player`. The api-client used to annotate this route with
+ * GameParticipant[], promising two fields it never sends.
+ */
+export type AudienceMembersResponse = components['schemas']['ListAudienceMembersResponse'];
 
 /**
  * A game's lifecycle state.
@@ -67,55 +83,38 @@ export interface GameParticipant {
  */
 export type GameState = components['schemas']['UpdateGameStateBody']['state'];
 
-type ParticipantRole = 'player' | 'co_gm' | 'audience';
-type ParticipantStatus = 'active' | 'inactive' | 'removed';
+// ParticipantRole / ParticipantStatus were declared here by hand purely to type
+// GameParticipant's two fields. That type is generated now and carries the
+// unions itself (from enum tags on the Go struct), leaving these with no
+// consumers at all -- so they are deleted rather than re-exported as indexed
+// aliases, which would only be dead code knip would flag. Recover either union
+// as GameParticipant['role'] / ['status'] if one is ever needed.
 
-export interface CreateGameRequest {
-  title: string;
-  description: string;
-  /**
-   * Required on create (req 5): every new game belongs to a community.
-   *
-   * Deliberately absent from UpdateGameRequest below -- reassignment is a
-   * separate, differently-authorized operation (setup-only for the GM), not a
-   * field on an ordinary profile edit.
-   */
-  community_id: number;
-  genre?: string;
-  start_date?: string;
-  end_date?: string;
-  recruitment_deadline?: string;
-  max_players?: number;
-  is_anonymous?: boolean;
-  auto_accept_audience?: boolean;
-  allow_group_conversations?: boolean;
-  portrait_avatars?: boolean;
-  /**
-   * Only the labels the GM actually overrode. Empty strings must be omitted
-   * rather than sent as "": the backend rejects whitespace-only labels, and a
-   * blank box in the form means "use the default", not "name this tab nothing".
-   */
-  character_sheet?: CharacterSheetConfig;
-  banner_url?: string | null;
-  common_room_open_day?: number | null;
-  common_room_open_time?: string | null;
-  common_room_close_day?: number | null;
-  common_room_close_time?: string | null;
-  schedule_timezone?: string | null;
-}
+/**
+ * POST /games — generated.
+ *
+ * `community_id` is required: every new game belongs to a community.
+ * Deliberately OPTIONAL on update below -- reassignment is a separate,
+ * differently-authorized operation (setup-only for the GM), not a field on an
+ * ordinary profile edit.
+ *
+ * `character_sheet` carries only the labels the GM actually overrode. Empty
+ * strings must be omitted rather than sent as "": the backend rejects
+ * whitespace-only labels, and a blank box means "use the default", not "name
+ * this tab nothing".
+ */
+export type CreateGameRequest = components['schemas']['CreateGameBody'];
 
-export interface UpdateGameRequest extends Omit<CreateGameRequest, 'community_id'> {
-  /**
-   * OPTIONAL, and preserve-on-absent: omitting it leaves the game's community
-   * alone rather than clearing it. The server only honours it while the game is
-   * in setup (decision 4).
-   */
-  community_id?: number;
-  is_anonymous?: boolean;
-  auto_accept_audience?: boolean;
-  allow_group_conversations?: boolean;
-  portrait_avatars?: boolean;
-}
+/**
+ * PUT /games/{id} — generated.
+ *
+ * Was `Omit<CreateGameRequest, 'community_id'>` plus a re-widened
+ * `community_id?`. The spec declares the body in full, so the derivation is
+ * unnecessary: community_id is preserve-on-absent here (omitting it leaves the
+ * game's community alone rather than clearing it), and the server only honours
+ * it while the game is in setup.
+ */
+export type UpdateGameRequest = components['schemas']['UpdateGameBody'];
 
 /**
  * POST /games/{gameID}/apply — generated from the OpenAPI spec
@@ -124,28 +123,21 @@ export interface UpdateGameRequest extends Omit<CreateGameRequest, 'community_id
  */
 export type ApplyToGameRequest = components['schemas']['ApplyToGameBody'];
 
-export interface GameApplication {
-  id: number;
-  game_id: number;
-  user_id: number;
-  username?: string;
-  avatar_url?: string | null;
-  role: 'player' | 'audience';
-  message?: string;
-  status: ApplicationStatus;
-  applied_at: string;
-  reviewed_at?: string;
-  reviewed_by_user_id?: number;
-}
+/**
+ * Generated. One entry of the GM's application list.
+ *
+ * `username` was optional and is always sent. The four genuinely optional
+ * fields stay optional, and their absence is meaningful: an unreviewed
+ * application omits `reviewed_at` and `reviewed_by_user_id` entirely rather
+ * than sending null, so absence is how you tell pending from reviewed.
+ *
+ * `email` is withheld here even though the GM is the only caller.
+ */
+export type GameApplication = components['schemas']['ApplicationListItemResponse'];
 
 
-export interface GameLog {
-  id: number;
-  game_id: number;
-  type: string;
-  message: string;
-  created_at: string;
-}
+/** Generated. One line of a game's log. */
+export type GameLog = components['schemas']['GameLogEntryResponse'];
 
 /**
  * Arguments to the loot-table mutation hooks -- NOT wire types.
@@ -171,30 +163,35 @@ export interface UpdateLootTableContentsArgs {
   items: LootTableContent[];
 }
 
-export interface LootTable {
-  id: number;
-  game_id: number;
-  name: string;
-  created_at: string;
-  /** Bumped when the table is renamed. Equals created_at until then. */
-  updated_at: string;
-}
+/**
+ * Generated. A loot table.
+ *
+ * The list and create endpoints now share one Go struct, so the two can no
+ * longer disagree about what a loot table is -- the backend previously kept
+ * them in sync by hand, with a comment asking the next editor to remember.
+ *
+ * `updated_at` is bumped when the table is renamed; it equals created_at until
+ * then.
+ */
+export type LootTable = components['schemas']['GameLootTableResponse'];
 
-export interface LootTableContent {
-  id: number;
-  name: string;
-  data: string;
-}
+/**
+ * Generated. One item in a loot table, as the list returns it.
+ *
+ * Narrower than the single-item write response, which also carries
+ * `loot_table_id`. `data` is a plain string: the handler flattens a NULL column
+ * to "".
+ */
+export type LootTableContent = components['schemas']['LootTableContentResponse'];
 
-// Public applicant view (no status, message, email, or review info)
-// Available to anyone when game is in recruitment state
-export interface PublicGameApplicant {
-  id: number;
-  username: string;
-  avatar_url?: string | null;
-  role: 'player' | 'audience';
-  applied_at: string;
-}
+/**
+ * Generated. The applicant list shown during recruitment.
+ *
+ * Username and role only -- no status, message, email or review information,
+ * because this endpoint is readable by anyone. It is a deliberately separate
+ * shape from GameApplication rather than a filtered view of it.
+ */
+export type PublicGameApplicant = components['schemas']['PublicApplicantResponse'];
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 

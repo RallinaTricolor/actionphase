@@ -81,7 +81,8 @@ type ThreadedCommentResponse struct {
 // (which holds nested replies as well as top-level comments), and has_more says
 // whether paging further is worthwhile.
 type PaginatedCommentsResponse struct {
-	Comments         []*ThreadedCommentResponse `json:"comments" doc:"Top-level comments and their nested replies, flattened"`
+	// nullable:"false": built with make(...,0,len) before the loop.
+	Comments         []*ThreadedCommentResponse `json:"comments" nullable:"false" doc:"Top-level comments and their nested replies, flattened"`
 	TotalTopLevel    int64                      `json:"total_top_level" doc:"Top-level comments on the post, across all pages"`
 	Limit            int32                      `json:"limit" doc:"Top-level comments requested"`
 	Offset           int32                      `json:"offset" doc:"Top-level comments skipped"`
@@ -137,13 +138,17 @@ type CommentWithParentResponse struct {
 // not return. Kept as its own type rather than shared, because the two feeds
 // are free to diverge and a shared type would silently couple them.
 type CharacterMessageResponse struct {
-	ID                 int32   `json:"id" doc:"Message ID"`
-	GameID             int32   `json:"game_id"`
-	ParentID           *int32  `json:"parent_id" doc:"Message being replied to, null for a post"`
-	AuthorID           int32   `json:"author_id"`
-	CharacterID        int32   `json:"character_id"`
-	Content            string  `json:"content" doc:"Body, as markdown"`
-	MessageType        string  `json:"message_type" doc:"\"post\" or \"comment\""`
+	ID          int32  `json:"id" doc:"Message ID"`
+	GameID      int32  `json:"game_id"`
+	ParentID    *int32 `json:"parent_id" doc:"Message being replied to, null for a post"`
+	AuthorID    int32  `json:"author_id"`
+	CharacterID int32  `json:"character_id"`
+	Content     string `json:"content" doc:"Body, as markdown"`
+	// Only post and comment: ListCharacterPostsAndComments filters on
+	// visibility='game', which excludes private messages, so the third member
+	// of the message_type ENUM cannot reach this endpoint. Tagged so the
+	// generated TypeScript keeps the union rather than widening to bare string.
+	MessageType        string  `json:"message_type" enum:"post,comment" doc:"\"post\" or \"comment\""`
 	CreatedAt          string  `json:"created_at" doc:"RFC3339 timestamp"`
 	EditedAt           *string `json:"edited_at" doc:"RFC3339 timestamp, null when never edited"`
 	EditCount          int32   `json:"edit_count"`
@@ -172,7 +177,8 @@ type RecentCommentsResponse struct {
 
 // CharacterMessagesResponse is the body of a character's activity feed.
 type CharacterMessagesResponse struct {
-	Messages   []*CharacterMessageResponse `json:"messages"`
+	// nullable:"false": built with make(..., len(messages)).
+	Messages   []*CharacterMessageResponse `json:"messages" nullable:"false"`
 	Pagination PaginationResponse          `json:"pagination"`
 }
 
@@ -209,8 +215,11 @@ type PostUnreadCommentsResponse struct {
 
 // ManualReadCommentIDsResponse represents the manual read comment IDs for a post
 type ManualReadCommentIDsResponse struct {
-	PostID         int32   `json:"post_id"`
-	ReadCommentIDs []int32 `json:"read_comment_ids" doc:"Comments the caller explicitly marked read"`
+	PostID int32 `json:"post_id"`
+	// nullable:"false": GetManualReadCommentIDsForGame seeds every map entry
+	// with []int32{} and only ever appends, so this is never nil -- the same
+	// guarantee as PostUnreadCommentsResponse above.
+	ReadCommentIDs []int32 `json:"read_comment_ids" nullable:"false" doc:"Comments the caller explicitly marked read"`
 }
 
 // FavoriteCommentResponse is one entry of the cross-game favorites list.
@@ -250,7 +259,8 @@ type FavoriteCommentResponse struct {
 // ordered set, which shifts every later offset boundary and skips a favorite.
 // There is no total because nothing renders one.
 type FavoriteCommentsResponse struct {
-	Favorites  []*FavoriteCommentResponse  `json:"favorites"`
+	// nullable:"false": favoriteCommentsToResponse make()s to len(favorites).
+	Favorites  []*FavoriteCommentResponse  `json:"favorites" nullable:"false"`
 	Pagination FavoritesPaginationResponse `json:"pagination"`
 }
 

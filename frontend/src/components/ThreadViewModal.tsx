@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ThreadedComment } from './ThreadedComment';
 import type { Message } from '../types/messages';
+import type { CommentTreeNode } from '../lib/utils/commentTree';
 import type { Character } from '../types/characters';
 import { Button } from './ui';
 import { UtilitiesButton } from './UtilitiesButton';
@@ -13,7 +14,10 @@ import { useDirtyChildren } from '../hooks/useDirtyChildren';
 interface ThreadViewModalProps {
   gameId: number;
   postId: number; // The root post ID
-  comment: Message; // Pass the comment object directly instead of just ID
+  // Message | CommentTreeNode: a "Continue this thread" button can be rendered
+  // from either, and this modal reads none of the four fields a tree node
+  // lacks (comment_count, edit_count, is_draft, updated_at).
+  comment: Message | CommentTreeNode;
   characters: Character[];
   controllableCharacters: Character[];
   onClose: () => void;
@@ -60,7 +64,7 @@ export function ThreadViewModal({
   allowReadTracking = true,
 }: ThreadViewModalProps) {
   // State for nested modal (modal-within-modal for deeply nested threads)
-  const [nestedModalComment, setNestedModalComment] = useState<Message | null>(null);
+  const [nestedModalComment, setNestedModalComment] = useState<Message | CommentTreeNode | null>(null);
   // Track where mousedown originated so a drag that ends on the backdrop doesn't close the modal.
   // Firefox on Windows synthesizes a click on the backdrop when mouseup lands there after a drag
   // that started inside the modal (e.g. resizing the CommentEditor). We only close on a "true"
@@ -120,9 +124,12 @@ export function ThreadViewModal({
 
   // Strip children property from comment to force ThreadedComment to load fresh replies
   // Comments from main view have pre-loaded children with maxDepth=5, but in thread view we want THREAD_VIEW_MAX_DEPTH
-  const stripChildren = (msg: Message): Message => {
-    const { _children, ...rest } = msg as Message & { _children?: unknown };
-    return rest;
+  // Generic over the comment union: this only drops a property and hands the
+  // rest back, so it preserves whichever arm it was given rather than
+  // narrowing everything to Message.
+  const stripChildren = <T extends Message | CommentTreeNode>(msg: T): T => {
+    const { _children, ...rest } = msg as T & { _children?: unknown };
+    return rest as T;
   };
 
   return (

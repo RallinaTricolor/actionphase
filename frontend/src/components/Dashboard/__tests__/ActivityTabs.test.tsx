@@ -70,10 +70,12 @@ describe('ActivityTabs', () => {
       game_id: 2,
       game_title: 'Test Game 2',
       author_name: 'Another Author',
-      character_name: null,
+      // undefined, not null: both are omitempty pointers on the Go side, so an
+      // unset value omits the key.
+      character_name: undefined,
       content: 'Another test message',
       message_type: 'comment',
-      phase_id: null,
+      phase_id: undefined,
       created_at: new Date().toISOString(),
     },
   ];

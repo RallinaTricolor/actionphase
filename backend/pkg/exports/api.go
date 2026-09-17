@@ -22,9 +22,12 @@ type Handler struct {
 
 // ExportResponse is the API view of an export job.
 type ExportResponse struct {
-	ID          int32  `json:"id"`
-	GameID      int32  `json:"game_id"`
-	Status      string `json:"status"`
+	ID     int32 `json:"id"`
+	GameID int32 `json:"game_id"`
+	// Pinned by the CHECK constraint on game_exports.status (migration
+	// 20260805171316). Tagged so the generated TypeScript keeps the union the
+	// frontend's hand-written GameExportStatus carried.
+	Status      string `json:"status" enum:"pending,running,complete,failed"`
 	Progress    string `json:"progress,omitempty"`
 	Error       string `json:"error,omitempty"`
 	SizeBytes   int64  `json:"size_bytes,omitempty"`
