@@ -171,7 +171,10 @@ type PaginationResponse struct {
 
 // RecentCommentsResponse is the body of the "New Comments" view.
 type RecentCommentsResponse struct {
-	Comments   []*CommentWithParentResponse `json:"comments"`
+	// nullable:"false": commentsWithParentsToResponse builds this with
+	// make(..., len(comments)), so it is an empty array rather than null on an
+	// empty page. Same tag, same reason as PaginatedCommentsResponse.Comments.
+	Comments   []*CommentWithParentResponse `json:"comments" nullable:"false"`
 	Pagination PaginationResponse           `json:"pagination"`
 }
 

@@ -259,12 +259,12 @@ function processContent(content: string, mentionedCharacters: MentionedCharacter
   }
 
   // Step 1b: Process [[DisplayName|type:uuid]] sheet item references, skipping code blocks
-  if (sheetItemRefs.length > 0 || /\[\[([^\]|]+)\|(?:ability|skill|item):([^\]]+)\]\]/.test(mentionsResult)) {
+  if (sheetItemRefs.length > 0 || /\[\[([^\]|]+)\|(?:skill|item):([^\]]+)\]\]/.test(mentionsResult)) {
     const sheetSegments = splitByCodeBlocks(mentionsResult);
     mentionsResult = sheetSegments.map((segment) => {
       if (segment.isCode) return segment.text;
       return segment.text.replace(
-        /\[\[([^\]|]+)\|(?:ability|skill|item):([^\]]+)\]\]/g,
+        /\[\[([^\]|]+)\|(?:skill|item):([^\]]+)\]\]/g,
         (_match, displayName: string, refId: string) => {
           const safeDisplay = escapeHtml(displayName);
           return `<mark data-sheet-ref-id="${escapeHtml(refId)}" class="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1 rounded font-medium cursor-help">[[${safeDisplay}]]</mark>`;

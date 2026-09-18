@@ -48,7 +48,7 @@ describe('useDraftPost', () => {
   it('returns draft post when one exists', async () => {
     vi.mocked(apiClient.messages.getDraftPost).mockResolvedValue({
       data: mockDraft,
-    } as AxiosResponse<Message>);
+    } as AxiosResponse<Message | null>);
 
     const { result } = renderHook(() => useDraftPost(10), {
       wrapper: makeWrapper(),
@@ -60,7 +60,9 @@ describe('useDraftPost', () => {
   });
 
   it('returns null when no draft exists (200 null)', async () => {
-    vi.mocked(apiClient.messages.getDraftPost).mockResolvedValue({ data: null } as never);
+    vi.mocked(apiClient.messages.getDraftPost).mockResolvedValue({
+      data: null,
+    } as AxiosResponse<Message | null>);
 
     const { result } = renderHook(() => useDraftPost(10), {
       wrapper: makeWrapper(),

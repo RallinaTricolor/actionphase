@@ -36,8 +36,15 @@ var (
 	// [color:name]...[/color] — non-greedy, spans newlines.
 	colorPattern = regexp.MustCompile(`(?s)\[color:([a-z]+)\](.*?)\[/color\]`)
 
-	// [[Display Name|type:ref]] where type is ability, skill, or item.
-	sheetRefPattern = regexp.MustCompile(`\[\[([^\]|]+)\|(?:ability|skill|item):([^\]]+)\]\]`)
+	// [[Display Name|type:ref]] where type is skill or item.
+	//
+	// `ability` was a third member until the Phase 4 refactor folded abilities
+	// into skills; SheetItem['type'] is 'skill' | 'item' and the app can no
+	// longer emit an ability token. Dropped rather than kept as back-compat:
+	// production was verified empty of ability content before the deletion (see
+	// frontend/src/types/characters.ts), and the same alternative was removed
+	// from MarkdownPreview.tsx so the viewer and this exporter agree.
+	sheetRefPattern = regexp.MustCompile(`\[\[([^\]|]+)\|(?:skill|item):([^\]]+)\]\]`)
 
 	// Fenced blocks (``` or ~~~) and inline code spans. Ordered so fenced
 	// blocks win over inline spans that would otherwise match inside them.

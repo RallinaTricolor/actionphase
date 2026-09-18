@@ -166,6 +166,14 @@ type messageOutput struct {
 // draftPostOutput carries a nullable body: the chi handler answered 200 with a
 // literal `null` when the phase has no draft, rather than 404. The frontend
 // branches on the null, so this is preserved -- see humaGetDraftPost.
+//
+// The schema cannot say so. huma panics on `nullable:"true"` for a struct ref
+// (schema.go:622, "nullable is not supported for field 'Body'"): it only
+// supports nullable scalars, because a nullable object needs anyOf/not, which
+// generators handle poorly. So the spec describes this 200 as a plain
+// MessageResponse and the null is documented in the operation description
+// instead. The generated type is therefore wider than the wire, and the
+// hand-written client widens it back -- see messages.ts getDraftPost.
 type draftPostOutput struct {
 	Body *MessageResponse
 }

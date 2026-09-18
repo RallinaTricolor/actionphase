@@ -5968,7 +5968,7 @@ export interface components {
             new_owner_user_id: number;
         };
         RecentCommentsResponse: {
-            comments: components["schemas"]["CommentWithParentResponse"][] | null;
+            comments: components["schemas"]["CommentWithParentResponse"][];
             pagination: components["schemas"]["PaginationResponse"];
         };
         RegisterBody: {
@@ -6339,7 +6339,6 @@ export interface components {
             id: number;
             is_admin: boolean;
             is_banned: boolean;
-            password: string;
             pending_approval: boolean;
             /** Format: date-time */
             pending_approval_since?: string;

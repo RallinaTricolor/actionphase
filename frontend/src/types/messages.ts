@@ -106,56 +106,44 @@ export type PaginatedCommentsResponse = components['schemas']['PaginatedComments
 // max_parents nearest ancestors, ordered parent-to-child.
 export type MessageThreadContext = components['schemas']['MessageThreadContextResponse'];
 
-// Comment with parent context (for "New Comments" view)
-export interface CommentWithParent {
-  // Comment data
-  id: number;
-  game_id: number;
-  parent_id?: number | null;
-  post_id?: number | null;
-  author_id: number;
-  character_id: number;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  edited_at?: string | null;
-  edit_count: number;
-  deleted_at?: string | null;
-  is_deleted: boolean;
-  author_username: string;
-  character_name?: string | null;
-  character_avatar_url?: string | null;
+/**
+ * One entry of the "New Comments" view, as it reaches a component.
+ *
+ * Generated wire shape PLUS the flattening `getRecentComments` applies. The
+ * `parent_*` keys are NOT wire fields: the backend sends a nested `parent`
+ * object (ParentContextResponse) and the API client copies each of its members
+ * up to a `parent_`-prefixed key. CommentWithParentCard reads only the
+ * flattened keys, so the two halves have to be modelled together.
+ *
+ * Was hand-written, and declared `updated_at`, which this endpoint does not
+ * send; the generated half fixes that.
+ *
+ * The `parent_*` keys stay OPTIONAL here, and that is deliberate. On the wire
+ * the nested `parent` object is itself nullable, so when the LEFT JOIN finds no
+ * parent the client's `comment.parent?.content` yields `undefined`, not null.
+ * Optional is the accurate claim about the post-flattening shape this type
+ * describes -- do not "fix" it to required-and-nullable to match the raw wire
+ * fields inside ParentContextResponse.
+ */
+export type CommentWithParent = components['schemas']['CommentWithParentResponse'] & {
+  [K in keyof ParentContext as `parent_${K}`]?: ParentContext[K];
+};
 
-  // Parent context (nested object from backend)
-  parent?: {
-    content?: string | null;
-    created_at?: string | null;
-    deleted_at?: string | null;
-    is_deleted?: boolean | null;
-    message_type?: string | null;
-    author_username?: string | null;
-    character_name?: string | null;
-    character_avatar_url?: string | null;
-  } | null;
+/** The nested parent object, flattened into `parent_*` keys by the client. */
+type ParentContext = NonNullable<components['schemas']['ParentContextResponse']>;
 
-  // Parent context (flattened fields)
-  parent_content?: string | null;
-  parent_created_at?: string | null;
-  parent_deleted_at?: string | null;
-  parent_is_deleted?: boolean | null;
-  parent_message_type?: string | null;
-  parent_author_username?: string | null;
-  parent_character_name?: string | null;
-  parent_character_avatar_url?: string | null;
-}
-
-// Pagination response for recent comments
-export interface RecentCommentsResponse {
-  comments: CommentWithParent[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+/**
+ * One page of the "New Comments" view — generated.
+ *
+ * The hand-written version declared top-level `total`/`limit`/`offset`. The
+ * real shape is `{ comments, pagination }`; the counts live inside the
+ * pagination envelope. useRecentComments already assumed as much, deriving the
+ * next offset from pages loaded rather than from the response.
+ *
+ * `comments` needed a backend `nullable:"false"` first -- it is make()d before
+ * the loop, so the null the spec reported was unreachable.
+ */
+export type RecentCommentsResponse = components['schemas']['RecentCommentsResponse'];
 
 // A comment the user has privately starred, from the cross-game /favorites list.
 //
