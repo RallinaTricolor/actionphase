@@ -91,7 +91,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationBell />);
 
     // Wait for component to load
@@ -121,7 +121,7 @@ describe('NotificationBell', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationBell />);
 
     await waitFor(() => {

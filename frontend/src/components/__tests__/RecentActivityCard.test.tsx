@@ -298,7 +298,7 @@ describe('RecentActivityCard', () => {
     });
 
     it('expands and re-collapses on header click', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <RecentActivityCard messages={[baseMessage]} defaultCollapsed />
       );

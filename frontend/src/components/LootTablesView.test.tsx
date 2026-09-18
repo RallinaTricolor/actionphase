@@ -228,7 +228,7 @@ describe('LootTablesView deletion', () => {
   });
 
   it('asks for confirmation before deleting rather than deleting on first click', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Delete Normal Items' }));
@@ -240,7 +240,7 @@ describe('LootTablesView deletion', () => {
   });
 
   it('deletes the chosen table once confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Delete Rare Items' }));
@@ -251,7 +251,7 @@ describe('LootTablesView deletion', () => {
   });
 
   it('cancelling the dialog leaves the table alone', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Delete Normal Items' }));
@@ -262,7 +262,7 @@ describe('LootTablesView deletion', () => {
   });
 
   it('does not delete a stale table if the dialog is confirmed after cancelling', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Delete Normal Items' }));
@@ -285,7 +285,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('opens a blank form from the New Loot Table button', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: /new loot table/i }));
@@ -294,7 +294,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('opens the clicked table in the form when editing', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockLootTables.mockReturnValue([table(), table({ id: 2, name: 'Rare Items' })]);
     renderView();
 
@@ -304,7 +304,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('returns to the list without saving when the form is closed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: /new loot table/i }));
@@ -315,7 +315,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('creates a table when the submitted data has no id', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: /new loot table/i }));
@@ -328,7 +328,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('returns to the list after a successful create', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: /new loot table/i }));
@@ -340,7 +340,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('renames an existing table without rewriting its contents', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Edit Normal Items' }));
@@ -354,7 +354,7 @@ describe('LootTablesView create and edit routing', () => {
   });
 
   it('rewrites contents without renaming when only the items changed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderView();
 
     await user.click(screen.getByRole('button', { name: 'Edit Normal Items' }));

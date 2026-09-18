@@ -66,7 +66,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('calls onNavigateToParent when navigation button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ParentCommentPreview
         content="Parent content"
@@ -157,7 +157,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('expands when expand button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ParentCommentPreview
         content="Parent content that should be expanded"
@@ -172,7 +172,7 @@ describe('ParentCommentPreview', () => {
   });
 
   it('collapses when collapse button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(
       <ParentCommentPreview
         content="Parent content"

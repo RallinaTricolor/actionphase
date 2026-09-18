@@ -302,7 +302,7 @@ describe('NewConversationModal', () => {
 
   describe('User Interactions', () => {
     it('allows user to type in title field', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -322,7 +322,7 @@ describe('NewConversationModal', () => {
     })
 
     it('allows user to select their character from dropdown', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -342,7 +342,7 @@ describe('NewConversationModal', () => {
     })
 
     it('allows user to select and deselect participants', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -375,7 +375,7 @@ describe('NewConversationModal', () => {
     })
 
     it('displays participant count correctly', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -405,7 +405,7 @@ describe('NewConversationModal', () => {
 
   describe('Validation', () => {
     it('disables create button when title is empty', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -434,7 +434,7 @@ describe('NewConversationModal', () => {
     })
 
     it('disables create button when your character is not selected', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -463,7 +463,7 @@ describe('NewConversationModal', () => {
     })
 
     it('disables create button when no participants are selected', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -492,7 +492,7 @@ describe('NewConversationModal', () => {
     })
 
     it('disables create button when title is only whitespace', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -525,7 +525,7 @@ describe('NewConversationModal', () => {
 
   describe('Form Submission', () => {
     it('successfully creates conversation and calls callbacks', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -559,7 +559,7 @@ describe('NewConversationModal', () => {
     })
 
     it('sends correct data to API including your character and participants', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       let requestBody: unknown = null
 
       server.use(
@@ -612,7 +612,7 @@ describe('NewConversationModal', () => {
     })
 
     it('handles multiple participants correctly', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       let requestBody: unknown = null
 
       server.use(
@@ -668,7 +668,7 @@ describe('NewConversationModal', () => {
     })
 
     it('does not call callbacks when API errors occur during conversation creation', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
 
       server.use(
         http.post('/api/v1/games/:gameId/conversations', () => {
@@ -718,7 +718,7 @@ describe('NewConversationModal', () => {
 
   describe('Close Behavior', () => {
     it('calls onClose when close button is clicked', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -740,7 +740,7 @@ describe('NewConversationModal', () => {
     })
 
     it('calls onClose when cancel button is clicked', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -762,7 +762,7 @@ describe('NewConversationModal', () => {
 
   describe('Loading States', () => {
     it('shows loading state while creating conversation', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
 
       // Delay the response to see loading state
       server.use(
@@ -816,7 +816,7 @@ describe('NewConversationModal', () => {
     })
 
     it('disables form fields while creating conversation', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
 
       // Delay the response
       server.use(
@@ -892,7 +892,7 @@ describe('NewConversationModal', () => {
     })
 
     it('enables create button when all required fields are filled', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -942,7 +942,7 @@ describe('NewConversationModal', () => {
 
   describe('Character Filtering', () => {
     it('filters out user-controlled characters from participant list when selected as sender', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -1048,7 +1048,7 @@ describe('NewConversationModal', () => {
     })
 
     it('disables create button when no participant is selected', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -1069,7 +1069,7 @@ describe('NewConversationModal', () => {
     })
 
     it('enables create button after selecting a single participant', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderWithProviders(
         <NewConversationModal
           gameId={mockGameId}
@@ -1095,7 +1095,7 @@ describe('NewConversationModal', () => {
     })
 
     it('sends only two character IDs when group conversations are disabled', async () => {
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       let requestBody: unknown = null
 
       server.use(

@@ -81,7 +81,7 @@ describe('LootTableSelector', () => {
     });
 
     it('reports the chosen table id as a number', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { onLootTableChange } = renderSelector();
 
       await waitFor(() => expect(screen.getByRole('option', { name: 'Common Loot' })).toBeInTheDocument());
@@ -92,7 +92,7 @@ describe('LootTableSelector', () => {
     });
 
     it('reports null when the placeholder option is chosen', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { onLootTableChange } = renderSelector({ lootTableId: 11 });
 
       await waitFor(() => expect(screen.getByRole('option', { name: 'Common Loot' })).toBeInTheDocument());
@@ -134,7 +134,7 @@ describe('LootTableSelector', () => {
     });
 
     it('reports the whole content row, not just its id', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { onItemChange } = renderSelector({ requireItem: true, lootTableId: 11 });
 
       await waitFor(() => expect(screen.getByRole('option', { name: 'Health Potion' })).toBeInTheDocument());
@@ -146,7 +146,7 @@ describe('LootTableSelector', () => {
     });
 
     it('reports null when the placeholder option is chosen', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { onItemChange } = renderSelector({ requireItem: true, lootTableId: 11 });
 
       await waitFor(() => expect(screen.getByRole('option', { name: 'Health Potion' })).toBeInTheDocument());
@@ -159,7 +159,7 @@ describe('LootTableSelector', () => {
     });
 
     it('clears the reported item when the table changes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { onLootTableChange } = renderSelector({
         requireItem: true,
         lootTableId: 11,
@@ -178,7 +178,7 @@ describe('LootTableSelector', () => {
     });
 
     it('blanks the item select while the new table has no contents loaded', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderSelector({ requireItem: true, lootTableId: 11 });
 
       await waitFor(() => expect(screen.getByRole('option', { name: 'Health Potion' })).toBeInTheDocument());

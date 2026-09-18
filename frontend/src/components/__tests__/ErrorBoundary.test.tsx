@@ -149,7 +149,7 @@ describe('ErrorBoundary', () => {
 
   describe('Reset Functionality', () => {
     it('calls resetError when try again button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const resetCallback = vi.fn();
 
       const CustomFallback = ({ resetError, error }: ErrorBoundaryFallbackProps) => {
@@ -181,7 +181,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('reload page button triggers window.location.reload', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Mock location.reload using Object.defineProperty
       const reloadMock = vi.fn();
@@ -573,7 +573,7 @@ describe('ErrorBoundary', () => {
     });
 
     it('generates unique error IDs for each error', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onError = vi.fn();
 
       const { rerender } = render(

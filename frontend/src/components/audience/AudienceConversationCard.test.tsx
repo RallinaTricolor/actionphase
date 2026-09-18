@@ -75,7 +75,7 @@ describe('AudienceConversationCard', () => {
   // set the same param, pushing a second identical history entry and making the
   // first browser Back press appear to do nothing.
   it('navigates by link href, adding exactly one history entry', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     const { router } = renderWithProviders(
       <AudienceConversationCard conversation={mockConversation} />,

@@ -275,7 +275,7 @@ describe('UnreadInboxSection', () => {
   });
 
   it('collapses and expands the section on header click', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<UnreadInboxSection />);
 
     await waitFor(() => {
@@ -292,7 +292,7 @@ describe('UnreadInboxSection', () => {
   });
 
   it('sends a comment reply with the entered content and character', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let capturedBody: Record<string, unknown> | null = null;
 
     server.use(
@@ -332,7 +332,7 @@ describe('UnreadInboxSection', () => {
   });
 
   it('offers every character in the game for @-mentions, not just ones the replier controls', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<UnreadInboxSection />);
 
@@ -359,7 +359,7 @@ describe('UnreadInboxSection', () => {
 
   describe('parent context', () => {
     it('shows the parent comment above the unread reply so the reader can recall the thread', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<UnreadInboxSection />);
 
       await waitFor(() => {
@@ -377,7 +377,7 @@ describe('UnreadInboxSection', () => {
     });
 
     it('shows the preceding message as context when expanding a private message', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<UnreadInboxSection />);
 
       await waitFor(() => {
@@ -393,7 +393,7 @@ describe('UnreadInboxSection', () => {
     });
 
     it('does not show a parent block when the unread message opened the conversation', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       // Notification points at message 54, the first in the conversation, so
       // the server has no predecessor to return.
       server.use(
@@ -421,7 +421,7 @@ describe('UnreadInboxSection', () => {
     });
 
     it('requests only the notified message and its predecessor, not the whole thread', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const requestedUrls: string[] = [];
       const recordRequest = ({ request }: { request: Request }) => {
         const url = new URL(request.url);
@@ -453,7 +453,7 @@ describe('UnreadInboxSection', () => {
     });
 
     it('keeps the parent collapsed by default and expands it on request', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<UnreadInboxSection />);
 
       await waitFor(() => {

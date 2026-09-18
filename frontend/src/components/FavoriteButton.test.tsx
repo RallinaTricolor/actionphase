@@ -36,7 +36,7 @@ describe('FavoriteButton', () => {
 
   it('reports the comment id and the CURRENT state when clicked', async () => {
     const onToggle = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<FavoriteButton commentId={7} isFavorited={false} onToggle={onToggle} />);
     await user.click(screen.getByTestId('favorite-button'));
@@ -47,7 +47,7 @@ describe('FavoriteButton', () => {
 
   it('passes the favorited state through on click so the caller can unfavorite', async () => {
     const onToggle = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(<FavoriteButton commentId={7} isFavorited={true} onToggle={onToggle} />);
     await user.click(screen.getByTestId('favorite-button'));

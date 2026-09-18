@@ -80,7 +80,7 @@ describe('AdminPage', () => {
 
   describe('Banned Users Tab', () => {
     it('shows loading state initially', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.admin.listBannedUsers).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
@@ -93,7 +93,7 @@ describe('AdminPage', () => {
     });
 
     it('displays empty state when no banned users exist', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
@@ -106,7 +106,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of banned users', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const bannedUsers = [
         {
           id: 1,
@@ -149,7 +149,7 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.admin.listBannedUsers).mockRejectedValue(
         new Error('API Error')
       );
@@ -164,7 +164,7 @@ describe('AdminPage', () => {
     });
 
     it('unbans a user when unban button is clicked and confirmed via modal', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',
@@ -202,7 +202,7 @@ describe('AdminPage', () => {
     });
 
     it('does not unban user when confirmation modal is cancelled', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',
@@ -232,7 +232,7 @@ describe('AdminPage', () => {
     });
 
     it('shows error toast when unban fails', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',

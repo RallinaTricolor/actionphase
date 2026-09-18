@@ -121,7 +121,7 @@ describe('CommonRoom', () => {
     });
 
     it('retries loading when try again is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let callCount = 0;
 
       server.use(
@@ -1038,7 +1038,7 @@ describe('CommonRoom', () => {
         }),
       ]);
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />, { gameId: 1 });
 
       // Wait for post to load and Add Comment button to appear
@@ -1102,7 +1102,7 @@ describe('CommonRoom', () => {
         }),
       );
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />, { gameId: 1 });
 
       await waitFor(() => {
@@ -1296,7 +1296,7 @@ describe('CommonRoom', () => {
       );
 
       const getElementByIdSpy = vi.spyOn(document, 'getElementById').mockReturnValue(null);
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(<CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />, {
         gameId: 1,

@@ -104,7 +104,7 @@ describe('Layout', () => {
       // landed — so every click closed it again and the menu was reachable
       // only by keyboard. The test above uses a bare fireEvent.click and so
       // never emitted the hover that triggers this.
-      const user = userEvent.setup()
+      const user = userEvent.setup({ delay: null })
       renderLayout(<div>Content</div>, '/dashboard')
 
       const userButton = screen.getByRole('button', { name: /testuser/i })

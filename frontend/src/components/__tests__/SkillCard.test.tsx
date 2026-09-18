@@ -149,7 +149,7 @@ describe('SkillCard', () => {
 
   describe('Legacy level key', () => {
     it('clears the legacy key when a legacy row is saved', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onUpdate = vi.fn();
       const legacy = { ...mockSkill, rank: undefined, level: 'Expert' };
       render(
@@ -200,7 +200,7 @@ describe('SkillCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -219,7 +219,7 @@ describe('SkillCard', () => {
     });
 
     it('shows Save and Cancel buttons in edit mode', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -236,7 +236,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing skill name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -255,7 +255,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing rank', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -274,7 +274,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -293,7 +293,7 @@ describe('SkillCard', () => {
     });
 
     it('allows editing category', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -315,7 +315,7 @@ describe('SkillCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with all field values when saved', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -351,7 +351,7 @@ describe('SkillCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -372,7 +372,7 @@ describe('SkillCard', () => {
   describe('Cancel Functionality', () => {
     it('reverts to view mode without calling onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -399,7 +399,7 @@ describe('SkillCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -460,7 +460,7 @@ describe('SkillCard', () => {
     });
 
     it('expands description when button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -478,7 +478,7 @@ describe('SkillCard', () => {
     });
 
     it('collapses description when button clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}
@@ -496,7 +496,7 @@ describe('SkillCard', () => {
     });
 
     it('changes aria-label when expanded/collapsed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <SkillCard
           skill={mockSkill}

@@ -115,7 +115,7 @@ describe('PrivateMessages new-conversation shortcut', () => {
   });
 
   it('drops the pre-selection once the form is dismissed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderMessages('/games/7?tab=messages&newConversationWith=42');
 
     await screen.findByTestId('new-conversation-modal');

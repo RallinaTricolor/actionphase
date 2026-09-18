@@ -32,7 +32,7 @@ describe('Drawer', () => {
   });
 
   it('calls onClose when close button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     render(
       <Drawer open={true} onClose={onClose} title="Sheet">
@@ -44,7 +44,7 @@ describe('Drawer', () => {
   });
 
   it('calls onClose when backdrop is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     render(
       <Drawer open={true} onClose={onClose}>
@@ -99,7 +99,7 @@ describe('Drawer', () => {
     });
 
     it('still closes on outside click with the scrim hidden', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       render(
         <Drawer open={true} onClose={onClose} hideBackdrop>

@@ -65,7 +65,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('posts a single ordinary result when no follow-up is added', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'A normal result.');
@@ -80,7 +80,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('builds a chain payload with a zero-delay head', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'The sword whooshes...');
@@ -101,7 +101,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('sends the delay the GM picked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'Part one.');
@@ -116,7 +116,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('supports a three-part chain in order', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'One.');
@@ -140,7 +140,7 @@ describe('CreateActionResultForm — staged chains', () => {
   // at submit time would surface as a generic "Failed to create result" and
   // lose every part the GM had written — so the control has to stop them here.
   it('stops the GM at the maximum chain length', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'The head.');
@@ -156,7 +156,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('removes a follow-up part, reverting to the single-result path', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'Only this.');
@@ -173,7 +173,7 @@ describe('CreateActionResultForm — staged chains', () => {
   });
 
   it('refuses to submit a chain with an empty part', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderForm();
 
     await user.type(screen.getByTestId('content'), 'Part one.');

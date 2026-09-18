@@ -130,7 +130,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -153,7 +153,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByText('Test Notification'));
@@ -176,7 +176,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     // pointerEventsCheck disabled so we can dispatch a middle-click (button 1).
@@ -202,7 +202,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.pointer({
@@ -225,7 +225,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.pointer({
@@ -241,7 +241,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification({ link_url: '/games/123#results' });
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -255,7 +255,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification({ link_url: undefined });
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -269,7 +269,7 @@ describe('NotificationItem', () => {
   it('shows confirm modal when delete button is clicked', async () => {
     const notification = createMockNotification();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -289,7 +289,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -311,7 +311,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -358,7 +358,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification();
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -401,7 +401,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTestId('toggle-read-button'));
@@ -422,7 +422,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTestId('toggle-read-button'));
@@ -442,7 +442,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );

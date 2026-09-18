@@ -368,7 +368,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should expand previous phases when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1, previousPhase2]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);
@@ -392,7 +392,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should collapse previous phases when clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);
@@ -413,7 +413,7 @@ describe('CurrentPhaseDisplay', () => {
     });
 
     it('should display phase numbers in previous phases', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCommonRoomPhase, [previousPhase1, previousPhase2]);
 
       renderWithProviders(<CurrentPhaseDisplay gameId={1} isGM={false} />);

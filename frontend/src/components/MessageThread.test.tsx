@@ -111,7 +111,7 @@ beforeEach(() => {
 
 describe('MessageThread draft clearing on conversation change', () => {
   it('clears the message draft when switching to a different conversation', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Set up participants so the message form renders
     baseConversationContext.conversation = {
@@ -145,7 +145,7 @@ describe('MessageThread observability', () => {
       participants: [makeConversationParticipant({ character_id: 10, character_name: 'TestChar', user_id: 1 })],
     };
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MessageThread {...defaultProps} />);
 
     // Composer is collapsed by default; open it via the Reply button.
@@ -183,7 +183,7 @@ describe('MessageThread edit functionality', () => {
   });
 
   it('shows inline editor when edit button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     baseConversationContext.messages = [makeMessage({ sender_user_id: 1, content: 'Original text' })];
 
     render(<MessageThread {...defaultProps} />);
@@ -196,7 +196,7 @@ describe('MessageThread edit functionality', () => {
   });
 
   it('calls editMessage and closes editor on save', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockEditMessage.mockResolvedValue(undefined);
     baseConversationContext.messages = [makeMessage({ id: 42, sender_user_id: 1, content: 'Original' })];
 
@@ -217,7 +217,7 @@ describe('MessageThread edit functionality', () => {
   });
 
   it('cancels editing without saving', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     baseConversationContext.messages = [makeMessage({ sender_user_id: 1 })];
 
     render(<MessageThread {...defaultProps} />);

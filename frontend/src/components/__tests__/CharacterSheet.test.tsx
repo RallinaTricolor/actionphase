@@ -181,7 +181,7 @@ describe('CharacterSheet', () => {
       gameId: 1,
     });
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.click(await screen.findByRole('tab', { name: 'Skills' }));
 
     // The manager's own <h3> is the one that survives; the description that used
@@ -204,7 +204,7 @@ describe('CharacterSheet', () => {
   });
 
   it('buffers an in-progress edit without mutating the saved values', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     setupSheet();
 
     renderWithProviders(<CharacterSheet characterId={CHARACTER_ID} canEdit />, {
@@ -231,7 +231,7 @@ describe('CharacterSheet', () => {
   });
 
   it('sends the buffered draft when the edit is saved', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     setupSheet();
 
     let savedBody: Record<string, unknown> | null = null;

@@ -222,7 +222,7 @@ describe('GameStatsView', () => {
   });
 
   it('re-sorts when a column header is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockStats({ data: baseStats });
     render(<GameStatsView gameId={1} gameState="completed" />);
 
@@ -236,7 +236,7 @@ describe('GameStatsView', () => {
   });
 
   it('reverses order when the active column is clicked again', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     mockStats({ data: baseStats });
     render(<GameStatsView gameId={1} gameState="completed" />);
 

@@ -347,7 +347,7 @@ describe('ItemCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -365,7 +365,7 @@ describe('ItemCard', () => {
     });
 
     it('shows Save and Cancel buttons in edit mode', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -382,7 +382,7 @@ describe('ItemCard', () => {
     });
 
     it('allows editing item name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -401,7 +401,7 @@ describe('ItemCard', () => {
     });
 
     it('allows editing quantity', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -419,7 +419,7 @@ describe('ItemCard', () => {
     });
 
     it('allows editing category', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -438,7 +438,7 @@ describe('ItemCard', () => {
     });
 
     it('allows editing description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -460,7 +460,7 @@ describe('ItemCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with all field values when saved', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -493,7 +493,7 @@ describe('ItemCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -514,7 +514,7 @@ describe('ItemCard', () => {
   describe('Cancel Functionality', () => {
     it('reverts to view mode without calling onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemCard
           item={mockItem}
@@ -541,7 +541,7 @@ describe('ItemCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <ItemCard
           item={mockItem}
@@ -602,7 +602,7 @@ describe('ItemCard', () => {
     });
 
     it('expands description when button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <ItemCard
           item={mockItem}
@@ -620,7 +620,7 @@ describe('ItemCard', () => {
     });
 
     it('collapses description when button clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <ItemCard
           item={mockItem}
@@ -638,7 +638,7 @@ describe('ItemCard', () => {
     });
 
     it('changes aria-label when expanded/collapsed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <ItemCard
           item={mockItem}

@@ -115,7 +115,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect when character is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 
@@ -126,7 +126,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect with correct character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 

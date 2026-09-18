@@ -118,7 +118,7 @@ describe('GameApplicationsList', () => {
   });
 
   it('calls reviewGameApplication with approve and refreshes list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.games.getGameApplications).mockResolvedValue({
       data: [makeApp()],
     } as never);
@@ -139,7 +139,7 @@ describe('GameApplicationsList', () => {
   });
 
   it('calls reviewGameApplication with reject and refreshes list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.games.getGameApplications).mockResolvedValue({
       data: [makeApp()],
     } as never);

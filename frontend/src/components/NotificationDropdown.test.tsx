@@ -194,7 +194,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -225,7 +225,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -255,7 +255,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 
@@ -375,7 +375,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 

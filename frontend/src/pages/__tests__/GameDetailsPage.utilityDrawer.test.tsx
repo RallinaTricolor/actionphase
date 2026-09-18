@@ -142,7 +142,7 @@ function setupGame({ state, phaseType = 'action', characters = [viewedGameCharac
 
 /** Render the game page (on the given tab) and open the Utility Drawer. */
 async function renderPageAndOpenDrawer(tab: string) {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   renderWithProviders(
     <GameProvider gameId={7}>
       <GameDetailsPage gameId={7} />

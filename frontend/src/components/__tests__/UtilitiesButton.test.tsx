@@ -15,7 +15,7 @@ function DrawerStateProbe() {
 
 describe('UtilitiesButton', () => {
   it('opens the drawer when clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     render(
       <UtilityDrawerProvider>

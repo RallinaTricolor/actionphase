@@ -379,7 +379,7 @@ describe('NewCommentsView', () => {
     });
 
     it('generates correct deep link to comment when "View Comment" is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
@@ -405,7 +405,7 @@ describe('NewCommentsView', () => {
     });
 
     it('generates correct deep link to parent comment when "View Parent" is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
           pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
@@ -431,7 +431,7 @@ describe('NewCommentsView', () => {
     });
 
     it('does not navigate to parent when parent_id is null', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const commentWithoutParent = { ...mockComment, parent_id: null };
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
@@ -458,7 +458,7 @@ describe('NewCommentsView', () => {
     });
 
     it('generates correct deep links for multiple comments', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const comments = [
         { ...mockComment, id: 10, parent_id: 100, content: 'First comment' },
         { ...mockComment, id: 20, parent_id: 200, content: 'Second comment' },
@@ -515,7 +515,7 @@ describe('NewCommentsView', () => {
     });
 
     it('calls refetch when refresh button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const refetch = vi.fn().mockResolvedValue({});
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
@@ -542,7 +542,7 @@ describe('NewCommentsView', () => {
     });
 
     it('disables refresh button while refreshing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const refetch = vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
@@ -577,7 +577,7 @@ describe('NewCommentsView', () => {
     });
 
     it('shows "Refreshing..." text while refreshing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const refetch = vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
@@ -700,7 +700,7 @@ describe('NewCommentsView', () => {
     });
 
     it('requests only unread comments once the filter is enabled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(
         loadedComments([{ ...mockComment, id: 1 }])
@@ -726,7 +726,7 @@ describe('NewCommentsView', () => {
     });
 
     it('shows an "all read" empty state when the filter hides everything', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
 
       // Comments exist unfiltered; once filtered, the server returns none.
@@ -746,7 +746,7 @@ describe('NewCommentsView', () => {
     });
 
     it('keeps the toggle and refresh button usable in the "all read" empty state', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
 
       vi.mocked(useRecentCommentsModule.useRecentComments).mockImplementation(
@@ -770,7 +770,7 @@ describe('NewCommentsView', () => {
     });
 
     it('lets the user clear the filter from the empty state via the toggle', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
 
       vi.mocked(useRecentCommentsModule.useRecentComments).mockImplementation(
@@ -791,7 +791,7 @@ describe('NewCommentsView', () => {
     });
 
     it('refetches from the empty state and shows newly-arrived unread comments', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
 
       let unreadArrived = false;
@@ -826,7 +826,7 @@ describe('NewCommentsView', () => {
     });
 
     it('renders the filtered list the server returns', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockReadMode = 'manual';
 
       vi.mocked(useRecentCommentsModule.useRecentComments).mockImplementation(

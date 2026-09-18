@@ -54,7 +54,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('calls onSubmit with the selected character id and trimmed content, and clears nothing until parent re-renders', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(
@@ -77,7 +77,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('does not call onSubmit when content is empty or only whitespace', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(
@@ -99,7 +99,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('falls back to the first controllable character when no character has been explicitly selected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(

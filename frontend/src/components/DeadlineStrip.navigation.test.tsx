@@ -64,7 +64,7 @@ describe('DeadlineStrip navigation', () => {
   });
 
   it('navigates to the deadline when a card with a destination is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderStrip({ onDeadlineClick, getDeadlineHref });
 
     await user.click(screen.getByRole('button', { name: /Who leads the expedition\?/ }));
@@ -74,7 +74,7 @@ describe('DeadlineStrip navigation', () => {
   });
 
   it('navigates via the keyboard, so the card is not mouse-only', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderStrip({ onDeadlineClick, getDeadlineHref });
 
     await user.tab();
@@ -85,7 +85,7 @@ describe('DeadlineStrip navigation', () => {
   });
 
   it('leaves deadlines without a destination inert', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderStrip({
       deadlines: [arbitraryDeadline],
       onDeadlineClick,

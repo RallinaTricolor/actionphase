@@ -27,7 +27,7 @@ describe('EmailVerificationBanner', () => {
   });
 
   it('disappears after clicking dismiss', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<EmailVerificationBanner />);
 
     const dismissButton = screen.getByRole('button', { name: /dismiss/i });
@@ -37,7 +37,7 @@ describe('EmailVerificationBanner', () => {
   });
 
   it('calls resendVerificationEmail when Resend Email is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.auth.resendVerificationEmail).mockResolvedValue(
       makeAxiosResponse({ message: 'Verification email sent' }),
     );

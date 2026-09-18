@@ -232,7 +232,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should load more comments when "Load More" button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Arrange: Initial load returns one page of threads
     const initialComments = Array.from({ length: THREADS_PER_PAGE }, (_, i) => createMockComment(i + 1));
@@ -293,7 +293,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should show loading state while loading more comments', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Arrange: Initial load
     const initialComments = Array.from({ length: THREADS_PER_PAGE }, (_, i) => createMockComment(i + 1));
@@ -353,7 +353,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should append new comments to existing tree when loading more', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Arrange: Initial 3 comments
     const initialComments = [
@@ -416,7 +416,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should preserve nested comment structure when loading more', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Arrange: Top-level comment with nested replies
     const initialComments = [
@@ -572,7 +572,7 @@ describe('PostCard - Load More Comments', () => {
       .mockResolvedValueOnce(makeAxiosResponse(initialResponse))
       .mockResolvedValueOnce(makeAxiosResponse(secondResponse));
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPostCard(mockPost);
 
     await waitFor(() => {
@@ -629,7 +629,7 @@ describe('PostCard - Load More Comments', () => {
       // 3rd call = the silent refresh
       .mockImplementationOnce(() => refreshDeferred.promise as never);
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPostCard(mockPost);
 
     // Load two pages
@@ -682,7 +682,7 @@ describe('PostCard - Load More Comments', () => {
       // 4th call = the corrective re-fetch with the grown window
       .mockResolvedValueOnce(makeAxiosResponse(makePageResponse([...page1, ...page2], 0, false)));
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPostCard(mockPost);
     await waitFor(() => expect(screen.getByText('Comment 1')).toBeInTheDocument());
 
@@ -732,7 +732,7 @@ describe('PostCard - Load More Comments', () => {
       .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, true, 12)))
       .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page2, THREADS_PER_PAGE, true, 14)));
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPostCard(mockPost);
 
     await waitFor(() => expect(screen.getByText(/7 remaining/i)).toBeInTheDocument());
@@ -753,7 +753,7 @@ describe('PostCard - Load More Comments', () => {
       .mockRejectedValueOnce(new Error('Network error'))
       .mockResolvedValueOnce(makeAxiosResponse(makePageResponse(page1, 0, false)));
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPostCard(mockPost);
 
     // The failure is surfaced — NOT the misleading "No comments yet" empty
@@ -768,7 +768,7 @@ describe('PostCard - Load More Comments', () => {
   });
 
   it('should recover from a failed page-2 fetch and allow manual retry', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     // Arrange: Initial load succeeds
     const initialComments = Array.from({ length: THREADS_PER_PAGE }, (_, i) => createMockComment(i + 1));

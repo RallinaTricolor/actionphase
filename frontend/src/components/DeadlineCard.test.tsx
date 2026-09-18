@@ -81,7 +81,7 @@ describe('DeadlineCard', () => {
     });
 
     it('shows description in tooltip on hover', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<DeadlineCard deadline={mockDeadline} isGM={false} />);
 
       const infoIcon = screen.getByLabelText('View description');
@@ -94,7 +94,7 @@ describe('DeadlineCard', () => {
     });
 
     it('preserves line breaks in description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const multilineDescription = 'Line 1\nLine 2\nLine 3';
       const deadline = { ...mockDeadline, description: multilineDescription };
       render(<DeadlineCard deadline={deadline} isGM={false} />);
@@ -158,7 +158,7 @@ describe('DeadlineCard', () => {
 
   describe('GM Actions', () => {
     it('shows edit button on hover for GM', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onEdit = vi.fn();
       const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onEdit={onEdit} />
@@ -172,7 +172,7 @@ describe('DeadlineCard', () => {
     });
 
     it('does not show GM actions for non-GM users', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onEdit = vi.fn();
       const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={false} onEdit={onEdit} />
@@ -186,7 +186,7 @@ describe('DeadlineCard', () => {
     });
 
     it('calls onEdit when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onEdit = vi.fn();
       const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onEdit={onEdit} />
@@ -206,7 +206,7 @@ describe('DeadlineCard', () => {
     });
 
     it('calls onDelete when delete button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onDelete = vi.fn();
       const { container } = render(
         <DeadlineCard deadline={mockDeadline} isGM={true} onDelete={onDelete} />
@@ -247,7 +247,7 @@ describe('DeadlineCard', () => {
 
   describe('Clickable Behavior', () => {
     it('calls onClick when card is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClick = vi.fn();
       render(
         <DeadlineCard deadline={mockDeadline} isGM={false} onClick={onClick} />
@@ -281,7 +281,7 @@ describe('DeadlineCard', () => {
     });
 
     it('activates via the keyboard, so the card is not mouse-only', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClick = vi.fn();
       render(<DeadlineCard deadline={mockDeadline} isGM={false} onClick={onClick} />);
 
@@ -298,7 +298,7 @@ describe('DeadlineCard', () => {
     // A bubbled Space keypress hit the container's preventDefault + navigate,
     // so Space on Delete navigated instead of deleting.
     it('deletes rather than navigates when Space activates the delete button', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClick = vi.fn();
       const onDelete = vi.fn();
       const { container } = render(
@@ -323,7 +323,7 @@ describe('DeadlineCard', () => {
     // The GM actions are hover-gated, so without focus revealing them they are
     // mouse-only. Tabbing must walk the whole card: click target -> Edit -> Delete.
     it('reaches every GM action by keyboard alone', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <DeadlineCard
           deadline={mockDeadline}

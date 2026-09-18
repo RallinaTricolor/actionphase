@@ -21,7 +21,7 @@ describe('MessageCharacterButton', () => {
   });
 
   it('navigates to the new-conversation form for the character', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<MessageCharacterButton character={character} />);
 
     await user.click(screen.getByRole('button'));
@@ -32,7 +32,7 @@ describe('MessageCharacterButton', () => {
   });
 
   it('still navigates when onNavigate returns nothing', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onNavigate = vi.fn();
     render(<MessageCharacterButton character={character} onNavigate={onNavigate} />);
 
@@ -48,7 +48,7 @@ describe('MessageCharacterButton', () => {
    * point of asking.
    */
   it('cancels navigation when onNavigate returns false', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onNavigate = vi.fn(() => false);
     render(<MessageCharacterButton character={character} onNavigate={onNavigate} />);
 

@@ -46,7 +46,7 @@ describe('DeletePhaseDialog', () => {
   });
 
   it('should call onConfirm when Delete button clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const onConfirm = vi.fn().mockResolvedValue(undefined);
 
@@ -69,7 +69,7 @@ describe('DeletePhaseDialog', () => {
   });
 
   it('should close when Cancel button clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const onConfirm = vi.fn();
 
@@ -90,7 +90,7 @@ describe('DeletePhaseDialog', () => {
   });
 
   it('should display error message when deletion fails', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const errorMessage = 'cannot delete phase: 2 action submission(s) exist for this phase';
     const onConfirm = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -121,7 +121,7 @@ describe('DeletePhaseDialog', () => {
   });
 
   it('should disable buttons while submitting', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     let resolveConfirm: () => void;
     const confirmPromise = new Promise<void>((resolve) => {

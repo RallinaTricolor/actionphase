@@ -405,7 +405,7 @@ describe('ThreadedComment', () => {
     });
 
     it('shows collapse icon when replies are hidden', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockCommentWithReplies}
@@ -443,7 +443,7 @@ describe('ThreadedComment', () => {
     });
 
     it('shows reply form when reply button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -463,7 +463,7 @@ describe('ThreadedComment', () => {
     });
 
     it('hides reply form when reply button is clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -486,7 +486,7 @@ describe('ThreadedComment', () => {
 
   describe('Reply Form', () => {
     it('auto-selects first character when user has characters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -508,7 +508,7 @@ describe('ThreadedComment', () => {
     });
 
     it('shows character dropdown when user has multiple characters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -530,7 +530,7 @@ describe('ThreadedComment', () => {
     });
 
     it('does not show character dropdown when user has single character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -567,7 +567,7 @@ describe('ThreadedComment', () => {
     });
 
     it('allows changing selected character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -590,7 +590,7 @@ describe('ThreadedComment', () => {
     });
 
     it('auto-selects parent comment character when parentComment is provided and user controls it', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Parent comment authored by character ID 2 (Villain)
       const parentComment: Message = makeMessage({
@@ -635,7 +635,7 @@ describe('ThreadedComment', () => {
     });
 
     it('auto-selects first character when parentComment is null', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <ThreadedComment
@@ -659,7 +659,7 @@ describe('ThreadedComment', () => {
     });
 
     it('auto-selects first character when parentComment character is not controllable', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Parent comment authored by character ID 99 (not in controllableCharacters)
       const parentComment: Message = makeMessage({
@@ -703,7 +703,7 @@ describe('ThreadedComment', () => {
     });
 
     it('allows typing in reply textarea', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -726,7 +726,7 @@ describe('ThreadedComment', () => {
     });
 
     it('disables reply button when content is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -750,7 +750,7 @@ describe('ThreadedComment', () => {
     });
 
     it('enables reply button when content is provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -774,7 +774,7 @@ describe('ThreadedComment', () => {
     });
 
     it('disables reply button when content is only whitespace', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -798,7 +798,7 @@ describe('ThreadedComment', () => {
     });
 
     it('shows cancel button', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -817,7 +817,7 @@ describe('ThreadedComment', () => {
     });
 
     it('closes form when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -840,7 +840,7 @@ describe('ThreadedComment', () => {
     });
 
     it('clears form content when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -866,7 +866,7 @@ describe('ThreadedComment', () => {
     });
 
     it('saves post to localstorage cache with the proper tag', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -890,7 +890,7 @@ describe('ThreadedComment', () => {
     });
 
     it('clears localstorage cache after cancel', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -919,7 +919,7 @@ describe('ThreadedComment', () => {
 
   describe('Reply Submission', () => {
     it('calls onCreateReply with correct parameters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -949,7 +949,7 @@ describe('ThreadedComment', () => {
     });
 
     it('trims whitespace from reply content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -978,7 +978,7 @@ describe('ThreadedComment', () => {
     });
 
     it('clears form after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -1008,7 +1008,7 @@ describe('ThreadedComment', () => {
     });
 
     it.skip('shows loading state during submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
@@ -1039,7 +1039,7 @@ describe('ThreadedComment', () => {
     });
 
     it.skip('disables form fields during submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
       );
@@ -1072,7 +1072,7 @@ describe('ThreadedComment', () => {
     });
 
     it('reloads replies after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -1107,7 +1107,7 @@ describe('ThreadedComment', () => {
     });
 
     it('clears localstorage cache after submit', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadedComment
           comment={mockComment}
@@ -1185,7 +1185,7 @@ describe('ThreadedComment', () => {
     });
 
     it('toggles replies visibility when reply count button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <ThreadedComment
@@ -1331,7 +1331,7 @@ describe('ThreadedComment', () => {
     });
 
     it('does not show nested replies when showReplies is false', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <ThreadedComment
@@ -1356,7 +1356,7 @@ describe('ThreadedComment', () => {
     });
 
     it('shows replies after submitting a new reply', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -1532,7 +1532,7 @@ describe('ThreadedComment', () => {
     });
 
     it('handles error when creating reply fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       mockOnCreateReply.mockRejectedValueOnce(new Error('Failed to create reply'));
 
@@ -1569,7 +1569,7 @@ describe('ThreadedComment', () => {
 
   describe('Integration', () => {
     it('handles complete workflow from viewing to replying', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -1624,7 +1624,7 @@ describe('ThreadedComment', () => {
     });
 
     it('handles nested reply workflow', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockOnCreateReply.mockResolvedValueOnce(undefined);
 
       renderWithProviders(
@@ -2361,7 +2361,7 @@ describe('ThreadedComment', () => {
 
     it('reports the comment id and current state when the star is clicked', async () => {
       const onToggleFavorite = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <ThreadedComment {...favoriteProps} favoriteCommentIDs={[]} onToggleFavorite={onToggleFavorite} />
@@ -2415,7 +2415,7 @@ describe('ThreadedComment', () => {
       // A favorite is the viewer's own private row, and a finished game is
       // exactly when someone goes back to collect the comments worth keeping,
       // so the star has to survive into the history view.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onToggleFavorite = vi.fn();
 
       renderWithProviders(

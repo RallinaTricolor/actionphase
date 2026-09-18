@@ -87,7 +87,7 @@ describe('AllPrivateMessagesView - URL sync', () => {
   })
 
   it('selecting a conversation card sets the audienceConversation param', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     server.use(
       http.get('/api/v1/games/:gameId/private-messages/all', () => {
         return HttpResponse.json({ conversations: [mockConversation], total: 1 })
@@ -111,7 +111,7 @@ describe('AllPrivateMessagesView - URL sync', () => {
   })
 
   it('clicking back returns to conversation list and clears the param', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     server.use(
       http.get('/api/v1/games/:gameId/private-messages/all', () => {
         return HttpResponse.json({ conversations: [mockConversation], total: 1 })
@@ -194,7 +194,7 @@ describe('AllPrivateMessagesView - participant filter', () => {
   })
 
   it('narrows filter options to co-participants when a name is selected', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     renderWithProviders(<AllPrivateMessagesView gameId={gameId} />, { gameId })
 
     // Wait for initial filter list
@@ -259,7 +259,7 @@ describe('AllPrivateMessagesView - filters by character ID, not name', () => {
 
 describe('AllPrivateMessagesView - browser Back button', () => {
   it('returns to the conversation list when Back is pressed after opening a conversation', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     server.use(
       http.get('/api/v1/games/:gameId/private-messages/all', () =>
         HttpResponse.json({ conversations: [mockConversation], total: 1 })
@@ -301,7 +301,7 @@ describe('AllPrivateMessagesView - browser Back button', () => {
 
 describe('AllPrivateMessagesView - filters persist in the URL', () => {
   it('writes the selected participant filter to the URL', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const { router } = renderWithProviders(<AllPrivateMessagesView gameId={gameId} />, {
       gameId,
       initialEntries: ['/?tab=audience'],
