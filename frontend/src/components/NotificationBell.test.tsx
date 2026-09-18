@@ -1,17 +1,16 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { server } from '../mocks/server';
 import { renderWithProviders, createTestQueryClient as _createTestQueryClient } from '../test-utils/render';
 import NotificationBell from './NotificationBell';
 
 // Setup MSW server
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// Uses the shared MSW server from src/mocks/server rather than a local
+// setupServer(). Both listen at once, and the shared one wins, so a local
+// server's handlers never match -- requests fall through as unhandled and
+// tests can pass for the wrong reason. src/mocks/server.ts documents this.
 
 describe('NotificationBell', () => {
   beforeEach(() => {

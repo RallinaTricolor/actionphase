@@ -40,8 +40,12 @@ beforeEach(() => {
   }
 })
 
-// Establish API mocking before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
+// Establish API mocking before all tests.
+// 'error' rather than 'warn': an unstubbed request 404s, and a component then
+// renders its failure branch while the test passes by asserting on something
+// else. Failing at the point of introduction is what keeps that from returning.
+// Add a base handler in src/mocks/server.ts, or override with server.use().
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 
 // Reset any request handlers that we may add during tests,
 // so they don't affect other tests

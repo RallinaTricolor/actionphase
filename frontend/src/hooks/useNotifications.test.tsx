@@ -1,8 +1,7 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import {
   useNotifications,
   useUnreadCount,
@@ -12,16 +11,14 @@ import {
   useAutoMarkNotificationRead,
 } from './useNotifications';
 import type { Notification } from '../types/notifications';
+import { server } from '../mocks/server';
 import { AuthProvider } from '../contexts/AuthContext'
 import { ToastProvider } from '../contexts/ToastContext'
 import { MemoryRouter } from 'react-router-dom';
 
-// Setup MSW server
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// Uses the shared MSW server from setupTests.ts. Handlers registered via
+// server.use() below take precedence over its base handlers, and setupTests.ts
+// already resets them after each test.
 
 describe('useNotifications hooks', () => {
   let queryClient: QueryClient;

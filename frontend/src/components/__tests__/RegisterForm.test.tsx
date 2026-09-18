@@ -481,6 +481,20 @@ describe('RegisterForm', () => {
     it('does not show error when passwords match', async () => {
       const user = userEvent.setup();
 
+      // Passwords match, so the click actually submits. Stub the POST: the
+      // request is incidental to this test, which is about the inline
+      // validation message, but leaving it unhandled makes it 404.
+      server.use(
+        http.post('/api/v1/auth/register', async () => {
+          return HttpResponse.json({
+            id: 1,
+            username: 'testuser',
+            email: 'test@example.com',
+            Token: 'fake-token',
+          });
+        })
+      );
+
       renderWithProviders(<RegisterForm />);
 
       await user.type(screen.getByLabelText(/username/i), 'testuser');
