@@ -7,7 +7,7 @@ describe('NumberForm', () => {
   describe('Submit guard', () => {
     it('does not call onSubmit when name is empty', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberForm
           onSubmit={onSubmit}
@@ -30,7 +30,7 @@ describe('NumberForm', () => {
   describe('Decimal support', () => {
     it('accepts decimal amount', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberForm
           onSubmit={onSubmit}
@@ -57,7 +57,7 @@ describe('NumberForm', () => {
   // it — the control stays hidden and the key is never persisted alone.
   describe('Maximum and display mode', () => {
     it('hides the display control until a maximum is entered', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<NumberForm onSubmit={vi.fn()} onCancel={vi.fn()} submitLabel="Add" />);
 
       expect(screen.queryByLabelText(/display as/i)).not.toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('NumberForm', () => {
 
     it('submits max and display together', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<NumberForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" />);
 
       await user.type(screen.getByLabelText(/^name/i), 'Stress');
@@ -86,7 +86,7 @@ describe('NumberForm', () => {
 
     it('omits max and display for an unbounded entry', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<NumberForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" />);
 
       await user.type(screen.getByLabelText(/^name/i), 'Gold');
@@ -103,7 +103,7 @@ describe('NumberForm', () => {
     // default into the document, which the sparse-config rule exists to prevent.
     it('does not persist the default display mode', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<NumberForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" />);
 
       await user.type(screen.getByLabelText(/^name/i), 'Stress');
@@ -120,7 +120,7 @@ describe('NumberForm', () => {
     // rather than stored as a bound nothing can render against.
     it('treats a zero maximum as unset', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<NumberForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" />);
 
       await user.type(screen.getByLabelText(/^name/i), 'Gold');

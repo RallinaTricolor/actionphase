@@ -80,7 +80,7 @@ describe('NumberCard', () => {
     // Editing a legacy row should leave it carrying one spelling of its name,
     // not both — otherwise the fallback silently keeps choosing between them.
     it('clears the legacy key when a legacy row is saved', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onUpdate = vi.fn();
       const legacy = { id: '1', type: 'Gold', amount: 1000 } as NumberEntry;
       render(
@@ -112,7 +112,7 @@ describe('NumberCard', () => {
     // controls are labelled buttons rather than the ✓/✕ icons this card used to
     // hand-roll — the only editor on the sheet that did not read as Save/Cancel.
     it('presents the shared form\'s save and cancel buttons while editing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard entry={mockEntry} canEdit={true} onUpdate={vi.fn()} onRemove={vi.fn()} />
       );
@@ -263,7 +263,7 @@ describe('NumberCard', () => {
 
   describe('Edit Mode', () => {
     it('enters edit mode when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -281,7 +281,7 @@ describe('NumberCard', () => {
     });
 
     it('shows save and cancel buttons in edit mode', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -298,7 +298,7 @@ describe('NumberCard', () => {
     });
 
     it('allows editing the name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -317,7 +317,7 @@ describe('NumberCard', () => {
     });
 
     it('allows editing amount', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -336,7 +336,7 @@ describe('NumberCard', () => {
     });
 
     it('allows editing description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -358,7 +358,7 @@ describe('NumberCard', () => {
   describe('Save Functionality', () => {
     it('calls onUpdate with modified values when saved', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -391,7 +391,7 @@ describe('NumberCard', () => {
     });
 
     it('exits edit mode after save', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -410,7 +410,7 @@ describe('NumberCard', () => {
 
     it('sets description to undefined when empty', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -440,7 +440,7 @@ describe('NumberCard', () => {
 
   describe('Cancel Functionality', () => {
     it('reverts changes when cancelled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -465,7 +465,7 @@ describe('NumberCard', () => {
 
     it('does not call onUpdate when cancelled', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -487,7 +487,7 @@ describe('NumberCard', () => {
     });
 
     it('exits edit mode when cancelled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -508,7 +508,7 @@ describe('NumberCard', () => {
   describe('Remove Functionality', () => {
     it('calls onRemove when delete button clicked', async () => {
       const onRemove = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -527,7 +527,7 @@ describe('NumberCard', () => {
   describe('Decimal Amount Support', () => {
     it('accepts decimal amount input', async () => {
       const onUpdate = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -598,7 +598,7 @@ describe('NumberCard', () => {
     });
 
     it('renders Write/Preview tabs in edit mode for description field', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <NumberCard
           entry={mockEntry}
@@ -635,7 +635,7 @@ describe('NumberCard', () => {
     });
 
     it('reports dirty once a field diverges from the saved value', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onDirtyChange = vi.fn();
       render(
         <NumberCard
@@ -654,7 +654,7 @@ describe('NumberCard', () => {
     });
 
     it('reports clean again after cancel restores the saved values', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onDirtyChange = vi.fn();
       render(
         <NumberCard
@@ -686,7 +686,7 @@ describe('NumberCard', () => {
      * write was never actually surfaced by this flag.
      */
     it('reports clean once saved, without waiting for the parent to apply it', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onDirtyChange = vi.fn();
       render(
         <NumberCard

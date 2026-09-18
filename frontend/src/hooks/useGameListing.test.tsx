@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { makeAxiosResponse } from '../test-utils';
+import { makeAxiosResponse } from '../test-utils/factories';
 import { useGameListing } from './useGameListing';
 import { apiClient } from '../lib/api';
 import type { GameListingResponse, EnrichedGameListItem, GameState } from '../types/games';

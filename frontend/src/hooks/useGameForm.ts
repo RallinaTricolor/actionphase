@@ -251,11 +251,30 @@ export function useGameForm(initialData?: GameWithDetails) {
     setInitialFormData(next);
   }, []);
 
+  // Fills in a default the form chose for itself, moving the baseline for THAT
+  // FIELD ONLY so it does not read as a user edit.
+  //
+  // Not resetFormData({ ...formData, field: value }): that rebases the entire
+  // baseline onto current formData, so anything the user had already typed gets
+  // absorbed into it and the form stops looking dirty. That is a real bug, not
+  // a hypothetical -- callers apply defaults from async data (the community
+  // picker waits on a fetch), so a user typing before it resolves silently
+  // loses the unsaved-edit guard and can close the form discarding their work.
+  // Applying both updates functionally also avoids capturing a stale formData.
+  const applySelfDefault = useCallback(
+    (field: keyof GameFormData, value: string | number | boolean) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+      setInitialFormData(prev => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
   return {
     formData,
     setFormData,
     initialFormData,
     resetFormData,
+    applySelfDefault,
     handleChange,
     error,
     setError,

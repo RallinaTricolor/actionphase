@@ -48,7 +48,7 @@ describe('ItemForm unsaved-edit reporting', () => {
   });
 
   it('reports dirty once a manual field is typed into', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onDirtyChange = vi.fn();
     renderForm({ onDirtyChange });
 
@@ -63,7 +63,7 @@ describe('ItemForm unsaved-edit reporting', () => {
    * lock stayed on with no edit the user could save or cancel to clear it.
    */
   it('ignores a whitespace-only change', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onDirtyChange = vi.fn();
     renderForm({ onDirtyChange, initialValues: { name: 'Rope', quantity: 1 } });
 
@@ -89,7 +89,7 @@ describe('ItemForm unsaved-edit reporting', () => {
    * Reporting dirty here would warn on every close for an edit the GM never made.
    */
   it('reports clean after browsing a loot table and returning to manual', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onDirtyChange = vi.fn();
     renderForm({ onDirtyChange });
 

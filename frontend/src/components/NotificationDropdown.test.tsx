@@ -1,30 +1,19 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { server } from '../mocks/server';
 import { renderWithProviders, createTestQueryClient } from '../test-utils';
 import NotificationDropdown from './NotificationDropdown';
 import type { Notification } from '../types/notifications';
 import type { QueryClient } from '@tanstack/react-query';
 
-// Setup MSW server with default handlers
-const server = setupServer(
-  // Mock auth/me endpoint that AuthContext calls
-  http.get('/api/v1/auth/me', () => {
-    return HttpResponse.json({
-      id: 1,
-      username: 'testuser',
-      email: 'test@example.com',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-  })
-);
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// Uses the shared MSW server from src/mocks/server rather than a local
+// setupServer(). Both listen at once, and the shared one wins, so a local
+// server's handlers never match -- requests fall through as unhandled and
+// tests can pass for the wrong reason. src/mocks/server.ts documents this.
+// The auth/me handler this file used to declare locally is already a base
+// handler on the shared server.
 
 describe('NotificationDropdown', () => {
   let queryClient: QueryClient;
@@ -205,7 +194,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -236,7 +225,7 @@ describe('NotificationDropdown', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={vi.fn()} />, { queryClient });
 
     await waitFor(() => {
@@ -266,7 +255,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 
@@ -386,7 +375,7 @@ describe('NotificationDropdown', () => {
     );
 
     const mockOnClose = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<NotificationDropdown isOpen={true} onClose={mockOnClose} />);
 

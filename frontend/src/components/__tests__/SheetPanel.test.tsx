@@ -30,7 +30,7 @@ describe('SheetPanel', () => {
   });
 
   it('calls onInsert with the clicked item', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onInsert = vi.fn();
     render(<SheetPanel items={items} onInsert={onInsert} />);
     await user.click(screen.getByText('Stealth'));
@@ -38,7 +38,7 @@ describe('SheetPanel', () => {
   });
 
   it('filters items by name', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetPanel items={items} onInsert={vi.fn()} />);
     const filterInput = screen.getByRole('textbox', { name: /filter/i });
     await user.type(filterInput, 'bolt');
@@ -47,7 +47,7 @@ describe('SheetPanel', () => {
   });
 
   it('shows no-match message when filter returns nothing', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetPanel items={items} onInsert={vi.fn()} />);
     await user.type(screen.getByRole('textbox', { name: /filter/i }), 'xyzzy');
     expect(screen.getByText(/no items match/i)).toBeInTheDocument();

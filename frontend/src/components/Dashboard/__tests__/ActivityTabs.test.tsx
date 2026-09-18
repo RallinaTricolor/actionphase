@@ -114,7 +114,7 @@ describe('ActivityTabs', () => {
     });
 
     it('switches to activity tab when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -128,7 +128,7 @@ describe('ActivityTabs', () => {
     });
 
     it('applies active styling to activity tab when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -147,7 +147,7 @@ describe('ActivityTabs', () => {
     });
 
     it('can toggle between tabs multiple times', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 
@@ -290,7 +290,7 @@ describe('ActivityTabs', () => {
 
   describe('responsive behavior', () => {
     it('maintains tab state when switching between tabs', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(<ActivityTabs deadlines={mockDeadlines} messages={mockMessages} />);
 

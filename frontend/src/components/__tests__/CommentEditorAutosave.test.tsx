@@ -30,7 +30,7 @@ describe('CommentEditor autosave', () => {
   });
 
   it('persists typed content under the supplied autosave id', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness autosaveRefId="post-reply-42" />);
 
     await user.type(screen.getByTestId('editor'), 'draft text');
@@ -56,7 +56,7 @@ describe('CommentEditor autosave', () => {
   });
 
   it('does not persist anything when no autosave id is supplied', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<Harness />);
 
     await user.type(screen.getByTestId('editor'), 'ephemeral');
@@ -65,7 +65,7 @@ describe('CommentEditor autosave', () => {
   });
 
   it('clears the cached draft when the editor is emptied', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     postCachingService.save('post-reply-42', 'abc');
 
     render(<Harness autosaveRefId="post-reply-42" />);

@@ -71,7 +71,7 @@ describe('PrivateMessages — notification for the conversation already open', (
   });
 
   it('reloads the thread when the notification points at the open conversation', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithNotificationLink(5);
 
     // Precondition: conversation 5 is the one on screen.

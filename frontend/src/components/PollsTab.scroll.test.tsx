@@ -137,7 +137,7 @@ describe('PollsTab deep-link scrolling', () => {
   });
 
   it('leaves the expired toggle alone when the user has not deep-linked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(hooks.usePollsByPhase).mockReturnValue({
       data: [makePoll({ id: 1 }), makePoll({ id: 42, question: 'Old vote', is_expired: true })],
       isLoading: false,

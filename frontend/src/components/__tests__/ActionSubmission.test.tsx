@@ -305,7 +305,7 @@ describe('ActionSubmission', () => {
     });
 
     it('allows changing selected character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -324,7 +324,7 @@ describe('ActionSubmission', () => {
     });
 
     it('allows deselecting character (optional)', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -371,7 +371,7 @@ describe('ActionSubmission', () => {
     });
 
     it('updates content when user types', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -414,7 +414,7 @@ describe('ActionSubmission', () => {
     });
 
     it('enables submit button when content is provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -431,7 +431,7 @@ describe('ActionSubmission', () => {
     });
 
     it('saves post to localstorage cache with the proper tag', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -449,7 +449,7 @@ describe('ActionSubmission', () => {
 
   describe('Action Submission', () => {
     it('submits action with content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -470,7 +470,7 @@ describe('ActionSubmission', () => {
     });
 
     it('trims whitespace from content before submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let submittedData: ActionSubmissionRequest | undefined;
 
       setupDefaultHandlers();
@@ -499,7 +499,7 @@ describe('ActionSubmission', () => {
     });
 
     it('submits with selected character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let submittedData: ActionSubmissionRequest | undefined;
 
       setupDefaultHandlers();
@@ -531,7 +531,7 @@ describe('ActionSubmission', () => {
     });
 
     it('clears form after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -552,7 +552,7 @@ describe('ActionSubmission', () => {
     });
 
     it('shows loading state while submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers();
       server.use(
@@ -580,7 +580,7 @@ describe('ActionSubmission', () => {
     });
 
     it('disables form fields while submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers();
       server.use(
@@ -608,7 +608,7 @@ describe('ActionSubmission', () => {
     });
 
     it('clears localstorage cache after submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -686,7 +686,7 @@ describe('ActionSubmission', () => {
     });
 
     it('opens edit form when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -704,7 +704,7 @@ describe('ActionSubmission', () => {
     });
 
     it('pre-populates form with current action content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -719,7 +719,7 @@ describe('ActionSubmission', () => {
     });
 
     it('shows update button when editing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -737,7 +737,7 @@ describe('ActionSubmission', () => {
     });
 
     it('shows cancel button when editing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -755,7 +755,7 @@ describe('ActionSubmission', () => {
     });
 
     it('restores original content when cancel clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -781,7 +781,7 @@ describe('ActionSubmission', () => {
     });
 
     it('hides current action display when editing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -799,7 +799,7 @@ describe('ActionSubmission', () => {
     });
 
     it('updates action successfully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(
@@ -927,7 +927,7 @@ describe('ActionSubmission', () => {
     });
 
     it('expands previous actions when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [
         mockCurrentAction,
         ...mockPreviousActions,
@@ -948,7 +948,7 @@ describe('ActionSubmission', () => {
     });
 
     it('collapses previous actions when clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [
         mockCurrentAction,
         ...mockPreviousActions,
@@ -977,7 +977,7 @@ describe('ActionSubmission', () => {
     });
 
     it('displays phase number in previous actions', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [
         mockCurrentAction,
         ...mockPreviousActions,
@@ -996,7 +996,7 @@ describe('ActionSubmission', () => {
     });
 
     it('displays character name in previous actions', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [
         mockCurrentAction,
         ...mockPreviousActions,
@@ -1033,7 +1033,7 @@ describe('ActionSubmission', () => {
 
   describe('Error Handling', () => {
     it('displays error message when submission fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers();
       server.use(
@@ -1065,7 +1065,7 @@ describe('ActionSubmission', () => {
     });
 
     it('does not clear content when submission fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers();
       server.use(
@@ -1098,7 +1098,7 @@ describe('ActionSubmission', () => {
 
   describe('Integration', () => {
     it('handles complete submission workflow', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(
@@ -1126,7 +1126,7 @@ describe('ActionSubmission', () => {
     });
 
     it('handles complete edit workflow', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockCharacters, [mockCurrentAction]);
 
       renderWithProviders(

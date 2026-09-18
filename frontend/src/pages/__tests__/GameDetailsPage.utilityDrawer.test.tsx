@@ -8,7 +8,7 @@ import { UtilityDrawerHarness } from '../../test-utils/utilityDrawer'
 import { GameProvider } from '../../contexts/GameContext'
 import { GameDetailsPage } from '../GameDetailsPage'
 import type { Character } from '../../types/characters'
-import { makeCharacter } from '../../test-utils'
+import { makeCharacter } from '../../test-utils/factories';
 
 /**
  * The Utility Drawer is mounted at the app root and reachable from every page,
@@ -142,7 +142,7 @@ function setupGame({ state, phaseType = 'action', characters = [viewedGameCharac
 
 /** Render the game page (on the given tab) and open the Utility Drawer. */
 async function renderPageAndOpenDrawer(tab: string) {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   renderWithProviders(
     <GameProvider gameId={7}>
       <GameDetailsPage gameId={7} />

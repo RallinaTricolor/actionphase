@@ -59,7 +59,7 @@ describe('MessageCharacterButton', () => {
   });
 
   it('navigates to the game messages tab with the character pre-selected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderButton();
 
     await user.click(screen.getByRole('button', { name: /send a private message/i }));
@@ -68,7 +68,7 @@ describe('MessageCharacterButton', () => {
   });
 
   it('dismisses the host surface before navigating', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onNavigate = vi.fn();
     renderButton({ onNavigate });
 

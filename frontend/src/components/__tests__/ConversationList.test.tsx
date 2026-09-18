@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import { renderWithProviders, makeConversationListItem } from '../../test-utils'
+import { renderWithProviders } from '../../test-utils';
+import { makeConversationListItem } from '../../test-utils/factories';
 import { ConversationList } from '../ConversationList'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'

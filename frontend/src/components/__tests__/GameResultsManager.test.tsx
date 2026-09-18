@@ -328,7 +328,7 @@ describe('GameResultsManager', () => {
 
   describe('Edit Functionality', () => {
     it('shows edit form when Edit button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -345,7 +345,7 @@ describe('GameResultsManager', () => {
     });
 
     it('shows Save Changes and Cancel buttons in edit mode', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -361,7 +361,7 @@ describe('GameResultsManager', () => {
     });
 
     it('hides Edit button when in edit mode', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -378,7 +378,7 @@ describe('GameResultsManager', () => {
     });
 
     it('allows editing content in textarea', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -397,7 +397,7 @@ describe('GameResultsManager', () => {
     });
 
     it('closes edit form and reverts changes when Cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -421,7 +421,7 @@ describe('GameResultsManager', () => {
     });
 
     it('successfully saves changes when Save Changes is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -445,7 +445,7 @@ describe('GameResultsManager', () => {
     });
 
     it('trims whitespace from content before saving', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let requestBody: { content: string } | undefined;
 
       server.use(
@@ -481,7 +481,7 @@ describe('GameResultsManager', () => {
     });
 
     it('does not save when content is unchanged', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -502,7 +502,7 @@ describe('GameResultsManager', () => {
     });
 
     it('disables Save button when content is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -521,7 +521,7 @@ describe('GameResultsManager', () => {
     });
 
     it('disables Save button when content is only whitespace', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -541,7 +541,7 @@ describe('GameResultsManager', () => {
     });
 
     it('offers a markdown preview of the draft being edited', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -566,7 +566,7 @@ describe('GameResultsManager', () => {
     });
 
     it('keeps edited content when toggling between Write and Preview', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -587,7 +587,7 @@ describe('GameResultsManager', () => {
     });
 
     it('can edit only one result at a time', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult, mockUnpublishedResult2]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -608,7 +608,7 @@ describe('GameResultsManager', () => {
 
   describe('Loading States', () => {
     it('shows loading text while saving changes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Hold the save open until the test releases it, rather than racing a
       // timer. This keeps the pending state observable for as long as we need
@@ -653,7 +653,7 @@ describe('GameResultsManager', () => {
     });
 
     it('disables form controls while saving', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Hold the save open until the test releases it, rather than racing a
       // timer. This keeps the pending state observable for as long as we need
@@ -701,7 +701,7 @@ describe('GameResultsManager', () => {
 
   describe('Error Handling', () => {
     it('shows error message when save fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('/api/v1/games/:gameId/results', () => {
@@ -735,7 +735,7 @@ describe('GameResultsManager', () => {
     });
 
     it('keeps edit form open when save fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('/api/v1/games/:gameId/results', () => {
@@ -945,7 +945,7 @@ describe('GameResultsManager', () => {
     });
 
     it('expands to show full content when "Show full content" is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const longContent = 'This is a very long unpublished result that exceeds the 200 character limit. It contains important information that the GM is still drafting and needs to review before publishing to players. The content continues with more narrative details about the game.';
       const longResult: ActionResult = {
         ...mockUnpublishedResult,
@@ -972,7 +972,7 @@ describe('GameResultsManager', () => {
     });
 
     it('collapses to show preview when "Show less" is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const longContent = 'This is a very long unpublished result that needs to be collapsed. It has lots of details about what happened during the action phase and the consequences of the player\'s choices. The GM is still working on perfecting this narrative before sending it.';
       const longResult: ActionResult = {
         ...mockUnpublishedResult,
@@ -1004,7 +1004,7 @@ describe('GameResultsManager', () => {
     });
 
     it('maintains separate collapse state for multiple long results', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const longResult1: ActionResult = {
         ...mockUnpublishedResult,
         id: 1,
@@ -1098,7 +1098,7 @@ describe('GameResultsManager', () => {
     });
 
     it('shows confirmation dialog when Delete is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -1115,7 +1115,7 @@ describe('GameResultsManager', () => {
     });
 
     it('hides confirmation dialog when Cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -1132,7 +1132,7 @@ describe('GameResultsManager', () => {
     });
 
     it('calls delete API and removes result when confirmed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let deleteCalled = false;
 
       server.use(
@@ -1160,7 +1160,7 @@ describe('GameResultsManager', () => {
     });
 
     it('leaves result in list when delete fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('/api/v1/games/:gameId/results', () => {
@@ -1325,7 +1325,7 @@ describe('GameResultsManager', () => {
     });
 
     it('surfaces the conflict in the publish confirmation dialog', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([resultA, resultB]);
       setupDraftCounts({ 10: 1, 11: 1 });
       server.use(
@@ -1351,7 +1351,7 @@ describe('GameResultsManager', () => {
 
   describe('Integration', () => {
     it('handles complete edit workflow', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -1379,7 +1379,7 @@ describe('GameResultsManager', () => {
     });
 
     it('handles editing multiple results sequentially', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockUnpublishedResult, mockUnpublishedResult2]);
 
       renderWithProviders(<GameResultsManager gameId={mockGameId} />);
@@ -1485,7 +1485,7 @@ describe('GameResultsManager', () => {
     });
 
     it('cancels a pending part after confirmation', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let cancelledId: string | undefined;
 
       setupDefaultHandlers([releasedPart, pendingPart]);
@@ -1572,7 +1572,7 @@ describe('GameResultsManager', () => {
     });
 
     it('appends a part to a draft and sends its content and delay', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let appendedTo: string | undefined;
       let appendedBody: { content: string; delay_minutes: number } | undefined;
 
@@ -1605,7 +1605,7 @@ describe('GameResultsManager', () => {
     });
 
     it('closes the follow-up form once the part is saved', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers([mockUnpublishedResult]);
       server.use(
@@ -1637,7 +1637,7 @@ describe('GameResultsManager', () => {
     // cleared anyway the GM would be left staring at an empty box with an
     // error toast, and a long-composed part would be gone with no undo.
     it('keeps the typed content when the append fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers([mockUnpublishedResult]);
       server.use(
@@ -1671,7 +1671,7 @@ describe('GameResultsManager', () => {
     });
 
     it('cannot save a follow-up with no content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       setupDefaultHandlers([draftHead, draftFollowUp]);
 
@@ -1849,7 +1849,7 @@ describe('GameResultsManager', () => {
     });
 
     it('sends the new delay when the GM changes it', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let retimedId: string | undefined;
       let retimedBody: { delay_minutes: number } | undefined;
 

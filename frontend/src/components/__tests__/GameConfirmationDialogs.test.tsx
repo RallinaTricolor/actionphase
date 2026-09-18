@@ -25,7 +25,7 @@ describe('DeleteGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm and closes when confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(
@@ -44,7 +44,7 @@ describe('DeleteGameConfirmationDialog', () => {
   });
 
   it('calls onClose when Keep Game is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     renderWithProviders(
       <DeleteGameConfirmationDialog
@@ -74,7 +74,7 @@ describe('CancelGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm and closes when confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(
@@ -93,7 +93,7 @@ describe('CancelGameConfirmationDialog', () => {
   });
 
   it('calls onClose when Keep Game is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     renderWithProviders(
       <CancelGameConfirmationDialog
@@ -123,7 +123,7 @@ describe('PauseGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm and closes when confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(
@@ -157,7 +157,7 @@ describe('CompleteGameConfirmationDialog', () => {
   });
 
   it('enables confirm button only after typing "completed"', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <CompleteGameConfirmationDialog
         isOpen
@@ -172,7 +172,7 @@ describe('CompleteGameConfirmationDialog', () => {
   });
 
   it('is case-insensitive for "completed" check', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <CompleteGameConfirmationDialog
         isOpen
@@ -186,7 +186,7 @@ describe('CompleteGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm when confirmed with correct text', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(
@@ -206,7 +206,7 @@ describe('CompleteGameConfirmationDialog', () => {
   });
 
   it('clears input and calls onClose when Cancel is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     renderWithProviders(
       <CompleteGameConfirmationDialog
@@ -247,7 +247,7 @@ describe('EpilogueGameConfirmationDialog', () => {
   it('gates confirmation on typing "epilogue", not "completed"', async () => {
     // Wiring the wrong word here would let a GM confirm the wrong action from
     // muscle memory, and this transition cannot be undone.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render();
     const input = screen.getByRole('textbox');
 
@@ -260,7 +260,7 @@ describe('EpilogueGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm once the word is typed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     render({ onConfirm, onClose });
@@ -300,7 +300,7 @@ describe('LeaveGameConfirmationDialog', () => {
   });
 
   it('calls onConfirm and closes when confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(
@@ -379,7 +379,7 @@ describe('WithdrawApplicationConfirmationDialog', () => {
   });
 
   it('calls onConfirm and closes when withdraw confirmed', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderWithProviders(

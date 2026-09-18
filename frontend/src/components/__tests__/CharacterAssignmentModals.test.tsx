@@ -83,14 +83,14 @@ describe('AssignNPCModal', () => {
   });
 
   it('hides dropdown when assign-to-self is checked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<AssignNPCModal character={baseCharacter} gameId={10} isOpen onClose={vi.fn()} />);
     await user.click(screen.getByRole('checkbox'));
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('calls assignNPC.mutateAsync with self user id when assign-to-self checked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const mutation = makeMutation();
     vi.mocked(useAssignNPC).mockReturnValue(mutation as never);
     const onSuccess = vi.fn();
@@ -110,7 +110,7 @@ describe('AssignNPCModal', () => {
   });
 
   it('calls assignNPC.mutateAsync with selected user id', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const mutation = makeMutation();
     vi.mocked(useAssignNPC).mockReturnValue(mutation as never);
     const onClose = vi.fn();
@@ -127,7 +127,7 @@ describe('AssignNPCModal', () => {
   });
 
   it('calls onClose when Cancel clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     renderWithProviders(<AssignNPCModal character={baseCharacter} gameId={10} isOpen onClose={onClose} />);
     await user.click(screen.getByRole('button', { name: /cancel/i }));
@@ -155,7 +155,7 @@ describe('ReassignCharacterModal', () => {
   });
 
   it('calls reassignCharacter.mutateAsync with self user id when assign-to-self checked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const mutation = makeMutation();
     vi.mocked(useReassignCharacter).mockReturnValue(mutation as never);
     const onSuccess = vi.fn();
@@ -175,7 +175,7 @@ describe('ReassignCharacterModal', () => {
   });
 
   it('calls reassignCharacter.mutateAsync with selected user id', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const mutation = makeMutation();
     vi.mocked(useReassignCharacter).mockReturnValue(mutation as never);
     const onClose = vi.fn();

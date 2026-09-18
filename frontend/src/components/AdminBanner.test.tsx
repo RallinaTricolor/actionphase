@@ -90,7 +90,7 @@ describe('AdminBanner', () => {
 
   describe('exit button', () => {
     it('calls toggleAdminMode when exit button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const mockToggle = vi.fn();
 
       vi.mocked(useAdminModeHook.useAdminMode).mockReturnValue({

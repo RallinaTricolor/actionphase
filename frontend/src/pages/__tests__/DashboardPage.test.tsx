@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import {
-  renderWithProviders,
-  makeQueryResult,
-  makeDashboardGameCard,
-  makeDashboardDeadline,
-} from '../../test-utils';
+import { renderWithProviders } from '../../test-utils';
+import { makeQueryResult, makeDashboardGameCard, makeDashboardDeadline } from '../../test-utils/factories';
 import { DashboardPage } from '../DashboardPage';
 import type { ComponentProps } from 'react';
 import type { DashboardData } from '../../types/dashboard';

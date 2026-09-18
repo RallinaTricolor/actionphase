@@ -1,22 +1,19 @@
 import React from 'react';
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
 import {
   useUnreadCommentIDs,
   usePostUnreadCommentIDs,
   useMarkPostAsRead,
 } from './useReadTracking';
 import type { PostUnreadComments } from '../types/messages';
+import { server } from '../mocks/server';
 
-// Setup MSW server
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// Uses the shared MSW server from setupTests.ts. Handlers registered via
+// server.use() below take precedence over its base handlers, and setupTests.ts
+// already resets them after each test.
 
 describe('useReadTracking hooks', () => {
   let queryClient: QueryClient;

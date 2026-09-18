@@ -45,7 +45,7 @@ describe('ConfirmActionDialog', () => {
   });
 
   it('confirms immediately when no typed confirmation is required', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
     renderDialog({ onConfirm, onClose });
@@ -66,7 +66,7 @@ describe('ConfirmActionDialog', () => {
 
   describe('typed confirmation gate', () => {
     it('keeps confirm disabled until the exact word is typed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderDialog({ requireTypedConfirmation: 'epilogue' });
 
       expect(screen.getByTestId('confirm-button')).toBeDisabled();
@@ -79,7 +79,7 @@ describe('ConfirmActionDialog', () => {
     });
 
     it('accepts the word case-insensitively and with surrounding whitespace', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderDialog({ requireTypedConfirmation: 'epilogue' });
 
       await user.type(screen.getByRole('textbox'), '  EPILOGUE  ');
@@ -87,7 +87,7 @@ describe('ConfirmActionDialog', () => {
     });
 
     it('does not call onConfirm while the gate is unsatisfied', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onConfirm = vi.fn();
       renderDialog({ requireTypedConfirmation: 'epilogue', onConfirm });
 
@@ -98,7 +98,7 @@ describe('ConfirmActionDialog', () => {
     });
 
     it('clears the typed text when reopened after cancelling', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       renderDialog({ requireTypedConfirmation: 'epilogue', onClose });
 
@@ -114,7 +114,7 @@ describe('ConfirmActionDialog', () => {
 
   describe('when onConfirm rejects', () => {
     it('stays open so the user can retry', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onConfirm = vi.fn().mockRejectedValue(new Error('server said no'));
       const onClose = vi.fn();
       renderDialog({ onConfirm, onClose });
@@ -127,7 +127,7 @@ describe('ConfirmActionDialog', () => {
     });
 
     it('re-enables the confirm button rather than leaving it stuck pending', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onConfirm = vi.fn().mockRejectedValue(new Error('server said no'));
       renderDialog({ onConfirm });
 

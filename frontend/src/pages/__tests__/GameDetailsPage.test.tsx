@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { GameDetailsPage } from '../GameDetailsPage'
 import { GameProvider } from '../../contexts/GameContext'
 import { renderWithProviders } from '../../test-utils/render'
-import { makeGameParticipant } from '../../test-utils'
+import { makeGameParticipant } from '../../test-utils/factories';
 import { server } from '../../mocks/server'
 import type { GameWithDetails, GameParticipant } from '../../types/games'
 

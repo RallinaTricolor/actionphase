@@ -4,16 +4,15 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { server } from '../mocks/server';
 import NotificationItem from './NotificationItem';
 import type { Notification } from '../types/notifications';
 
 // Setup MSW server
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// Uses the shared MSW server from src/mocks/server rather than a local
+// setupServer(). Both listen at once, and the shared one wins, so a local
+// server's handlers never match -- requests fall through as unhandled and
+// tests can pass for the wrong reason. src/mocks/server.ts documents this.
 
 describe('NotificationItem', () => {
   let queryClient: QueryClient;
@@ -131,7 +130,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -154,7 +153,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByText('Test Notification'));
@@ -177,7 +176,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     // pointerEventsCheck disabled so we can dispatch a middle-click (button 1).
@@ -203,7 +202,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.pointer({
@@ -226,7 +225,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.pointer({
@@ -242,7 +241,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification({ link_url: '/games/123#results' });
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -256,7 +255,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification({ link_url: undefined });
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -270,7 +269,7 @@ describe('NotificationItem', () => {
   it('shows confirm modal when delete button is clicked', async () => {
     const notification = createMockNotification();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -290,7 +289,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -312,7 +311,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTitle('Delete notification'));
@@ -359,7 +358,7 @@ describe('NotificationItem', () => {
     const notification = createMockNotification();
     const mockOnNavigate = vi.fn();
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );
@@ -402,7 +401,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTestId('toggle-read-button'));
@@ -423,7 +422,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationItem notification={notification} />);
 
     await user.click(screen.getByTestId('toggle-read-button'));
@@ -443,7 +442,7 @@ describe('NotificationItem', () => {
       })
     );
 
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <NotificationItem notification={notification} onNavigate={mockOnNavigate} />
     );

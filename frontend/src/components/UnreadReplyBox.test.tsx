@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnreadReplyBox } from './UnreadReplyBox';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 
 describe('UnreadReplyBox', () => {
   it("shows a fallback message and no editor when the user controls no character", () => {
@@ -54,7 +54,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('calls onSubmit with the selected character id and trimmed content, and clears nothing until parent re-renders', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(
@@ -77,7 +77,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('does not call onSubmit when content is empty or only whitespace', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(
@@ -99,7 +99,7 @@ describe('UnreadReplyBox', () => {
   });
 
   it('falls back to the first controllable character when no character has been explicitly selected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleSubmit = vi.fn();
 
     render(

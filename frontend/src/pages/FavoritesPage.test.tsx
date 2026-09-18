@@ -119,7 +119,7 @@ describe('FavoritesPage', () => {
 
   it('deep-links to the comment in its own game', async () => {
     mockFavorites([makeFavorite({ id: 42, game_id: 9 })]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<FavoritesPage />);
     await user.click(screen.getByRole('button', { name: /view in thread/i }));
@@ -129,7 +129,7 @@ describe('FavoritesPage', () => {
 
   it('unfavorites a comment when its star is clicked', async () => {
     mockFavorites([makeFavorite({ id: 42 })]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<FavoritesPage />);
     await user.click(screen.getByTestId('favorite-button'));
@@ -141,7 +141,7 @@ describe('FavoritesPage', () => {
   // hunting down the comment again, so it stays until the next load.
   it('keeps an unfavorited card on screen so the action can be undone', async () => {
     mockFavorites([makeFavorite({ id: 42 })]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<FavoritesPage />);
     await user.click(screen.getByTestId('favorite-button'));
@@ -152,7 +152,7 @@ describe('FavoritesPage', () => {
 
   it('re-favorites when the star is clicked again', async () => {
     mockFavorites([makeFavorite({ id: 42 })]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderWithProviders(<FavoritesPage />);
     await user.click(screen.getByTestId('favorite-button'));

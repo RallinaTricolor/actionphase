@@ -88,7 +88,7 @@ describe('CreateDeadlineModal', () => {
 
   describe('User interactions', () => {
     it('should allow typing in title field', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -105,7 +105,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should allow typing in description field', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -145,7 +145,7 @@ describe('CreateDeadlineModal', () => {
 
   describe('Form validation', () => {
     it('should show error when title is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -166,7 +166,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when description is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -190,7 +190,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when deadline is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -217,7 +217,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should show error when title exceeds 100 characters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -248,7 +248,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should show error when deadline is in the past', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -282,7 +282,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should accept title of exactly 100 characters', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -318,7 +318,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should call onSubmit with correct data when form is valid', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -354,7 +354,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should trim whitespace from title and description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -390,7 +390,7 @@ describe('CreateDeadlineModal', () => {
     // Skipped: react-datepicker interactions are complex to test in unit tests
     // This validation is covered by E2E tests
     it.skip('should convert datetime-local to ISO 8601 format', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -434,7 +434,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should call onClose when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <CreateDeadlineModal
@@ -451,7 +451,7 @@ describe('CreateDeadlineModal', () => {
     });
 
     it('should reset form when modal closes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       const { rerender } = render(
         <CreateDeadlineModal

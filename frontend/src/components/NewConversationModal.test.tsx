@@ -57,7 +57,7 @@ describe('NewConversationModal pre-selected participants', () => {
   });
 
   it('submits the pre-selected participant alongside the sending character', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onConversationCreated = vi.fn();
     renderModal({ initialParticipantIds: [42], onConversationCreated });
 
@@ -74,7 +74,7 @@ describe('NewConversationModal pre-selected participants', () => {
   });
 
   it('selects the pre-selected participant in the dropdown when group conversations are off', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderModal({ initialParticipantIds: [42], allowGroupConversations: false });
 
     expect(screen.getByLabelText(/participant/i)).toHaveValue('42');
@@ -97,7 +97,7 @@ describe('NewConversationModal pre-selected participants', () => {
   });
 
   it('drops a pre-selection that is also the sending character', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // Only one controllable character, so it is auto-selected as the sender.
     renderModal({ characters: [mine], initialParticipantIds: [mine.id, vesper.id] });
 

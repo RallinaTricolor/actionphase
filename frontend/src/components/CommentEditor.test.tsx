@@ -4,7 +4,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { CommentEditor } from './CommentEditor';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 import type { SheetItem } from '../hooks/useCharacterSheetItems';
 
 /**
@@ -74,7 +74,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows preview when Preview tab is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="" />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -83,7 +83,7 @@ describe('CommentEditor', () => {
     });
 
     it('hides preview when Write tab is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="" showPreviewByDefault />);
 
       // Preview should be visible initially
@@ -103,7 +103,7 @@ describe('CommentEditor', () => {
 
   describe('Live Preview', () => {
     it('renders markdown in preview', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="**bold text**" />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -126,7 +126,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows placeholder message when preview is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="" />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -135,7 +135,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows placeholder message for whitespace-only content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="   " />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -156,7 +156,7 @@ describe('CommentEditor', () => {
     });
 
     it('shows help panel when help button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} />);
 
       await user.click(screen.getByText(/Markdown Help/));
@@ -165,7 +165,7 @@ describe('CommentEditor', () => {
     });
 
     it('hides help panel when help button is clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} />);
 
       // Open help
@@ -178,7 +178,7 @@ describe('CommentEditor', () => {
     });
 
     it('displays markdown syntax examples', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} />);
 
       await user.click(screen.getByText(/Markdown Help/));
@@ -197,7 +197,7 @@ describe('CommentEditor', () => {
 
   describe('User Input', () => {
     it('calls onChange when user types', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onChange = vi.fn();
       render(<CommentEditor {...defaultProps} onChange={onChange} />);
 
@@ -493,7 +493,7 @@ describe('Tab Layout', () => {
     });
 
     it('shows preview tab content when Preview is active', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CommentEditor {...defaultProps} value="Test" />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -503,7 +503,7 @@ describe('Tab Layout', () => {
     });
 
     it('preview div has a constrained maxHeight without manual resize so it does not expand freely', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { container } = render(<CommentEditor {...defaultProps} value="Some content" rows={4} />);
 
       await user.click(screen.getByRole('button', { name: 'Preview' }));
@@ -678,7 +678,7 @@ describe('Tab Layout', () => {
     });
 
     it('inserts character name when selected from autocomplete', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onChange = vi.fn();
       render(<CommentEditor {...defaultProps} characters={mockCharacters} onChange={onChange} value="" />);
 
@@ -771,7 +771,7 @@ describe('Tab Layout', () => {
     });
 
     it('stays on page when user clicks Stay', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { router } = renderWithDataRouter({
         value: 'some draft text',
         onChange: vi.fn(),
@@ -788,7 +788,7 @@ describe('Tab Layout', () => {
     });
 
     it('navigates away when user clicks Leave', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { router } = renderWithDataRouter({
         value: 'some draft text',
         onChange: vi.fn(),

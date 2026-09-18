@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
-import { makeUseAuthResult } from '../test-utils'
+import { makeUseAuthResult } from '../test-utils/factories'
 
 // Mock the auth hook
 vi.mock('../hooks/useAuth', () => ({

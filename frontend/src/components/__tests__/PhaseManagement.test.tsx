@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { PhaseManagement } from '../PhaseManagement'
 import { renderWithProviders } from '../../test-utils/render'
 import { server } from '../../mocks/server'
-import { makeGamePhase } from '../../test-utils'
+import { makeGamePhase } from '../../test-utils/factories';
 import type { GamePhase } from '../../types/phases'
 
 describe('PhaseManagement', () => {

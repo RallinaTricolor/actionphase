@@ -221,7 +221,7 @@ describe('ThreadedComment — manual read mode', () => {
     });
 
     it('calls onToggleRead with (commentId, false) when Read button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onToggleRead = vi.fn();
       renderComment({
         commentReadMode: 'manual',
@@ -258,7 +258,7 @@ describe('ThreadedComment — manual read mode', () => {
     });
 
     it('calls onToggleRead with (commentId, true) when Unread button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onToggleRead = vi.fn();
       renderComment({
         commentReadMode: 'manual',

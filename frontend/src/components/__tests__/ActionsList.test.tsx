@@ -245,7 +245,7 @@ describe('ActionsList', () => {
     });
 
     it('shows phase-specific empty state when filtering', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([mockActions[0]]);
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -421,7 +421,7 @@ describe('ActionsList', () => {
     });
 
     it('filters actions by selected phase', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -442,7 +442,7 @@ describe('ActionsList', () => {
     });
 
     it('updates action count when filtering by phase', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -460,7 +460,7 @@ describe('ActionsList', () => {
     });
 
     it('shows all actions when "All Action Phases" is selected', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -567,7 +567,7 @@ describe('ActionsList', () => {
     });
 
     it('expands action card on click', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -583,7 +583,7 @@ describe('ActionsList', () => {
     });
 
     it('collapses action card when clicked again', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -607,7 +607,7 @@ describe('ActionsList', () => {
     });
 
     it('shows action content when expanded', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -623,7 +623,7 @@ describe('ActionsList', () => {
     });
 
     it('shows the submitted timestamp when expanded', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -637,7 +637,7 @@ describe('ActionsList', () => {
     });
 
     it('does not show an edit timestamp for an unedited submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -652,7 +652,7 @@ describe('ActionsList', () => {
     });
 
     it('shows "Send Result" button when expanded', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -668,7 +668,7 @@ describe('ActionsList', () => {
     });
 
     it('toggles CreateActionResultForm when "Send Result" clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -687,7 +687,7 @@ describe('ActionsList', () => {
     });
 
     it('passes correct props to CreateActionResultForm', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -708,7 +708,7 @@ describe('ActionsList', () => {
     });
 
     it('shows cancel button when result form is open', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -727,7 +727,7 @@ describe('ActionsList', () => {
     });
 
     it('hides result form when cancel clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -755,7 +755,7 @@ describe('ActionsList', () => {
     });
 
     it('hides result form on successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -781,7 +781,7 @@ describe('ActionsList', () => {
     });
 
     it('only expands one action at a time', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers();
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -867,7 +867,7 @@ describe('ActionsList', () => {
     });
 
     it('opens confirmation dialog when publish button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -886,7 +886,7 @@ describe('ActionsList', () => {
     });
 
     it('shows count in confirmation dialog', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -907,7 +907,7 @@ describe('ActionsList', () => {
     });
 
     it('shows warning about irreversibility in confirmation dialog', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -928,7 +928,7 @@ describe('ActionsList', () => {
     });
 
     it('closes dialog when cancel clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -956,7 +956,7 @@ describe('ActionsList', () => {
     });
 
     it('publishes results when confirmed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let publishCalled = false;
 
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
@@ -988,7 +988,7 @@ describe('ActionsList', () => {
     });
 
     it('refetches action results after publishing so drafts stop showing as unpublished', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let gameResultsFetches = 0;
 
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
@@ -1044,7 +1044,7 @@ describe('ActionsList', () => {
     it('warns in the confirm dialog when one character has updates on several results', async () => {
       // Two unpublished results for character 500, both staging sheet updates:
       // publishing them together applies one snapshot over the other.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 2);
       server.use(
         http.get('/api/v1/games/:gameId/results', () =>
@@ -1079,7 +1079,7 @@ describe('ActionsList', () => {
       // very path where the clobber is guaranteed, since bulk publish applies every
       // conflicting result in one transaction. Pending must count as possibly-staged,
       // matching the per-result hook.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 2);
       server.use(
         http.get('/api/v1/games/:gameId/results', () =>
@@ -1110,7 +1110,7 @@ describe('ActionsList', () => {
     });
 
     it('shows no conflict warning when each character has updates on one result', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 2);
       server.use(
         http.get('/api/v1/games/:gameId/results', () =>
@@ -1141,7 +1141,7 @@ describe('ActionsList', () => {
     });
 
     it('shows loading state while publishing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let resolvePublish: () => void;
       const publishPromise = new Promise<void>((resolve) => {
         resolvePublish = resolve;
@@ -1179,7 +1179,7 @@ describe('ActionsList', () => {
     });
 
     it('disables buttons while publishing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let resolvePublish: () => void;
       const publishPromise = new Promise<void>((resolve) => {
         resolvePublish = resolve;
@@ -1221,7 +1221,7 @@ describe('ActionsList', () => {
     });
 
     it('closes dialog after successful publish', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1], 3);
 
       renderWithProviders(
@@ -1247,7 +1247,7 @@ describe('ActionsList', () => {
     });
 
     it('updates unpublished count for selected phase', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1, mockActionPhase2], 2);
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
@@ -1294,7 +1294,7 @@ describe('ActionsList', () => {
     };
 
     it('resolves a reference in the expanded body to a tooltip', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([actionWithRef]);
       server.use(
         http.get('/api/v1/games/:gameId/characters/data', () => HttpResponse.json(sheetPayload))
@@ -1311,7 +1311,7 @@ describe('ActionsList', () => {
     });
 
     it('loads the cast in one request rather than one per card', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const fetched: string[] = [];
       setupDefaultHandlers([actionWithRef]);
       server.use(
@@ -1332,7 +1332,7 @@ describe('ActionsList', () => {
     });
 
     it('leaves the reference untooltipped when the sheet is not visible', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([actionWithRef]);
       server.use(
         http.get('/api/v1/games/:gameId/characters/data', () => HttpResponse.json({}))
@@ -1381,7 +1381,7 @@ describe('ActionsList', () => {
     });
 
     it('shows both submitted and edited times when expanded', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       setupDefaultHandlers([editedAction], [mockActionPhase1]);
 
       renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });

@@ -6,7 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { PrivateMessages } from '../PrivateMessages';
 import type { Character } from '../../types/characters';
-import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils';
+import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils/factories';
 
 // Mock the auth hook
 vi.mock('../../contexts/AuthContext', () => ({
@@ -210,7 +210,7 @@ describe('PrivateMessages', () => {
     });
 
     it('refreshes conversation list when refresh button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let conversationsFetchCount = 0;
 
       const mockConversations = [
@@ -259,7 +259,7 @@ describe('PrivateMessages', () => {
     });
 
     it('disables refresh button while refreshing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('/api/v1/games/:gameId/conversations', async () => {
@@ -297,7 +297,7 @@ describe('PrivateMessages', () => {
     });
 
     it('fetches updated conversation data after refresh', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let conversationCount = 1;
 
       server.use(
@@ -345,7 +345,7 @@ describe('PrivateMessages', () => {
     });
 
     it('handles refresh errors gracefully', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // Start with successful response
       server.use(
@@ -387,7 +387,7 @@ describe('PrivateMessages', () => {
     });
 
     it('increments refresh key to force ConversationList remount', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       // We can't directly test the refreshKey state, but we can verify
       // that ConversationList remounts by checking that it fetches data again
@@ -496,7 +496,7 @@ describe('PrivateMessages', () => {
     });
 
     it('updates URL when a conversation is selected', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
@@ -537,7 +537,7 @@ describe('PrivateMessages', () => {
     });
 
     it('clears conversation param when back button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       server.use(
         http.get('/api/v1/games/:gameId/conversations', () => {

@@ -38,7 +38,7 @@ describe('SheetItemAutocomplete', () => {
   });
 
   it('calls onSelect with the clicked item', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onSelect = vi.fn();
     render(
       <SheetItemAutocomplete items={items} query="" position={pos} onSelect={onSelect} selectedIndex={0} />

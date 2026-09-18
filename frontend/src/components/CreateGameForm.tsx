@@ -56,7 +56,7 @@ export const CreateGameForm = ({
     uploadPendingBanner,
     uploadBanner,
     buildApiPayload,
-    resetFormData,
+    applySelfDefault,
   } = useGameForm();
 
   const { communities } = useSelectableCommunities();
@@ -65,15 +65,22 @@ export const CreateGameForm = ({
   // a required field with a single option, which is a step, not a decision.
   // Guarded on the field still being empty so it never overrides the GM.
   //
-  // resetFormData, NOT handleChange: this moves the unsaved-edit baseline along
-  // with the value. A default the form filled in for itself is not an edit, and
-  // with handleChange an untouched form would prompt "discard your changes?" on
-  // close.
+  // applySelfDefault, NOT handleChange: this moves the unsaved-edit baseline
+  // along with the value. A default the form filled in for itself is not an
+  // edit, and with handleChange an untouched form would prompt "discard your
+  // changes?" on close.
+  //
+  // Nor resetFormData({ ...formData, ... }), which rebases the WHOLE baseline
+  // onto current formData. `communities` arrives from a fetch, so this effect
+  // can land after the user has started typing, and rebasing then swallows
+  // their edits into the baseline -- the form stops looking dirty and the
+  // close guard silently stops firing. applySelfDefault moves community_id
+  // alone and leaves every other field's baseline where it was.
   useEffect(() => {
     if (communities.length === 1 && formData.community_id === '') {
-      resetFormData({ ...formData, community_id: communities[0].id });
+      applySelfDefault('community_id', communities[0].id);
     }
-  }, [communities, formData, resetFormData]);
+  }, [communities, formData.community_id, applySelfDefault]);
 
   const isDirty = useGameFormDirty(formData, initialFormData, pendingBannerFile);
   const [confirmingClose, setConfirmingClose] = useState(false);
