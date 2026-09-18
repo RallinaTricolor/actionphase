@@ -56,9 +56,18 @@ func TestStripCustomMarkdown(t *testing.T) {
 			want:    "She used [[Lockpicking]] on the door.",
 		},
 		{
-			name:    "rewrites ability and item refs",
-			content: "[[Second Sight|ability:x1]] and [[Rope|item:y2]]",
+			name:    "rewrites item ref to display name",
+			content: "[[Second Sight|skill:x1]] and [[Rope|item:y2]]",
 			want:    "[[Second Sight]] and [[Rope]]",
+		},
+		{
+			// `ability` was retired in the Phase 4 refactor and is no longer a
+			// sheet item type, so its token is left alone like any other
+			// unknown ref type. Production was verified empty of ability
+			// content before the type was deleted.
+			name:    "leaves retired ability ref alone",
+			content: "[[Second Sight|ability:x1]]",
+			want:    "[[Second Sight|ability:x1]]",
 		},
 		{
 			name:    "leaves plain wiki-style link alone",

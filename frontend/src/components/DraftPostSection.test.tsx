@@ -30,17 +30,19 @@ vi.mock('../contexts/GameContext', async () => {
 const { useDraftPost, useCreateDraftPost, useUpdateDraftPost, useDeleteDraftPost } = await import('../hooks');
 
 /**
- * The "no draft" case is mocked as `undefined`, not `null`.
+ * The "no draft" case is mocked as `null`, which is what the endpoint sends:
+ * "A phase with no draft answers 200 with a null body, not 404" (the
+ * getDraftPost operation's own description in messages/huma_api.go).
+ * DraftPostSection branches on `draft === null || draft === undefined`.
  *
- * The endpoint really answers null: "A phase with no draft answers 200 with a
- * null body, not 404" (the getDraftPost operation's own description in
- * messages/huma_api.go), and DraftPostSection branches on
- * `draft === null || draft === undefined` accordingly. But neither the API
- * client (`client.get<Message>`) nor the generated spec (MessageResponse, not
- * nullable) admits null, so the declared data type is `Message`. That is a
- * backend-spec drift -- the Go handler should mark the 200 body nullable --
- * recorded rather than fixed here, since it is production code. `undefined`
- * exercises the same component branch and stays honest to the declared type.
+ * `undefined` is kept for exactly one case -- the loading test -- because that
+ * is what React Query holds before the first response, and it is the other
+ * half of the component's branch.
+ *
+ * The generated spec still says plain MessageResponse rather than a nullable
+ * body, and cannot say otherwise: huma panics on `nullable:"true"` for a
+ * struct ref, supporting nullable scalars only. The API client declares
+ * `Message | null` to carry the null the schema cannot.
  */
 
 const mockDraft: Message = makeMessage({
@@ -74,7 +76,7 @@ describe('DraftPostSection', () => {
   });
 
   it('shows loading state while fetching', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
       data: undefined,
       isLoading: true,
       isSuccess: false,
@@ -86,8 +88,8 @@ describe('DraftPostSection', () => {
   });
 
   it('shows "No draft post" and add button when no draft exists', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
-      data: undefined,
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+      data: null,
       isLoading: false,
       isSuccess: true,
       isError: false,
@@ -100,7 +102,7 @@ describe('DraftPostSection', () => {
   });
 
   it('shows draft preview when draft exists', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
@@ -116,8 +118,8 @@ describe('DraftPostSection', () => {
   });
 
   it('opens create modal when add button is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
-      data: undefined,
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+      data: null,
       isLoading: false,
       isSuccess: true,
       isError: false,
@@ -130,7 +132,7 @@ describe('DraftPostSection', () => {
   });
 
   it('shows delete confirmation when delete is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
@@ -147,7 +149,7 @@ describe('DraftPostSection', () => {
     const mockDelete = makeMutationResult<void, void>();
     vi.mocked(useDeleteDraftPost).mockReturnValue(mockDelete);
 
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
@@ -163,7 +165,7 @@ describe('DraftPostSection', () => {
   });
 
   it('opens preview modal when preview is clicked', () => {
-    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message>({
+    vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
       data: mockDraft,
       isLoading: false,
       isSuccess: true,
