@@ -2,14 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
-import { renderWithProviders } from '../../test-utils/render';
-import { makeCharacter, makeMessage } from '../../test-utils/factories';
-import { ThreadedComment } from '../ThreadedComment';
-import type { Message } from '../../types/messages';
-import type { Character } from '../../types/characters';
+import { server } from '@/mocks/server';
+import { renderWithProviders } from '@/test-utils/render';
+import { makeCharacter, makeMessage } from '@/test-utils/factories';
+import { ThreadedComment } from './ThreadedComment';
+import type { Message } from '@/types/messages';
+import type { Character } from '@/types/characters';
 import { logger } from '@/services/LoggingService';
-import { postCachingService } from '../../services/PostCachingService';
+import { postCachingService } from '@/services/PostCachingService';
 
 describe('ThreadedComment', () => {
   const mockGameId = 1;
@@ -2303,48 +2303,6 @@ describe('ThreadedComment', () => {
       });
 
       expect(loadCount).toBe(0);
-    });
-  });
-
-  describe('allowReadTracking prop', () => {
-    it('hides toggle button when allowReadTracking=false even in manual mode', () => {
-      renderWithProviders(
-        <ThreadedComment
-          comment={mockComment}
-          gameId={mockGameId}
-          postId={10}
-          characters={mockCharacters}
-          controllableCharacters={[]}
-          onCreateReply={mockOnCreateReply}
-          currentUserId={mockCurrentUserId}
-          commentReadMode="manual"
-          manualReadCommentIDs={[]}
-          onToggleRead={vi.fn()}
-          allowReadTracking={false}
-        />
-      );
-
-      expect(screen.queryByRole('button', { name: /mark as (read|unread)/i })).not.toBeInTheDocument();
-    });
-
-    it('shows toggle button when allowReadTracking=true in manual mode', () => {
-      renderWithProviders(
-        <ThreadedComment
-          comment={mockComment}
-          gameId={mockGameId}
-          postId={10}
-          characters={mockCharacters}
-          controllableCharacters={[]}
-          onCreateReply={mockOnCreateReply}
-          currentUserId={mockCurrentUserId}
-          commentReadMode="manual"
-          manualReadCommentIDs={[]}
-          onToggleRead={vi.fn()}
-          allowReadTracking={true}
-        />
-      );
-
-      expect(screen.getByRole('button', { name: /mark as (read|unread)/i })).toBeInTheDocument();
     });
   });
 

@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { NewConversationModal } from '../NewConversationModal'
-import { renderWithProviders } from '../../test-utils/render'
-import { server } from '../../mocks/server'
-import type { Character } from '../../types/characters'
+import { NewConversationModal } from './NewConversationModal'
+import { renderWithProviders } from '@/test-utils/render'
+import { server } from '@/mocks/server'
+import type { Character } from '@/types/characters'
 
 describe('NewConversationModal', () => {
   const mockGameId = 1

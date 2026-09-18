@@ -2,21 +2,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
-import { renderWithProviders } from '../../test-utils/render';
-import { MessageThread } from '../MessageThread';
-import type { Character } from '../../types/characters';
-import type { SendMessageRequest } from '../../types/conversations';
+import { server } from '@/mocks/server';
+import { renderWithProviders } from '@/test-utils/render';
+import { MessageThread } from './MessageThread';
+import type { Character } from '@/types/characters';
+import type { SendMessageRequest } from '@/types/conversations';
 
 // Mock the auth hook
-vi.mock('../../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { useAuth } from '../../contexts/AuthContext'
-import { makeAuthContext, makeUser, makeCharacter } from '../../test-utils/factories';
-import { postCachingService } from '../../services/PostCachingService';
+import { useAuth } from '@/contexts/AuthContext'
+import { makeAuthContext, makeUser, makeCharacter } from '@/test-utils/factories';
+import { postCachingService } from '@/services/PostCachingService';
 
 describe('MessageThread', () => {
   const mockCharacters: Character[] = [

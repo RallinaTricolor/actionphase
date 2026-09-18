@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, render, fireEvent } from '@testing-library/react'
-import { Modal } from '../Modal'
-import { __resetBodyScrollLockForTests } from '../../hooks/useBodyScrollLock'
+import { Modal } from './Modal'
+import { __resetBodyScrollLockForTests } from '@/hooks/useBodyScrollLock'
 
 describe('Modal', () => {
   const mockOnClose = vi.fn()

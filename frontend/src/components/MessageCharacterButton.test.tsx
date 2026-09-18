@@ -77,4 +77,20 @@ describe('MessageCharacterButton', () => {
     expect(onNavigate).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalled();
   });
+
+  /**
+   * The character sheet vetoes here to hold position while it asks about unsaved
+   * edits. Navigating anyway would unmount the sheet and destroy them — the whole
+   * point of asking.
+   */
+  it('cancels navigation when onNavigate returns false', async () => {
+    const user = userEvent.setup({ delay: null });
+    const onNavigate = vi.fn(() => false);
+    renderButton({ onNavigate });
+
+    await user.click(screen.getByRole('button', { name: /send a private message/i }));
+
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });

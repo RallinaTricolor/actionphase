@@ -2,19 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
-import { renderWithProviders } from '../../test-utils/render';
-import { PrivateMessages } from '../PrivateMessages';
-import type { Character } from '../../types/characters';
-import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils/factories';
+import { server } from '@/mocks/server';
+import { renderWithProviders } from '@/test-utils/render';
+import { PrivateMessages } from './PrivateMessages';
+import type { Character } from '@/types/characters';
+import { makeCharacter, makeAuthContext, makeUser } from '@/test-utils/factories';
 
 // Mock the auth hook
-vi.mock('../../contexts/AuthContext', () => ({
+vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 describe('PrivateMessages', () => {
   const mockCharacters: Character[] = [
