@@ -51,7 +51,7 @@ vi.mock('../PeopleView', () => ({
   PeopleView: () => <div>PeopleView</div>,
 }));
 
-vi.mock('../HandoutsList', () => ({
+vi.mock('@/components/handouts/HandoutsList', () => ({
   HandoutsList: () => <div>HandoutsList</div>,
 }));
 

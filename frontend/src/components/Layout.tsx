@@ -4,8 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Wrench } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useOptionalUtilityDrawer } from '../contexts/UtilityDrawerContext';
-import NotificationBell from './NotificationBell';
-import { AdminBanner } from './AdminBanner';
+import NotificationBell from '@/components/notifications/NotificationBell';
+import { AdminBanner } from '@/components/admin/AdminBanner';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
 
 interface LayoutProps {

@@ -16,7 +16,7 @@ import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
 import { AudienceView } from './AudienceView';
 import { PeopleView } from './PeopleView';
-import { HandoutsList } from './HandoutsList';
+import { HandoutsList } from '@/components/handouts/HandoutsList';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';
 import { GameLogsView } from './GameLogsView';

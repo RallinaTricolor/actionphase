@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { AdminModeToggle } from '../components/AdminModeToggle';
+import { AdminModeToggle } from '@/components/admin/AdminModeToggle';
 import { TabNavigation } from '../components/TabNavigation';
 import { AdminsTab } from './admin/AdminsTab';
 import { BannedUsersTab } from './admin/BannedUsersTab';

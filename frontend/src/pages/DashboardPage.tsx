@@ -4,9 +4,9 @@ import { useDashboardConversations } from '../hooks/useDashboardConversations';
 import { DashboardGameCard } from '../components/DashboardGameCard';
 import { UrgentActionsCard } from '../components/UrgentActionsCard';
 import { RecentActivityCard } from '../components/RecentActivityCard';
-import { UpcomingDeadlinesCard } from '../components/UpcomingDeadlinesCard';
+import { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
 import { ActivityTabs } from '../components/Dashboard/ActivityTabs';
-import { NotificationDigest } from '../components/NotificationDigest';
+import { NotificationDigest } from '@/components/notifications/NotificationDigest';
 import { PrivateMessagePreview } from '../components/PrivateMessagePreview';
 import { UnreadInboxSection } from '../components/UnreadInboxSection';
 

@@ -8,7 +8,7 @@ import type { DashboardData } from '../../types/dashboard';
 import type { DashboardGameCard } from '../../components/DashboardGameCard';
 import type { UrgentActionsCard } from '../../components/UrgentActionsCard';
 import type { RecentActivityCard } from '../../components/RecentActivityCard';
-import type { UpcomingDeadlinesCard } from '../../components/UpcomingDeadlinesCard';
+import type { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
 import type { ActivityTabs } from '../../components/Dashboard/ActivityTabs';
 
 // Mock the useDashboard hook
@@ -44,7 +44,7 @@ vi.mock('../../components/RecentActivityCard', () => ({
   ),
 }));
 
-vi.mock('../../components/UpcomingDeadlinesCard', () => ({
+vi.mock('@/components/deadlines/UpcomingDeadlinesCard', () => ({
   UpcomingDeadlinesCard: ({ deadlines }: ComponentProps<typeof UpcomingDeadlinesCard>) => (
     <div data-testid="upcoming-deadlines-card">
       Deadlines: {deadlines.length}
@@ -64,7 +64,7 @@ vi.mock('../../hooks/useDashboardConversations', () => ({
   useDashboardConversations: vi.fn().mockReturnValue({ data: [] }),
 }));
 
-vi.mock('../../components/NotificationDigest', () => ({
+vi.mock('@/components/notifications/NotificationDigest', () => ({
   NotificationDigest: () => <div data-testid="notification-digest" />,
 }));
 

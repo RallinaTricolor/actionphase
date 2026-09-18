@@ -5,7 +5,7 @@ import { ActivityTabs } from '../ActivityTabs';
 import type { DashboardDeadline, DashboardMessage } from '../../../types/dashboard';
 
 // Mock the child components
-vi.mock('../../UpcomingDeadlinesCard', () => ({
+vi.mock('@/components/deadlines/UpcomingDeadlinesCard', () => ({
   UpcomingDeadlinesCard: ({ deadlines }: { deadlines: DashboardDeadline[] }) => (
     <div data-testid="upcoming-deadlines-card">
       Upcoming Deadlines: {deadlines.length} items

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UpcomingDeadlinesCard } from '../UpcomingDeadlinesCard';
+import { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
 import { RecentActivityCard } from '../RecentActivityCard';
 import type { DashboardDeadline, DashboardMessage } from '../../types/dashboard';
 

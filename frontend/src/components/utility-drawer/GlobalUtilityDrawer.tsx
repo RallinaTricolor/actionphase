@@ -14,7 +14,7 @@ const CharacterSheet = lazy(() =>
 // Same reasoning as the sheet above: the handout view drags in the markdown
 // renderer and comment editor, which most page loads never need.
 const HandoutView = lazy(() =>
-  import('../HandoutView').then((m) => ({ default: m.HandoutView }))
+  import('@/components/handouts/HandoutView').then((m) => ({ default: m.HandoutView }))
 );
 
 /**

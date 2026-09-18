@@ -28,7 +28,7 @@ import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmati
 import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
 import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
 import { WithdrawApplicationConfirmationDialog } from '../components/WithdrawApplicationConfirmationDialog';
-import { DeadlineStrip } from '../components/DeadlineStrip';
+import { DeadlineStrip } from '@/components/deadlines/DeadlineStrip';
 import type { CreateDeadlineRequest, UpdateDeadlineRequest, UnifiedDeadline } from '../types/deadlines';
 import { getDeadlineTarget } from '../utils/deadlineTarget';
 import { clearForeignTabParams } from '../utils/tabParams';

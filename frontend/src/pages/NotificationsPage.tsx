@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNotifications, useMarkAllAsRead } from '../hooks/useNotifications';
-import NotificationItem from '../components/NotificationItem';
+import NotificationItem from '@/components/notifications/NotificationItem';
 import { useNavigate } from 'react-router-dom';
 
 export default function NotificationsPage() {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Inbox } from 'lucide-react';
 import { Badge, Button, Spinner } from './ui';
 import { UnreadInboxItemCard } from './UnreadInboxItemCard';
-import { ActivityDigestRow } from './ActivityDigestRow';
+import { ActivityDigestRow } from '@/components/notifications/ActivityDigestRow';
 import { useUnreadInbox } from '../hooks/useUnreadInbox';
 import { countDigestNotifications } from '../utils/activityDigest';
 

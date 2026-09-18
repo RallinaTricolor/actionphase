@@ -7,7 +7,7 @@ import { ActiveSessions } from '../components/ActiveSessions';
 import { ChangeUsernameForm } from '../components/ChangeUsernameForm';
 import { ChangeEmailForm } from '../components/ChangeEmailForm';
 import { SettingsSidebar } from '../components/SettingsSidebar';
-import { DiscordNotificationsSection } from '../components/DiscordNotificationsSection';
+import { DiscordNotificationsSection } from '@/components/notifications/DiscordNotificationsSection';
 import { Radio } from '@/components/ui';
 import { useUserPreferences, useUpdateUserPreferences } from '../hooks/useUserPreferences';
 import { useQueryClient } from '@tanstack/react-query';
