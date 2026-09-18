@@ -204,8 +204,19 @@ export class MessagesApi extends BaseApiClient {
 
   // Draft post endpoints (GM only, phase-scoped)
 
+  /**
+   * A phase with no draft answers 200 with a literal `null` body, not 404 --
+   * see the operation description on humaGetDraftPost. DraftPostSection
+   * branches on that null.
+   *
+   * `Message | null` is deliberately WIDER than the generated schema, which
+   * says plain MessageResponse. That is not drift to fix here: huma refuses
+   * `nullable:"true"` on a struct ref (it supports nullable scalars only), so
+   * the spec cannot express this body and the generated type is wrong about
+   * it. Widening at the client is the only place the null can be declared.
+   */
   async getDraftPost(phaseId: number) {
-    return this.client.get<Message>(`/api/v1/phases/${phaseId}/draft-post`);
+    return this.client.get<Message | null>(`/api/v1/phases/${phaseId}/draft-post`);
   }
 
   async createDraftPost(phaseId: number, characterId: number, content: string) {

@@ -4832,9 +4832,7 @@ components:
                 comments:
                     items:
                         $ref: '#/components/schemas/CommentWithParentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationResponse'
             required:
@@ -5560,8 +5558,6 @@ components:
                     type: boolean
                 is_banned:
                     type: boolean
-                password:
-                    type: string
                 pending_approval:
                     type: boolean
                 pending_approval_since:
@@ -5574,7 +5570,6 @@ components:
                 - username
                 - email
                 - email_verified
-                - password
                 - is_admin
                 - is_banned
                 - createdAt

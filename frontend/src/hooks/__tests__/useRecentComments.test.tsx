@@ -12,8 +12,7 @@ import type { apiClient as apiClientType } from '../../lib/api';
  * WIRE shape, and getRecentComments rewrites it before returning, replacing each
  * comment's nested `parent` object with flattened `parent_*` fields. Typing the
  * fixtures against the method's own return keeps them describing what the hook
- * actually receives. (The hand-written wire interfaces also drift from the
- * generated schema -- recorded separately, out of scope here.)
+ * actually receives.
  */
 type RecentCommentsResult = Awaited<
   ReturnType<typeof apiClientType.messages.getRecentComments>
@@ -67,11 +66,12 @@ describe('useRecentComments', () => {
     id: 1,
     game_id: 1,
     parent_id: 100,
+    post_id: null,
+    character_avatar_url: null,
     author_id: 10,
     character_id: 20,
     content: 'Test comment',
     created_at: '2025-10-22T10:00:00Z',
-    updated_at: '2025-10-22T10:00:00Z',
     edited_at: null,
     edit_count: 0,
     deleted_at: null,
@@ -90,9 +90,7 @@ describe('useRecentComments', () => {
 
   const mockResponse: RecentCommentsPage = {
     comments: [mockComment],
-    total: 1,
-    limit: 20,
-    offset: 0,
+    pagination: { total: 1, limit: 20, offset: 0 },
   };
 
   it('fetches recent comments successfully', async () => {
@@ -141,9 +139,7 @@ describe('useRecentComments', () => {
   it('determines hasNextPage correctly when there are more pages', async () => {
     const fullPageResponse: RecentCommentsPage = {
       comments: Array(20).fill(mockComment),
-      total: 50,
-      limit: 20,
-      offset: 0,
+      pagination: { total: 50, limit: 20, offset: 0 },
     };
 
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(fullPageResponse));
@@ -161,9 +157,7 @@ describe('useRecentComments', () => {
   it('determines hasNextPage correctly when at end', async () => {
     const partialPageResponse: RecentCommentsPage = {
       comments: Array(15).fill(mockComment),
-      total: 15,
-      limit: 20,
-      offset: 0,
+      pagination: { total: 15, limit: 20, offset: 0 },
     };
 
     vi.mocked(apiClient.messages.getRecentComments).mockResolvedValue(apiResult(partialPageResponse));
@@ -181,16 +175,12 @@ describe('useRecentComments', () => {
   it('fetches next page with correct offset', async () => {
     const firstPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 1 }),
-      total: 50,
-      limit: 20,
-      offset: 0,
+      pagination: { total: 50, limit: 20, offset: 0 },
     };
 
     const secondPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 2 }),
-      total: 50,
-      limit: 20,
-      offset: 20,
+      pagination: { total: 50, limit: 20, offset: 20 },
     };
 
     vi.mocked(apiClient.messages.getRecentComments)
@@ -265,27 +255,19 @@ describe('useRecentComments', () => {
     // Regression test for a NaN bug: the hook must derive the next offset from
     // the number of pages loaded rather than from the response.
     //
-    // NOTE: `offset` is required on the frontend's RecentCommentsResponse, so
-    // it cannot be omitted here without a cast. That type is wrong: the wire
-    // shape is { comments, pagination }, with no top-level total/limit/offset
-    // at all (backend/pkg/messages/responses.go, and the generated
-    // RecentCommentsResponse in api.gen.ts). The hook already assumes as much
-    // -- see its "doesn't rely on the API response including an offset field"
-    // comment. Correcting types/messages.ts touches production code, so it is
-    // out of scope here; this mock stays honest to the declared type and the
-    // drift is recorded instead.
+    // The name is now historical: there is no top-level `offset` to omit. The
+    // wire shape is { comments, pagination }, so the offset the hook must not
+    // trust lives inside the pagination envelope, and it is supplied here. The
+    // hook ignores it either way -- see its "doesn't rely on the API response
+    // including an offset field" comment.
     const responseWithoutOffset: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment }),
-      total: 50,
-      limit: 20,
-      offset: 0,
+      pagination: { total: 50, limit: 20, offset: 0 },
     };
 
     const secondPageResponse: RecentCommentsPage = {
       comments: Array(20).fill({ ...mockComment, id: 2 }),
-      total: 50,
-      limit: 20,
-      offset: 20,
+      pagination: { total: 50, limit: 20, offset: 20 },
     };
 
     vi.mocked(apiClient.messages.getRecentComments)

@@ -19,21 +19,31 @@ type PreferencesData struct {
 // It includes authentication credentials, contact information, and metadata.
 // The struct supports JSON serialization and validation tags for API usage.
 type User struct {
-	ID                   int        `json:"id"`                                        // Unique user identifier
-	Username             string     `json:"username" validate:"required"`              // Unique username for login
-	Email                string     `json:"email" validate:"required,email"`           // User's email address
-	EmailVerified        bool       `json:"email_verified"`                            // Whether user has verified their email
-	Password             string     `json:"password" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
-	Bio                  *string    `json:"bio,omitempty"`                             // User's bio/about text
-	AvatarURL            *string    `json:"avatar_url,omitempty"`                      // URL to user's avatar image
-	IsAdmin              bool       `json:"is_admin"`                                  // Whether user has admin privileges
-	IsBanned             bool       `json:"is_banned"`                                 // Whether user is banned from platform
-	BannedAt             *time.Time `json:"banned_at,omitempty"`                       // When user was banned
-	BannedByUserID       *int32     `json:"banned_by_user_id,omitempty"`               // ID of admin who banned user
-	CreatedAt            *time.Time `json:"createdAt"`                                 // Account creation timestamp
-	PendingApproval      bool       `json:"pending_approval"`                          // Whether account is awaiting admin approval
-	PendingApprovalSince *time.Time `json:"pending_approval_since,omitempty"`          // When account was placed into pending state
-	DiscordUsername      *string    `json:"discord_username,omitempty"`                // Discord username if account is linked
+	ID            int    `json:"id"`                              // Unique user identifier
+	Username      string `json:"username" validate:"required"`    // Unique username for login
+	Email         string `json:"email" validate:"required,email"` // User's email address
+	EmailVerified bool   `json:"email_verified"`                  // Whether user has verified their email
+	// json:"-": never serialized. User is used as a response body by the admin
+	// list routes (see admin/huma_api.go), and a `json:"password"` tag put the
+	// field in the OpenAPI schema as REQUIRED, so every generated client type
+	// carried it. The admin list services build a fresh User without it, so
+	// nothing leaked in practice -- but the lookup builders (GetUser,
+	// GetUserByEmail, and friends in db/services/users.go) DO set Password, so
+	// returning one of those from a handler would have put the hash on the wire.
+	// json:"-" makes that unreachable however the value was built.
+	// The validate tag is unaffected: go-playground reads struct fields, not
+	// json tags, and registration still validates through user.Validate().
+	Password             string     `json:"-" validate:"required,min=8,max=64"` // Hashed password (bcrypt)
+	Bio                  *string    `json:"bio,omitempty"`                      // User's bio/about text
+	AvatarURL            *string    `json:"avatar_url,omitempty"`               // URL to user's avatar image
+	IsAdmin              bool       `json:"is_admin"`                           // Whether user has admin privileges
+	IsBanned             bool       `json:"is_banned"`                          // Whether user is banned from platform
+	BannedAt             *time.Time `json:"banned_at,omitempty"`                // When user was banned
+	BannedByUserID       *int32     `json:"banned_by_user_id,omitempty"`        // ID of admin who banned user
+	CreatedAt            *time.Time `json:"createdAt"`                          // Account creation timestamp
+	PendingApproval      bool       `json:"pending_approval"`                   // Whether account is awaiting admin approval
+	PendingApprovalSince *time.Time `json:"pending_approval_since,omitempty"`   // When account was placed into pending state
+	DiscordUsername      *string    `json:"discord_username,omitempty"`         // Discord username if account is linked
 }
 
 // BannedUser represents a banned user with additional ban information.

@@ -21,13 +21,12 @@ type RecentCommentsPage = NonNullable<
 /**
  * One comment as the endpoint actually returns it.
  *
- * Deliberately NOT `types/messages.ts`'s hand-written `CommentWithParent`:
- * that interface marks `parent_content` (and its siblings) optional, but the
- * query selects `pm.content as parent_content` into a plain
- * `json:"parent_content"` field -- no omitempty -- so the key is ALWAYS present
- * and merely null when the LEFT JOIN finds no parent. Typing the fixtures
- * against the hook keeps them honest about that; the local interface is a
- * production drift recorded separately.
+ * Derived from the hook rather than written against `CommentWithParent`, so it
+ * cannot drift from what the hook actually hands the component. (The two are
+ * now the same shape: `CommentWithParent` is the generated wire type plus the
+ * `parent_*` flattening the API client applies, and no longer a hand-written
+ * interface. The flattened `parent_*` keys are optional in both, since the
+ * client derives them from an optional nested `parent` object.)
  */
 type RecentComment = RecentCommentsPage['comments'][number];
 
@@ -105,11 +104,12 @@ describe('NewCommentsView', () => {
     id: 1,
     game_id: 1,
     parent_id: 100,
+    post_id: null,
+    character_avatar_url: null,
     author_id: 10,
     character_id: 20,
     content: 'Test comment',
     created_at: '2025-10-22T10:00:00Z',
-    updated_at: '2025-10-22T10:00:00Z',
     edited_at: null,
     edit_count: 0,
     deleted_at: null,
@@ -204,7 +204,7 @@ describe('NewCommentsView', () => {
 
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
-        pages: [{ comments, total: 3, limit: 20, offset: 0 }],
+        pages: [{ comments, pagination: { total: 3, limit: 20, offset: 0 } }],
         pageParams: [0],
       },
       isLoading: false,
@@ -237,8 +237,8 @@ describe('NewCommentsView', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
         pages: [
-          { comments: page1Comments, total: 4, limit: 2, offset: 0 },
-          { comments: page2Comments, total: 4, limit: 2, offset: 2 },
+          { comments: page1Comments, pagination: { total: 4, limit: 2, offset: 0 } },
+          { comments: page2Comments, pagination: { total: 4, limit: 2, offset: 2 } },
         ],
         pageParams: [0, 2],
       },
@@ -262,7 +262,7 @@ describe('NewCommentsView', () => {
   it('shows "No more comments" when all pages loaded', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
-        pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
         pageParams: [0],
       },
       isLoading: false,
@@ -282,7 +282,7 @@ describe('NewCommentsView', () => {
   it('shows loading spinner when fetching next page', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
-        pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pages: [{ comments: [mockComment], pagination: { total: 20, limit: 20, offset: 0 } }],
         pageParams: [0],
       },
       isLoading: false,
@@ -304,7 +304,7 @@ describe('NewCommentsView', () => {
   it('sets up intersection observer when hasNextPage is true', async () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
-        pages: [{ comments: [mockComment], total: 20, limit: 20, offset: 0 }],
+        pages: [{ comments: [mockComment], pagination: { total: 20, limit: 20, offset: 0 } }],
         pageParams: [0],
       },
       isLoading: false,
@@ -329,7 +329,7 @@ describe('NewCommentsView', () => {
   it('does not set up intersection observer when hasNextPage is false', () => {
     vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
       data: {
-        pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+        pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
         pageParams: [0],
       },
       isLoading: false,
@@ -381,7 +381,7 @@ describe('NewCommentsView', () => {
     it('generates correct deep link to comment when "View Comment" is clicked', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -406,7 +406,7 @@ describe('NewCommentsView', () => {
     it('generates correct deep link to parent comment when "View Parent" is clicked', () => {
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -432,7 +432,7 @@ describe('NewCommentsView', () => {
       const commentWithoutParent = { ...mockComment, parent_id: null };
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [commentWithoutParent], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [commentWithoutParent], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -462,7 +462,7 @@ describe('NewCommentsView', () => {
 
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments, total: 2, limit: 20, offset: 0 }],
+          pages: [{ comments, pagination: { total: 2, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -493,7 +493,7 @@ describe('NewCommentsView', () => {
       const refetch = vi.fn();
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -514,7 +514,7 @@ describe('NewCommentsView', () => {
       const refetch = vi.fn().mockResolvedValue({});
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -542,7 +542,7 @@ describe('NewCommentsView', () => {
       );
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -576,7 +576,7 @@ describe('NewCommentsView', () => {
       );
       vi.mocked(useRecentCommentsModule.useRecentComments).mockReturnValue(makeInfiniteQueryResult<RecentCommentsPage>({
         data: {
-          pages: [{ comments: [mockComment], total: 1, limit: 20, offset: 0 }],
+          pages: [{ comments: [mockComment], pagination: { total: 1, limit: 20, offset: 0 } }],
           pageParams: [0],
         },
         isLoading: false,
@@ -629,7 +629,7 @@ describe('NewCommentsView', () => {
   describe('unread-only filter', () => {
     const loadedComments = (comments: RecentComment[]) =>
       makeInfiniteQueryResult<RecentCommentsPage>({
-        data: { pages: [{ comments, total: comments.length, limit: 20, offset: 0 }], pageParams: [0] },
+        data: { pages: [{ comments, pagination: { total: comments.length, limit: 20, offset: 0 } }], pageParams: [0] },
         isLoading: false,
         isError: false,
         error: null,
