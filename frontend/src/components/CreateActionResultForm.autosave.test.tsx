@@ -27,7 +27,7 @@ describe('CreateActionResultForm — cancel discards cached drafts', () => {
   });
 
   it('clears the head draft when cancelled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onCancel = vi.fn();
     postCachingService.save(HEAD_KEY, 'half-written result');
 
@@ -48,7 +48,7 @@ describe('CreateActionResultForm — cancel discards cached drafts', () => {
   });
 
   it('clears staged follow-up drafts too, not just the head', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     postCachingService.save(HEAD_KEY, 'head');
 
     renderInRouter(

@@ -46,7 +46,7 @@ describe('ItemForm', () => {
   describe('Submit guard', () => {
     it('does not call onSubmit when item name is empty', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemForm
           onSubmit={onSubmit}
@@ -69,7 +69,7 @@ describe('ItemForm', () => {
   describe('Decimal support', () => {
     it('accepts decimal value for item value field', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemForm
           onSubmit={onSubmit}
@@ -95,7 +95,7 @@ describe('ItemForm', () => {
 
     it('accepts decimal value for item weight field', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemForm
           onSubmit={onSubmit}
@@ -194,7 +194,7 @@ describe('ItemForm', () => {
 
     it('submits as a manual item when loot modes are unavailable', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGameContext.current = null;
       renderWithQuery(
         <ItemForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" allowedLootModes={['manual','loot_table','loot_table_random']} />
@@ -221,7 +221,7 @@ describe('ItemForm', () => {
 
     it('submits the chosen item using its stored JSON payload', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGetLootTableContents.mockResolvedValue({
         data: [
           {
@@ -258,7 +258,7 @@ describe('ItemForm', () => {
 
     it('does not submit when no item has been chosen', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGetLootTableContents.mockResolvedValue({ data: [] });
 
       renderWithQuery(
@@ -274,7 +274,7 @@ describe('ItemForm', () => {
 
     it('refuses to submit an item whose stored data is malformed JSON', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGetLootTableContents.mockResolvedValue({
         data: [{ id: 21, name: 'Broken Item', data: 'not json{' }],
       });
@@ -300,7 +300,7 @@ describe('ItemForm', () => {
 
     it('clears the chosen item when the table is changed', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGetLootTables.mockResolvedValue({
         data: [
           { id: 11, game_id: 7, name: 'Common Loot' },
@@ -352,7 +352,7 @@ describe('ItemForm', () => {
 
     it('submits only the table id, deferring the roll to the caller', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithQuery(
         <ItemForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" allowedLootModes={['manual','loot_table','loot_table_random']} />
@@ -369,7 +369,7 @@ describe('ItemForm', () => {
     });
 
     it('does not offer an item picker — the item is chosen server-side', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(
         <ItemForm onSubmit={vi.fn()} onCancel={vi.fn()} submitLabel="Add" allowedLootModes={['manual','loot_table','loot_table_random']} />
       );
@@ -384,7 +384,7 @@ describe('ItemForm', () => {
 
     it('does not submit when no table has been chosen', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithQuery(
         <ItemForm onSubmit={onSubmit} onCancel={vi.fn()} submitLabel="Add" allowedLootModes={['manual','loot_table','loot_table_random']} />
@@ -401,7 +401,7 @@ describe('ItemForm', () => {
   describe('Stale mode after loot modes disappear', () => {
     it('submits as manual when the loot modes are withdrawn mid-edit', async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       mockGameContext.current = { gameId: 7 };
       mockGetLootTables.mockResolvedValue({
         data: [{ id: 11, game_id: 7, name: 'Common Loot' }],

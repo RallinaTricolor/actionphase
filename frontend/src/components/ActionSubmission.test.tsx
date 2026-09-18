@@ -120,7 +120,7 @@ describe('ActionSubmission sheet drawer', () => {
     vi.mocked(useCharacterSheetItems).mockReturnValue([
       { id: 's1', name: 'Fire Bolt', type: 'skill' },
     ]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithClient(<ActionSubmission gameId={1} currentPhase={baseActionPhase} />);
     await user.click(screen.getByTestId('sheet-toggle-button'));
     expect(screen.getByRole('dialog', { name: 'Character Sheet' })).toBeInTheDocument();

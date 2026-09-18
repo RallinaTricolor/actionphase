@@ -54,7 +54,7 @@ describe('AddNumberModal', () => {
 
   describe('Form Input', () => {
     it('allows entering a name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const nameInput = screen.getByLabelText(/^Name/);
@@ -73,7 +73,7 @@ describe('AddNumberModal', () => {
     });
 
     it('allows entering description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={vi.fn()} onCancel={vi.fn()} />);
 
       const descInput = screen.getByLabelText(/Description/);
@@ -86,7 +86,7 @@ describe('AddNumberModal', () => {
   describe('Form Submission', () => {
     it('calls onAdd with complete entry data', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Gold');
@@ -106,7 +106,7 @@ describe('AddNumberModal', () => {
 
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Silver');
@@ -124,7 +124,7 @@ describe('AddNumberModal', () => {
 
     it('trims whitespace from the name', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '  Gold  ');
@@ -137,7 +137,7 @@ describe('AddNumberModal', () => {
 
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Credits');
@@ -151,7 +151,7 @@ describe('AddNumberModal', () => {
 
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Gold');
@@ -165,7 +165,7 @@ describe('AddNumberModal', () => {
 
     it('does not call onAdd when the name is empty', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: /^Add$/ }));
@@ -175,7 +175,7 @@ describe('AddNumberModal', () => {
 
     it('does not call onAdd when the name is only whitespace', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '   ');
@@ -188,7 +188,7 @@ describe('AddNumberModal', () => {
   describe('Cancel Functionality', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
@@ -198,7 +198,7 @@ describe('AddNumberModal', () => {
 
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<AddNumberModal onAdd={onAdd} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Gold');

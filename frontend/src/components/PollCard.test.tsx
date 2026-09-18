@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { setupServer } from 'msw/node';
 import { PollCard } from './PollCard';
 import type { PollListItem, PollWithOptions } from '../types/polls';
 
@@ -39,12 +38,9 @@ vi.mock('../hooks', () => ({
   })),
 }));
 
-// Setup MSW server
-const server = setupServer();
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+// No MSW handlers needed: this file renders PollCard with props and asserts on
+// the output, so it makes no requests. It previously ran an empty local
+// setupServer() that served nothing.
 
 describe('PollCard', () => {
   let queryClient: QueryClient;

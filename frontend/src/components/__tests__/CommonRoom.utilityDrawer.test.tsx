@@ -118,7 +118,7 @@ function setupPlayerGame(gameState: 'in_progress' | 'completed' = 'in_progress')
  * its game context to that provider while mounted.
  */
 async function renderAndOpenDrawer() {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   renderWithProviders(
     <>
       <CommonRoom gameId={1} phaseId={1} isCurrentPhase={true} />

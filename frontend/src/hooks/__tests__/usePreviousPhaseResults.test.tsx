@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePreviousPhaseResults } from '../usePreviousPhaseResults';
 import { apiClient } from '../../lib/api';
 import type { GamePhase, ActionResult } from '../../types/phases';
-import { makeAxiosResponse, makeGamePhase } from '../../test-utils';
+import { makeAxiosResponse, makeGamePhase } from '../../test-utils/factories';
 
 // Mock the API client
 vi.mock('../../lib/api', () => ({

@@ -76,7 +76,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('calls onBack when back button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleBack = vi.fn();
 
     render(

@@ -71,7 +71,7 @@ function SheetHarness() {
  */
 describe('character sheet tab lock', () => {
   it('allows switching tabs when no editor is open', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetHarness />);
 
     await user.selectOptions(screen.getByRole('combobox'), 'inventory');
@@ -80,7 +80,7 @@ describe('character sheet tab lock', () => {
   });
 
   it('locks the tabs while a skill editor holds edits', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetHarness />);
 
     await user.click(screen.getByText('✎'));
@@ -91,7 +91,7 @@ describe('character sheet tab lock', () => {
   });
 
   it('keeps the edit intact because the tab click cannot unmount the editor', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetHarness />);
 
     await user.click(screen.getByText('✎'));
@@ -106,7 +106,7 @@ describe('character sheet tab lock', () => {
   });
 
   it('unlocks the tabs once the editor is cancelled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<SheetHarness />);
 
     await user.click(screen.getByText('✎'));

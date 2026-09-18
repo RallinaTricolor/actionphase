@@ -31,7 +31,7 @@ describe('Handout modal content validation', () => {
     });
 
     it('keeps submit disabled for whitespace-only content', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderModal();
 
       await user.type(screen.getByTestId('handout-content-input'), '   ');
@@ -40,7 +40,7 @@ describe('Handout modal content validation', () => {
     });
 
     it('enables submit once content is entered', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderModal();
 
       await user.type(screen.getByTestId('handout-content-input'), 'Real content');
@@ -49,7 +49,7 @@ describe('Handout modal content validation', () => {
     });
 
     it('trims content before submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderModal();
 
       await user.type(screen.getByTestId('handout-title-input'), 'World Lore');
@@ -91,7 +91,7 @@ describe('Handout modal content validation', () => {
     });
 
     it('disables submit once content is cleared', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderModal();
 
       await user.clear(screen.getByTestId('handout-content-input'));
@@ -100,7 +100,7 @@ describe('Handout modal content validation', () => {
     });
 
     it('trims content before submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderModal({ content: '' });
 
       await user.type(screen.getByTestId('handout-content-input'), '  Edited content  ');

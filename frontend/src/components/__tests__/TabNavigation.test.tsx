@@ -110,7 +110,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when a tab is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <TabNavigation
@@ -206,7 +206,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange when dropdown selection changes', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       render(
         <TabNavigation
@@ -366,7 +366,7 @@ describe('TabNavigation', () => {
     });
 
     it('shows collapsed tabs in the More dropdown when opened', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       restoreLayout = stubLayout(400);
       renderWithRouter(
         <TabNavigation tabs={allTabs} activeTab="tab1" onTabChange={mockOnTabChange} collapseOverflow />
@@ -381,7 +381,7 @@ describe('TabNavigation', () => {
     });
 
     it('calls onTabChange and closes dropdown when a collapsed tab is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       restoreLayout = stubLayout(400);
       render(
         <TabNavigation tabs={allTabs} activeTab="tab1" onTabChange={mockOnTabChange} collapseOverflow />
@@ -395,7 +395,7 @@ describe('TabNavigation', () => {
     });
 
     it('closes dropdown when clicking outside', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       restoreLayout = stubLayout(400);
       render(
         <TabNavigation tabs={allTabs} activeTab="tab1" onTabChange={mockOnTabChange} collapseOverflow />

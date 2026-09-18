@@ -74,7 +74,7 @@ describe('ActionResultsList', () => {
   });
 
   it('expands and collapses long content on toggle', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const longContent = 'B'.repeat(300);
     vi.mocked(useUserActionResults).mockReturnValue({ isLoading: false, data: [makeResult({ content: longContent })], error: null } as never);
     renderWithProviders(<ActionResultsList gameId={5} />);

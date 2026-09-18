@@ -158,7 +158,7 @@ describe('HandoutView', () => {
 
   describe('Edit Mode', () => {
     it('shows inline editor when edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -188,7 +188,7 @@ describe('HandoutView', () => {
     });
 
     it('reverts to view mode when cancel button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -233,7 +233,7 @@ describe('HandoutView', () => {
     });
 
     it('updates comment when save button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -284,7 +284,7 @@ describe('HandoutView', () => {
 
   describe('Delete Confirmation', () => {
     it('shows confirmation modal when delete button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -313,7 +313,7 @@ describe('HandoutView', () => {
     });
 
     it('deletes comment when deletion confirmed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -356,7 +356,7 @@ describe('HandoutView', () => {
     });
 
     it('does not delete when modal is cancelled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutView
@@ -594,7 +594,7 @@ describe('HandoutView', () => {
         />
       );
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const editButton = await screen.findByRole('button', { name: /^edit$/i });
       await user.click(editButton);
       expect(mockOnEdit).toHaveBeenCalled();

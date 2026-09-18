@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
 import { apiClient } from '../../lib/api';
-import { makeGameParticipant } from '../../test-utils';
+import { makeGameParticipant } from '../../test-utils/factories';
 import type { GameParticipant } from '../../types/games';
 
 const renderInRouter = (ui: React.ReactElement) =>
@@ -86,7 +86,7 @@ describe('PeopleView - Leave Game Button', () => {
   describe('Bug #9: Audience members cannot leave games', () => {
     it('should show Leave Game button for audience members', async () => {
       // Arrange: User is an audience member
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -110,7 +110,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button for non-participants', async () => {
       // Arrange: User has no role in the game
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -134,7 +134,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should call onLeaveGame when audience member clicks Leave Game', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onLeaveGame = vi.fn();
 
       renderInRouter(
@@ -162,7 +162,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should show Leave Game button for regular participants', async () => {
       // Arrange: User is a regular player participant
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -186,7 +186,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button in completed games', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -210,7 +210,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button in cancelled games', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -234,7 +234,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button when onLeaveGame is not provided', async () => {
       // Arrange: onLeaveGame callback is undefined
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -258,7 +258,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should not show Leave Game button for GM', async () => {
       // Arrange: Current user is the GM
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -282,7 +282,7 @@ describe('PeopleView - Leave Game Button', () => {
 
     it('should disable Leave Game button when actionLoading is true', async () => {
       // Arrange
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderInRouter(
         <PeopleView
@@ -309,7 +309,7 @@ describe('PeopleView - Leave Game Button', () => {
 
 describe('PeopleView - Pending audience applications with no participants', () => {
   it('should show pending audience applications even when there are no participants', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     vi.mocked(apiClient.games.getGameApplications).mockResolvedValue({
       data: [
@@ -362,7 +362,7 @@ describe('PeopleView - anonymous game former player display', () => {
   };
 
   it('shows former players in a "Former Players" section in non-anonymous games', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderInRouter(
       <PeopleView
@@ -383,7 +383,7 @@ describe('PeopleView - anonymous game former player display', () => {
   });
 
   it('hides "Former Players" section from a regular player in an anonymous game', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const regularPlayer: GameParticipant = {
       is_former_player: false,
       avatar_url: null,
@@ -411,7 +411,7 @@ describe('PeopleView - anonymous game former player display', () => {
   });
 
   it('hides "Former Players" section from a non-participant in an anonymous game', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderInRouter(
       <PeopleView
@@ -431,7 +431,7 @@ describe('PeopleView - anonymous game former player display', () => {
   });
 
   it('shows "Former Players" section to the GM in an anonymous game', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderInRouter(
       <PeopleView
@@ -452,7 +452,7 @@ describe('PeopleView - anonymous game former player display', () => {
   });
 
   it('shows "Former Players" section to an audience member in an anonymous game', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const audienceMember: GameParticipant = {
       avatar_url: null,
       id: 20, game_id: 1, user_id: 20, username: 'watcher',
@@ -493,7 +493,7 @@ describe('PeopleView - participant profile links', () => {
   };
 
   it('links participant username to their user profile', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     renderInRouter(
       <PeopleView

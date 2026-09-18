@@ -382,7 +382,7 @@ describe('PostCard', () => {
     });
 
     it('collapses content when collapse button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockLongPost}
@@ -407,7 +407,7 @@ describe('PostCard', () => {
     });
 
     it('expands content when show button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockLongPost}
@@ -479,7 +479,7 @@ describe('PostCard', () => {
     });
 
     it('toggles to expand comments when collapse is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -515,7 +515,7 @@ describe('PostCard', () => {
     });
 
     it('opens comment form when add comment is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -533,7 +533,7 @@ describe('PostCard', () => {
     });
 
     it('hides add comment button when comment form is open', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -553,7 +553,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Rendering', () => {
     it('shows comment form when commenting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -573,7 +573,7 @@ describe('PostCard', () => {
     });
 
     it('shows character selector when multiple characters available', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -594,7 +594,7 @@ describe('PostCard', () => {
     });
 
     it('does not show character selector when only one character available', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -631,7 +631,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Character Selection', () => {
     it('auto-selects first character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -650,7 +650,7 @@ describe('PostCard', () => {
     });
 
     it('allows changing selected character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -673,7 +673,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Input', () => {
     it('updates content when user types', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -694,7 +694,7 @@ describe('PostCard', () => {
     });
         
     it('saves post to localstorage cache with the proper tag', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -721,7 +721,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Validation', () => {
     it('disables submit button when content is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -740,7 +740,7 @@ describe('PostCard', () => {
     });
 
     it('disables submit button when content is only whitespace', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -762,7 +762,7 @@ describe('PostCard', () => {
     });
 
     it('enables submit button when content is valid', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -790,7 +790,7 @@ describe('PostCard', () => {
     });
 
     it('calls onCreateComment with correct arguments', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -815,7 +815,7 @@ describe('PostCard', () => {
     });
 
     it('trims whitespace from content before submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -840,7 +840,7 @@ describe('PostCard', () => {
     });
 
     it('clears content after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -870,7 +870,7 @@ describe('PostCard', () => {
     });
 
     it('closes comment form after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -896,7 +896,7 @@ describe('PostCard', () => {
     });
 
     it('reloads comments after successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       let loadCount = 0;
 
       server.use(
@@ -941,7 +941,7 @@ describe('PostCard', () => {
     });
 
     it('uses selected character when submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -968,7 +968,7 @@ describe('PostCard', () => {
     });
     
     it('clears localstorage cache after submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -997,7 +997,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Cancel', () => {
     it('closes comment form when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1018,7 +1018,7 @@ describe('PostCard', () => {
     });
 
     it('clears content when cancel is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1045,7 +1045,7 @@ describe('PostCard', () => {
     });
 
     it('shows add comment button again after cancel', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1064,7 +1064,7 @@ describe('PostCard', () => {
     });
     
     it('clears localstorage cache after cancel', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1093,7 +1093,7 @@ describe('PostCard', () => {
 
   describe('Comment Form - Loading State', () => {
     it('shows loading text while submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       // Hold the submission open with a manually-resolved promise instead of a
       // timer. A setTimeout-based mock races the real clock: under CPU
       // contention (e.g. parallel workers in CI/containers) the delay can
@@ -1131,7 +1131,7 @@ describe('PostCard', () => {
     });
 
     it('disables all form elements while submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       // Manually-resolved promise, not a timer — see note above; the timer
       // version races the clock and flakes under parallel-worker contention.
       let resolveSubmit!: () => void;
@@ -1174,7 +1174,7 @@ describe('PostCard', () => {
     });
 
     it('disables character selector while submitting', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       // Manually-resolved promise, not a timer — see note above.
       let resolveSubmit!: () => void;
       mockOnCreateComment.mockImplementation(
@@ -1351,7 +1351,7 @@ describe('PostCard', () => {
 
       const postWithoutComments = { ...mockPost, comment_count: 0 };
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={postWithoutComments}
@@ -1520,7 +1520,7 @@ describe('PostCard', () => {
   describe('Integration', () => {
     it('handles complete comment workflow', async () => {
       mockOnCreateComment.mockResolvedValue(undefined);
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <PostCard
@@ -1654,7 +1654,7 @@ describe('PostCard', () => {
     });
 
     it('shows editor when edit button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1681,7 +1681,7 @@ describe('PostCard', () => {
     });
 
     it('reverts changes when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1727,7 +1727,7 @@ describe('PostCard', () => {
         })
       );
 
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1761,7 +1761,7 @@ describe('PostCard', () => {
     });
 
     it('disables save button when content is unchanged', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}
@@ -1780,7 +1780,7 @@ describe('PostCard', () => {
     });
 
     it('disables save button when content is empty', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <PostCard
           post={mockPost}

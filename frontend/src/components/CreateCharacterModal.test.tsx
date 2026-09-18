@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils/render';
-import { makeAxiosResponse } from '../test-utils';
+import { makeAxiosResponse } from '../test-utils/factories';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { apiClient } from '../lib/api';
 import type { GameParticipant } from '../types/games';
@@ -136,7 +136,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('allows entering character name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -167,7 +167,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('submit button is enabled when name is provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -217,7 +217,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('allows selecting NPC type', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -249,7 +249,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('shows helper text for NPC', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -283,7 +283,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('hides user selector when GM creates NPC', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -306,7 +306,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('shows user selector again when switching back to player character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -373,7 +373,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('allows selecting a player from dropdown', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -391,7 +391,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('submit button is disabled when player character has no assigned user', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -410,7 +410,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('submit button is enabled when player character has name and assigned user', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -432,7 +432,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('clears user_id when switching from player character to NPC', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
         makeAxiosResponse<Character>({
           id: 433,
@@ -483,7 +483,7 @@ describe('CreateCharacterModal', () => {
 
   describe('Form Submission', () => {
     it('calls API with correct data for player creating player character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
         makeAxiosResponse<Character>({
           id: 433,
@@ -521,7 +521,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('calls API with user_id for GM creating player character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
         makeAxiosResponse<Character>({
           id: 433,
@@ -565,7 +565,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('calls API without user_id for GM creating NPC', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
         makeAxiosResponse<Character>({
           id: 433,
@@ -607,7 +607,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('closes modal on successful submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockResolvedValue(
         makeAxiosResponse<Character>({
           id: 433,
@@ -642,7 +642,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('shows error message on submission failure', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.characters.createCharacter).mockRejectedValue(
         new Error('Failed to create character')
       );
@@ -670,7 +670,7 @@ describe('CreateCharacterModal', () => {
 
   describe('Modal Close/Cancel', () => {
     it('calls onClose when cancel button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <CreateCharacterModal
           isOpen={true}
@@ -687,7 +687,7 @@ describe('CreateCharacterModal', () => {
     });
 
     it('resets form when modal is closed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const { rerender } = renderWithProviders(
         <CreateCharacterModal
           isOpen={true}

@@ -54,7 +54,7 @@ describe('AddItemModal', () => {
 
   describe('Form Input', () => {
     it('allows entering item name', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       const nameInput = screen.getByPlaceholderText(/Iron Sword/);
@@ -74,7 +74,7 @@ describe('AddItemModal', () => {
     });
 
     it('allows entering category', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       const categoryInput = screen.getByPlaceholderText(/Weapon, Armor/);
@@ -102,7 +102,7 @@ describe('AddItemModal', () => {
     });
 
     it('allows entering description', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       const descInput = screen.getByPlaceholderText(/Describe this item/);
@@ -115,7 +115,7 @@ describe('AddItemModal', () => {
   describe('Form Submission', () => {
     it('calls onAdd with complete item data', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Iron Sword');
@@ -139,7 +139,7 @@ describe('AddItemModal', () => {
 
     it('calls onAdd with only required fields', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Simple Item');
@@ -158,7 +158,7 @@ describe('AddItemModal', () => {
 
     it('trims whitespace from name', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '  Iron Sword  ');
@@ -171,7 +171,7 @@ describe('AddItemModal', () => {
 
     it('trims whitespace from category', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
@@ -185,7 +185,7 @@ describe('AddItemModal', () => {
 
     it('trims whitespace from description', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
@@ -199,7 +199,7 @@ describe('AddItemModal', () => {
 
     it('sets empty category to undefined', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
@@ -213,7 +213,7 @@ describe('AddItemModal', () => {
 
     it('sets empty description to undefined', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Item');
@@ -227,7 +227,7 @@ describe('AddItemModal', () => {
 
     it('does not call onAdd when name is empty', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: 'Add' }));
@@ -237,7 +237,7 @@ describe('AddItemModal', () => {
 
     it('does not call onAdd when name is only whitespace', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), '   ');
@@ -250,7 +250,7 @@ describe('AddItemModal', () => {
     // reintroduce a key the type no longer has and that nothing reads.
     it('does not write an equipped field', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');
@@ -264,7 +264,7 @@ describe('AddItemModal', () => {
   describe('Cancel Functionality', () => {
     it('calls onCancel when cancel button clicked', async () => {
       const onCancel = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={onCancel} />);
 
       await user.click(screen.getByText('Cancel'));
@@ -274,7 +274,7 @@ describe('AddItemModal', () => {
 
     it('does not call onAdd when cancelled', async () => {
       const onAdd = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithQuery(<AddItemModal onAdd={onAdd} onAddRandom={vi.fn()} onCancel={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Name/), 'Sword');

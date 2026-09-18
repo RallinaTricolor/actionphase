@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils/render';
-import { makeMutationResult } from '../test-utils';
+import { makeMutationResult } from '../test-utils/factories';
 import { PhaseActivationDialog } from './PhaseActivationDialog';
 import type { GamePhase } from '../types/phases';
 

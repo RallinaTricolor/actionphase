@@ -190,7 +190,7 @@ describe('CommentWithParentCard', () => {
   });
 
   it('calls onNavigateToComment when "View in thread" button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const mockNavigate = vi.fn();
 
     renderWithProviders(
@@ -330,7 +330,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('shows reply form when Reply button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useGameContext).mockReturnValue({
         ...mockGameContext,
         userCharacters: [mockControllableCharacter],
@@ -344,7 +344,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('submits reply via apiClient and resets form', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useGameContext).mockReturnValue({
         ...mockGameContext,
         userCharacters: [mockControllableCharacter],
@@ -372,7 +372,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('shows inline confirmation with "View in thread" link after successful reply', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useGameContext).mockReturnValue({
         ...mockGameContext,
         userCharacters: [mockControllableCharacter],
@@ -400,7 +400,7 @@ describe('CommentWithParentCard', () => {
     });
     
     it('saves post to localstorage cache with the proper tag', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useGameContext).mockReturnValue({
         ...mockGameContext,
         userCharacters: [mockControllableCharacter],
@@ -418,7 +418,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('clears localstorage cache after submission', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useGameContext).mockReturnValue({
         ...mockGameContext,
         userCharacters: [mockControllableCharacter],
@@ -460,7 +460,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('shows edit form when Edit button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useAuth).mockReturnValue({ currentUser: { id: mockComment.author_id } } as never);
 
       renderWithProviders(<CommentWithParentCard comment={commentWithPostId} gameId={1} />, { gameId: 1 });
@@ -503,7 +503,7 @@ describe('CommentWithParentCard', () => {
     });
 
     it('shows confirmation modal when Delete button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(useAuth).mockReturnValue({ currentUser: { id: mockComment.author_id } } as never);
 
       renderWithProviders(<CommentWithParentCard comment={commentWithPostId} gameId={1} />, { gameId: 1 });
@@ -599,7 +599,7 @@ describe('CommentWithParentCard', () => {
   describe('favorite star', () => {
     it('reports the comment id and current state when clicked', async () => {
       const onToggleFavorite = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <CommentWithParentCard comment={mockComment} gameId={1} onToggleFavorite={onToggleFavorite} />,

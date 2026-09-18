@@ -255,7 +255,7 @@ describe('HandoutCard', () => {
     });
 
     it('calls onEdit when Edit button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutCard
@@ -273,7 +273,7 @@ describe('HandoutCard', () => {
     });
 
     it('calls onPublish when Publish button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutCard
@@ -291,7 +291,7 @@ describe('HandoutCard', () => {
     });
 
     it('calls onUnpublish when Unpublish button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutCard
@@ -309,7 +309,7 @@ describe('HandoutCard', () => {
     });
 
     it('shows confirmation dialog when Delete button clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutCard
@@ -327,7 +327,7 @@ describe('HandoutCard', () => {
     });
 
     it('calls onDelete when deletion confirmed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
 
       renderWithProviders(
         <HandoutCard
@@ -345,7 +345,7 @@ describe('HandoutCard', () => {
     });
 
     it('does not call onDelete when deletion cancelled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       renderWithProviders(

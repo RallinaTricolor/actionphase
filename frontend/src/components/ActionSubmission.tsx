@@ -75,8 +75,27 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
     }
   });
 
-  // Pre-populate form if editing existing action
+  // Which action id the form has already been hydrated from. `null` means "the
+  // no-saved-action case", which is hydrated exactly once too.
+  const hydratedActionIdRef = useRef<number | null | undefined>(undefined);
+
+  // Pre-populate form if editing existing action.
+  //
+  // Hydration happens ONCE per action, not on every run of this effect.
+  // currentAction derives from a fetch, so this effect re-runs when that data
+  // arrives -- and it used to re-run whenever `availableCharacters` changed
+  // identity as well. Unguarded, the `else` branch's setContent('') fires after
+  // the user has begun typing and silently erases what they wrote. That is real
+  // data loss for anyone who starts typing before the actions request settles,
+  // not just a test artifact.
+  //
+  // Keyed on the action id rather than a "has run" boolean so a genuinely
+  // different action (switching phases, a submission landing) still re-hydrates.
   useEffect(() => {
+    const incomingId = currentAction ? currentAction.id : null;
+    if (hydratedActionIdRef.current === incomingId) return;
+    hydratedActionIdRef.current = incomingId;
+
     if (currentAction) {
       setContent(currentAction.content);
       if (currentAction.character_id) {

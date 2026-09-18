@@ -36,7 +36,7 @@ describe('ConfirmModal', () => {
   });
 
   it('calls onClose when cancel button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
 
     render(
@@ -54,7 +54,7 @@ describe('ConfirmModal', () => {
   });
 
   it('calls onConfirm and onClose when confirm button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const onConfirm = vi.fn();
 
@@ -123,7 +123,7 @@ describe('ConfirmModal', () => {
   });
 
   it('calls onClose when backdrop is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
 
     render(
@@ -174,7 +174,7 @@ describe('ConfirmModal', () => {
     });
 
     it('distinguishes its confirm button from a same-labelled button outside it', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onConfirm = vi.fn();
       const rowDelete = vi.fn();
 

@@ -201,7 +201,7 @@ describe('ThreadViewModal', () => {
       // This is the actual failure case: dirty state originates from a child
       // ThreadedComment (id=2), not the root (id=1). Before the fix, the root's
       // onDirtyStateChange was not propagated to children, so hasDirtyReply stayed false.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -236,7 +236,7 @@ describe('ThreadViewModal', () => {
       // Asserting "still open" alone would also pass against the old behaviour, where
       // the backdrop raised the confirm dialog; the absence of the dialog is what
       // distinguishes inert from confirming.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -266,7 +266,7 @@ describe('ThreadViewModal', () => {
     });
 
     it('should close without confirmation when no reply content is pending', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -287,7 +287,7 @@ describe('ThreadViewModal', () => {
     });
 
     it('should close when user confirms discard', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -312,7 +312,7 @@ describe('ThreadViewModal', () => {
     });
 
     it('should keep modal open when user cancels the discard', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -341,7 +341,7 @@ describe('ThreadViewModal', () => {
       // Regression for the stale-Set bug: if a ThreadedComment unmounts while its
       // replyContent is non-empty, the cleanup effect must clear the dirty entry.
       // If it doesn't, hasDirtyReply stays true and the modal can never be closed.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -372,7 +372,7 @@ describe('ThreadViewModal', () => {
       // modal content area (mousedown on the inner div), but mouseup happens over the
       // backdrop, so Firefox synthesises a click on the backdrop directly.
       // The guard must ignore that spurious click.
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -398,7 +398,7 @@ describe('ThreadViewModal', () => {
     });
 
     it('should close when both mousedown and click occur on the backdrop', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}
@@ -456,7 +456,7 @@ describe('ThreadViewModal', () => {
     });
 
     it('should call onClose when close button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ThreadViewModal
           gameId={mockGameId}

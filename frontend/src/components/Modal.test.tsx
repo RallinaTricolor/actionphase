@@ -58,7 +58,7 @@ describe('Modal', () => {
 
   describe('dismissal', () => {
     it('closes on a backdrop click by default', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       renderOpen({ onClose });
 
@@ -71,7 +71,7 @@ describe('Modal', () => {
     // a decision, and the panel may hold a draft living only in component
     // state. Losing it to a stray click is unrecoverable.
     it('ignores a backdrop click when dismissOnBackdrop is false', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       renderOpen({ onClose, dismissOnBackdrop: false });
 
@@ -83,7 +83,7 @@ describe('Modal', () => {
     // ...but closing must stay POSSIBLE, or the modal is a trap. The X is the
     // deliberate exit that survives dismissOnBackdrop={false}.
     it('still closes via the X when the backdrop is disabled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onClose = vi.fn();
       renderOpen({ onClose, dismissOnBackdrop: false });
 

@@ -48,7 +48,7 @@ describe('ApplyToGameModal', () => {
   });
 
   it('shows auto-accept notice when autoAcceptAudience and role is audience', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApplyToGameModal {...defaultProps} autoAcceptAudience />);
     // Switch to audience role
     await user.selectOptions(screen.getByRole('combobox'), 'audience');
@@ -61,7 +61,7 @@ describe('ApplyToGameModal', () => {
   });
 
   it('calls applyToGame and fires callbacks on successful submit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.games.applyToGame).mockResolvedValue(undefined as never);
     const onApplicationSubmitted = vi.fn();
     const onClose = vi.fn();
@@ -85,7 +85,7 @@ describe('ApplyToGameModal', () => {
   });
 
   it('omits empty message from submission', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.games.applyToGame).mockResolvedValue(undefined as never);
     renderWithProviders(<ApplyToGameModal {...defaultProps} />);
     await user.click(screen.getByTestId('submit-application'));
@@ -98,7 +98,7 @@ describe('ApplyToGameModal', () => {
   });
 
   it('shows error alert on API failure', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     vi.mocked(apiClient.games.applyToGame).mockRejectedValue(new Error('Already applied'));
     renderWithProviders(<ApplyToGameModal {...defaultProps} />);
     await user.click(screen.getByTestId('submit-application'));
@@ -118,7 +118,7 @@ describe('ApplyToGameModal', () => {
    * which is why the bug survived a passing suite.
    */
   it('surfaces the server error message on a 403 rather than the axios default', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const banned = new AxiosError('Request failed with status code 403');
     banned.response = {
       status: 403,
@@ -147,7 +147,7 @@ describe('ApplyToGameModal', () => {
    * See .claude/planning/rfc7807-error-format.md.
    */
   it('uses the friendly fallback rather than the status field when no error detail is present', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const failure = new AxiosError('Request failed with status code 403');
     failure.response = {
       status: 403,
@@ -169,7 +169,7 @@ describe('ApplyToGameModal', () => {
    * user must see the server's detail, not the numeric `status`.
    */
   it('reads the detail field from an RFC 7807 error body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const banned = new AxiosError('Request failed with status code 403');
     banned.response = {
       status: 403,
@@ -197,7 +197,7 @@ describe('ApplyToGameModal', () => {
    * lands in it for screen readers to announce the change.
    */
   it('keeps the error region mounted so the error is announced in place', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const failure = new AxiosError('Request failed with status code 403');
     failure.response = {
       status: 403,
@@ -220,7 +220,7 @@ describe('ApplyToGameModal', () => {
   });
 
   it('calls onClose when Cancel is clicked (not submitting)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     renderWithProviders(<ApplyToGameModal {...defaultProps} onClose={onClose} />);
     await user.click(screen.getByRole('button', { name: /cancel/i }));

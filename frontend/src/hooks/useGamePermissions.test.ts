@@ -6,7 +6,7 @@ import { useGamePermissions } from './useGamePermissions';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdminMode } from '../contexts/AdminModeContext';
 import { apiClient } from '../lib/api';
-import { makeGameParticipant, makeGameWithDetails } from '../test-utils';
+import { makeGameParticipant, makeGameWithDetails } from '../test-utils/factories';
 import type { GameWithDetails } from '../types/games';
 import type { GameParticipant } from '../types/games';
 

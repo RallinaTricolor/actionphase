@@ -257,7 +257,7 @@ describe('MessageThread initial scroll positioning', () => {
 
 describe('MessageThread jump-to-latest control', () => {
   it('scrolls to the newest message when the Latest button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // Already read, so the initial positioning is a BOTTOM scroll; clear the
     // record afterwards to isolate the click's effect.
     ctx.messages = makeMessages(1);

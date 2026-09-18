@@ -111,6 +111,21 @@ describe('LoginForm', () => {
   })
 
   it('works without onSuccess callback', async () => {
+    // Without these the login POST 404s, and the button re-enables because the
+    // request FAILED -- the assertion below would pass on the error path.
+    server.use(
+      http.post('http://localhost:3000/api/v1/auth/login', async () => {
+        return HttpResponse.json({ Token: 'mock-jwt-token-from-test' })
+      }),
+      http.get('http://localhost:3000/api/v1/auth/me', async () => {
+        return HttpResponse.json({
+          id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+        })
+      })
+    )
+
     renderWithProviders(<LoginForm />)
 
     const usernameInput = screen.getByLabelText('Username or Email')

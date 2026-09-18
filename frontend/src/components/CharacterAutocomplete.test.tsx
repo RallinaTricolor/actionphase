@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CharacterAutocomplete } from './CharacterAutocomplete';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 import type { Character } from '../types/characters';
 
 describe('CharacterAutocomplete', () => {
@@ -115,7 +115,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect when character is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 
@@ -126,7 +126,7 @@ describe('CharacterAutocomplete', () => {
     });
 
     it('calls onSelect with correct character', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onSelect = vi.fn();
       render(<CharacterAutocomplete {...defaultProps} onSelect={onSelect} />);
 

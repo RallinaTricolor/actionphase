@@ -99,7 +99,7 @@ describe('CollapsibleMarkdown', () => {
 
   describe('expansion', () => {
     it('expands and collapses on click when uncontrolled', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<CollapsibleMarkdown content="long content" data-testid="body" />);
 
       const toggle = screen.getByRole('button', { name: /show full content/i });
@@ -116,7 +116,7 @@ describe('CollapsibleMarkdown', () => {
     });
 
     it('defers to the controlled prop and reports changes instead of self-managing', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const onExpandedChange = vi.fn();
       render(
         <CollapsibleMarkdown

@@ -140,7 +140,7 @@ describe('GameFormFields', () => {
 
     it('calls onChange with true when Portrait is selected', async () => {
       const onChange = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderFields({ formData: { ...baseFormData, portrait_avatars: false }, onChange });
 
       await user.click(screen.getByRole('radio', { name: 'Portrait' }));
@@ -150,7 +150,7 @@ describe('GameFormFields', () => {
 
     it('calls onChange with false when Circular is selected', async () => {
       const onChange = vi.fn();
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderFields({ formData: { ...baseFormData, portrait_avatars: true }, onChange });
 
       await user.click(screen.getByRole('radio', { name: 'Circular' }));

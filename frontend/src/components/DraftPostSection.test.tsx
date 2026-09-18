@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../test-utils/render';
-import { makeMessage, makeMutationResult, makeQueryResult } from '../test-utils';
+import { makeMessage, makeMutationResult, makeQueryResult } from '../test-utils/factories';
 import { DraftPostSection } from './DraftPostSection';
 import type { Message } from '../types/messages';
 

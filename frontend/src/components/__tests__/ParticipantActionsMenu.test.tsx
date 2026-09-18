@@ -25,7 +25,7 @@ vi.mock('../../lib/api', () => ({
 
 import { usePromoteToCoGM, useDemoteFromCoGM, useTransitionPlayerToAudience, useRemovePlayer } from '../../hooks/usePlayerManagement';
 import { apiClient } from '../../lib/api';
-import { makeMutationResult } from '../../test-utils';
+import { makeMutationResult } from '../../test-utils/factories';
 import type { AxiosResponse } from 'axios';
 
 // Each of these hooks returns a full UseMutationResult; the component reads
@@ -83,7 +83,7 @@ describe('ParticipantActionsMenu', () => {
   });
 
   it('opens dropdown on button click', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <ParticipantActionsMenu gameId={10} participant={baseParticipant} isPrimaryGM={true} />
     );
@@ -93,7 +93,7 @@ describe('ParticipantActionsMenu', () => {
 
   describe('Promote to Co-GM', () => {
     it('shows Promote to Co-GM for primary GM with audience participant', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -106,7 +106,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('does not show Promote to Co-GM for non-primary GM', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -119,7 +119,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('does not show Promote to Co-GM for co_gm participant', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -132,7 +132,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('shows confirm modal when Promote to Co-GM is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -147,7 +147,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls promoteToCoGM.mutateAsync and fires onSuccess', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const promoteMutation = makeMutation();
       vi.mocked(usePromoteToCoGM).mockReturnValue(promoteMutation);
       const onSuccess = vi.fn();
@@ -173,7 +173,7 @@ describe('ParticipantActionsMenu', () => {
     const coGMParticipant = { ...baseParticipant, role: 'co_gm' as const };
 
     it('shows Demote from Co-GM for primary GM with co_gm participant', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -186,7 +186,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('does not show Demote from Co-GM for non-primary GM', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -199,7 +199,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls demoteFromCoGM.mutateAsync after confirming', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const demoteMutation = makeMutation();
       vi.mocked(useDemoteFromCoGM).mockReturnValue(demoteMutation);
       const onSuccess = vi.fn();
@@ -223,7 +223,7 @@ describe('ParticipantActionsMenu', () => {
 
   describe('Remove Player', () => {
     it('shows Remove Player for any participant (non-primary GM)', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -236,7 +236,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls removePlayer.mutateAsync after confirming', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const removeMutation = makeMutation();
       vi.mocked(useRemovePlayer).mockReturnValue(removeMutation);
       const onSuccess = vi.fn();
@@ -262,7 +262,7 @@ describe('ParticipantActionsMenu', () => {
     const playerParticipant: GameParticipant = { ...baseParticipant, role: 'player' };
 
     it('shows Move to Former Players for primary GM with player participant', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -275,7 +275,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('does not show Move to Former Players for non-primary GM', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -288,7 +288,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('does not show Move to Former Players for audience participant', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -301,7 +301,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('submit button is disabled until "confirm" is typed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -318,7 +318,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls transitionToAudience.mutateAsync and fires onSuccess after typing confirm', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const transitionMutation = makeMutation();
       vi.mocked(useTransitionPlayerToAudience).mockReturnValue(transitionMutation);
       const onSuccess = vi.fn();
@@ -343,7 +343,7 @@ describe('ParticipantActionsMenu', () => {
 
   describe('Approve / Reject Application', () => {
     it('shows Approve and Reject Application when application provided', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(
         <ParticipantActionsMenu
           gameId={10}
@@ -357,7 +357,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls reviewGameApplication with approve after confirming', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.games.reviewGameApplication).mockResolvedValue(undefined as never);
       const onSuccess = vi.fn();
       renderWithProviders(
@@ -378,7 +378,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('calls reviewGameApplication with reject after confirming', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.games.reviewGameApplication).mockResolvedValue(undefined as never);
       const onSuccess = vi.fn();
       renderWithProviders(
@@ -399,7 +399,7 @@ describe('ParticipantActionsMenu', () => {
     });
 
     it('shows application message in approve modal', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const appWithMessage = { ...baseApplication, message: 'Please let me in' };
       renderWithProviders(
         <ParticipantActionsMenu

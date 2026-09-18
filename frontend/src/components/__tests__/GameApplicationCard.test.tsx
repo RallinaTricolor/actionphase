@@ -82,7 +82,7 @@ describe('GameApplicationCard', () => {
   });
 
   it('calls onApprove when Approve is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onApprove = vi.fn().mockResolvedValue(undefined);
     const onReject = vi.fn();
     renderWithProviders(
@@ -99,7 +99,7 @@ describe('GameApplicationCard', () => {
   });
 
   it('shows confirm modal before rejecting', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onApprove = vi.fn();
     const onReject = vi.fn();
     renderWithProviders(
@@ -117,7 +117,7 @@ describe('GameApplicationCard', () => {
   });
 
   it('calls onReject after confirming rejection', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onApprove = vi.fn();
     const onReject = vi.fn().mockResolvedValue(undefined);
     renderWithProviders(

@@ -111,7 +111,7 @@ describe('ThreadViewModal + utility drawer', () => {
   });
 
   it('opens the drawer over the thread without closing it', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderThreadWithDrawer();
 
     await user.click(await screen.findByRole('button', { name: 'Utilities' }));
@@ -124,7 +124,7 @@ describe('ThreadViewModal + utility drawer', () => {
   });
 
   it('keeps the thread mounted behind the drawer', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderThreadWithDrawer();
 
     await user.click(await screen.findByRole('button', { name: 'Utilities' }));
@@ -140,7 +140,7 @@ describe('ThreadViewModal + utility drawer', () => {
   });
 
   it('keeps the thread open and scroll locked after the drawer closes', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderThreadWithDrawer();
 
     await user.click(await screen.findByRole('button', { name: 'Utilities' }));
