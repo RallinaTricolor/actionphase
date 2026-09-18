@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { usePolls } from '../hooks';
-import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox, DateTimeInput } from './ui';
-import type { CreatePollRequest } from '../types/polls';
+import { usePolls } from '@/hooks';
+import { Button, Input, Textarea, Card, CardBody, Alert, Checkbox, DateTimeInput } from '@/components/ui';
+import type { CreatePollRequest } from '@/types/polls';
 import { logger } from '@/services/LoggingService';
-import { localDateTimeToUTC } from '../utils/timezone';
+import { localDateTimeToUTC } from '@/utils/timezone';
 
 interface CreatePollFormProps {
   gameId: number;

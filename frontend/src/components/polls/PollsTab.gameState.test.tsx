@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollsTab } from './PollsTab';
-import * as hooks from '../hooks';
-import type { PollListItem } from '../types/polls';
+import * as hooks from '@/hooks';
+import type { PollListItem } from '@/types/polls';
 
 // PollCard stands in for the real card, reporting only the gameState it was
 // handed. The gate itself is covered separately below against the real card.
@@ -16,12 +16,12 @@ vi.mock('./PollCard', () => ({
   ),
 }));
 
-vi.mock('../hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../hooks')>();
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
   return { ...actual, usePollsByPhase: vi.fn() };
 });
 
-vi.mock('../contexts/GameContext', () => ({
+vi.mock('@/contexts/GameContext', () => ({
   useGameContext: () => ({ currentPhaseId: 10 }),
 }));
 

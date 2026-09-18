@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { usePoll, usePollResults, usePolls } from '../hooks';
-import { Card, CardHeader, CardBody, Button, Badge, Spinner } from './ui';
-import { MarkdownPreview } from './MarkdownPreview';
+import { usePoll, usePollResults, usePolls } from '@/hooks';
+import { Card, CardHeader, CardBody, Button, Badge, Spinner } from '@/components/ui';
+import { MarkdownPreview } from '@/components/MarkdownPreview';
 import { PollVotingForm } from './PollVotingForm';
 import { PollResults } from './PollResults';
-import { ConfirmModal } from './ConfirmModal';
-import type { PollListItem } from '../types/polls';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import type { PollListItem } from '@/types/polls';
 import { isGameWritable } from '@/lib/gamePermissions';
 
 interface PollCardProps {

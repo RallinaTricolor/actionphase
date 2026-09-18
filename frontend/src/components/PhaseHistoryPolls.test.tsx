@@ -5,7 +5,7 @@ import * as hooks from '../hooks';
 import type { PollListItem } from '../types/polls';
 
 // Mock the PollCard component to avoid needing to mock all its dependencies
-vi.mock('./PollCard', () => ({
+vi.mock('@/components/polls/PollCard', () => ({
   PollCard: ({ poll }: { poll: PollListItem }) => (
     <div data-testid={`poll-${poll.id}`}>
       <h3>{poll.question}</h3>

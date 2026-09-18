@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { usePollsByPhase } from '../hooks';
+import { usePollsByPhase } from '@/hooks';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/api';
-import { Button, Alert, Spinner } from './ui';
+import { apiClient } from '@/lib/api';
+import { Button, Alert, Spinner } from '@/components/ui';
 import { CreatePollForm } from './CreatePollForm';
 import { PollCard } from './PollCard';
-import { useGameContext } from '../contexts/GameContext';
-import type { CreatePollRequest } from '../types/polls';
+import { useGameContext } from '@/contexts/GameContext';
+import type { CreatePollRequest } from '@/types/polls';
 
 interface PollsTabProps {
   gameId: number;

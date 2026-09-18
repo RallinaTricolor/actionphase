@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollsTab } from './PollsTab';
-import * as hooks from '../hooks';
-import type { PollListItem } from '../types/polls';
+import * as hooks from '@/hooks';
+import type { PollListItem } from '@/types/polls';
 import type { Mock } from 'vitest';
 
 // Render a stand-in for PollCard carrying the same anchor id the real card
@@ -16,12 +16,12 @@ vi.mock('./PollCard', () => ({
   ),
 }));
 
-vi.mock('../hooks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../hooks')>();
+vi.mock('@/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks')>();
   return { ...actual, usePollsByPhase: vi.fn() };
 });
 
-vi.mock('../contexts/GameContext', () => ({
+vi.mock('@/contexts/GameContext', () => ({
   useGameContext: () => ({ currentPhaseId: 10 }),
 }));
 

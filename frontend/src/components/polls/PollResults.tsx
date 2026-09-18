@@ -1,4 +1,4 @@
-import type { PollResults as PollResultsType, Poll } from '../types/polls';
+import type { PollResults as PollResultsType, Poll } from '@/types/polls';
 
 interface PollResultsProps {
   results: PollResultsType;

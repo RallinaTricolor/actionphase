@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollCard } from './PollCard';
-import type { PollListItem } from '../types/polls';
+import type { PollListItem } from '@/types/polls';
 
 const usePollResultsMock = vi.fn(() => ({
   data: undefined,
@@ -11,7 +11,7 @@ const usePollResultsMock = vi.fn(() => ({
   error: null,
 }));
 
-vi.mock('../hooks', () => ({
+vi.mock('@/hooks', () => ({
   usePoll: vi.fn(() => ({
     data: undefined,
     isLoading: false,

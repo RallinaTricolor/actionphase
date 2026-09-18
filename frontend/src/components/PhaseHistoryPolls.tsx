@@ -1,5 +1,5 @@
 import { usePollsByPhase } from '../hooks';
-import { PollCard } from './PollCard';
+import { PollCard } from '@/components/polls/PollCard';
 import { Alert, Spinner } from './ui';
 
 interface PhaseHistoryPollsProps {

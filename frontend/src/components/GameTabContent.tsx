@@ -24,7 +24,7 @@ import { LootTablesView } from './LootTablesView';
 import { GameStatsView } from './GameStatsView';
 
 // Lazy load PollsTab to match CommonRoom's lazy loading and prevent duplicate chunks
-const PollsTab = lazy(() => import('./PollsTab').then(m => ({ default: m.PollsTab })));
+const PollsTab = lazy(() => import('@/components/polls/PollsTab').then(m => ({ default: m.PollsTab })));
 
 interface GameTabContentProps {
   activeTab: string;

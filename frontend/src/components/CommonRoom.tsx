@@ -25,7 +25,7 @@ import { logger } from '@/services/LoggingService';
 import { parentContextForViewport } from '@/config/comments';
 
 // Lazy load PollsTab component
-const PollsTab = lazy(() => import('./PollsTab').then(m => ({ default: m.PollsTab })));
+const PollsTab = lazy(() => import('@/components/polls/PollsTab').then(m => ({ default: m.PollsTab })));
 
 interface CommonRoomProps {
   gameId: number;

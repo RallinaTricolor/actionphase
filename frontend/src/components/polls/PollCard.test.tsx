@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollCard } from './PollCard';
-import type { PollListItem, PollWithOptions } from '../types/polls';
+import type { PollListItem, PollWithOptions } from '@/types/polls';
 
 // Mock hooks
-vi.mock('../hooks', () => ({
+vi.mock('@/hooks', () => ({
   usePoll: vi.fn(() => ({
     data: undefined,
     isLoading: false,
@@ -176,7 +176,7 @@ describe('PollCard', () => {
 
   describe('Your vote display', () => {
     it('shows "Your vote" with the chosen option for a player who has voted on an active poll', async () => {
-      const { usePoll } = await import('../hooks');
+      const { usePoll } = await import('@/hooks');
       // usePoll returns the DETAIL shape (PollWithOptions), which is the list
       // item plus its options -- so the fixture spreads mockPoll and adds them.
       vi.mocked(usePoll).mockReturnValue({
@@ -202,7 +202,7 @@ describe('PollCard', () => {
     });
 
     it('shows "Your vote" with the other response text when user chose "other"', async () => {
-      const { usePoll } = await import('../hooks');
+      const { usePoll } = await import('@/hooks');
       const writeInPoll: PollWithOptions = {
         ...mockPoll,
         options: [],

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useSubmitVote } from '../hooks';
-import { Button, Alert, Input } from './ui';
-import type { PollWithOptions, SubmitVoteRequest } from '../types/polls';
+import { useSubmitVote } from '@/hooks';
+import { Button, Alert, Input } from '@/components/ui';
+import type { PollWithOptions, SubmitVoteRequest } from '@/types/polls';
 import { logger } from '@/services/LoggingService';
 
 interface PollVotingFormProps {

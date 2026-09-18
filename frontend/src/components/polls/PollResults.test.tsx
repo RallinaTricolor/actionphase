@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../test-utils/render';
-import { PollResults } from '../PollResults';
-import type { Poll, PollResults as PollResultsType } from '../../types/polls';
+import { renderWithProviders } from '@/test-utils/render';
+import { PollResults } from './PollResults';
+import type { Poll, PollResults as PollResultsType } from '@/types/polls';
 
 const basePoll: Poll = {
   id: 1,

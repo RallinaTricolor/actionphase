@@ -5,7 +5,7 @@ import { CreatePollForm } from './CreatePollForm';
 
 const mutateAsync = vi.fn().mockResolvedValue({});
 
-vi.mock('../hooks', () => ({
+vi.mock('@/hooks', () => ({
   usePolls: () => ({
     createPollMutation: {
       mutateAsync,
@@ -19,8 +19,8 @@ vi.mock('../hooks', () => ({
 // DateTimeInput wraps react-datepicker, whose interactions are covered at the E2E
 // level by convention in this codebase. Stub it with a plain input so these tests
 // exercise the poll option logic rather than the date widget's parsing.
-vi.mock('./ui', async () => {
-  const actual = await vi.importActual<typeof import('./ui')>('./ui');
+vi.mock('@/components/ui', async () => {
+  const actual = await vi.importActual<typeof import('@/components/ui')>('@/components/ui');
   return {
     ...actual,
     DateTimeInput: ({
