@@ -47,7 +47,7 @@ vi.mock('../lib/api', () => ({
 }));
 
 import { apiClient } from '../lib/api';
-import { makeMessage } from '../test-utils';
+import { makeMessage } from '../test-utils/factories';
 
 vi.mock('../hooks/useCommentMutations', () => ({
   useCreateComment: () => ({ mutateAsync: vi.fn() }),

@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCharacterOwnership } from './useCharacterOwnership';
 import type { Character } from '../types/characters';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 
 // Mock useUserCharacters since it now reads from GameContext
 vi.mock('./useUserCharacters');

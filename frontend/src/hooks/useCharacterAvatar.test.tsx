@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useUploadCharacterAvatar, useDeleteCharacterAvatar } from './useCharacterAvatar';
 import { apiClient } from '../lib/api';
-import { makeAxiosResponse } from '../test-utils';
+import { makeAxiosResponse } from '../test-utils/factories';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({

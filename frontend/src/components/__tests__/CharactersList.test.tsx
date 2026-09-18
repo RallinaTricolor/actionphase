@@ -4,7 +4,7 @@ import { renderWithProviders } from '../../test-utils'
 import { CharactersList } from '../CharactersList'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import { makeCharacter } from '../../test-utils'
+import { makeCharacter } from '../../test-utils/factories';
 import type { Character } from '../../types/characters'
 
 describe('CharactersList', () => {
@@ -675,7 +675,7 @@ describe('CharactersList', () => {
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
           return HttpResponse.json([
             ...mockCharacters,
-            { id: 4, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
+            { id: 5, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
               character_type: 'player_character', status: 'approved', attributes: {}, inventory: [], notes: '',
               created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
           ])
@@ -704,7 +704,7 @@ describe('CharactersList', () => {
         http.get('http://localhost:3000/api/v1/games/:gameId/characters', () => {
           return HttpResponse.json([
             ...mockCharacters,
-            { id: 4, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
+            { id: 5, name: 'Other Player Character', game_id: 123, user_id: 3, username: 'player3',
               character_type: 'player_character', status: 'approved', attributes: {}, inventory: [], notes: '',
               created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
           ])

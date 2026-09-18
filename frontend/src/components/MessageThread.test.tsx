@@ -11,7 +11,7 @@ import {
   makeConversation,
   makeConversationParticipant,
   makeConversationWithDetails,
-} from '../test-utils';
+} from '../test-utils/factories';
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();

@@ -13,7 +13,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }))
 
 import { useAuth } from '../../contexts/AuthContext'
-import { makeAuthContext, makeUser } from '../../test-utils'
+import { makeAuthContext, makeUser } from '../../test-utils/factories'
 
 describe('Layout', () => {
   const mockLogout = vi.fn()

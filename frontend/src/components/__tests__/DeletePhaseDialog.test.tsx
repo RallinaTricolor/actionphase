@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeletePhaseDialog } from '../DeletePhaseDialog';
-import { makeGamePhase } from '../../test-utils';
+import { makeGamePhase } from '../../test-utils/factories';
 import type { GamePhase } from '../../types/phases';
 
 const mockPhase: GamePhase = makeGamePhase({

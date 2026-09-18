@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-utils/render';
-import { makeAxiosResponse } from '../test-utils';
+import { makeAxiosResponse } from '../test-utils/factories';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { apiClient } from '../lib/api';
 import type { GameParticipant } from '../types/games';

@@ -25,7 +25,7 @@ vi.mock('../../lib/api', () => ({
 
 import { usePromoteToCoGM, useDemoteFromCoGM, useTransitionPlayerToAudience, useRemovePlayer } from '../../hooks/usePlayerManagement';
 import { apiClient } from '../../lib/api';
-import { makeMutationResult } from '../../test-utils';
+import { makeMutationResult } from '../../test-utils/factories';
 import type { AxiosResponse } from 'axios';
 
 // Each of these hooks returns a full UseMutationResult; the component reads

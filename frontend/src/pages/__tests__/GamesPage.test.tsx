@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
-import { renderWithProviders, makeAuthContext, makeUser, makeGameListItem } from '../../test-utils'
+import { renderWithProviders } from '../../test-utils';
+import { makeAuthContext, makeUser, makeGameListItem } from '../../test-utils/factories';
 import { GamesPage } from '../GamesPage'
 import type { ComponentProps } from 'react'
 import type { GamesList } from '../../components/GamesList'

@@ -4,12 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AxiosResponse } from 'axios';
-import {
-  makeAxiosResponse,
-  makeCharacter,
-  makeCommentWithDepth,
-  makeMessage,
-} from '../test-utils';
+import { makeAxiosResponse, makeCharacter, makeCommentWithDepth, makeMessage } from '../test-utils/factories';
 import { PostCard } from './PostCard';
 import { ToastProvider } from '../contexts/ToastContext';
 import { stubIntersectionObserver } from '../test-utils/mockIntersectionObserver';

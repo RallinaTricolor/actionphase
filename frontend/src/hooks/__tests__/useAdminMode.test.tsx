@@ -5,7 +5,7 @@ import * as AuthContext from '../../contexts/AuthContext'
 import type { User } from '../../types/auth';
 import { AdminModeProvider } from '../../contexts/AdminModeContext';
 import type { ReactNode } from 'react';
-import { makeAuthContext } from '../../test-utils';
+import { makeAuthContext } from '../../test-utils/factories';
 
 // Mock the AuthContext
 vi.mock('../../contexts/AuthContext', () => ({

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnreadReplyBox } from './UnreadReplyBox';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 
 describe('UnreadReplyBox', () => {
   it("shows a fallback message and no editor when the user controls no character", () => {

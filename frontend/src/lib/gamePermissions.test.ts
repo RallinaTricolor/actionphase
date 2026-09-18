@@ -6,7 +6,7 @@ import {
   resolveUserRole,
   type UserGameRole,
 } from './gamePermissions';
-import { makeGameParticipant } from '../test-utils';
+import { makeGameParticipant } from '../test-utils/factories';
 import type { GameParticipant } from '../types/games';
 
 // These rules are consumed by both GameProvider and useGamePermissions, so a

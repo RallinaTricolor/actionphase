@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PollVotingForm } from './PollVotingForm';
 import type { PollWithOptions } from '../types/polls';
-import { makeMutationResult } from '../test-utils';
+import { makeMutationResult } from '../test-utils/factories';
 
 // Mock the useSubmitVote and useUserCharacters hooks
 vi.mock('../hooks', () => ({

@@ -8,7 +8,7 @@ import type { UnreadCommentItem, UnreadPrivateMessageItem } from '@/types/unread
 import type { Notification } from '@/types/notifications';
 import type { PrivateMessage } from '@/types/conversations';
 import type { Message } from '@/types/messages';
-import { makeMessage as makeMessageFixture } from '../test-utils';
+import { makeMessage as makeMessageFixture } from '../test-utils/factories';
 
 vi.mock('@/utils/unreadInboxApi', () => ({
   fetchCommentContext: vi.fn(),

@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test-utils';
 import { PrivateMessagePreview } from '../PrivateMessagePreview';
 import type { ConversationListItem } from '../../types/conversations';
-import { makeConversationListItem } from '../../test-utils';
+import { makeConversationListItem } from '../../test-utils/factories';
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');

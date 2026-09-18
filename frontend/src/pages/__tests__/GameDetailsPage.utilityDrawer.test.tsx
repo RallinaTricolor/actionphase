@@ -8,7 +8,7 @@ import { UtilityDrawerHarness } from '../../test-utils/utilityDrawer'
 import { GameProvider } from '../../contexts/GameContext'
 import { GameDetailsPage } from '../GameDetailsPage'
 import type { Character } from '../../types/characters'
-import { makeCharacter } from '../../test-utils'
+import { makeCharacter } from '../../test-utils/factories';
 
 /**
  * The Utility Drawer is mounted at the app root and reachable from every page,

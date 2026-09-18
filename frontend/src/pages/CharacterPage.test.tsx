@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CharacterPage } from './CharacterPage';
 import { stubRenderedHeight } from '../test-utils/renderedHeight';
-import { makeInfiniteQueryResult, makeQueryResult } from '../test-utils';
+import { makeInfiniteQueryResult, makeQueryResult } from '../test-utils/factories';
 import * as useCharacterCommentsModule from '../hooks/useCharacterComments';
 import * as useCharacterStatsModule from '../hooks/useCharacterStats';
 import type {

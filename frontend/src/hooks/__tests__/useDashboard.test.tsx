@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { makeAxiosResponse } from '../../test-utils';
+import { makeAxiosResponse } from '../../test-utils/factories';
 import { useDashboard } from '../useDashboard';
 import { simpleApi } from '../../lib/simple-api';
 import type { DashboardData } from '../../types/dashboard';

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils/render';
-import { makeCharacter } from '../../test-utils';
+import { makeCharacter } from '../../test-utils/factories';
 import { CreatePostForm } from '../CreatePostForm';
 import type { Character } from '../../types/characters';
 import { postCachingService } from '../../services/PostCachingService';

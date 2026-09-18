@@ -15,7 +15,7 @@ vi.mock('../../contexts/AuthContext', () => ({
 }));
 
 import { useAuth } from '../../contexts/AuthContext'
-import { makeAuthContext, makeUser, makeCharacter } from '../../test-utils'
+import { makeAuthContext, makeUser, makeCharacter } from '../../test-utils/factories';
 import { postCachingService } from '../../services/PostCachingService';
 
 describe('MessageThread', () => {

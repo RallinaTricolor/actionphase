@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { PeopleView } from '../PeopleView';
 import { apiClient } from '../../lib/api';
-import { makeGameParticipant } from '../../test-utils';
+import { makeGameParticipant } from '../../test-utils/factories';
 import type { GameParticipant } from '../../types/games';
 
 const renderInRouter = (ui: React.ReactElement) =>

@@ -13,7 +13,7 @@ vi.mock('../../lib/api', () => ({
 }));
 
 import { apiClient } from '../../lib/api';
-import { makeAxiosResponse } from '../../test-utils';
+import { makeAxiosResponse } from '../../test-utils/factories';
 
 describe('EmailVerificationBanner', () => {
   beforeEach(() => {

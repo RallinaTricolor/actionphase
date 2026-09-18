@@ -4,7 +4,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { CommentEditor } from './CommentEditor';
-import { makeCharacter } from '../test-utils';
+import { makeCharacter } from '../test-utils/factories';
 import type { SheetItem } from '../hooks/useCharacterSheetItems';
 
 /**

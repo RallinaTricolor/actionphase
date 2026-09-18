@@ -6,7 +6,7 @@ import { server } from '../../mocks/server';
 import { renderWithProviders } from '../../test-utils/render';
 import { PrivateMessages } from '../PrivateMessages';
 import type { Character } from '../../types/characters';
-import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils';
+import { makeCharacter, makeAuthContext, makeUser } from '../../test-utils/factories';
 
 // Mock the auth hook
 vi.mock('../../contexts/AuthContext', () => ({
