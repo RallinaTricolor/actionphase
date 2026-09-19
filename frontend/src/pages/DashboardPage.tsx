@@ -3,12 +3,12 @@ import { useDashboard } from '../hooks/useDashboard';
 import { useDashboardConversations } from '../hooks/useDashboardConversations';
 import { DashboardGameCard } from '../components/DashboardGameCard';
 import { UrgentActionsCard } from '../components/UrgentActionsCard';
-import { RecentActivityCard } from '../components/RecentActivityCard';
+import { RecentActivityCard } from '@/components/dashboard/RecentActivityCard';
 import { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
-import { ActivityTabs } from '../components/Dashboard/ActivityTabs';
+import { ActivityTabs } from '@/components/dashboard/ActivityTabs';
 import { NotificationDigest } from '@/components/notifications/NotificationDigest';
-import { PrivateMessagePreview } from '../components/PrivateMessagePreview';
-import { UnreadInboxSection } from '../components/UnreadInboxSection';
+import { PrivateMessagePreview } from '@/components/conversations/PrivateMessagePreview';
+import { UnreadInboxSection } from '@/components/conversations/UnreadInboxSection';
 
 /**
  * DashboardPage - Main user dashboard showing games, actions, and activity

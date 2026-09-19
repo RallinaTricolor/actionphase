@@ -17,7 +17,7 @@ import { Button, Badge, Input } from './ui';
 import { useRenameCharacter } from '../hooks/useCharacters';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
-import { MessageCharacterButton } from './MessageCharacterButton';
+import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLabels } from '../hooks/useSheetLabels';
 import { EditorLockNotice } from './EditorLockNotice';

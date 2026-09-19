@@ -14,7 +14,7 @@ import { Spinner, Alert, Badge, Card, CardBody } from '../components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import type { CharacterMessage } from '../types/messages';
 import { CharacterActivityStats } from '../components/CharacterActivityStats';
-import { MessageCharacterButton } from '../components/MessageCharacterButton';
+import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { useFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 

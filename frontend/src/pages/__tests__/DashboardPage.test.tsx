@@ -7,9 +7,9 @@ import type { ComponentProps } from 'react';
 import type { DashboardData } from '../../types/dashboard';
 import type { DashboardGameCard } from '../../components/DashboardGameCard';
 import type { UrgentActionsCard } from '../../components/UrgentActionsCard';
-import type { RecentActivityCard } from '../../components/RecentActivityCard';
+import type { RecentActivityCard } from '@/components/dashboard/RecentActivityCard';
 import type { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
-import type { ActivityTabs } from '../../components/Dashboard/ActivityTabs';
+import type { ActivityTabs } from '@/components/dashboard/ActivityTabs';
 
 // Mock the useDashboard hook
 vi.mock('../../hooks/useDashboard', () => ({
@@ -36,7 +36,7 @@ vi.mock('../../components/UrgentActionsCard', () => ({
   ),
 }));
 
-vi.mock('../../components/RecentActivityCard', () => ({
+vi.mock('@/components/dashboard/RecentActivityCard', () => ({
   RecentActivityCard: ({ messages }: ComponentProps<typeof RecentActivityCard>) => (
     <div data-testid="recent-activity-card">
       Messages: {messages.length}
@@ -52,7 +52,7 @@ vi.mock('@/components/deadlines/UpcomingDeadlinesCard', () => ({
   ),
 }));
 
-vi.mock('../../components/Dashboard/ActivityTabs', () => ({
+vi.mock('@/components/dashboard/ActivityTabs', () => ({
   ActivityTabs: ({ deadlines, messages }: ComponentProps<typeof ActivityTabs>) => (
     <div data-testid="activity-tabs">
       Deadlines: {deadlines.length}, Messages: {messages.length}
@@ -68,7 +68,7 @@ vi.mock('@/components/notifications/NotificationDigest', () => ({
   NotificationDigest: () => <div data-testid="notification-digest" />,
 }));
 
-vi.mock('../../components/PrivateMessagePreview', () => ({
+vi.mock('@/components/conversations/PrivateMessagePreview', () => ({
   PrivateMessagePreview: () => <div data-testid="private-message-preview" />,
 }));
 

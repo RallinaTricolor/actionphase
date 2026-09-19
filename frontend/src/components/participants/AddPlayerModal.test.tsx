@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test-utils/render';
 import { AddParticipantModal } from './AddParticipantModal';
 import { AddPlayerModal } from './AddPlayerModal';
-import { AddAudienceMemberModal } from '@/components/AddAudienceMemberModal';
+import { AddAudienceMemberModal } from '@/components/audience/AddAudienceMemberModal';
 
 vi.mock('@/lib/api', () => ({
   apiClient: {

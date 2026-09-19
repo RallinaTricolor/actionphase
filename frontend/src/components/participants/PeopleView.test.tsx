@@ -32,7 +32,7 @@ vi.mock('./AddPlayerModal', () => ({
   AddPlayerModal: () => <div>Add Player Modal</div>,
 }));
 
-vi.mock('@/components/AddAudienceMemberModal', () => ({
+vi.mock('@/components/audience/AddAudienceMemberModal', () => ({
   AddAudienceMemberModal: () => <div>Add Audience Member Modal</div>,
 }));
 
@@ -40,7 +40,7 @@ vi.mock('@/components/InactiveCharactersList', () => ({
   InactiveCharactersList: () => <div>Inactive Characters</div>,
 }));
 
-vi.mock('@/components/AudienceMemberBadge', () => ({
+vi.mock('@/components/audience/AudienceMemberBadge', () => ({
   AudienceMemberBadge: () => <span>Audience</span>,
 }));
 

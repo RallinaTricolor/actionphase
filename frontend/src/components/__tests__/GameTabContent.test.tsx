@@ -31,7 +31,7 @@ vi.mock('../CharactersList', () => ({
   CharactersList: () => <div>CharactersList</div>,
 }));
 
-vi.mock('../PhaseManagement', () => ({
+vi.mock('@/components/phases/PhaseManagement', () => ({
   PhaseManagement: () => <div>PhaseManagement</div>,
 }));
 
@@ -39,11 +39,11 @@ vi.mock('../CommonRoom', () => ({
   CommonRoom: () => <div>CommonRoom</div>,
 }));
 
-vi.mock('../PrivateMessages', () => ({
+vi.mock('@/components/conversations/PrivateMessages', () => ({
   PrivateMessages: () => <div>PrivateMessages</div>,
 }));
 
-vi.mock('../HistoryView', () => ({
+vi.mock('@/components/phases/HistoryView', () => ({
   HistoryView: () => <div>HistoryView</div>,
 }));
 
@@ -55,7 +55,7 @@ vi.mock('@/components/handouts/HandoutsList', () => ({
   HandoutsList: () => <div>HandoutsList</div>,
 }));
 
-vi.mock('../AudienceView', () => ({
+vi.mock('@/components/audience/AudienceView', () => ({
   AudienceView: () => <div>AudienceView</div>,
 }));
 
