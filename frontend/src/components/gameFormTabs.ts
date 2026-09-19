@@ -1,4 +1,4 @@
-import type { Tab } from './TabNavigation';
+import type { Tab } from '@/components/layout/TabNavigation';
 
 /**
  * Prefixed because TabNavigation derives its testid as `tab-${id}`, and the game

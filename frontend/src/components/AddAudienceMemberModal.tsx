@@ -1,4 +1,4 @@
-import { AddParticipantModal } from './AddParticipantModal';
+import { AddParticipantModal } from '@/components/participants/AddParticipantModal';
 
 interface AddAudienceMemberModalProps {
   gameId: number;

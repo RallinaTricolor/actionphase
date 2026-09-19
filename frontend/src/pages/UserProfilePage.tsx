@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import { UserProfileHeader } from '../components/UserProfileHeader';
+import { UserProfileHeader } from '@/components/users/UserProfileHeader';
 import { UserGameHistory } from '../components/UserGameHistory';
 import { Spinner, Button } from '../components/ui';
 

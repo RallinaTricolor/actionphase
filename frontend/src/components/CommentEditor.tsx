@@ -9,7 +9,7 @@ import { applyMarkdownFormat, formatForKey } from './markdownHotkeys';
 import type { MarkdownFormat } from './markdownHotkeys';
 import { SheetItemAutocomplete } from './SheetItemAutocomplete';
 import { Button, Textarea, Modal } from './ui';
-import { STICKY_BELOW_TABS } from './TabNavigation';
+import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
 import type { Character } from '../types/characters';
 import type { SheetItem } from '../hooks/useCharacterSheetItems';
 import { postCachingService } from '@/services/PostCachingService';

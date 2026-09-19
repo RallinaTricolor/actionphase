@@ -32,7 +32,7 @@ vi.mock('../../../contexts/ToastContext', async () => {
 // exclusion list is captured because which users the form REFUSES to offer is
 // part of the form's contract, not the picker's.
 const pickerExcludes = vi.fn()
-vi.mock('../../../components/UserSearchSelect', () => ({
+vi.mock('@/components/participants/UserSearchSelect', () => ({
   UserSearchSelect: ({
     onChange,
     excludeUserIds,

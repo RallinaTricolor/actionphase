@@ -15,7 +15,7 @@ import { CommonRoom } from './CommonRoom';
 import { PrivateMessages } from './PrivateMessages';
 import { HistoryView } from './HistoryView';
 import { AudienceView } from './AudienceView';
-import { PeopleView } from './PeopleView';
+import { PeopleView } from '@/components/participants/PeopleView';
 import { HandoutsList } from '@/components/handouts/HandoutsList';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';

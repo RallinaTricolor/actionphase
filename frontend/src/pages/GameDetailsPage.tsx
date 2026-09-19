@@ -17,7 +17,7 @@ import { GameHeader } from '../components/GameHeader';
 import { GameBanner } from '../components/GameBanner';
 import { GameApplicationStatus } from '../components/GameApplicationStatus';
 import { GameActions } from '../components/GameActions';
-import { TabNavigation } from '../components/TabNavigation';
+import { TabNavigation } from '@/components/layout/TabNavigation';
 import { GameTabContent } from '../components/GameTabContent';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { EditGameModal } from '../components/EditGameModal';

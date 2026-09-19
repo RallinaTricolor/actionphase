@@ -1,6 +1,6 @@
 import type { UserGame, UserGameHistoryMetadata } from '../types/user-profiles';
 import { GameHistoryCard } from './GameHistoryCard';
-import { Pagination } from './Pagination';
+import { Pagination } from '@/components/layout/Pagination';
 import { Link } from 'react-router-dom';
 
 interface UserGameHistoryProps {

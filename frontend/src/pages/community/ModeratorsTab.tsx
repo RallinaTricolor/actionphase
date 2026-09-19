@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardBody, CardHeader, Button, Alert, Spinner, Badge } from '../../components/ui';
-import { UserSearchSelect, type SelectedUser } from '../../components/UserSearchSelect';
+import { UserSearchSelect, type SelectedUser } from '@/components/participants/UserSearchSelect';
 import { useToast } from '../../contexts/ToastContext';
 import { useCommunityModerators } from '../../hooks/useCommunities';
 import type { Community } from '../../types/communities';

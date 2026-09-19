@@ -7,7 +7,7 @@ import { Button, Select, Alert } from './ui';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from './CharacterAvatar';
 import { MarkdownPreview } from './MarkdownPreview';
-import { STICKY_BELOW_TABS } from './TabNavigation';
+import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
 import type { Character } from '../types/characters';
 import { logger } from '@/services/LoggingService';
 import { postCachingService } from '@/services/PostCachingService';

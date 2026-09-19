@@ -6,7 +6,7 @@ import { CreateGameForm } from '../components/CreateGameForm';
 import { ApplyToGameModal } from '../components/ApplyToGameModal';
 import { Modal } from '../components/Modal';
 import { FilterBar } from '../components/FilterBar';
-import { Pagination } from '../components/Pagination';
+import { Pagination } from '@/components/layout/Pagination';
 import { Input } from '../components/ui';
 import { useGameListing } from '../hooks/useGameListing';
 import { useActiveCommunities } from '../hooks/useCommunities';

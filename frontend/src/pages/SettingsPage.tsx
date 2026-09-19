@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import { ProfileSection } from '../components/ProfileSection';
-import { ChangePasswordForm } from '../components/ChangePasswordForm';
-import { ActiveSessions } from '../components/ActiveSessions';
-import { ChangeUsernameForm } from '../components/ChangeUsernameForm';
-import { ChangeEmailForm } from '../components/ChangeEmailForm';
-import { SettingsSidebar } from '../components/SettingsSidebar';
+import { ProfileSection } from '@/components/users/ProfileSection';
+import { ChangePasswordForm } from '@/components/users/ChangePasswordForm';
+import { ActiveSessions } from '@/components/auth/ActiveSessions';
+import { ChangeUsernameForm } from '@/components/users/ChangeUsernameForm';
+import { ChangeEmailForm } from '@/components/users/ChangeEmailForm';
+import { SettingsSidebar } from '@/components/users/SettingsSidebar';
 import { DiscordNotificationsSection } from '@/components/notifications/DiscordNotificationsSection';
 import { Radio } from '@/components/ui';
 import { useUserPreferences, useUpdateUserPreferences } from '../hooks/useUserPreferences';

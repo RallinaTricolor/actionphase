@@ -31,7 +31,7 @@ vi.mock('../pages/GameDetailsPage', () => ({
   ),
 }))
 
-vi.mock('../components/ProtectedRoute', () => ({
+vi.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="protected-route">{children}</div>
   ),

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { SkillsManager } from '../SkillsManager';
-import { TabNavigation } from '../TabNavigation';
+import { TabNavigation } from '@/components/layout/TabNavigation';
 import { EditorLockNotice } from '../EditorLockNotice';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import type { CharacterSkill } from '../../types/characters';
