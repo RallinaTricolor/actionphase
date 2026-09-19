@@ -6,7 +6,7 @@ import { getActionPhaseLabel, getActionPhaseColor } from '@/types/phases';
 import { CommonRoom } from '@/components/messages/CommonRoom';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import { Button, Alert } from '@/components/ui';
-import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
+import { CollapsibleMarkdown } from '@/components/common/CollapsibleMarkdown';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useOptionalGameContext } from '@/contexts/GameContext';

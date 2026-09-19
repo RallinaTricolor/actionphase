@@ -1,4 +1,4 @@
-import { ConfirmActionDialog } from '@/components/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/common/ConfirmActionDialog';
 
 interface CancelGameConfirmationDialogProps {
   isOpen: boolean;

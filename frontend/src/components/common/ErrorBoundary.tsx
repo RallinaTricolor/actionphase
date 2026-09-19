@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import type { ErrorInfo } from 'react';
-import type { AppError } from '../types/errors';
-import { ErrorType, ErrorSeverity } from '../types/errors';
-import { createAppError, logError, getErrorMessage, getRecoveryActions } from '../lib/errors';
-import { Button } from './ui';
-import { pushError } from '../lib/faro';
-import { isChunkLoadError } from '../lib/chunkLoadError';
+import type { AppError } from '@/types/errors';
+import { ErrorType, ErrorSeverity } from '@/types/errors';
+import { createAppError, logError, getErrorMessage, getRecoveryActions } from '@/lib/errors';
+import { Button } from '@/components/ui';
+import { pushError } from '@/lib/faro';
+import { isChunkLoadError } from '@/lib/chunkLoadError';
 
 interface Props {
   children: React.ReactNode;

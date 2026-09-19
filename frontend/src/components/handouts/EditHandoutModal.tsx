@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, Input, Select } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import type { Handout, UpdateHandoutRequest } from '@/types/handouts';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 
 interface EditHandoutModalProps {
   handout: Handout;

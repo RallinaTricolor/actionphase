@@ -4,7 +4,7 @@ import type { Area, Point } from 'react-easy-crop';
 import { useUploadCharacterAvatar, useDeleteCharacterAvatar } from '@/hooks/useCharacterAvatar';
 import CharacterAvatar from './CharacterAvatar';
 import { Button, Alert } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { cropImage } from '@/utils/cropImage';
 
 interface AvatarUploadModalProps {

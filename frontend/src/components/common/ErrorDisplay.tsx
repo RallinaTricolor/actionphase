@@ -1,8 +1,8 @@
 import React from 'react';
-import { Alert, Button } from './ui';
-import type { AppError } from '../types/errors';
-import { ErrorSeverity } from '../types/errors';
-import { getErrorMessage, getRecoveryActions, isRecoverable } from '../lib/errors';
+import { Alert, Button } from '@/components/ui';
+import type { AppError } from '@/types/errors';
+import { ErrorSeverity } from '@/types/errors';
+import { getErrorMessage, getRecoveryActions, isRecoverable } from '@/lib/errors';
 
 interface ErrorDisplayProps {
   error: AppError | null;

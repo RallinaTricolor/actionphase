@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { GameApplication, GameState } from '@/types/games';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '@/types/games';
 import { Button } from '@/components/ui';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { logger } from '@/services/LoggingService';
 import { getInitials, getAvatarColor } from '@/utils/avatar';
 

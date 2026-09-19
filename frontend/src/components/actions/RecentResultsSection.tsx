@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Card, CardBody, Button, Badge } from '@/components/ui';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
 import type { ActionResult } from '@/types/phases';
 

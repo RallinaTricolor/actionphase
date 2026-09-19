@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { apiClient } from '@/lib/api';
 import { Textarea, Button, Modal } from '@/components/ui';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { getInitials, getAvatarColor } from '@/utils/avatar';
 import { cropImage } from '@/utils/cropImage';
 

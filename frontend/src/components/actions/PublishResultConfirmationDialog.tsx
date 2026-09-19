@@ -1,4 +1,4 @@
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Button, Alert } from '@/components/ui';
 import { useDraftCharacterUpdates } from '@/hooks';
 

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { UtilitiesButton } from '../UtilitiesButton';
+import { UtilitiesButton } from './UtilitiesButton';
 import {
   UtilityDrawerProvider,
   useUtilityDrawer,
-} from '../../contexts/UtilityDrawerContext';
+} from '@/contexts/UtilityDrawerContext';
 
 /** Surfaces the drawer's open state so the test can assert on it. */
 function DrawerStateProbe() {

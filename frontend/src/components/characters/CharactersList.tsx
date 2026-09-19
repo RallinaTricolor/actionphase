@@ -10,7 +10,7 @@ import { useGameContext } from '@/contexts/GameContext';
 import { CreateCharacterModal } from './CreateCharacterModal';
 import { CharacterSheet } from './CharacterSheet';
 import { AssignNPCModal } from './AssignNPCModal';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Card, Button, Badge, Spinner, type BadgeVariant } from '@/components/ui';
 import CharacterAvatar from './CharacterAvatar';
 import { logger } from '@/services/LoggingService';

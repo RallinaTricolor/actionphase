@@ -5,7 +5,7 @@ import { apiClient } from '@/lib/api';
 import { useToast } from '@/contexts/ToastContext';
 import type { Message } from '@/types/messages';
 import type { Character } from '@/types/characters';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { Button, Select } from '@/components/ui';
@@ -16,7 +16,7 @@ import { useUpdateComment, useDeleteComment } from '@/hooks/useCommentMutations'
 import { useGamePermissions } from '@/hooks/useGamePermissions';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { useReportDirty } from '@/hooks/useReportDirty';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { logger } from '@/services/LoggingService';
 import type { CommentTreeNode } from '@/lib/utils/commentTree';
 import { COMMENT_MAX_DEPTH_MOBILE } from '@/config/comments';

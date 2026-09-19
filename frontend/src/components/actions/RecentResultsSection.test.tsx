@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock MarkdownPreview component
-vi.mock('@/components/MarkdownPreview', () => ({
+vi.mock('@/components/common/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div data-testid="markdown-preview">{content}</div>,
 }));
 

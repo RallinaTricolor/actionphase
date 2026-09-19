@@ -1,5 +1,5 @@
 import type { NumberEntry } from '@/types/characters';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { NumberForm, type NumberFormData } from './NumberForm';
 
 interface AddNumberModalProps {

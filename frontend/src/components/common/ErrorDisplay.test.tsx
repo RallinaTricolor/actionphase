@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, fireEvent, render } from '@testing-library/react'
-import { ErrorDisplay, InlineError, ErrorToast } from '../ErrorDisplay'
-import { ErrorCategory, ErrorSeverity, ErrorType } from '../../types/errors'
-import type { AppError, ErrorContext } from '../../types/errors'
+import { ErrorDisplay, InlineError, ErrorToast } from './ErrorDisplay'
+import { ErrorCategory, ErrorSeverity, ErrorType } from '@/types/errors'
+import type { AppError, ErrorContext } from '@/types/errors'
 
 // Mock the error utility functions
-vi.mock('../../lib/errors', () => ({
+vi.mock('@/lib/errors', () => ({
   getErrorMessage: vi.fn((error: AppError) => error.message),
   getRecoveryActions: vi.fn((error: AppError) => error.context?.recoveryActions || []),
   isRecoverable: vi.fn((error: AppError) => error.context?.category === 'recoverable'),
@@ -17,7 +17,7 @@ vi.mock('../../lib/errors', () => ({
   },
 }))
 
-import { getRecoveryActions, isRecoverable } from '../../lib/errors'
+import { getRecoveryActions, isRecoverable } from '@/lib/errors'
 
 /**
  * Builds a complete AppError. AppError extends Error, so the object must be a

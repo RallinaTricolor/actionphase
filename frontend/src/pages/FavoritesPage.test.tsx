@@ -15,7 +15,7 @@ vi.mock('../hooks/useFavorites', async (importOriginal) => {
   };
 });
 
-vi.mock('../components/MarkdownPreview', () => ({
+vi.mock('@/components/common/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 

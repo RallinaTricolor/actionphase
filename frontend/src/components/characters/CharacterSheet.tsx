@@ -10,18 +10,18 @@ import { NumbersManager } from './sheet-items/NumbersManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
 import { useOptionalGameContext } from '@/contexts/GameContext';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import type { Tab } from '@/components/layout/TabNavigation';
 import { Button, Badge, Input } from '@/components/ui';
 import { useRenameCharacter } from '@/hooks/useCharacters';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLabels } from '@/hooks/useSheetLabels';
 import { EditorLockNotice } from '@/components/actions/EditorLockNotice';
-import { ConfirmDiscardEdits } from '@/components/ConfirmDiscardEdits';
+import { ConfirmDiscardEdits } from '@/components/common/ConfirmDiscardEdits';
 
 interface CharacterSheetProps {
   characterId: number;

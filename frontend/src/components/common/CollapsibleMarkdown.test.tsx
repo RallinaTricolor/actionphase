@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CollapsibleMarkdown } from '../CollapsibleMarkdown';
+import { CollapsibleMarkdown } from './CollapsibleMarkdown';
 
 /**
  * jsdom does no layout, so scrollHeight is always 0 and nothing would ever

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Button, Alert, Spinner } from '@/components/ui';
 import { SkillsManager } from './sheet-items/SkillsManager';
 import { ItemsManager } from './sheet-items/ItemsManager';
@@ -14,7 +14,7 @@ import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLabels } from '@/hooks/useSheetLabels';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { EditorLockNotice } from '@/components/actions/EditorLockNotice';
-import { ConfirmDiscardEdits } from '@/components/ConfirmDiscardEdits';
+import { ConfirmDiscardEdits } from '@/components/common/ConfirmDiscardEdits';
 
 interface UpdateCharacterSheetModalProps {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 import { Wrench } from 'lucide-react';
-import { Button } from './ui';
-import { useOptionalUtilityDrawer } from '../contexts/UtilityDrawerContext';
+import { Button } from '@/components/ui';
+import { useOptionalUtilityDrawer } from '@/contexts/UtilityDrawerContext';
 
 interface UtilitiesButtonProps {
   /** Overrides the default icon-button styling for the host surface. */

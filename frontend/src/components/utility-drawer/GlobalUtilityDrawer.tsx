@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { UtilityDrawer } from './UtilityDrawer';
-import { Modal } from '../Modal';
+import { Modal } from '@/components/common/Modal';
 import { Spinner } from '../ui';
 import { useUtilityDrawer } from '../../contexts/UtilityDrawerContext';
 import { LAYERS } from '../../config/layers';

@@ -6,10 +6,10 @@ import {
   FormErrorBoundary,
   AsyncErrorBoundary,
   withErrorBoundary,
-} from '../ErrorBoundary';
-import type { ErrorBoundaryFallbackProps } from '../ErrorBoundary';
-import { ErrorType, ErrorSeverity } from '../../types/errors';
-import type { AppError } from '../../types/errors';
+} from './ErrorBoundary';
+import type { ErrorBoundaryFallbackProps } from './ErrorBoundary';
+import { ErrorType, ErrorSeverity } from '@/types/errors';
+import type { AppError } from '@/types/errors';
 
 // Test component that throws an error
 const ThrowError = ({ shouldThrow = false, error }: { shouldThrow?: boolean; error?: Error }) => {

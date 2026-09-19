@@ -3,7 +3,7 @@ import { isAxiosError } from 'axios';
 import type { GameWithDetails, UpdateGameRequest } from '@/types/games';
 import { apiClient } from '@/lib/api';
 import { Button, Alert } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { GameFormFields } from './GameFormFields';
 import { useSelectableCommunities } from '@/hooks/useCommunities';
 import type { GameFormTabId } from './gameFormTabs';
@@ -11,7 +11,7 @@ import { useRevealInvalidTab } from '@/hooks/useRevealInvalidTab';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { useGameForm, gameToFormData } from '@/hooks/useGameForm';
 import { useGameFormDirty } from '@/hooks/useGameFormDirty';
-import { ConfirmDiscardEdits } from '@/components/ConfirmDiscardEdits';
+import { ConfirmDiscardEdits } from '@/components/common/ConfirmDiscardEdits';
 import { extractApiErrorMessage } from '@/lib/errors';
 
 interface EditGameModalProps {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { ErrorDisplay } from '@/components/ErrorDisplay';
+import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { Input, Button } from '@/components/ui';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
 import type { LoginRequest } from '@/types/auth';

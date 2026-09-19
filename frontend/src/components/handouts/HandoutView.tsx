@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Card, Button, Badge, Alert, Spinner } from '@/components/ui';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { useHandoutComments } from '@/hooks/useHandoutComments';
 import type { Handout } from '@/types/handouts';
 import { logger } from '@/services/LoggingService';

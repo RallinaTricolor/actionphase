@@ -1,4 +1,4 @@
-import { Button } from './ui';
+import { Button } from '@/components/ui';
 
 interface ConfirmDiscardEditsProps {
   /** Proceed with the close, abandoning the open editor's uncommitted text. */

@@ -1,4 +1,4 @@
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/ui';
 import { logger } from '@/services/LoggingService';
 

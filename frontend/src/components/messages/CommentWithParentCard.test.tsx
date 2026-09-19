@@ -14,7 +14,7 @@ vi.mock('@/hooks/useScreenshotMode', () => ({
   useScreenshotMode: vi.fn(),
 }));
 
-vi.mock('@/components/MarkdownPreview', () => ({
+vi.mock('@/components/common/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 

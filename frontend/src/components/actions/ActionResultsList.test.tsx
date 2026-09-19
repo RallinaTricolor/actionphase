@@ -9,7 +9,7 @@ vi.mock('@/hooks/useActionResults', () => ({
   useUserActionResults: vi.fn(),
 }));
 
-vi.mock('@/components/MarkdownPreview', () => ({
+vi.mock('@/components/common/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
 }));
 

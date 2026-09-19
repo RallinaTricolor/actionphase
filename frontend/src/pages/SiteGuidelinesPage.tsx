@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 
 export const SiteGuidelinesPage = () => {
   const [content, setContent] = useState<string | null>(null);

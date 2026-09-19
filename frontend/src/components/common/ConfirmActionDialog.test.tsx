@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../../test-utils/render';
-import { ConfirmActionDialog } from '../ConfirmActionDialog';
+import { renderWithProviders } from '@/test-utils/render';
+import { ConfirmActionDialog } from './ConfirmActionDialog';
 
 /**
  * Tests for the shared dialog's own behaviour. The per-action wrappers

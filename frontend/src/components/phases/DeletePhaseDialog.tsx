@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/ui';
 import type { GamePhase } from '@/types/phases';
 import { logger } from '@/services/LoggingService';

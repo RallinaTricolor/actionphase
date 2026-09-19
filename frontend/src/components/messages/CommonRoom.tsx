@@ -12,7 +12,7 @@ import { CreatePostForm } from './CreatePostForm';
 import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
 import { NewCommentsView } from './NewCommentsView';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { RecentResultsSection } from '@/components/actions/RecentResultsSection';
 import type { GameUtilityContext } from '@/components/utility-drawer/types';
 import { useProvideGameUtilityContext } from '@/contexts/UtilityDrawerContext';

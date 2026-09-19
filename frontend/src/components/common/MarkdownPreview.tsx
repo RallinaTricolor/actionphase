@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
-import { Badge, Button } from './ui';
-import type { SheetItem } from '../hooks/useCharacterSheetItems';
+import { Badge, Button } from '@/components/ui';
+import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { ALLOWED_COLORS } from './textColors';
 
 

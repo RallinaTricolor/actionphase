@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { NumberEntry } from '@/types/characters';
 import { numberEntryName, isBoundedTrack } from '@/types/characters';
 import { Button } from '@/components/ui';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { NumberForm, type NumberFormData } from './NumberForm';
 
 interface NumberCardProps {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { createAppError, getErrorMessage } from '@/lib/errors';
 import { useAddParticipant } from '@/hooks/usePlayerManagement';
 import { UserSearchSelect, type SelectedUser } from './UserSearchSelect';

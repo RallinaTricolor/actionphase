@@ -1,6 +1,6 @@
 import type { UserProfile } from '@/types/user-profiles';
 import { Card, CardBody, Badge } from '@/components/ui';
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 import { getInitials, getAvatarColor } from '@/utils/avatar';
 
 interface UserProfileHeaderProps {

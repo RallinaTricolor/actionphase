@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUserActionResults } from '@/hooks/useActionResults';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
 import { Alert } from '@/components/ui';
-import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
+import { CollapsibleMarkdown } from '@/components/common/CollapsibleMarkdown';
 import { StagedPartPlaceholder } from './StagedPartPlaceholder';
 
 interface ActionResultsListProps {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Modal } from './Modal';
-import { Button, Input } from './ui';
+import { Button, Input } from '@/components/ui';
 import { logger } from '@/services/LoggingService';
 
 /**

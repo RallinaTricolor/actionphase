@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { Button, Select } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { useReassignCharacter, useGameParticipants } from '@/hooks/usePlayerManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InactiveCharacter } from '@/types/characters';

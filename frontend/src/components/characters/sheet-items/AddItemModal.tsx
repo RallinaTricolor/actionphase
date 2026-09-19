@@ -1,5 +1,5 @@
 import type { InventoryItem } from '@/types/characters';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { ItemForm, type ItemFormData, type lootModes } from './ItemForm';
 
 interface AddItemModalProps {

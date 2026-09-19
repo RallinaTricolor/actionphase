@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Button } from '../../components/ui';
-import { ConfirmModal } from '../../components/ConfirmModal';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 import type { User } from '../../lib/api/admin';
 
 export function PendingApprovalTab() {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { apiClient } from '@/lib/api';
 import { createAppError, getErrorMessage } from '@/lib/errors';
 import type { ApplyToGameRequest } from '@/types/games';
-import { Modal } from '@/components/Modal';
+import { Modal } from '@/components/common/Modal';
 import { Button, Alert, Select, Textarea } from '@/components/ui';
 
 interface ApplyToGameModalProps {

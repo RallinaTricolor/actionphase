@@ -5,7 +5,7 @@ import type { Message } from '@/types/messages';
 import type { CommentTreeNode } from '@/lib/utils/commentTree';
 import type { Character } from '@/types/characters';
 import { Button } from '@/components/ui';
-import { UtilitiesButton } from '@/components/UtilitiesButton';
+import { UtilitiesButton } from '@/components/utility-drawer/UtilitiesButton';
 import { THREAD_VIEW_MAX_DEPTH } from '@/config/comments';
 import { LAYERS } from '@/config/layers';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
