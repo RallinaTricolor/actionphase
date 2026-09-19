@@ -226,7 +226,7 @@ just sh backend
 just test-fe run
 
 # Frontend — a single file
-just test-fe run src/components/Foo.test.tsx
+just test-fe run src/components/games/GamesList.test.tsx
 
 # Frontend — watch mode
 just test-fe watch

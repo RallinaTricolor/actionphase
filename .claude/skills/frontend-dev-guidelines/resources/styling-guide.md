@@ -414,7 +414,7 @@ Use Tailwind utilities for layout, spacing, and positioning:
 For rendering markdown content, use the MarkdownPreview component:
 
 ```tsx
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 
 <MarkdownPreview
   content={markdownText}

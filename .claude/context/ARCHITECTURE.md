@@ -310,10 +310,20 @@ if err != nil {
 
 ```
 components/
-├── ComponentName.tsx          # Component implementation
-├── ComponentName.test.tsx     # Component tests (co-located)
-├── __tests__/                 # Shared test utilities for components
+├── <domain>/                  # One directory per bounded context — NO loose
+│   ├── ComponentName.tsx      #   .tsx files sit directly in components/
+│   └── ComponentName.test.tsx # Tests co-located beside their component
 └── ui/                        # UI component library (Button, Card, Input, etc.)
+
+# Domains mirror the backend's bounded contexts (backend/pkg/<domain>/):
+#   actions  admin  audience  auth  characters  common  conversations
+#   dashboard  deadlines  games  handouts  layout  messages  notifications
+#   participants  phases  polls  users  utility-drawer
+#
+# games/ nests further: games/dialogs/ and games/applications/.
+# common/ holds cross-cutting pieces (Modal, MarkdownPreview, ErrorBoundary).
+# Import across domains via the @/ alias — @/components/games/GamesList —
+# never a relative ../ hop. A guard test enforces the no-loose-files rule.
 
 hooks/
 ├── useCustomHook.ts          # Custom hooks

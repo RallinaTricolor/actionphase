@@ -307,7 +307,7 @@ just reset-test-db            # Rebuild the test DB if it gets into a dirty stat
 1. API client method → `frontend/src/lib/api/<domain>.ts`
 2. Custom hooks → `frontend/src/hooks/*.ts`
 3. **Write hook tests** → `*.test.ts`
-4. Implement components → `frontend/src/components/*.tsx`
+4. Implement components → `frontend/src/components/<domain>/*.tsx`
 5. **Write component tests** → `*.test.tsx`
 6. Run tests → `just test-fe run`
 
@@ -337,7 +337,9 @@ just reset-test-db            # Rebuild the test DB if it gets into a dirty stat
 - `frontend/src/contexts/AuthContext.tsx` - Centralized auth state
 - `frontend/src/App.tsx` - Application setup
 - `frontend/src/hooks/` - Custom hooks
-- `frontend/src/components/` - React components
+- `frontend/src/components/` - React components, one directory per domain
+  (`games/`, `messages/`, `characters/`, …, plus `common/` and the `ui/`
+  library). No `.tsx` sits directly in `components/` — a guard test enforces it.
 
 ### Configuration
 - `.env` - Environment variables (local development)
@@ -517,7 +519,7 @@ import { Card, CardHeader, CardBody, CardFooter, Input, Button, Badge } from '@/
 For markdown content, use the MarkdownPreview component:
 
 ```tsx
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/MarkdownPreview';
 
 <MarkdownPreview
   content={markdownText}
