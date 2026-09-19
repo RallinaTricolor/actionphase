@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/api';
-import { Button, Select, Badge, Alert } from './ui';
-import { usePhaseSheetDraftConflicts } from '../hooks/useConflictingSheetDrafts';
-import type { ActionWithDetails, GamePhase } from '../types/phases';
+import { apiClient } from '@/lib/api';
+import { Button, Select, Badge, Alert } from '@/components/ui';
+import { usePhaseSheetDraftConflicts } from '@/hooks/useConflictingSheetDrafts';
+import type { ActionWithDetails, GamePhase } from '@/types/phases';
 import { CreateActionResultForm } from './CreateActionResultForm';
 import { StandaloneResultComposer } from './StandaloneResultComposer';
-import { Modal } from './Modal';
-import { MarkdownPreview } from './MarkdownPreview';
-import CharacterAvatar from './CharacterAvatar';
-import { useGameContext } from '../contexts/GameContext';
-import { useGameCharacterSheetItems } from '../hooks/useCharacterSheetItems';
-import type { SheetItem } from '../hooks/useCharacterSheetItems';
-import { wasSubmissionEdited } from '../utils/submissionEdits';
+import { Modal } from '@/components/Modal';
+import { MarkdownPreview } from '@/components/MarkdownPreview';
+import CharacterAvatar from '@/components/CharacterAvatar';
+import { useGameContext } from '@/contexts/GameContext';
+import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
+import type { SheetItem } from '@/hooks/useCharacterSheetItems';
+import { wasSubmissionEdited } from '@/utils/submissionEdits';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ActionsListProps {

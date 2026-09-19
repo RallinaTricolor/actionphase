@@ -1,6 +1,6 @@
-import { Modal } from './Modal';
-import { Button, Alert } from './ui';
-import { useDraftCharacterUpdates } from '../hooks';
+import { Modal } from '@/components/Modal';
+import { Button, Alert } from '@/components/ui';
+import { useDraftCharacterUpdates } from '@/hooks';
 
 interface PublishResultConfirmationDialogProps {
   isOpen: boolean;

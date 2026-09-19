@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { LinkProps } from 'react-router-dom';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../test-utils';
-import { UrgentActionsCard } from '../UrgentActionsCard';
-import type { DashboardGameCard } from '../../types/dashboard';
+import { renderWithProviders } from '@/test-utils';
+import { UrgentActionsCard } from './UrgentActionsCard';
+import type { DashboardGameCard } from '@/types/dashboard';
 
 // Mock react-router-dom Link
 vi.mock('react-router-dom', async () => {

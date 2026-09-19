@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RecentResultsSection } from '../RecentResultsSection';
-import type { ActionResult } from '../../types/phases';
+import { RecentResultsSection } from './RecentResultsSection';
+import type { ActionResult } from '@/types/phases';
 
 // Mock the useNavigate hook
 const mockNavigate = vi.fn();
@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock MarkdownPreview component
-vi.mock('../MarkdownPreview', () => ({
+vi.mock('@/components/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div data-testid="markdown-preview">{content}</div>,
 }));
 

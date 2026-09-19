@@ -1,8 +1,8 @@
 import React from 'react';
-import { Select, Button } from './ui';
-import { CommentEditor } from './CommentEditor';
-import type { StagedResultPart } from '../types/phases';
-import { DELAY_PRESETS, formatDelayLabel } from '../lib/stagedDelays';
+import { Select, Button } from '@/components/ui';
+import { CommentEditor } from '@/components/CommentEditor';
+import type { StagedResultPart } from '@/types/phases';
+import { DELAY_PRESETS, formatDelayLabel } from '@/lib/stagedDelays';
 import { postCachingService } from '@/services/PostCachingService';
 
 interface StagedPartsEditorProps {

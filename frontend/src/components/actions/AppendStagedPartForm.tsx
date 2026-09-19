@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Select, Button, Alert } from './ui';
-import { CommentEditor } from './CommentEditor';
-import { DELAY_PRESETS, DEFAULT_DELAY_MINUTES, formatDelayLabel } from '../lib/stagedDelays';
+import { Select, Button, Alert } from '@/components/ui';
+import { CommentEditor } from '@/components/CommentEditor';
+import { DELAY_PRESETS, DEFAULT_DELAY_MINUTES, formatDelayLabel } from '@/lib/stagedDelays';
 
 interface AppendStagedPartFormProps {
   /** Any member of the chain to append to; the server resolves the tail. */

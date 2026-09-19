@@ -6,7 +6,7 @@ import { CreateActionResultForm } from './CreateActionResultForm';
 const mockCreateResult = vi.fn();
 const mockCreateChain = vi.fn();
 
-vi.mock('../hooks/useActionResults', () => ({
+vi.mock('@/hooks/useActionResults', () => ({
   useCreateActionResult: () => ({
     mutateAsync: mockCreateResult,
     isPending: false,
@@ -22,13 +22,13 @@ vi.mock('../hooks/useActionResults', () => ({
 }));
 
 const mockShowWarning = vi.fn();
-vi.mock('../contexts/ToastContext', () => ({
+vi.mock('@/contexts/ToastContext', () => ({
   useToast: () => ({ showWarning: mockShowWarning }),
 }));
 
 // CommentEditor is a rich editor; a plain textarea keeps these tests about the
 // payload the form builds rather than the editor's internals.
-vi.mock('./CommentEditor', () => ({
+vi.mock('@/components/CommentEditor', () => ({
   CommentEditor: ({
     id,
     value,

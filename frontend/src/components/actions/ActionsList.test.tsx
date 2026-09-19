@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
-import { renderWithProviders, createTestQueryClient } from '../../test-utils';
-import { ActionsList } from '../ActionsList';
-import type { GamePhase, ActionWithDetails } from '../../types/phases';
-import { useGameActionResults } from '../../hooks/useActionResults';
+import { server } from '@/mocks/server';
+import { renderWithProviders, createTestQueryClient } from '@/test-utils';
+import { ActionsList } from './ActionsList';
+import type { GamePhase, ActionWithDetails } from '@/types/phases';
+import { useGameActionResults } from '@/hooks/useActionResults';
 import type { ComponentProps } from 'react';
-import type { CreateActionResultForm } from '../CreateActionResultForm';
+import type { CreateActionResultForm } from './CreateActionResultForm';
 
 /**
  * Stands in for the results list rendered next to ActionsList in the GM view,
@@ -21,7 +21,7 @@ function ResultsQueryProbe({ gameId }: { gameId: number }) {
 
 // Mock CreateActionResultForm component. It owns its own Cancel control (so it
 // can discard cached drafts before dismissing), so the mock renders one too.
-vi.mock('../CreateActionResultForm', () => ({
+vi.mock('./CreateActionResultForm', () => ({
   CreateActionResultForm: ({
     gameId,
     userId,

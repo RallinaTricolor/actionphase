@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StandaloneResultComposer } from './StandaloneResultComposer';
-import type { Character } from '../types/characters';
+import type { Character } from '@/types/characters';
 
 const mockCreateResult = vi.fn();
 
@@ -33,7 +33,7 @@ vi.mock('./CreateActionResultForm', () => ({
 
 let mockCharacters: Character[] = [];
 
-vi.mock('../contexts/GameContext', () => ({
+vi.mock('@/contexts/GameContext', () => ({
   useGameContext: () => ({ allGameCharacters: mockCharacters }),
 }));
 

@@ -4,18 +4,18 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { ActionSubmission } from './ActionSubmission';
-import type { GamePhase } from '../types/phases';
-import { useCharacterSheetItems } from '../hooks/useCharacterSheetItems';
+import type { GamePhase } from '@/types/phases';
+import { useCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 
-vi.mock('../hooks/useUserCharacters', () => ({
+vi.mock('@/hooks/useUserCharacters', () => ({
   useUserCharacters: vi.fn(() => ({ characters: [], isLoading: false })),
 }));
 
-vi.mock('../hooks/useCharacterSheetItems', () => ({
+vi.mock('@/hooks/useCharacterSheetItems', () => ({
   useCharacterSheetItems: vi.fn(() => []),
 }));
 
-vi.mock('../lib/api', () => ({
+vi.mock('@/lib/api', () => ({
   apiClient: {
     phases: {
       getUserActions: vi.fn(() => Promise.resolve({ data: [] })),

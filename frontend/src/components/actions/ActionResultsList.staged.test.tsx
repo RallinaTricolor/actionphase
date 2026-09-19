@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ActionResultsList } from './ActionResultsList';
-import type { ActionResult } from '../types/phases';
+import type { ActionResult } from '@/types/phases';
 
 // If this string ever reaches the DOM, the feature is defeated: a player with
 // devtools open reads the ending without waiting. The server blanks locked
@@ -13,13 +13,13 @@ const LOCKED_CONTENT = 'SPOILER-XYZZY-the-blow-lands-and-you-die';
 
 const mockUseUserActionResults = vi.fn();
 
-vi.mock('../hooks/useActionResults', () => ({
+vi.mock('@/hooks/useActionResults', () => ({
   useUserActionResults: (gameId: number) => mockUseUserActionResults(gameId),
 }));
 
 // MarkdownPreview renders through a markdown pipeline that is irrelevant here;
 // a plain passthrough keeps the assertions about content, not formatting.
-vi.mock('./MarkdownPreview', () => ({
+vi.mock('@/components/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 

@@ -14,7 +14,7 @@ import type { Character } from '@/types/characters';
 import { postCachingService } from '@/services/PostCachingService'
 
 // Mock CountdownTimer component
-vi.mock('./CountdownTimer', () => ({
+vi.mock('@/components/CountdownTimer', () => ({
   CountdownTimer: ({ deadline }: { deadline: string }) => (
     <div data-testid="countdown-timer">Time remaining for {deadline}</div>
   ),

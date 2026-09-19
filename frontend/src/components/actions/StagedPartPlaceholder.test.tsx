@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
-import { StagedPartPlaceholder } from '../StagedPartPlaceholder';
+import { StagedPartPlaceholder } from './StagedPartPlaceholder';
 
 /**
  * These tests drive the clock directly rather than waiting, because the

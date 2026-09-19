@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import { useGameActionResults, useUpdateActionResult, usePublishActionResult, useDeleteActionResult, useCancelPendingStagedPart, useAppendStagedPart, useUpdateStagedPartDelay } from '../hooks/useActionResults';
-import type { ActionResult, GamePhase } from '../types/phases';
-import { Button, Badge, Alert, Select } from './ui';
+import { useGameActionResults, useUpdateActionResult, usePublishActionResult, useDeleteActionResult, useCancelPendingStagedPart, useAppendStagedPart, useUpdateStagedPartDelay } from '@/hooks/useActionResults';
+import type { ActionResult, GamePhase } from '@/types/phases';
+import { Button, Badge, Alert, Select } from '@/components/ui';
 import { AppendStagedPartForm } from './AppendStagedPartForm';
-import { DELAY_PRESETS, formatDelayLabel, isPresetDelay } from '../lib/stagedDelays';
-import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
+import { DELAY_PRESETS, formatDelayLabel, isPresetDelay } from '@/lib/stagedDelays';
+import { UpdateCharacterSheetModal } from '@/components/UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
-import { ConfirmModal } from './ConfirmModal';
-import { CollapsibleMarkdown } from './CollapsibleMarkdown';
-import { CommentEditor } from './CommentEditor';
-import { useDraftUpdateCount } from '../hooks';
-import { useConflictingSheetDrafts } from '../hooks/useConflictingSheetDrafts';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
+import { CommentEditor } from '@/components/CommentEditor';
+import { useDraftUpdateCount } from '@/hooks';
+import { useConflictingSheetDrafts } from '@/hooks/useConflictingSheetDrafts';
 import { logger } from '@/services/LoggingService';
-import { useToast } from '../contexts/ToastContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface GameResultsManagerProps {
   gameId: number;

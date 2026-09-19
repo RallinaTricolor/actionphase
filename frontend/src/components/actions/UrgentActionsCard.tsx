@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import type { DashboardGameCard } from '../types/dashboard';
+import type { DashboardGameCard } from '@/types/dashboard';
 import { AlertTriangle, Clock } from 'lucide-react';
-import { Badge } from './ui';
+import { Badge } from '@/components/ui';
 
 interface UrgentActionsCardProps {
   games: DashboardGameCard[];

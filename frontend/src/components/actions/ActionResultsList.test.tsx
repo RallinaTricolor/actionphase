@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../../test-utils/render';
-import { ActionResultsList } from '../ActionResultsList';
-import { stubRenderedHeight } from '../../test-utils/renderedHeight';
+import { renderWithProviders } from '@/test-utils/render';
+import { ActionResultsList } from './ActionResultsList';
+import { stubRenderedHeight } from '@/test-utils/renderedHeight';
 
-vi.mock('../../hooks/useActionResults', () => ({
+vi.mock('@/hooks/useActionResults', () => ({
   useUserActionResults: vi.fn(),
 }));
 
-vi.mock('../MarkdownPreview', () => ({
+vi.mock('@/components/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
 }));
 
-import { useUserActionResults } from '../../hooks/useActionResults';
+import { useUserActionResults } from '@/hooks/useActionResults';
 
 const makeResult = (overrides = {}) => ({
   id: 1,

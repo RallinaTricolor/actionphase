@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Select, Alert } from './ui';
+import { Select, Alert } from '@/components/ui';
 import { CreateActionResultForm } from './CreateActionResultForm';
-import { useGameContext } from '../contexts/GameContext';
+import { useGameContext } from '@/contexts/GameContext';
 
 interface StandaloneResultComposerProps {
   gameId: number;

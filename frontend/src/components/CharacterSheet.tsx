@@ -20,7 +20,7 @@ import { CommentEditor } from './CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLabels } from '../hooks/useSheetLabels';
-import { EditorLockNotice } from './EditorLockNotice';
+import { EditorLockNotice } from '@/components/actions/EditorLockNotice';
 import { ConfirmDiscardEdits } from './ConfirmDiscardEdits';
 
 interface CharacterSheetProps {

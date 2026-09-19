@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserRound } from 'lucide-react';
-import { apiClient } from '../lib/api';
-import { useUserCharacters } from '../hooks/useUserCharacters';
-import { useCharacterSheetItems } from '../hooks/useCharacterSheetItems';
-import type { SheetItem } from '../hooks/useCharacterSheetItems';
-import { CountdownTimer } from './CountdownTimer';
-import { Button, Select, Alert, Drawer } from './ui';
-import { SheetPanel } from './SheetPanel';
-import { MarkdownPreview } from './MarkdownPreview';
-import { CollapsibleMarkdown } from './CollapsibleMarkdown';
-import { useExpandedSet } from '../hooks/useExpandedSet';
-import { CommentEditor } from './CommentEditor';
-import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '../types/phases';
+import { apiClient } from '@/lib/api';
+import { useUserCharacters } from '@/hooks/useUserCharacters';
+import { useCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
+import type { SheetItem } from '@/hooks/useCharacterSheetItems';
+import { CountdownTimer } from '@/components/CountdownTimer';
+import { Button, Select, Alert, Drawer } from '@/components/ui';
+import { SheetPanel } from '@/components/SheetPanel';
+import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
+import { useExpandedSet } from '@/hooks/useExpandedSet';
+import { CommentEditor } from '@/components/CommentEditor';
+import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '@/types/phases';
 import { postCachingService } from '@/services/PostCachingService';
 
 interface ActionSubmissionProps {

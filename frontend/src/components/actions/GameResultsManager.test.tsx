@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { server } from '../../mocks/server';
-import { renderWithProviders } from '../../test-utils/render';
-import { GameResultsManager } from '../GameResultsManager';
-import type { ActionResult } from '../../types/phases';
-import { stubRenderedHeight } from '../../test-utils/renderedHeight';
+import { server } from '@/mocks/server';
+import { renderWithProviders } from '@/test-utils/render';
+import { GameResultsManager } from './GameResultsManager';
+import type { ActionResult } from '@/types/phases';
+import { stubRenderedHeight } from '@/test-utils/renderedHeight';
 
 describe('GameResultsManager', () => {
 

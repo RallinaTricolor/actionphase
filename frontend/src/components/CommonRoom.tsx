@@ -13,7 +13,7 @@ import { PostCard } from './PostCard';
 import { ThreadViewModal } from './ThreadViewModal';
 import { NewCommentsView } from './NewCommentsView';
 import { MarkdownPreview } from './MarkdownPreview';
-import { RecentResultsSection } from './RecentResultsSection';
+import { RecentResultsSection } from '@/components/actions/RecentResultsSection';
 import type { GameUtilityContext } from './utility-drawer/types';
 import { useProvideGameUtilityContext } from '../contexts/UtilityDrawerContext';
 import { usePreviousPhaseResults } from '../hooks/usePreviousPhaseResults';

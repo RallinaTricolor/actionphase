@@ -5,21 +5,21 @@ import type { GameWithDetails, GameParticipant } from '../../types/games';
 import type { GamePhase } from '../../types/phases';
 
 // Mock all child components
-vi.mock('../GameResultsManager', () => ({
+vi.mock('@/components/actions/GameResultsManager', () => ({
   GameResultsManager: ({ gameId }: { gameId: number }) => (
     <div data-testid="game-results-manager">GameResultsManager for game {gameId}</div>
   ),
 }));
 
-vi.mock('../ActionsList', () => ({
+vi.mock('@/components/actions/ActionsList', () => ({
   ActionsList: () => <div data-testid="actions-list">ActionsList</div>,
 }));
 
-vi.mock('../ActionSubmission', () => ({
+vi.mock('@/components/actions/ActionSubmission', () => ({
   ActionSubmission: () => <div data-testid="action-submission">ActionSubmission</div>,
 }));
 
-vi.mock('../ActionResultsList', () => ({
+vi.mock('@/components/actions/ActionResultsList', () => ({
   ActionResultsList: () => <div data-testid="action-results-list">ActionResultsList</div>,
 }));
 

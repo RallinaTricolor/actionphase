@@ -12,11 +12,11 @@ function renderInRouter(ui: React.ReactElement) {
   return render(<RouterProvider router={router} />);
 }
 
-vi.mock('../hooks/useActionResults', () => ({
+vi.mock('@/hooks/useActionResults', () => ({
   useCreateActionResult: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, isSuccess: false }),
   useCreateStagedResultChain: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, isSuccess: false }),
 }));
-vi.mock('../contexts/ToastContext', () => ({ useToast: () => ({ showWarning: vi.fn() }) }));
+vi.mock('@/contexts/ToastContext', () => ({ useToast: () => ({ showWarning: vi.fn() }) }));
 
 const ACTION_SUBMISSION_ID = 99;
 const HEAD_KEY = `action-result-${ACTION_SUBMISSION_ID}`;
