@@ -28,7 +28,7 @@ import { makeCharacter } from '../../test-utils/factories';
  * reports them via the DOM. (The mock predates the fix for the sheet's render
  * loop; it is kept for scoping, not because the real one still hangs.)
  */
-vi.mock('../../components/CharacterSheet', () => ({
+vi.mock('@/components/characters/CharacterSheet', () => ({
   CharacterSheet: ({ characterId, canEdit }: { characterId: number; canEdit?: boolean }) => (
     <div
       data-testid="character-sheet-probe"

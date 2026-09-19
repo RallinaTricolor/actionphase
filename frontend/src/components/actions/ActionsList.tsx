@@ -8,7 +8,7 @@ import { CreateActionResultForm } from './CreateActionResultForm';
 import { StandaloneResultComposer } from './StandaloneResultComposer';
 import { Modal } from '@/components/Modal';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
-import CharacterAvatar from '@/components/CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';

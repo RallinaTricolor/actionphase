@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
-import CharacterAvatar from '@/components/CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { AudienceConversationCard } from '@/components/audience/AudienceConversationCard';
 import { AudienceConversationHeader } from '@/components/audience/AudienceConversationHeader';
 import type { AudienceConversationListItem, AudienceConversationMessage } from '@/types/conversations';

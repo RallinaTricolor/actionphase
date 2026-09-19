@@ -10,7 +10,7 @@ import type { OpenCharacterSheetOptions } from '../types';
 // The wiring is what's under test here: the drawer mounts at the app root,
 // outside any GameProvider, so anything the sheet would normally read from
 // GameContext has to arrive through these props or it silently defaults.
-vi.mock('../../CharacterSheet', () => ({
+vi.mock('@/components/characters/CharacterSheet', () => ({
   CharacterSheet: (props: Record<string, unknown>) => (
     <div
       data-testid="character-sheet-probe"

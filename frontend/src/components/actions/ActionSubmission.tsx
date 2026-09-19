@@ -7,7 +7,7 @@ import { useCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { Button, Select, Alert, Drawer } from '@/components/ui';
-import { SheetPanel } from '@/components/SheetPanel';
+import { SheetPanel } from '@/components/characters/SheetPanel';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
 import { useExpandedSet } from '@/hooks/useExpandedSet';

@@ -37,7 +37,7 @@ import type { Character } from '../../types/characters';
  * loop is fixed — see CharacterSheet.test.tsx — so the mock is now a scoping
  * choice rather than a workaround.)
  */
-vi.mock('../CharacterSheet', () => ({
+vi.mock('@/components/characters/CharacterSheet', () => ({
   CharacterSheet: ({ characterId }: { characterId: number }) => (
     <div data-testid="character-sheet-probe" data-character-id={String(characterId)} />
   ),

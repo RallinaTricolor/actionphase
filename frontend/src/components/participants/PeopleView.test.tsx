@@ -20,7 +20,7 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // Mock the child components that have complex dependencies
-vi.mock('@/components/CharactersList', () => ({
+vi.mock('@/components/characters/CharactersList', () => ({
   CharactersList: () => <div data-testid="characters-list">Characters List</div>,
 }));
 
@@ -36,7 +36,7 @@ vi.mock('@/components/audience/AddAudienceMemberModal', () => ({
   AddAudienceMemberModal: () => <div>Add Audience Member Modal</div>,
 }));
 
-vi.mock('@/components/InactiveCharactersList', () => ({
+vi.mock('@/components/characters/InactiveCharactersList', () => ({
   InactiveCharactersList: () => <div>Inactive Characters</div>,
 }));
 

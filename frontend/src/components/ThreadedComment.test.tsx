@@ -41,7 +41,7 @@ vi.mock('./CommentEditor', () => ({
   CommentEditor: () => <div data-testid="comment-editor" />,
 }));
 
-vi.mock('./CharacterAvatar', () => ({
+vi.mock('@/components/characters/CharacterAvatar', () => ({
   default: ({ characterName }: { characterName: string }) => <div data-testid="character-avatar">{characterName}</div>,
 }));
 

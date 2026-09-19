@@ -4,7 +4,7 @@ import type { ActionResult, GamePhase } from '@/types/phases';
 import { Button, Badge, Alert, Select } from '@/components/ui';
 import { AppendStagedPartForm } from './AppendStagedPartForm';
 import { DELAY_PRESETS, formatDelayLabel, isPresetDelay } from '@/lib/stagedDelays';
-import { UpdateCharacterSheetModal } from '@/components/UpdateCharacterSheetModal';
+import { UpdateCharacterSheetModal } from '@/components/characters/UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';

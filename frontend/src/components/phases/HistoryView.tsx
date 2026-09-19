@@ -8,7 +8,7 @@ import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import { Button, Alert } from '@/components/ui';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
-import CharacterAvatar from '@/components/CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import type { ActionWithDetails } from '@/types/phases';
 import { useUrlParam } from '@/hooks/useUrlParam';

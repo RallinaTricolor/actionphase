@@ -8,7 +8,7 @@ import { LAYERS } from '../../config/layers';
 // The sheet pulls in the whole character-sheet module tree; keep it out of the
 // initial bundle since most page loads never open it.
 const CharacterSheet = lazy(() =>
-  import('../CharacterSheet').then((m) => ({ default: m.CharacterSheet }))
+  import('@/components/characters/CharacterSheet').then((m) => ({ default: m.CharacterSheet }))
 );
 
 // Same reasoning as the sheet above: the handout view drags in the markdown

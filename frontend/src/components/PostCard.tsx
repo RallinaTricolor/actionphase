@@ -7,7 +7,7 @@ import { ThreadedComment } from './ThreadedComment';
 import { ThreadViewModal } from './ThreadViewModal';
 import { apiClient } from '../lib/api';
 import { CommentEditor } from './CommentEditor';
-import CharacterAvatar from './CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { MarkdownPreview } from './MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs, usePostManualReadCommentIDs, useToggleCommentRead } from '../hooks/useReadTracking';
 import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';

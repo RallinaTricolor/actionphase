@@ -7,7 +7,7 @@ import type { Message } from '../types/messages';
 import type { Character } from '../types/characters';
 import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
-import CharacterAvatar from './CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { Button, Select } from './ui';
 import { FavoriteButton } from './FavoriteButton';
 import { useAdminMode } from '../hooks/useAdminMode';

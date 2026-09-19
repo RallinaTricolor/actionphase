@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useUrlParam } from '@/hooks/useUrlParam';
-import { CharactersList } from '@/components/CharactersList';
-import CharacterAvatar from '@/components/CharacterAvatar';
+import { CharactersList } from '@/components/characters/CharactersList';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { ParticipantActionsMenu } from './ParticipantActionsMenu';
 import { AddPlayerModal } from './AddPlayerModal';
 import { AddAudienceMemberModal } from '@/components/audience/AddAudienceMemberModal';
-import { InactiveCharactersList } from '@/components/InactiveCharactersList';
+import { InactiveCharactersList } from '@/components/characters/InactiveCharactersList';
 import { AudienceMemberBadge } from '@/components/audience/AudienceMemberBadge';
 import { Button } from '@/components/ui';
 import { apiClient } from '@/lib/api';

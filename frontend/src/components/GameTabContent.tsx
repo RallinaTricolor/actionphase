@@ -20,7 +20,7 @@ import { HandoutsList } from '@/components/handouts/HandoutsList';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { GamePhase } from '../types/phases';
 import { GameLogsView } from './GameLogsView';
-import { LootTablesView } from './LootTablesView';
+import { LootTablesView } from '@/components/characters/sheet-items/LootTablesView';
 import { GameStatsView } from './GameStatsView';
 
 // Lazy load PollsTab to match CommonRoom's lazy loading and prevent duplicate chunks

@@ -40,7 +40,7 @@ import { makeCharacter } from '../../test-utils/factories';
 
 // Probe standing in for the real CharacterSheet. It records the props CommonRoom
 // passes so the tests can assert on the wired characterId and edit permission.
-vi.mock('../CharacterSheet', () => ({
+vi.mock('@/components/characters/CharacterSheet', () => ({
   CharacterSheet: ({ characterId, canEdit }: { characterId: number; canEdit?: boolean }) => (
     <div
       data-testid="character-sheet-probe"

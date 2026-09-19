@@ -27,7 +27,7 @@ vi.mock('../GameApplicationsList', () => ({
   GameApplicationsList: () => <div>GameApplicationsList</div>,
 }));
 
-vi.mock('../CharactersList', () => ({
+vi.mock('@/components/characters/CharactersList', () => ({
   CharactersList: () => <div>CharactersList</div>,
 }));
 

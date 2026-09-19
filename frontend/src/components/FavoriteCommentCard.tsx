@@ -4,7 +4,7 @@ import type { FavoriteComment } from '../types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { Card, CardBody, Badge, Button } from './ui';
-import CharacterAvatar from './CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { FavoriteButton } from './FavoriteButton';
 
 interface FavoriteCommentCardProps {

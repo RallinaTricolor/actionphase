@@ -7,7 +7,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import { Card, CardBody, Badge, Button, Select } from './ui';
 import { FavoriteButton } from './FavoriteButton';
-import CharacterAvatar from './CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useGameContext } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdminMode } from '../hooks/useAdminMode';
