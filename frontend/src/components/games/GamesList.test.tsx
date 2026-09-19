@@ -5,8 +5,44 @@ import { makeAuthContext, makeUser } from '@/test-utils/factories';
 import { GamesList } from './GamesList'
 import type { EnrichedGameListItem } from '@/types/games'
 
-// Mock the EnhancedGameCard component
-vi.mock('./EnhancedGameCard')
+// Mock the EnhancedGameCard component. Stubbed rather than rendered so these
+// tests assert GamesList's own apply-button gating, not the card's presentation.
+vi.mock('./EnhancedGameCard', () => ({
+  EnhancedGameCard: ({
+    game,
+    onClick,
+    onApplyClick,
+    isJoining = false,
+    showApplyButton = false,
+  }: {
+    game: EnrichedGameListItem
+    onClick?: () => void
+    onApplyClick?: () => void
+    isJoining?: boolean
+    showApplyButton?: boolean
+  }) => (
+    <div data-testid={`game-card-${game.id}`} onClick={onClick}>
+      <div>{game.title}</div>
+      <div>{game.description}</div>
+      <div>GM: {game.gm_username}</div>
+      <div>State: {game.state}</div>
+      {showApplyButton && onApplyClick && (
+        <button
+          onClick={(e) => {
+            // The card sits inside a clickable row; without this the apply
+            // click would also trigger onGameClick.
+            e.stopPropagation()
+            onApplyClick()
+          }}
+          disabled={isJoining}
+          data-testid={`apply-button-${game.id}`}
+        >
+          {isJoining ? 'Applying...' : 'Apply to Join'}
+        </button>
+      )}
+    </div>
+  ),
+}))
 
 // Mock the auth hook
 vi.mock('@/contexts/AuthContext', async () => {
