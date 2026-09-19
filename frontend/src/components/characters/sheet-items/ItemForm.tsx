@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, Select } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { logger } from '@/services/LoggingService';
 import type { LootTableContent } from '@/types/games';

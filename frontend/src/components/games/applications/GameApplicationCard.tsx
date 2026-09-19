@@ -1,0 +1,177 @@
+import { useState } from 'react';
+import type { GameApplication, GameState } from '@/types/games';
+import { APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '@/types/games';
+import { Button } from '@/components/ui';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { logger } from '@/services/LoggingService';
+import { getInitials, getAvatarColor } from '@/utils/avatar';
+
+interface GameApplicationCardProps {
+  application: GameApplication;
+  isGM?: boolean;
+  gameState?: GameState;
+  onApprove?: (applicationId: number) => Promise<void>;
+  onReject?: (applicationId: number) => Promise<void>;
+}
+
+export const GameApplicationCard = ({
+  application,
+  isGM = false,
+  gameState,
+  onApprove,
+  onReject
+}: GameApplicationCardProps) => {
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleApprove = async () => {
+    if (!onApprove) return;
+
+    try {
+      setActionLoading(true);
+      await onApprove(application.id);
+    } catch (error) {
+      logger.error('Failed to approve application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = () => {
+    if (!onReject) return;
+    setShowRejectConfirm(true);
+  };
+
+  const confirmReject = async () => {
+    if (!onReject) return;
+
+    try {
+      setActionLoading(true);
+      await onReject(application.id);
+    } catch (error) {
+      logger.error('Failed to reject application', { error, applicationId: application.id, userId: application.user_id, username: application.username });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <div className="surface-base border border-theme-default rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow" data-testid="application-card">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          {application.avatar_url ? (
+            <img
+              src={application.avatar_url}
+              alt={`${application.username || 'User'}'s avatar`}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${getAvatarColor(application.username || `User ${application.user_id}`)}`}>
+              {getInitials(application.username || `User ${application.user_id}`)}
+            </div>
+          )}
+
+          {/* Username and Role */}
+          <div>
+            <h3 className="text-lg font-semibold text-content-primary">
+              {application.username || `User ${application.user_id}`}
+            </h3>
+            <p className="text-sm text-content-secondary capitalize">
+              Applying as <b className={"text-semantic-info"}>{application.role}</b>
+            </p>
+          </div>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${APPLICATION_STATUS_COLORS[application.status]}`} data-testid="application-status-badge">
+          {APPLICATION_STATUS_LABELS[application.status]}
+        </span>
+      </div>
+
+      {application.message && (
+        <div className="mb-4">
+          <h4 className="font-medium text-content-primary mb-2">Application Message:</h4>
+          <p className="text-content-primary surface-raised p-3 rounded-lg text-sm leading-relaxed">
+            "{application.message}"
+          </p>
+        </div>
+      )}
+
+      <div className="flex justify-between items-center text-sm text-content-secondary mb-4">
+        <span>Applied: {formatDate(application.applied_at)}</span>
+        {application.reviewed_at && (
+          <span>Reviewed: {formatDate(application.reviewed_at)}</span>
+        )}
+      </div>
+
+      {isGM && gameState === 'recruitment' && onApprove && onReject && (
+        <div className="flex justify-end gap-3 pt-4 border-t border-theme-default min-h-[52px]">
+          {application.status === 'pending' && (
+            <>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleReject}
+                disabled={actionLoading}
+                data-testid="reject-application-button"
+              >
+                {actionLoading ? 'Processing...' : 'Reject'}
+              </Button>
+              <Button
+                variant="success"
+                size="sm"
+                onClick={handleApprove}
+                disabled={actionLoading}
+                data-testid="approve-application-button"
+              >
+                {actionLoading ? 'Processing...' : 'Approve'}
+              </Button>
+            </>
+          )}
+          {application.status === 'approved' && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleReject}
+              disabled={actionLoading}
+              data-testid="reject-application-button"
+            >
+              {actionLoading ? 'Processing...' : 'Reject'}
+            </Button>
+          )}
+          {application.status === 'rejected' && (
+            <Button
+              variant="success"
+              size="sm"
+              onClick={handleApprove}
+              disabled={actionLoading}
+              data-testid="approve-application-button"
+            >
+              {actionLoading ? 'Processing...' : 'Approve'}
+            </Button>
+          )}
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={showRejectConfirm}
+        onClose={() => setShowRejectConfirm(false)}
+        onConfirm={confirmReject}
+        title="Reject Application"
+        message={`Are you sure you want to reject ${application.username || 'this user'}'s application?`}
+        confirmText="Reject"
+        variant="danger"
+        isLoading={actionLoading}
+      />
+    </div>
+  );
+};

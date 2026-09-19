@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, Button, Badge, Alert, Spinner } from '@/components/ui';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useHandoutComments } from '@/hooks/useHandoutComments';
 import type { Handout } from '@/types/handouts';

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '@/lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '@/types/phases';
-import { CommonRoom } from '@/components/CommonRoom';
+import { CommonRoom } from '@/components/messages/CommonRoom';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
 import { Button, Alert } from '@/components/ui';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';

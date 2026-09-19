@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { CountdownTimer } from '@/components/CountdownTimer';
+import { CountdownTimer } from '@/components/games/CountdownTimer';
 import {
   getActionPhaseLabel,
   getActionPhaseDescription,

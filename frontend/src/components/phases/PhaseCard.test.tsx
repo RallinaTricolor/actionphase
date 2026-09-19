@@ -12,7 +12,7 @@ vi.mock('@/hooks/usePhaseActivation', () => ({
 }));
 
 // Mock DraftPostSection to avoid needing QueryClientProvider in these tests
-vi.mock('@/components/DraftPostSection', () => ({
+vi.mock('@/components/messages/DraftPostSection', () => ({
   DraftPostSection: () => null,
 }));
 

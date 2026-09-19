@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Select, Button, Alert } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { DELAY_PRESETS, DEFAULT_DELAY_MINUTES, formatDelayLabel } from '@/lib/stagedDelays';
 
 interface AppendStagedPartFormProps {

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavoriteComments, useSetCommentFavorite } from '../hooks/useFavorites';
 import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel';
-import { FavoriteCommentCard } from '../components/FavoriteCommentCard';
+import { FavoriteCommentCard } from '@/components/messages/FavoriteCommentCard';
 import { Spinner, Alert } from '../components/ui';
 
 /**

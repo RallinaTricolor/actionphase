@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, Select } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { useReportDirty } from '@/hooks/useReportDirty';
 import type { NumberEntryDisplay } from '@/types/characters';
 

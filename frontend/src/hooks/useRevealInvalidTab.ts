@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { FormEvent } from 'react';
-import type { GameFormTabId } from '../components/gameFormTabs';
-import { findFirstInvalidTab } from '../components/gameFormTabs';
+import type { GameFormTabId } from '@/components/games/gameFormTabs';
+import { findFirstInvalidTab } from '@/components/games/gameFormTabs';
 
 /**
  * Reveals the tab holding an invalid `required` control before the browser

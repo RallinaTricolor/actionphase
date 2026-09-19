@@ -10,7 +10,7 @@ import {
   Input,
   Checkbox,
 } from '../../components/ui';
-import { CommentEditor } from '../../components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { Modal } from '../../components/Modal';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { useToast } from '../../contexts/ToastContext';

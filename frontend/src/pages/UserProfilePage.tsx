@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { UserProfileHeader } from '@/components/users/UserProfileHeader';
-import { UserGameHistory } from '../components/UserGameHistory';
+import { UserGameHistory } from '@/components/games/UserGameHistory';
 import { Spinner, Button } from '../components/ui';
 
 /**

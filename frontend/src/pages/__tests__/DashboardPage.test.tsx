@@ -5,7 +5,7 @@ import { makeQueryResult, makeDashboardGameCard, makeDashboardDeadline } from '.
 import { DashboardPage } from '../DashboardPage';
 import type { ComponentProps } from 'react';
 import type { DashboardData } from '../../types/dashboard';
-import type { DashboardGameCard } from '../../components/DashboardGameCard';
+import type { DashboardGameCard } from '@/components/games/DashboardGameCard';
 import type { UrgentActionsCard } from '@/components/actions/UrgentActionsCard';
 import type { RecentActivityCard } from '@/components/dashboard/RecentActivityCard';
 import type { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
@@ -22,7 +22,7 @@ vi.mock('../../hooks/useDashboard', () => ({
 // rename breaks the stub instead of being silently ignored. These were declared
 // `: unknown`, which cannot be destructured at all -- the props were untyped in
 // practice and every field access was unchecked.
-vi.mock('../../components/DashboardGameCard', () => ({
+vi.mock('@/components/games/DashboardGameCard', () => ({
   DashboardGameCard: ({ game }: ComponentProps<typeof DashboardGameCard>) => (
     <div data-testid="dashboard-game-card">{game.title}</div>
   ),

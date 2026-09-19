@@ -16,7 +16,7 @@ import type { Tab } from '@/components/layout/TabNavigation';
 import { Button, Badge, Input } from '@/components/ui';
 import { useRenameCharacter } from '@/hooks/useCharacters';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLabels } from '@/hooks/useSheetLabels';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CountdownTimer } from '@/components/CountdownTimer';
+import { CountdownTimer } from '@/components/games/CountdownTimer';
 import { PhaseCard } from './PhaseCard';
 import { CreatePhaseModal } from './CreatePhaseModal';
 import type { DraftPostData } from './CreatePhaseModal';

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { GameWithDetails, CreateGameRequest } from '../types/games';
 import type { CharacterSheetConfig } from '../types/characters';
-import type { GameFormData } from '../components/GameFormFields';
+import type { GameFormData } from '@/components/games/GameFormFields';
 import { convertToISO8601, formatDateTimeLocal } from '../lib/utils/dates';
 import { useUploadGameBanner, useDeleteGameBanner } from './useGameBanner';
 

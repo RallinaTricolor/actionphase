@@ -25,7 +25,7 @@ vi.mock('../../../contexts/ToastContext', async () => {
 // CommentEditor is the project's markdown editor; it is exercised by its own
 // tests. Standing it in keeps these assertions about the FORM -- which fields
 // are sent, and when -- rather than about the editor's preview machinery.
-vi.mock('../../../components/CommentEditor', () => ({
+vi.mock('@/components/messages/CommentEditor', () => ({
   CommentEditor: ({
     value,
     onChange,

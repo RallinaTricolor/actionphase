@@ -28,7 +28,7 @@ vi.mock('@/contexts/ToastContext', () => ({
 
 // CommentEditor is a rich editor; a plain textarea keeps these tests about the
 // payload the form builds rather than the editor's internals.
-vi.mock('@/components/CommentEditor', () => ({
+vi.mock('@/components/messages/CommentEditor', () => ({
   CommentEditor: ({
     id,
     value,

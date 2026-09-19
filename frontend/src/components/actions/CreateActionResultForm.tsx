@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCreateActionResult, useCreateStagedResultChain } from '@/hooks/useActionResults';
 import { useToast } from '@/contexts/ToastContext';
 import { Button, Alert } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { StagedPartsEditor } from './StagedPartsEditor';
 import type { StagedResultPart } from '@/types/phases';
 import { DEFAULT_DELAY_MINUTES, MAX_CHAIN_PARTS } from '@/lib/stagedDelays';

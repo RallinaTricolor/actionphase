@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { SimpleCountdown } from '@/components/CountdownTimer';
+import { SimpleCountdown } from '@/components/games/CountdownTimer';
 import { PhaseActivationDialog } from './PhaseActivationDialog';
 import { DeletePhaseDialog } from './DeletePhaseDialog';
-import { DraftPostSection } from '@/components/DraftPostSection';
+import { DraftPostSection } from '@/components/messages/DraftPostSection';
 import { usePhaseActivation } from '@/hooks/usePhaseActivation';
 import { usePhaseSheetDraftConflicts } from '@/hooks/useConflictingSheetDrafts';
 import { MarkdownPreview } from '@/components/MarkdownPreview';

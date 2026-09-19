@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Input, Select } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import type { CreateHandoutRequest } from '@/types/handouts';
 
 interface CreateHandoutModalProps {

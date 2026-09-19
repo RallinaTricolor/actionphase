@@ -6,11 +6,11 @@ import { CurrentPhaseDisplay } from './CurrentPhaseDisplay';
 import { renderWithProviders } from '@/test-utils/render';
 import { server } from '@/mocks/server';
 import type { ComponentProps } from 'react';
-import type { CountdownTimer } from '@/components/CountdownTimer';
+import type { CountdownTimer } from '@/components/games/CountdownTimer';
 import type { GamePhase } from '@/types/phases';
 
 // Mock the CountdownTimer component to avoid time-dependent test complexity
-vi.mock('@/components/CountdownTimer', () => ({
+vi.mock('@/components/games/CountdownTimer', () => ({
   CountdownTimer: ({
     deadline,
     onExpired,

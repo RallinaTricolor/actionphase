@@ -8,7 +8,7 @@ import { UpdateCharacterSheetModal } from '@/components/characters/UpdateCharact
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { useDraftUpdateCount } from '@/hooks';
 import { useConflictingSheetDrafts } from '@/hooks/useConflictingSheetDrafts';
 import { logger } from '@/services/LoggingService';

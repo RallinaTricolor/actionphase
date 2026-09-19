@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useConversation } from '@/contexts/ConversationContext';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { Button, Select, Alert } from '@/components/ui';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
 import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';

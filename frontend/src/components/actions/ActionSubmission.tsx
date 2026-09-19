@@ -5,13 +5,13 @@ import { apiClient } from '@/lib/api';
 import { useUserCharacters } from '@/hooks/useUserCharacters';
 import { useCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
-import { CountdownTimer } from '@/components/CountdownTimer';
+import { CountdownTimer } from '@/components/games/CountdownTimer';
 import { Button, Select, Alert, Drawer } from '@/components/ui';
 import { SheetPanel } from '@/components/characters/SheetPanel';
 import { MarkdownPreview } from '@/components/MarkdownPreview';
 import { CollapsibleMarkdown } from '@/components/CollapsibleMarkdown';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import type { GamePhase, ActionSubmissionRequest, ActionWithDetails } from '@/types/phases';
 import { postCachingService } from '@/services/PostCachingService';
 

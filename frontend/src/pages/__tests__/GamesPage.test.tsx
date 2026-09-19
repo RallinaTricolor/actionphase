@@ -4,10 +4,10 @@ import { renderWithProviders } from '../../test-utils';
 import { makeAuthContext, makeUser, makeGameListItem } from '../../test-utils/factories';
 import { GamesPage } from '../GamesPage'
 import type { ComponentProps } from 'react'
-import type { GamesList } from '../../components/GamesList'
-import type { CreateGameForm } from '../../components/CreateGameForm'
+import type { GamesList } from '@/components/games/GamesList'
+import type { CreateGameForm } from '@/components/games/CreateGameForm'
 import type { Modal } from '../../components/Modal'
-import type { ApplyToGameModal } from '../../components/ApplyToGameModal'
+import type { ApplyToGameModal } from '@/components/games/applications/ApplyToGameModal'
 
 // Mock react-router-dom
 const mockNavigate = vi.fn()
@@ -44,7 +44,7 @@ vi.mock('../../contexts/AuthContext', async () => {
 // Each stub takes the real component's prop type via ComponentProps, so a
 // renamed or removed prop breaks the stub. These were declared `: unknown`,
 // which cannot be destructured -- the props were effectively untyped.
-vi.mock('../../components/GamesList', () => ({
+vi.mock('@/components/games/GamesList', () => ({
   GamesList: ({
     games,
     loading,
@@ -62,7 +62,7 @@ vi.mock('../../components/GamesList', () => ({
   ),
 }))
 
-vi.mock('../../components/CreateGameForm', () => ({
+vi.mock('@/components/games/CreateGameForm', () => ({
   CreateGameForm: ({ onSuccess, onCancel }: ComponentProps<typeof CreateGameForm>) => (
     <div data-testid="create-game-form">
       <button onClick={() => onSuccess?.(789)}>Create Success</button>
@@ -83,7 +83,7 @@ vi.mock('../../components/Modal', () => ({
   ),
 }))
 
-vi.mock('../../components/ApplyToGameModal', () => ({
+vi.mock('@/components/games/applications/ApplyToGameModal', () => ({
   ApplyToGameModal: ({ gameId, gameTitle, isOpen, onClose, onApplicationSubmitted }: ComponentProps<typeof ApplyToGameModal>) => (
     isOpen ? (
       <div data-testid="apply-modal">

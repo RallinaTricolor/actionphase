@@ -3,7 +3,7 @@ import { PHASE_TYPE_DESCRIPTIONS } from '@/types/phases';
 import type { CreatePhaseRequest } from '@/types/phases';
 import { Button, Select, Input, DateTimeInput } from '@/components/ui';
 import { Modal } from '@/components/Modal';
-import { CommentEditor } from '@/components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { localDateTimeToUTC } from '@/utils/timezone';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 
