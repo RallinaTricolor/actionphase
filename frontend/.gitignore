@@ -18,6 +18,10 @@ dist-ssr
 # exists to eliminate.
 .openapi.gen.yaml
 
+# Regenerated API types that `just check-api-types` diffs against the committed
+# src/types/api.gen.ts. Removed on exit, but a killed run leaves it behind.
+src/types/.api.gen.check.ts
+
 # Playwright
 test-results/
 playwright-report/

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardBody, CardHeader, Button, Input, Alert } from '../../components/ui';
-import { CommentEditor } from '../../components/CommentEditor';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { CommunityBannerSection } from './CommunityBannerSection';
 import { useToast } from '../../contexts/ToastContext';
 import { useUpdateCommunityProfile } from '../../hooks/useCommunities';

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Card, CardBody, Badge, Spinner, Alert } from '../components/ui';
-import { CollapsibleMarkdown } from '../components/CollapsibleMarkdown';
+import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMarkdown';
 import { useActiveCommunities } from '../hooks/useCommunities';
 
 /**

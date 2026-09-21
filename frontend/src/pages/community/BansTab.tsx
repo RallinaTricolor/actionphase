@@ -11,7 +11,7 @@ import {
   Input,
   DateTimeInput,
 } from '../../components/ui';
-import { UserSearchSelect, type SelectedUser } from '../../components/UserSearchSelect';
+import { UserSearchSelect, type SelectedUser } from '@/components/participants/UserSearchSelect';
 import { useToast } from '../../contexts/ToastContext';
 import { useCommunityBans, useCommunityModerators } from '../../hooks/useCommunities';
 import type { Community, CommunityBan } from '../../types/communities';

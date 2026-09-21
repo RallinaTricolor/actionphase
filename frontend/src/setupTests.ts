@@ -34,6 +34,23 @@ if (!Element.prototype.getAnimations) {
   }
 }
 
+// jsdom implements neither of these, and throws a noisy "Not implemented"
+// through the virtual console on every call. Both callers already handle the
+// absence correctly -- useParticipantFit catches getContext and falls back to
+// per-character width estimation, and scrollTo is presentational -- so the
+// output was noise hiding real errors.
+//
+// getContext returns null (the shape a browser uses for an unsupported context
+// id), which is what useParticipantFit's fallback tests for. Module scope
+// rather than beforeEach: useParticipantFit memoizes the context on first use,
+// so a per-test reassignment would not be seen after the first render.
+HTMLCanvasElement.prototype.getContext = (() =>
+  null) as unknown as typeof HTMLCanvasElement.prototype.getContext
+
+// No-op: jsdom has no layout, so there is nothing to scroll. A test asserting
+// on scroll position would spy on this instead.
+window.scrollTo = (() => {}) as unknown as typeof window.scrollTo
+
 // Mock ResizeObserver and IntersectionObserver globally before each test
 // These are needed by react-datepicker and infinite scroll components
 beforeEach(() => {

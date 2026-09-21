@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { AudienceConversationListItem } from '../../types/conversations';
-import CharacterAvatar from '../CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useGameContext } from '../../contexts/GameContext';
 import { useParticipantFit } from '../../hooks/useParticipantFit';
 

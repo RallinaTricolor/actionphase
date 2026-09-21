@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, useParams, useRouteError, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/common/errors/ErrorBoundary';
 import { isChunkLoadError } from './lib/chunkLoadError';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { PublicArchiveRoute } from './components/PublicArchiveRoute';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PublicArchiveRoute } from '@/components/auth/PublicArchiveRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useCommunity } from './hooks/useCommunities';
 import { AdminModeProvider } from './contexts/AdminModeContext';
@@ -13,11 +13,11 @@ import { GameProvider } from './contexts/GameContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { UtilityDrawerProvider } from './contexts/UtilityDrawerContext';
-import { FontSizeApplier } from './components/FontSizeApplier';
+import { FontSizeApplier } from '@/components/users/FontSizeApplier';
 import { logger } from '@/services/LoggingService';
 
 // Lazy load Layout and all page components for better code splitting
-const Layout = lazy(() => import('./components/Layout').then(m => ({ default: m.Layout })));
+const Layout = lazy(() => import('@/components/layout/Layout').then(m => ({ default: m.Layout })));
 const GlobalUtilityDrawer = lazy(() => import('./components/utility-drawer/GlobalUtilityDrawer').then(m => ({ default: m.GlobalUtilityDrawer })));
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));

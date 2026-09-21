@@ -31,13 +31,13 @@ vi.mock('../pages/GameDetailsPage', () => ({
   ),
 }))
 
-vi.mock('../components/ProtectedRoute', () => ({
+vi.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="protected-route">{children}</div>
   ),
 }))
 
-vi.mock('../components/ErrorBoundary', () => ({
+vi.mock('@/components/common/errors/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),

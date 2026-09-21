@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { TabNavigation } from '../components/TabNavigation';
+import { TabNavigation } from '@/components/layout/TabNavigation';
 import { Alert, Spinner } from '../components/ui';
 import { useCommunity } from '../hooks/useCommunities';
 import { BanHistoryTab } from './community/BanHistoryTab';

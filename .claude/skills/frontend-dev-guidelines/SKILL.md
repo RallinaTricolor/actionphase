@@ -1,14 +1,15 @@
 ---
 name: frontend-dev-guidelines
-description: Frontend development guidelines for the ActionPhase React/TypeScript app. Covers the real component layout (flat components/ + pages/, no features directory), TanStack Query data fetching with useQuery, React Router 7 createBrowserRouter, the @/components/ui library, Tailwind v4 semantic tokens for dark mode, and TypeScript standards. Use when creating components, pages, fetching data, styling, routing, or working with frontend code.
+description: Frontend development guidelines for the ActionPhase React/TypeScript app. Covers the real component layout (components/ organized into domain subdirectories, plus pages/; no features directory), TanStack Query data fetching with useQuery, React Router 7 createBrowserRouter, the @/components/ui library, Tailwind v4 semantic tokens for dark mode, and TypeScript standards. Use when creating components, pages, fetching data, styling, routing, or working with frontend code.
 ---
 
 # Frontend Development Guidelines
 
 ## Purpose
 
-Guide for React development in ActionPhase as the codebase actually is: a flat
-`components/` + `pages/` layout, TanStack Query with `useQuery`, React Router 7's
+Guide for React development in ActionPhase as the codebase actually is: a
+domain-organized `components/` + `pages/` layout, TanStack Query with
+`useQuery`, React Router 7's
 data-router API, and an in-house UI component library styled with Tailwind v4
 semantic tokens.
 
@@ -33,7 +34,10 @@ semantic tokens.
 
 ### New Component Checklist
 
-- [ ] Put it in `frontend/src/components/` (flat, or an existing topical subdir)
+- [ ] Put it in the matching domain directory under `frontend/src/components/`
+      — e.g. `components/games/`, `components/messages/`. **Never drop a
+      `.tsx` directly in `components/`**; a guard test fails the build if you
+      do. Cross-domain imports use `@/components/<domain>/<Name>`.
 - [ ] Export as a **named** `export const`/`export function` — this is the
       dominant convention (~180 files vs 6 using default exports)
 - [ ] Use the UI library first: `@/components/ui` (`Button`, `Input`, `Card`, …)
@@ -58,7 +62,7 @@ existing directories:
 |---|---|
 | API method | `frontend/src/lib/api/<domain>.ts` (exported via `apiClient`) |
 | Hook | `frontend/src/hooks/use<Thing>.ts` |
-| Component | `frontend/src/components/` |
+| Component | `frontend/src/components/<domain>/` |
 | Page | `frontend/src/pages/` |
 | Route | a route object in `frontend/src/App.tsx` |
 | Types | `frontend/src/types/<domain>.ts` |
@@ -105,7 +109,7 @@ import type { Game, Character } from '@/types/games';
 ## Data Fetching
 
 **Primary pattern: `useQuery`.** It is used in ~54 files; `useSuspenseQuery`
-appears in exactly one (`components/ActiveSessions.tsx`) and is not the house
+appears in exactly one (`components/auth/ActiveSessions.tsx`) and is not the house
 style. Do not convert existing code to Suspense fetching.
 
 Hooks live in `frontend/src/hooks/` and call through `apiClient`:
