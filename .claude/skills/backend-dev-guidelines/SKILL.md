@@ -1,13 +1,22 @@
 ---
 name: backend-dev-guidelines
-description: Comprehensive backend development guide for Go/Chi/PostgreSQL with Clean Architecture. Use when creating routes, handlers, services, interfaces, middleware, working with Chi APIs, sqlc database access, JWT authentication, request validation, correlation IDs, or async patterns. Covers layered architecture (routes → handlers → services → database), interface-first development, error handling, observability, testing strategies, and service decomposition patterns.
+description: Comprehensive backend development guide for Go/huma/chi/PostgreSQL with Clean Architecture. Use when creating routes, handlers, services, interfaces, middleware, working with huma operations and the generated OpenAPI spec, sqlc database access, JWT authentication, request validation via schema tags, correlation IDs, or async patterns. Covers layered architecture (routes → huma operations → services → database), interface-first development, error handling, observability, testing strategies, and service decomposition patterns.
 ---
 
 # Backend Development Guidelines
 
 ## Purpose
 
-Establish consistency and best practices for ActionPhase backend development using Go, Chi router, PostgreSQL with sqlc, and Clean Architecture principles.
+Establish consistency and best practices for ActionPhase backend development using Go,
+huma (type-first HTTP handlers) mounted on chi, PostgreSQL with sqlc, and Clean
+Architecture principles.
+
+> **Rewritten 2026-09-21.** The previous version described the pre-huma codebase:
+> `func(w http.ResponseWriter, r *http.Request)` handlers, `render.Bind` +
+> `core.ValidateStruct` validation, and `core.WriteJSON`/`core.WriteError`
+> responses. **That migration is complete.** All 231 API operations are huma
+> operations; no JSON endpoint uses the old signature. Everything below is
+> verified against the codebase.
 
 ## When to Use This Skill
 
@@ -28,15 +37,20 @@ Automatically activates when working on:
 
 ### New Backend Feature Checklist
 
-- [ ] **Migration**: Database schema changes (if needed)
+- [ ] **Migration**: `just migration create <name>` (if schema changes needed)
 - [ ] **SQL Queries**: Write queries in `queries/*.sql`
 - [ ] **Code Generation**: Run `just sqlgen`
 - [ ] **Interface**: Define in `core/interfaces.go`
 - [ ] **Tests**: Write unit tests first (TDD)
 - [ ] **Service**: Implement business logic
-- [ ] **Handler**: HTTP request handling
+- [ ] **Request/Response**: Structs in `requests.go` / `responses.go` with schema tags
+- [ ] **Handler**: `func(ctx, *Input) (*Output, error)` + `huma.Register` in `huma_api.go`
+- [ ] **Regenerate the spec**: `just gen-openapi`, and commit `openapi.gen.yaml`
+- [ ] **Regenerate frontend types**: `just gen-api-types`, and commit `api.gen.ts`
 - [ ] **API Tests**: Test endpoints with curl
-- [ ] **Documentation**: Update API docs
+
+> Skipping the two regeneration steps fails `just verify` (`check-api-docs`,
+> `check-api-types`). See `.claude/context/CODE_GENERATION.md`.
 
 ### New Service Checklist
 
@@ -59,9 +73,11 @@ HTTP Request
     ↓
 Middleware (correlation ID, auth, CORS, recovery)
     ↓
-Routes (Chi router)
+Routes (chi router — mounts + middleware only)
     ↓
-Handlers (request binding, validation)
+huma operation (decodes + validates Input struct from its schema tags)
+    ↓
+Handler func(ctx, *Input) (*Output, error)
     ↓
 Services (business logic)
     ↓
@@ -97,9 +113,17 @@ backend/
 │   │       ├── messages/  # Decomposed message service
 │   │       └── *.go       # Other services
 │   ├── http/
-│   │   ├── root.go        # Routing + middleware
-│   │   ├── middleware/    # Custom middleware
-│   │   └── */api.go       # HTTP handlers
+│   │   ├── root.go        # chi routing, mounts, middleware
+│   │   ├── huma.go        # huma API wiring + spec merging
+│   │   └── middleware/    # Custom middleware
+│   ├── humaconfig/       # huma API config, RFC 7807 errors, TrimStrings
+│   ├── docs/
+│   │   ├── openapi.gen.yaml  # GENERATED — never hand-edit
+│   │   └── spec_metadata.go  # hand-written spec metadata
+│   ├── <domain>/         # One handler package per bounded context:
+│   │   ├── huma_api.go    # Input/Output types, handlers, huma.Register
+│   │   ├── requests.go    # Request bodies + schema tags
+│   │   └── responses.go   # Response bodies = the wire contract
 │   └── util/             # Utilities
 ├── .env                  # Environment variables
 └── justfile             # Development commands
@@ -156,34 +180,64 @@ game, err := queries.GetGame(ctx, id)
 
 **Workflow**: Write SQL → `just sqlgen` → Use generated code
 
-### 3. Handlers Only Handle HTTP, Services Contain Logic
+### 3. Handlers Are Type-First huma Operations
+
+A handler is `func(ctx, *Input) (*Output, error)`. It never touches
+`http.ResponseWriter`: huma decodes and validates the input from the struct's
+schema tags and encodes the output, which is what makes the OpenAPI spec
+derivable from Go types instead of hand-maintained.
+
+**Three files per domain** (`backend/pkg/<domain>/`):
+
+| File | Holds |
+|---|---|
+| `requests.go` | Request body structs + their schema tags |
+| `responses.go` | Response body structs — **the wire contract** |
+| `huma_api.go` | Input/Output wrappers, handlers, `huma.Register` calls |
 
 ```go
-// ❌ NEVER: Business logic in handlers
-func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
-    // 200 lines of validation, business logic, database calls
+type createCharacterInput struct {
+    GameID int32 `path:"gameID" doc:"Game ID"`
+    Body   *CreateCharacterRequest
 }
 
-// ✅ ALWAYS: Delegate to service layer
-func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-    correlationID := middleware.GetCorrelationID(ctx)
+type characterOutput struct {
+    Body *CharacterResponse
+}
 
-    var req core.CreateGameRequest
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        core.WriteError(w, core.ErrInvalidRequest(err, correlationID))
-        return
-    }
+func (h *Handler) humaCreateCharacter(ctx context.Context, in *createCharacterInput) (*characterOutput, error) {
+    defer h.App.ObsLogger.LogOperation(ctx, "api_create_character")()
 
-    game, err := h.service.CreateGame(ctx, &req)
+    authUser, err := h.authUser(ctx)
     if err != nil {
-        core.WriteError(w, err)
-        return
+        return nil, err
     }
 
-    core.WriteJSON(w, http.StatusCreated, game)
+    character, err := h.CharacterService.CreateCharacter(ctx, core.CreateCharacterRequest{
+        GameID: in.GameID,
+        Name:   in.Body.Name,
+    })
+    if err != nil {
+        return nil, huma.Error500InternalServerError(err.Error())
+    }
+
+    return &characterOutput{Body: toCharacterResponse(character)}, nil
 }
 ```
+
+**Errors are returned, not written**: `huma.Error400BadRequest(...)`,
+`huma.Error403Forbidden(...)`, `huma.Error500InternalServerError(...)`. Two
+helpers bridge service-layer `core` errors: `humaErr(errResp)` and
+`core.NotFoundOr500(err, "character")`.
+
+**chi has not gone away.** huma mounts onto the chi router via the humachi
+adapter, so `r.Mount`, `r.Route` and every `r.Use` middleware still work. Only
+the handler signature and encoding changed. Middleware that wrapped a chi route
+has a context-based twin for use inside a handler — e.g.
+`core.RequireVerifiedEmailCtx(ctx, h.App.Pool)`.
+
+**[📖 resources/huma-handlers.md](resources/huma-handlers.md)** — registration,
+the full example, error mapping and validation details.
 
 ### 4. Always Use Correlation IDs
 
@@ -217,52 +271,42 @@ log.Info().
 fmt.Println("Game created:", gameID)
 ```
 
-### 6. Validate All Input in Bind, via `validate` Tags
+### 6. Validate Input with Schema Tags
 
-Tag the request struct, then execute the tags from `Bind` with
-`core.ValidateStruct`. `Bind` is the only hook `go-chi/render` runs after
-decoding a body, and its errors render as 400 through `core.ErrInvalidRequest`.
+Constraints go on the request struct as **huma schema tags**. huma enforces them
+before the handler runs and returns 422 with the field named; the same tags
+become the constraints published in the spec, so validation and documentation
+cannot drift apart.
 
 ```go
-type RenameCharacterRequest struct {
-    Name string `json:"name" validate:"required,min=1,max=255"`
-}
-
-func (r *RenameCharacterRequest) Bind(req *http.Request) error {
-    return core.ValidateStruct(r)
+type CreateCharacterRequest struct {
+    Name          string `json:"name" minLength:"1" maxLength:"255" doc:"Character name"`
+    CharacterType string `json:"character_type" enum:"player_character,npc" doc:"Character kind"`
+    UserID        *int32 `json:"user_id,omitempty" required:"false" doc:"Owning player"`
 }
 ```
 
-`core.ValidateStruct` trims string fields in place before validating (so `"   "`
-fails `required`, and the handler reads the value the service will store) and
-reports failures by JSON field name: `name is required`, not validator's raw
-`Key: 'RenameCharacterRequest.Name' Error:...` text.
+**A field is required unless you say otherwise.** Mark optional fields
+`required:"false"` *and* make them pointers with `omitempty` — pointer +
+`omitempty` means the key is absent rather than `null`.
 
-**A tag that no `Bind` executes enforces nothing.** Never add a `validate` tag
-without wiring up `Bind` in the same change — an inert tag reads as enforcement
-to the next person and is worse than no tag at all.
-
-**Never rely on the service layer to catch bad input.** Service errors render via
-`core.ErrInternalError` as a 500 "unexpected error", so a user who submits a blank
-name is told the server broke. Services still hold their own invariants; that is
-defence in depth, not the client-facing check.
-
-Keep explicit checks for rules the tags cannot express — cross-field constraints
-and semantic ones such as `json.Valid`. They coexist, and one `Bind` may run both:
+**Trim strings via `Resolve`.** huma's `minLength` counts raw characters, so
+`"   "` passes `minLength:"1"` and puts a blank row in the database. Any body
+with a `minLength` string field needs:
 
 ```go
-func (r *UpdateLootTableRequest) Bind(req *http.Request) error {
-    if err := core.ValidateStruct(r); err != nil {
-        return err
-    }
-    return validateLootTableItems(r.Items)  // per-item json.Valid
+func (b *CreateCharacterRequest) Resolve(huma.Context) []error {
+    return humaconfig.TrimStrings(b)
 }
 ```
 
-Before enabling tags on an endpoint that already ships, check what the frontend
-actually sends: a `min=` stricter than the UI enforces will reject payloads that
-work today.
+**Rules the schema cannot see stay in the handler** — anything depending on the
+caller's role, other rows, or cross-field logic. And never rely on the service
+layer to catch bad input: a service error renders as a 500 "unexpected error",
+so a user who submits a blank name is told the server broke.
 
+**[📖 resources/huma-handlers.md](resources/huma-handlers.md)** — full tag list,
+`TrimStrings` semantics, and migrating an already-shipped endpoint.
 ### 7. Use Typed Errors with Context
 
 ```go
@@ -367,7 +411,13 @@ just test                  # Run all tests
 just test-mocks            # Fast unit tests (~300ms)
 just migrate               # Apply migrations
 just migration create <name>   # Create new migration
+just gen-openapi           # Regenerate openapi.gen.yaml from the Go types
+just gen-api-types         # Regenerate the frontend's api.gen.ts from the spec
+just verify                # Pre-push gate (includes both staleness checks)
 ```
+
+After any API change, run `just gen-openapi` then `just gen-api-types` and commit
+both generated files.
 
 ### Database Name
 
@@ -383,12 +433,18 @@ postgres://postgres:example@db:5432/actionphase          # inside the compose ne
 ## Anti-Patterns to Avoid
 
 ❌ Business logic in handlers
+❌ Writing a new `func(w http.ResponseWriter, r *http.Request)` JSON handler — the
+   huma migration is complete; every API operation is type-first
+❌ `render.Bind` / `core.ValidateStruct` / `core.WriteJSON` / `core.WriteError` in
+   a handler — all replaced by schema tags and returned huma errors
+❌ Hand-editing `openapi.gen.yaml` or `frontend/src/types/api.gen.ts`
+❌ Changing an API shape without running `just gen-openapi` + `just gen-api-types`
 ❌ Raw SQL without sqlc
 ❌ Missing correlation IDs
 ❌ No error handling
-❌ No input validation
-❌ `validate` tags on a request struct whose `Bind` returns a bare `nil` (inert — enforces nothing)
-❌ Letting bad input reach the service, where it renders as a 500 instead of a 400
+❌ An optional field without both `required:"false"` and pointer + `omitempty`
+❌ A string field with `minLength` whose body struct has no `Resolve`/`TrimStrings`
+❌ Letting bad input reach the service, where it renders as a 500 instead of a 422
 ❌ fmt.Println instead of structured logging
 ❌ Direct process.env in code (use config)
 ❌ Forgetting interface definitions
@@ -439,7 +495,8 @@ services/phases/
 | See complete patterns | `.claude/reference/BACKEND_ARCHITECTURE.md` |
 | Handle errors properly | `.claude/reference/ERROR_HANDLING.md` |
 | Implement logging | `.claude/reference/LOGGING_STANDARDS.md` |
-| Document APIs | `.claude/reference/API_DOCUMENTATION.md` |
+| Document APIs | The spec is generated — see `.claude/context/CODE_GENERATION.md` |
+| Regenerate spec / types | `.claude/context/CODE_GENERATION.md` |
 | Write tests | `.claude/context/TESTING.md` |
 | Use test fixtures | `.claude/context/TEST_DATA.md` |
 
@@ -454,6 +511,9 @@ services/phases/
 - `backend/pkg/http/root.go` - Routing + middleware
 
 **Implementation Examples:**
+- `backend/pkg/characters/huma_api.go` - Input/Output types, handlers, registration
+- `backend/pkg/characters/responses.go` - Response contract, documented field by field
+- `backend/pkg/humaconfig/humaconfig.go` - API config, RFC 7807 errors, `TrimStrings`
 - `backend/pkg/db/services/games.go` - Simple service
 - `backend/pkg/db/services/phases/` - Decomposed service
 - `backend/pkg/db/queries/games.sql` - sqlc patterns
@@ -498,12 +558,16 @@ services/phases/
 
 ## Authentication Pattern
 
-**JWT Access Tokens** (15 min) + **Refresh Tokens** (7 days)
+**One JWT bearer token, valid 7 days, backed by a server-side session.**
 
-- Access tokens for API requests (in Authorization header)
-- Refresh tokens stored in database sessions
-- User ID **NOT in JWT** - fetched from `/api/v1/auth/me`
-- Automatic refresh via frontend interceptors
+There is no separate refresh token. `GET /auth/refresh` exchanges a still-valid
+token for a fresh one; it does not consume a distinct refresh credential.
+Revocation happens by deleting the session row.
+
+- Issued by `JWTHandler.CreateToken` (`backend/pkg/auth/jwt.go`)
+- Sent in the `Authorization: Bearer <token>` header
+- User ID **NOT in JWT** — fetched from `/api/v1/auth/me`
+- In a handler: `core.GetAuthenticatedUser(ctx)`, 401 when nil
 
 **Security**: JWT only contains `sub` (username), `exp`, `iat`, `jti`
 
@@ -519,15 +583,15 @@ services/phases/
 - **`.claude/reference/BACKEND_ARCHITECTURE.md`** - Detailed implementation guide
 - **`.claude/reference/ERROR_HANDLING.md`** - Error patterns
 - **`.claude/reference/LOGGING_STANDARDS.md`** - Logging best practices
-- **`.claude/reference/API_DOCUMENTATION.md`** - API endpoint docs
+- **`.claude/context/CODE_GENERATION.md`** - The four generation chains and their gates
 
 ---
 
 ## ADR References
 
-- **ADR-001**: Technology Stack Selection (Go, Chi, PostgreSQL, sqlc)
+- **ADR-001**: Technology Stack Selection (Go, chi, PostgreSQL, sqlc)
 - **ADR-002**: Database Design (Hybrid relational-document with JSONB)
-- **ADR-003**: Authentication Strategy (JWT + Refresh Tokens)
+- **ADR-003**: Authentication Strategy (single JWT + server-side session)
 - **ADR-004**: API Design Principles (RESTful, versioned)
 - **ADR-006**: Observability Approach (Structured logging, correlation IDs)
 - **ADR-007**: Testing Strategy (Test pyramid, TDD)
@@ -537,6 +601,6 @@ services/phases/
 ---
 
 **Skill Status**: COMPLETE ✅
-**Line Count**: < 500 ✅
-**Tech Stack**: Go, Chi, PostgreSQL, sqlc ✅
+**Last Verified**: 2026-09-21 ✅
+**Tech Stack**: Go, huma on chi, PostgreSQL, sqlc ✅
 **Progressive Disclosure**: Links to detailed context files ✅

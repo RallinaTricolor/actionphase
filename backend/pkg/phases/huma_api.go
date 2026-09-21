@@ -5,7 +5,7 @@ package phases
 //
 // Two registration functions, because phases are mounted at two prefixes:
 // the per-game routes under /games/{gameID}, and the phase-id operations at
-// /phases. See .claude/planning/huma-migration.md gotcha 10.
+// /phases.
 
 import (
 	"context"

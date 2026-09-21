@@ -143,8 +143,6 @@ describe('ApplyToGameModal', () => {
    * would render a bare "403" once the backend migrates -- silently, since
    * nothing throws. The per-status fallback is used instead, which is both
    * friendlier and shape-independent.
-   *
-   * See .claude/planning/rfc7807-error-format.md.
    */
   it('uses the friendly fallback rather than the status field when no error detail is present', async () => {
     const user = userEvent.setup({ delay: null });

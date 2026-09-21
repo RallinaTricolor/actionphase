@@ -45,9 +45,8 @@ describe('HandoutsList', () => {
   const mockMutateAsync = vi.fn();
   // A deliberately partial useHandouts return: the mutation objects carry only
   // the two fields HandoutsList reads, not the ~25 a real UseMutationResult has.
-  // `as unknown as` is the sanctioned escape for this shape -- see
-  // .claude/planning/TYPECHECK_FRONTEND_TESTS.md. It replaces a cast to
-  // Partial<AxiosResponse<Handout[]>>, which described neither this object nor
+  // `as unknown as` is the sanctioned escape for this shape. It replaces a cast
+  // to Partial<AxiosResponse<Handout[]>>, which described neither this object nor
   // the hook: useHandouts returns {handouts, isLoading, ...}, never a response.
   const mockUseHandouts = {
     handouts: mockHandouts,

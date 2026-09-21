@@ -66,6 +66,18 @@ We now have tests for all of them. The lesson: **the right question is never "is
 
 This is the standard pattern. Every integration test follows it.
 
+> **Test routers mount huma operations.** Each handler package has its own
+> `setup*TestRouter` that builds a chi router with the real middleware, then
+> calls `RegisterHuma*(humaconfig.New(r, ...), handler)` so the test exercises
+> the same decode/validate/encode path as production. Mount at the same prefix
+> production uses — huma registers the `{id}` as part of each operation's path,
+> so the route is `/characters`, not `/characters/{id}`.
+>
+> **Schema validation failures are 422, not 400.** Anything enforced by a tag
+> (`minLength`, `enum`, `required`) is rejected by huma before the handler runs
+> and returns `http.StatusUnprocessableEntity`. Reserve 400 for the checks the
+> handler makes itself — cross-field and role-dependent rules.
+
 ```go
 func TestHandler_Endpoint(t *testing.T) {
     testDB := core.NewTestDatabase(t)
@@ -73,7 +85,9 @@ func TestHandler_Endpoint(t *testing.T) {
     defer testDB.CleanupTables(t, "affected_table", "users")
 
     app := core.NewTestApp(testDB.Pool)
-    router := setupTestRouter(app, testDB)
+    router := setupXTestRouter(app, testDB)  // per-package; builds a chi router,
+                                             // then registers the huma operations
+                                             // onto it with humaconfig.New
 
     gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
     player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -230,6 +244,9 @@ just test-fe run src/components/games/GamesList.test.tsx
 
 # Frontend — watch mode
 just test-fe watch
+
+# Frontend — type-check the test tree against the generated API types
+just check-test-types
 
 # E2E — all tests (desktop + mobile)
 just e2e
@@ -398,6 +415,56 @@ hiding something real:
 
 If a test genuinely cannot run yet, delete it and write down why — a TODO in
 the code under test is visible; a skipped test is not.
+
+---
+
+## Frontend Mocks: Use the Typed Factories
+
+**Never hand-roll an object literal for an API shape.** `frontend/src/test-utils/factories.ts`
+has a factory per wire shape, each returning the **full generated type**, so a
+field added on the backend breaks *one* file instead of the dozens of test files
+that used to build mocks by hand.
+
+```typescript
+import { makeMessage, makeCharacter } from '../test-utils/factories';
+
+// Pass only the fields the test is actually about; the rest are filled in.
+const comment = makeMessage({ content: 'hello', reply_count: 2 });
+const npc = makeCharacter({ character_type: 'npc', status: 'approved' });
+```
+
+Available: `makeMessage`, `makeCommentWithDepth`, `makeCharacter`, `makeUser`,
+`makeAuthContext`, `makeUseAuthResult`, `makeConversation`,
+`makeConversationParticipant`, `makeConversationListItem`,
+`makeConversationWithDetails`, `makeGameWithDetails`, `makeGameListItem`,
+`makeGameParticipant`, `makeGamePhase`, `makeDashboardGameCard`,
+`makeDashboardDeadline`, `makeAxiosResponse`, `makeQueryResult`,
+`makeMutationResult`, `makeInfiniteQueryResult`.
+
+**A mock is a claim about the wire.** If the compiler says a field is missing,
+add it with a value the server would really send — **do not cast it away**. A
+`as any` or `as Character` here re-creates exactly the drift the generated types
+were introduced to kill: mocks asserting shapes no endpoint returns, and tests
+that pass against fiction.
+
+`just check-test-types` type-checks the test tree (`tsconfig.test.json`) against
+these contracts. It runs in `just verify`.
+
+**Import the specific module, not the barrel.** `test-utils/index.ts`
+deliberately does **not** re-export the factories: ESM has no tree-shaking at
+test runtime, so importing the barrel loads six context providers and the whole
+UI library — measured at 1.36s versus 42ms for `factories` alone.
+
+```typescript
+// ✅ specific
+import { makeCharacter } from '../test-utils/factories';
+import { renderWithProviders } from '../test-utils/render';
+
+// ❌ drags in everything for one fixture
+import { makeCharacter, renderWithProviders } from '../test-utils';
+```
+
+**See**: `.claude/context/CODE_GENERATION.md` for where these types come from.
 
 ---
 

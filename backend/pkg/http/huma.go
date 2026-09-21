@@ -2,9 +2,9 @@ package http
 
 // Huma wiring for the type-first handler migration.
 //
-// Handlers are moving from func(w http.ResponseWriter, r *http.Request) to
-// func(ctx, *Input) (*Output, error) so that the OpenAPI spec is derived from
-// Go types instead of maintained by hand. See .claude/planning/huma-migration.md.
+// Handlers are func(ctx, *Input) (*Output, error) rather than
+// func(w http.ResponseWriter, r *http.Request), so that the OpenAPI spec is
+// derived from Go types instead of maintained by hand.
 //
 // Chi is NOT going away: huma mounts onto the existing chi router via the
 // humachi adapter, so routing, mounting, and every r.Use middleware continue to

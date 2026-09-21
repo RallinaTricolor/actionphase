@@ -14,7 +14,7 @@
  *
  * A mock is a claim about the wire. If the compiler says a field is missing,
  * add it with a value the server would really send; do not paper over it with
- * a cast. See .claude/planning/TYPECHECK_FRONTEND_TESTS.md
+ * a cast. See .claude/context/CODE_GENERATION.md
  */
 
 import type {

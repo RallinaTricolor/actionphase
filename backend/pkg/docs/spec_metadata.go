@@ -7,7 +7,7 @@ package docs
 // operation that is not a huma handler all have to come from somewhere. They
 // used to live in a hand-written openapi.yaml that the generated half was
 // merged over; with every package converted, that file held only this metadata
-// and was deleted (see .claude/planning/huma-migration.md, "Cutover").
+// and was deleted.
 //
 // Keeping it in Go rather than a YAML stub means the served document has one
 // source and `just gen-openapi` can render it without reading anything else.

@@ -5,7 +5,6 @@ package avatars
 // This is the migration's reference for multipart uploads: the "avatar" file
 // field is declared as a struct field, so the request body appears in the
 // generated spec as a documented multipart schema rather than as prose.
-// See .claude/planning/huma-migration.md.
 
 import (
 	"context"

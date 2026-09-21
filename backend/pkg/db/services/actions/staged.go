@@ -24,8 +24,6 @@ import (
 // NULL`. Publishing sets released_at on the head only (in SQL, see
 // PublishActionResult); later parts wait for ReleaseDueStagedParts to set
 // theirs. That NULL is the whole feature.
-//
-// See .claude/planning/staged-result-reveals.md.
 
 // CreateStagedResultChain creates an entire chain in one transaction.
 //

@@ -639,8 +639,8 @@ func TestMessageAPI_MarkPostRead(t *testing.T) {
 		router.ServeHTTP(w, req)
 		// Still 500: MarkPostAsRead is an upsert, so a missing post fails as a
 		// foreign-key violation rather than pgx.ErrNoRows, which is what
-		// core.NotFoundOr500 keys on. Mapping SQLSTATE 23503 to 404 is a
-		// separate change -- see .claude/planning/http-status-codes.md.
+		// core.NotFoundOr500 keys on. Mapping SQLSTATE 23503 to 404 would be a
+		// separate change.
 		core.AssertEqual(t, 500, w.Code, "Should return error for not found")
 	})
 

@@ -5,7 +5,6 @@ package messages
 // Three registration functions, because messages are mounted at three prefixes:
 // the common-room routes under /games/{gameID}, a character's activity feed
 // under /characters, and the phase draft-post routes under /phases.
-// See .claude/planning/huma-migration.md gotcha 10.
 
 import (
 	"context"
@@ -939,7 +938,7 @@ func (h *Handler) humaMarkPostRead(ctx context.Context, in *markPostReadInput) (
 	if err != nil {
 		// A missing post surfaces here as a foreign-key violation, not
 		// pgx.ErrNoRows, so NotFoundOr500 would not catch it and this stays a
-		// 500. See .claude/planning/http-status-codes.md.
+		// 500.
 		h.App.ObsLogger.Error(ctx, "Failed to mark post as read", "error", err, "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
@@ -1089,7 +1088,7 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 // gate on comments anywhere on this path -- any authenticated user can already
 // read any game's common room -- so filtering favorites by game access would
 // make them stricter than the room they link back to, and a comment you
-// starred could vanish from your own list. See .claude/planning/FAVORITE_COMMENTS.md.
+// starred could vanish from your own list.
 
 // encodeFavoriteCursor renders a keyset position as an opaque token. The
 // contents are the caller's own favorites, so the encoding is base64 for

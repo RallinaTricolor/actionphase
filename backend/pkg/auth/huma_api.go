@@ -21,8 +21,6 @@ package auth
 // Not converted: V1DiscordCallback. It answers a browser redirect (302 to the
 // frontend) and writes plain-text errors via http.Error, so it has no JSON
 // shape to document -- the same reasoning that leaves /ping on chi.
-//
-// See .claude/planning/huma-migration.md.
 
 import (
 	"context"

@@ -5,7 +5,7 @@ package games
 // Two registration functions, because the game routes divide by middleware
 // rather than by mount: the public listing group runs jwtauth.Verifier only
 // (auth is optional and merely enriches the result), while everything else is
-// fully authenticated. See .claude/planning/huma-migration.md gotcha 19.
+// fully authenticated.
 
 import (
 	"context"

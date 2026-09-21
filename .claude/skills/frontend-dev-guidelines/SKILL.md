@@ -18,7 +18,7 @@ semantic tokens.
 > the primary fetching pattern, a `SuspenseLoader` component, a `routes/`
 > directory, and a component template importing **MUI** (`@mui/material`). None
 > of those exist here — MUI is not a dependency. Everything below is verified
-> against the codebase; see `.claude/DOC_AUDIT_INVENTORY.md`.
+> against the codebase.
 
 ## When to Use This Skill
 

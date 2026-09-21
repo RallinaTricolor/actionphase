@@ -40,8 +40,10 @@ We adopted a **Hybrid Relational-Document approach** using PostgreSQL with strat
 > tracked only a single high-water mark, so a migration merged with an older
 > timestamp than one already applied was skipped silently and permanently. goose
 > records one row per applied migration and fails loudly on that gap. The
-> decision to use versioned up/down migration files is unchanged — only the tool
-> implementing it. See `.claude/planning/migration-library-swap.md`.
+> decision to use versioned migrations with both directions is unchanged — only
+> the tool implementing it. goose keeps both directions in a single file
+> (`-- +goose Up` / `-- +goose Down`) rather than the `.up.sql`/`.down.sql` pair
+> golang-migrate used.
 
 ## Alternatives Considered
 

@@ -240,15 +240,7 @@ test('GM can complete a game', async ({ page }) => {
 
 ---
 
-## 📚 Feature Plan Template
-
-When creating a new feature, use `.claude/planning/FEATURE_TEMPLATE.md`:
-
-```bash
-cp .claude/planning/FEATURE_TEMPLATE.md .claude/planning/feature-[name].md
-```
-
-**Key E2E Section** (in template):
+## 📚 What to Cover in a New Feature's E2E Test
 
 - [ ] **User Journey**: Describe end-to-end flow
 - [ ] **Happy Path Test**: Main user workflow
@@ -429,9 +421,8 @@ test('GM and Player interaction', async ({ browser }) => {
 
 ## 📖 Full Documentation
 
-- **Complete Plan**: `docs/E2E_TESTING_PLAN.md`
-- **Feature Template**: `.claude/planning/FEATURE_TEMPLATE.md`
-- **Test Catalog**: `docs/E2E_TEST_CATALOG.md` (created after first test)
+- **Complete E2E guide**: `frontend/e2e/README.md`
+- **Rules, debugging, fixtures**: `.claude/skills/testing-patterns/resources/e2e-testing.md`
 - **Playwright Docs**: https://playwright.dev/docs/intro
 
 ---

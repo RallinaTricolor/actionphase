@@ -9,6 +9,7 @@ This directory contains all AI-specific context and instructions for working wit
 
 - **TESTING.md** - Read before writing any tests (backend or frontend)
 - **ARCHITECTURE.md** - Read for architectural context and patterns
+- **CODE_GENERATION.md** - Read before changing a migration, API shape, or frontend type
 - **STATE_MANAGEMENT.md** - Read before working on frontend state
 - **FRONTEND_STYLING.md** - Read before creating/modifying ANY frontend component (dark mode required!)
 - **TEST_DATA.md** - Read when working with test data and fixtures
@@ -49,7 +50,7 @@ This directory contains all AI-specific context and instructions for working wit
 
 Note: several `resources/` files under `game-domain` and `testing-patterns` are
 unwritten stubs. They are placeholders, not authoritative — read the source
-instead. See `.claude/DOC_AUDIT_INVENTORY.md`.
+instead.
 
 ### `/agents/` - Subagent Definitions
 
@@ -140,9 +141,11 @@ Active documentation files (not in docs-site yet):
 3. Check `/backend/pkg/db/test_fixtures/` for actual fixtures
 
 ### Before API Changes
-1. Review `/docs-site/developer/architecture/adrs/004-api-design-principles.md`
-2. Check `.claude/reference/API_DOCUMENTATION.md`
-3. Review `.claude/reference/ERROR_HANDLING.md`
+1. Read `.claude/context/CODE_GENERATION.md` — the spec and the frontend types
+   are **generated**; you must regenerate and commit both
+2. Read `.claude/context/ARCHITECTURE.md` §4 for the huma handler pattern
+3. Review `/docs-site/developer/architecture/adrs/004-api-design-principles.md`
+4. Review `.claude/reference/ERROR_HANDLING.md`
 
 ### Before Writing E2E Tests (CRITICAL)
 **⚠️ E2E tests are the LAST step, NEVER the first!**
@@ -174,7 +177,7 @@ When starting a coding task:
 ## Maintenance
 
 - Prefer concise context files; split into `.claude/reference/` when they grow past ~500 lines
-  (several currently exceed this — see `.claude/DOC_AUDIT_INVENTORY.md`)
+  (several currently exceed this)
 - Update this README when adding new context files, skills, commands, or agents
 - Move detailed implementation guides to `.claude/reference/`
 - Keep ADRs in `/docs-site/developer/architecture/adrs/` (single source of truth)

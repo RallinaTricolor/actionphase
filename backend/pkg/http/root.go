@@ -618,7 +618,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	})
 	apiV1Router.Mount("/polls", pollsRouter)
 
-	// Notifications API (huma / type-first -- see .claude/planning/huma-migration.md)
+	// Notifications API (huma / type-first)
 	var notificationsAPI huma.API
 	notificationsRouter := chi.NewRouter()
 	notificationsRouter.Route("/", func(r chi.Router) {
@@ -648,7 +648,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	// because these operations span two: PUT /comments/{commentId}/favorite
 	// and GET /favorites/*. They are deliberately not under /games/{gameID} --
 	// a favorite is the caller's own private row addressed solely by comment
-	// ID, and the listing is cross-game. See .claude/planning/FAVORITE_COMMENTS.md.
+	// ID, and the listing is cross-game.
 	var favoritesAPI huma.API
 	apiV1Router.Group(func(r chi.Router) {
 		favoritesHandler := messages.Handler{
@@ -707,7 +707,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	})
 	apiV1Router.Mount("/communities", communitiesRouter)
 
-	// Dashboard API (huma / type-first — see .claude/planning/huma-migration.md)
+	// Dashboard API (huma / type-first)
 	var dashboardAPI huma.API
 	dashboardRouter := chi.NewRouter()
 	dashboardRouter.Route("/", func(r chi.Router) {
@@ -799,10 +799,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	apiV1Router.Mount("/admin", adminRouter)
 
 	// API Documentation routes (public) - register on apiV1Router BEFORE mounting
-	// The served spec merges huma's generated paths over the hand-written
-	// openapi.yaml, so migrated packages are documented from their Go types
-	// and the rest fall back to the manual file. Each package converted in
-	// .claude/planning/huma-migration.md improves the docs automatically.
+	// Every package is huma-native, so the served spec is generated entirely
+	// from the Go types, plus the metadata in pkg/docs/spec_metadata.go. The
+	// committed copy is backend/pkg/docs/openapi.gen.yaml (just gen-openapi).
 	docsHandler := &docs.Handler{
 		GeneratedSpec: func() ([]byte, error) {
 			return generatedSpecFor(map[string][]huma.API{

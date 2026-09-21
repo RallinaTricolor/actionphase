@@ -728,8 +728,7 @@ type ActionSubmissionServiceInterface interface {
 	//
 	// A staged result is one narrative beat split across several parts
 	// separated by timers, so the player reads "the sword swings toward your
-	// head..." and waits before learning whether it connects. See
-	// .claude/planning/staged-result-reveals.md.
+	// head..." and waits before learning whether it connects.
 
 	// CreateStagedResultChain creates a whole chain in one transaction:
 	// parts[0] becomes an ordinary head result, and each later part is linked

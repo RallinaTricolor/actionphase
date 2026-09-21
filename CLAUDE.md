@@ -51,6 +51,11 @@ When an E2E test fails, you MUST:
 4. **Never assume** - Don't assume timeouts mean "not implemented"
 **See `.claude/commands/debug-e2e-test.md` for detailed protocol**
 
+**Before Changing Schema or API Shape**:
+1. Read **`.claude/context/CODE_GENERATION.md`** — migrations, the OpenAPI spec
+   and the frontend types are **generated and committed**. Never hand-edit a
+   `.gen.` file; regenerate and commit.
+
 **Before Implementing Features**:
 1. Read **`.claude/context/ARCHITECTURE.md`** for architectural patterns
 2. Review relevant ADRs in **`/docs-site/developer/architecture/adrs/`** for architectural decisions
@@ -85,7 +90,7 @@ When an E2E test fails, you MUST:
 
 ActionPhase is a modern gaming platform with Clean Architecture principles:
 
-- **Go Backend**: JWT-based API using Chi router, PostgreSQL with sqlc
+- **Go Backend**: JWT-based API using huma (type-first handlers, generated OpenAPI spec) on Chi, PostgreSQL with sqlc
 - **React Frontend**: React/TypeScript SPA with Vite, Tailwind CSS, React Query
 - **Database**: PostgreSQL with hybrid relational-document design (JSONB for game data)
   - **CRITICAL**: Database name is **`actionphase`**, NOT `database`
@@ -99,7 +104,7 @@ ActionPhase is a modern gaming platform with Clean Architecture principles:
 - **Observability-First** - Structured logging with correlation IDs
 
 ### Technology Stack
-- **Backend**: Go, Chi, PostgreSQL, sqlc, goose
+- **Backend**: Go, huma on Chi, PostgreSQL, sqlc, goose
 - **Frontend**: React, TypeScript, Vite, React Query, Tailwind CSS
 - **Auth**: JWT + Refresh Tokens with server-side sessions
 
@@ -300,10 +305,14 @@ just reset-test-db            # Rebuild the test DB if it gets into a dirty stat
 4. Define interface → `backend/pkg/core/interfaces.go`
 5. **Write tests first** → `*_test.go`
 6. Implement service → `backend/pkg/db/services/*.go`
-7. Implement handler → `backend/pkg/*/api.go`
-8. Run tests → `just test`
+7. Request/response structs → `backend/pkg/<domain>/{requests,responses}.go`
+8. Implement handler → `backend/pkg/<domain>/huma_api.go`
+   (`func(ctx, *Input) (*Output, error)` + `huma.Register` — never `func(w, r)`)
+9. Regenerate the spec → `just gen-openapi`, commit `openapi.gen.yaml`
+10. Run tests → `just test`
 
 **Frontend Flow**:
+0. Regenerate types → `just gen-api-types`, commit `frontend/src/types/api.gen.ts`
 1. API client method → `frontend/src/lib/api/<domain>.ts`
 2. Custom hooks → `frontend/src/hooks/*.ts`
 3. **Write hook tests** → `*.test.ts`
@@ -323,7 +332,11 @@ just reset-test-db            # Rebuild the test DB if it gets into a dirty stat
 - `backend/pkg/core/interfaces.go` - All service interfaces
 - `backend/pkg/core/*.go` - Domain models, split per bounded context
   (`games.go`, `characters.go`, `phases.go`, `notifications.go`, `constants.go`, `permissions.go`, ...)
-- `backend/pkg/http/root.go` - API routing and middleware
+- `backend/pkg/http/root.go` - Chi routing, mounts and middleware
+- `backend/pkg/http/huma.go` - huma API wiring and spec merging
+- `backend/pkg/<domain>/huma_api.go` - Handlers + `huma.Register` (one per domain)
+- `backend/pkg/<domain>/responses.go` - The wire contract
+- `backend/pkg/docs/openapi.gen.yaml` - **GENERATED** spec — never hand-edit
 - `backend/pkg/db/queries/` - SQL queries (generates code via sqlc)
 - `backend/pkg/db/services/` - Service implementations
   - `phases/` - Phase service (decomposed into 6 focused files)
@@ -354,6 +367,7 @@ just reset-test-db            # Rebuild the test DB if it gets into a dirty stat
 ### Essential Context (Read Before Coding)
 - **`.claude/context/TESTING.md`** - Testing patterns and requirements
 - **`.claude/context/ARCHITECTURE.md`** - Architectural patterns
+- **`.claude/context/CODE_GENERATION.md`** - Generated artifacts and their gates
 - **`.claude/context/STATE_MANAGEMENT.md`** - Frontend state management
 - **`.claude/context/TEST_DATA.md`** - Test fixtures and data
 
@@ -588,9 +602,11 @@ Key variables in `.env`:
 2. Read **`.claude/context/TESTING.md`** for test requirements
 3. Create database migration if needed
 4. Implement backend with tests (TDD)
-5. Implement frontend with tests
-6. Test manually in UI
-7. Update documentation
+5. Regenerate spec + frontend types (`just gen-openapi`, `just gen-api-types`)
+6. Implement frontend with tests
+7. Test manually in UI
+8. `just verify` — fails on a stale spec or stale frontend types
+9. Update documentation
 
 ### Fixing a Bug
 1. Read **`.claude/context/TESTING.md`** for regression test requirements
@@ -608,8 +624,10 @@ Key variables in `.env`:
 ### Updating Database Schema
 1. Create migration: `just migration create <name>`
 2. Write the `-- +goose Up` and `-- +goose Down` sections of the generated file
+   (one file, both directions — there are no `.up.sql`/`.down.sql` pairs), and
+   delete the stub guard
 3. Update queries in `backend/pkg/db/queries/`
-4. Regenerate code: `just sqlgen`
+4. Regenerate code: `just sqlgen` (sqlc reads `migrations/` as the schema)
 5. Update tests
 6. Apply migration: `just migrate`
 
@@ -701,11 +719,12 @@ When we completed the AuthContext centralization refactor:
 ## Critical Reminders
 
 1. **Read context files BEFORE coding** - They contain essential patterns and requirements
-2. **Tests are mandatory** - No PRs without tests
-3. **Bug fixes need regression tests** - Always write the test first
-4. **Implement features end-to-end** - Backend + frontend together
-5. **Follow established patterns** - Consistency is key for AI comprehension
-6. **Check ADRs for decisions** - Understand the "why" behind architectural choices
-7. **Update context files after changes** - Keep `.claude/context/` current with new patterns
+2. **Never hand-edit a `.gen.` file** - Change the source and regenerate; see `.claude/context/CODE_GENERATION.md`
+3. **Tests are mandatory** - No PRs without tests
+4. **Bug fixes need regression tests** - Always write the test first
+5. **Implement features end-to-end** - Backend + frontend together
+6. **Follow established patterns** - Consistency is key for AI comprehension
+7. **Check ADRs for decisions** - Understand the "why" behind architectural choices
+8. **Update context files after changes** - Keep `.claude/context/` current with new patterns
 
 **For detailed guidance on any topic, start with `.claude/README.md`**

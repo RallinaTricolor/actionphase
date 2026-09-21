@@ -4,7 +4,7 @@ package characters
 //
 // Two registration functions, because characters are mounted at two prefixes:
 // the roster routes under /games/{gameID}, and the per-character operations at
-// /characters. See .claude/planning/huma-migration.md gotcha 10.
+// /characters.
 
 import (
 	"context"
