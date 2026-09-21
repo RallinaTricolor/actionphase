@@ -519,7 +519,7 @@ import { Card, CardHeader, CardBody, CardFooter, Input, Button, Badge } from '@/
 For markdown content, use the MarkdownPreview component:
 
 ```tsx
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 
 <MarkdownPreview
   content={markdownText}

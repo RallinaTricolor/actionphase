@@ -37,7 +37,7 @@ vi.mock('@/components/auth/ProtectedRoute', () => ({
   ),
 }))
 
-vi.mock('@/components/common/ErrorBoundary', () => ({
+vi.mock('@/components/common/errors/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),

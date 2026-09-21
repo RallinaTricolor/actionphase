@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CharacterSkill } from '@/types/characters';
 import { skillRank } from '@/types/characters';
 import { Button, Badge } from '@/components/ui';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { SkillForm, type SkillFormData } from './SkillForm';
 
 interface SkillCardProps {

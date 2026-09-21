@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Badge, Button, Input, Modal, Textarea } from '../../components/ui';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import type { SessionDetail, User } from '../../lib/api/admin';
 
 type PendingBan = { type: 'ip'; value: string } | { type: 'fingerprint'; value: string };

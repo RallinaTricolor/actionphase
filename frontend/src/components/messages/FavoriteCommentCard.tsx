@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { FavoriteComment } from '@/types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { Card, CardBody, Badge, Button } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { FavoriteButton } from './FavoriteButton';

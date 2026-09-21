@@ -29,7 +29,7 @@ vi.mock('@/hooks/useCommentMutations', () => ({
   useDeleteComment: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock('@/components/common/MarkdownPreview', () => ({
+vi.mock('@/components/common/markdown/MarkdownPreview', () => ({
   MarkdownPreview: ({ content, fullWidth }: { content: string; fullWidth?: boolean }) => (
     <div data-testid="markdown-preview" data-full-width={fullWidth ? 'true' : 'false'}>
       {content}
@@ -45,7 +45,7 @@ vi.mock('@/components/characters/CharacterAvatar', () => ({
   default: ({ characterName }: { characterName: string }) => <div data-testid="character-avatar">{characterName}</div>,
 }));
 
-vi.mock('@/components/common/ConfirmModal', () => ({
+vi.mock('@/components/common/modals/ConfirmModal', () => ({
   ConfirmModal: () => null,
 }));
 

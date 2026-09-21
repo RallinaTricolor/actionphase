@@ -9,7 +9,7 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { useGameForm } from '@/hooks/useGameForm';
 import { useSelectableCommunities } from '@/hooks/useCommunities';
 import { useGameFormDirty } from '@/hooks/useGameFormDirty';
-import { ConfirmDiscardEdits } from '@/components/common/ConfirmDiscardEdits';
+import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 import { extractApiErrorMessage } from '@/lib/errors';
 
 interface CreateGameFormProps {

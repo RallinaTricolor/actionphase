@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { InventoryItem } from '@/types/characters';
 import { Button, Badge } from '@/components/ui';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { ItemForm, type ItemFormData } from './ItemForm';
 
 interface ItemCardProps {

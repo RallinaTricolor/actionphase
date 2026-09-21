@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Button, Select } from '@/components/ui';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { useAssignNPC } from '@/hooks/useCharacters';
 import { useGameParticipants } from '@/hooks/usePlayerManagement';
 import { useAuth } from '@/contexts/AuthContext';

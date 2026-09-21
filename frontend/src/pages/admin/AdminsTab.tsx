@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { Badge } from '../../components/ui';
 import type { AdminUser } from '../../lib/api/admin';
 

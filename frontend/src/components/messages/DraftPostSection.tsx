@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useDraftPost, useUpdateDraftPost, useDeleteDraftPost, useCreateDraftPost } from '@/hooks';
 import { useOptionalGameContext } from '@/contexts/GameContext';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import { Button, Select } from '@/components/ui';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 
 interface DraftPostSectionProps {
   phaseId: number;

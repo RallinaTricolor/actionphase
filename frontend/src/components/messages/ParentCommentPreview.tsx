@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { CollapsibleMarkdown } from '@/components/common/CollapsibleMarkdown';
+import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMarkdown';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import type { Character } from '@/types/characters';

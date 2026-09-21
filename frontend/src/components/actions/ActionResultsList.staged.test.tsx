@@ -19,7 +19,7 @@ vi.mock('@/hooks/useActionResults', () => ({
 
 // MarkdownPreview renders through a markdown pipeline that is irrelevant here;
 // a plain passthrough keeps the assertions about content, not formatting.
-vi.mock('@/components/common/MarkdownPreview', () => ({
+vi.mock('@/components/common/markdown/MarkdownPreview', () => ({
   MarkdownPreview: ({ content }: { content: string }) => <div>{content}</div>,
 }));
 

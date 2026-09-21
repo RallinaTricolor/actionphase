@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge, Button } from '@/components/ui';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import type { Notification } from '@/types/notifications';
 import { useMarkNotificationAsRead, useMarkNotificationAsUnread, useDeleteNotification } from '@/hooks/useNotifications';
 

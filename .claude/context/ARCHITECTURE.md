@@ -321,7 +321,10 @@ components/
 #   participants  phases  polls  users  utility-drawer
 #
 # games/ nests further: games/dialogs/ and games/applications/.
-# common/ holds cross-cutting pieces (Modal, MarkdownPreview, ErrorBoundary).
+# common/ holds cross-cutting pieces, itself split by kind:
+#   common/markdown/  MarkdownPreview, CollapsibleMarkdown, markdownHotkeys
+#   common/modals/    Modal + the Confirm* dialogs built on it
+#   common/errors/    ErrorBoundary, ErrorDisplay
 # Import across domains via the @/ alias — @/components/games/GamesList —
 # never a relative ../ hop. A guard test enforces the no-loose-files rule.
 

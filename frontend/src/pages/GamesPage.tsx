@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { GamesList } from '@/components/games/GamesList';
 import { CreateGameForm } from '@/components/games/CreateGameForm';
 import { ApplyToGameModal } from '@/components/games/applications/ApplyToGameModal';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { FilterBar } from '@/components/games/FilterBar';
 import { Pagination } from '@/components/layout/Pagination';
 import { Input } from '../components/ui';

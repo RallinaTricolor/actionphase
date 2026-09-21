@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Reply, AtSign } from 'lucide-react';
 import { Button, Spinner, Alert, Badge } from '@/components/ui';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { UnreadReplyBox } from '@/components/messages/UnreadReplyBox';
 import { ParentCommentPreview } from '@/components/messages/ParentCommentPreview';

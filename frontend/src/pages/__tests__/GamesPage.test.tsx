@@ -6,7 +6,7 @@ import { GamesPage } from '../GamesPage'
 import type { ComponentProps } from 'react'
 import type { GamesList } from '@/components/games/GamesList'
 import type { CreateGameForm } from '@/components/games/CreateGameForm'
-import type { Modal } from '@/components/common/Modal'
+import type { Modal } from '@/components/common/modals/Modal'
 import type { ApplyToGameModal } from '@/components/games/applications/ApplyToGameModal'
 
 // Mock react-router-dom
@@ -71,7 +71,7 @@ vi.mock('@/components/games/CreateGameForm', () => ({
   ),
 }))
 
-vi.mock('@/components/common/Modal', () => ({
+vi.mock('@/components/common/modals/Modal', () => ({
   Modal: ({ isOpen, onClose, title, children }: ComponentProps<typeof Modal>) => (
     isOpen ? (
       <div data-testid="modal">

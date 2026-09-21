@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button, Alert, Input } from '@/components/ui';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { usePromoteToCoGM, useDemoteFromCoGM, useRemovePlayer, useTransitionPlayerToAudience } from '@/hooks/usePlayerManagement';
 import { apiClient } from '@/lib/api';
 import type { GameParticipant, GameApplication } from '@/types/games';

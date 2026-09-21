@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import type { CreateCharacterRequest } from '@/types/characters';
 import type { GameParticipant } from '@/types/games';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { Input, Button, Alert, Select } from '@/components/ui';
 import { logger } from '@/services/LoggingService';
 

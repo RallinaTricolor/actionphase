@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { AudienceConversationCard } from '@/components/audience/AudienceConversationCard';
 import { AudienceConversationHeader } from '@/components/audience/AudienceConversationHeader';

@@ -6,7 +6,7 @@ import { useOptionalGameContext } from '@/contexts/GameContext';
 import { Button, Select, Alert } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
 import type { Character } from '@/types/characters';
 import { logger } from '@/services/LoggingService';

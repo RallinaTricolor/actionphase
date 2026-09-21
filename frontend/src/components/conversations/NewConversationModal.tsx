@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
 import type { Character } from '@/types/characters';
 import { Button, Input, Select, Checkbox, Alert } from '@/components/ui';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { logger } from '@/services/LoggingService';
 
 interface NewConversationModalProps {

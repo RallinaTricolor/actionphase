@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PHASE_TYPE_DESCRIPTIONS } from '@/types/phases';
 import type { CreatePhaseRequest } from '@/types/phases';
 import { Button, Select, Input, DateTimeInput } from '@/components/ui';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { localDateTimeToUTC } from '@/utils/timezone';
 import { useOptionalGameContext } from '@/contexts/GameContext';

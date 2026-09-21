@@ -5,7 +5,7 @@ import { DeletePhaseDialog } from './DeletePhaseDialog';
 import { DraftPostSection } from '@/components/messages/DraftPostSection';
 import { usePhaseActivation } from '@/hooks/usePhaseActivation';
 import { usePhaseSheetDraftConflicts } from '@/hooks/useConflictingSheetDrafts';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { Button, DateTimeInput } from '@/components/ui';
 import {
   PHASE_TYPE_DESCRIPTIONS,

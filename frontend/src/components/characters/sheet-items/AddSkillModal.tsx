@@ -1,5 +1,5 @@
 import type { CharacterSkill } from '@/types/characters';
-import { Modal } from '@/components/common/Modal';
+import { Modal } from '@/components/common/modals/Modal';
 import { SkillForm, type SkillFormData } from './SkillForm';
 
 interface AddSkillModalProps {

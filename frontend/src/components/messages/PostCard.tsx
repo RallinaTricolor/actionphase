@@ -8,7 +8,7 @@ import { ThreadViewModal } from './ThreadViewModal';
 import { apiClient } from '@/lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
-import { MarkdownPreview } from '@/components/common/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs, usePostManualReadCommentIDs, useToggleCommentRead } from '@/hooks/useReadTracking';
 import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '@/hooks/useFavorites';
 import { useCommentReadMode } from '@/hooks/useUserPreferences';
