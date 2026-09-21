@@ -6,7 +6,12 @@ import tseslint from 'typescript-eslint'
 import { globalIgnores } from 'eslint/config'
 
 export default tseslint.config([
-  globalIgnores(['dist', 'coverage']),
+  // src/types/.api.gen.check.ts is a transient file: `just check-api-types`
+  // regenerates the API types there to diff against the committed
+  // api.gen.ts, then removes it on exit. eslint's src/**/*.ts glob would
+  // otherwise capture the name and fail with ENOENT when the trap deletes it
+  // mid-run -- and it is generated output, so it is not ours to lint anyway.
+  globalIgnores(['dist', 'coverage', 'src/types/.api.gen.check.ts']),
   // Main source code rules (strict)
   {
     files: ['src/**/*.{ts,tsx}'],
