@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useDashboard } from '../hooks/useDashboard';
 import { useDashboardConversations } from '../hooks/useDashboardConversations';
 import { DashboardGameCard } from '@/components/games/DashboardGameCard';
-import { UrgentActionsCard } from '@/components/actions/UrgentActionsCard';
+import { UrgentActionsCard } from '@/components/dashboard/UrgentActionsCard';
 import { RecentActivityCard } from '@/components/dashboard/RecentActivityCard';
 import { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
 import { ActivityTabs } from '@/components/dashboard/ActivityTabs';

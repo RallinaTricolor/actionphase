@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { SkillsManager } from './SkillsManager';
 import { TabNavigation } from '@/components/layout/TabNavigation';
-import { EditorLockNotice } from '@/components/actions/EditorLockNotice';
+import { EditorLockNotice } from '@/components/characters/EditorLockNotice';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import type { CharacterSkill } from '@/types/characters';
 

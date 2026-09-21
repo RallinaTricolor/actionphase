@@ -6,7 +6,7 @@ import { DashboardPage } from '../DashboardPage';
 import type { ComponentProps } from 'react';
 import type { DashboardData } from '../../types/dashboard';
 import type { DashboardGameCard } from '@/components/games/DashboardGameCard';
-import type { UrgentActionsCard } from '@/components/actions/UrgentActionsCard';
+import type { UrgentActionsCard } from '@/components/dashboard/UrgentActionsCard';
 import type { RecentActivityCard } from '@/components/dashboard/RecentActivityCard';
 import type { UpcomingDeadlinesCard } from '@/components/deadlines/UpcomingDeadlinesCard';
 import type { ActivityTabs } from '@/components/dashboard/ActivityTabs';
@@ -28,7 +28,7 @@ vi.mock('@/components/games/DashboardGameCard', () => ({
   ),
 }));
 
-vi.mock('@/components/actions/UrgentActionsCard', () => ({
+vi.mock('@/components/dashboard/UrgentActionsCard', () => ({
   UrgentActionsCard: ({ games }: ComponentProps<typeof UrgentActionsCard>) => (
     <div data-testid="urgent-actions-card">
       Urgent games: {games.filter((g) => g.is_urgent).length}
