@@ -9,7 +9,10 @@ import { MessagingPage } from '../pages/MessagingPage';
  *
  * Verifies that CommentEditor shows a confirmation dialog when the user
  * tries to navigate away (via React Router links) while unsaved text is
- * present. Uses warnOnUnsavedChanges={true} prop which is enabled on:
+ * present. The dialog is the shared ConfirmDiscardDraft ("Discard draft?",
+ * Keep editing / Discard), scoped here by its `discard-navigation-modal`
+ * testid so it is never confused with another confirmation on the page.
+ * Uses warnOnUnsavedChanges={true} prop which is enabled on:
  * - Common room new post (GM only)
  * - Action submission
  * - Private messages (new message)
@@ -38,11 +41,13 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       await navigateViaNavLink(page, 'Dashboard');
 
       // Warning dialog should appear
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText(/you have unsaved text/i)).toBeVisible();
+      const dialog = page.getByTestId('discard-navigation-modal');
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+      await expect(dialog.getByRole('heading', { name: 'Discard draft?' })).toBeVisible();
+      await expect(dialog.getByText(/you have unsaved text/i)).toBeVisible();
     });
 
-    test('Stay button keeps user on page with content intact', async ({ page }) => {
+    test('Keep editing button keeps user on page with content intact', async ({ page }) => {
       await loginAs(page, 'GM');
 
       const gameId = await getFixtureGameId(page, 'COMMON_ROOM_CREATE_POST');
@@ -55,14 +60,15 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       await postTextarea.fill(draftText);
 
       // Attempt navigation
+      const dialog = page.getByTestId('discard-navigation-modal');
       await navigateViaNavLink(page, 'Dashboard');
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
+      await expect(dialog).toBeVisible({ timeout: 5000 });
 
-      // Click Stay
-      await page.getByRole('button', { name: 'Stay' }).click();
+      // Click Keep editing
+      await dialog.getByTestId('confirm-modal-cancel').click();
 
       // Dialog dismissed
-      await expect(page.getByText('Leave page?')).not.toBeVisible();
+      await expect(dialog).not.toBeVisible();
 
       // Still on game page
       await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
@@ -71,7 +77,7 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       await expect(postTextarea).toHaveValue(draftText);
     });
 
-    test('Leave button proceeds with navigation', async ({ page }) => {
+    test('Discard button proceeds with navigation', async ({ page }) => {
       await loginAs(page, 'GM');
 
       const gameId = await getFixtureGameId(page, 'COMMON_ROOM_CREATE_POST');
@@ -82,11 +88,12 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       await postTextarea.fill('Text I am OK abandoning');
 
       // Attempt navigation
+      const dialog = page.getByTestId('discard-navigation-modal');
       await navigateViaNavLink(page, 'Dashboard');
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
+      await expect(dialog).toBeVisible({ timeout: 5000 });
 
-      // Click Leave
-      await page.getByRole('button', { name: 'Leave' }).click();
+      // Click Discard
+      await dialog.getByTestId('confirm-modal-confirm').click();
 
       // Should have navigated
       await page.waitForLoadState('networkidle');
@@ -107,7 +114,7 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       await page.waitForLoadState('networkidle');
 
       // Should navigate directly with no dialog
-      await expect(page.getByText('Leave page?')).not.toBeVisible();
+      await expect(page.getByTestId('discard-navigation-modal')).not.toBeVisible();
       await expect(page).toHaveURL('/dashboard');
     });
   });
@@ -128,10 +135,10 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       // Navigate away
       await navigateViaNavLink(page, 'Dashboard');
 
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('discard-navigation-modal')).toBeVisible({ timeout: 5000 });
     });
 
-    test('Stay preserves action content', async ({ page }) => {
+    test('Keep editing preserves action content', async ({ page }) => {
       await loginAs(page, 'PLAYER_3');
 
       const gameId = await getFixtureGameId(page, 'E2E_ACTION');
@@ -143,12 +150,13 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       const draftAction = 'My carefully drafted action plan';
       await actionTextarea.fill(draftAction);
 
+      const dialog = page.getByTestId('discard-navigation-modal');
       await navigateViaNavLink(page, 'Dashboard');
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
+      await expect(dialog).toBeVisible({ timeout: 5000 });
 
-      await page.getByRole('button', { name: 'Stay' }).click();
+      await dialog.getByTestId('confirm-modal-cancel').click();
 
-      await expect(page.getByText('Leave page?')).not.toBeVisible();
+      await expect(dialog).not.toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/games/${gameId}`));
       await expect(actionTextarea).toHaveValue(draftAction);
     });
@@ -184,7 +192,7 @@ test.describe('@mobile Unsaved Changes Warning', () => {
       // Navigate away
       await navigateViaNavLink(page, 'Dashboard');
 
-      await expect(page.getByText('Leave page?')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('discard-navigation-modal')).toBeVisible({ timeout: 5000 });
     });
   });
 });

@@ -65,13 +65,20 @@ export const ConfirmModal = ({
           {message}
         </p>
 
-        {/* Fixed testids rather than role+name lookups. The confirm button is
+        {/* `type="button"` is load-bearing: Modal renders in place rather than
+            portaling, so when a consumer sits inside a <form> (e.g. the comment
+            editor's discard-draft guard inside CreatePostForm) an implicit
+            type="submit" would submit that form -- posting the very draft the
+            dialog was asking to discard.
+
+            Fixed testids rather than role+name lookups. The confirm button is
             usually labelled for the action it completes -- "Delete" -- which is
             the SAME label as the row button that opened this dialog, so a
             `getByRole('button', { name: 'Delete' })` matches both and a test
             cannot say which one it meant. */}
         <div className="flex justify-end gap-3">
           <Button
+            type="button"
             variant="secondary"
             onClick={onClose}
             disabled={isLoading}
@@ -80,6 +87,7 @@ export const ConfirmModal = ({
             {cancelText}
           </Button>
           <Button
+            type="button"
             variant={variant}
             onClick={handleConfirm}
             loading={isLoading}

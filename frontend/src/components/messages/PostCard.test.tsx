@@ -1035,7 +1035,9 @@ describe('PostCard', () => {
       const textarea = screen.getByPlaceholderText(/write a comment\.\.\./i);
       await user.type(textarea, 'Test content');
 
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-comment-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       // Re-open form to check content is cleared
       await user.click(screen.getByRole('button', { name: /add comment/i }));
@@ -1085,7 +1087,9 @@ describe('PostCard', () => {
 
       expect(localStorage.getItem(autosaveId)).toBeDefined();
 
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-comment-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       expect(localStorage.getItem(autosaveId)).toBeNull();
     });

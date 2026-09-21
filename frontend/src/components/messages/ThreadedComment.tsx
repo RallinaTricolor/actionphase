@@ -17,6 +17,7 @@ import { useGamePermissions } from '@/hooks/useGamePermissions';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { useReportDirty } from '@/hooks/useReportDirty';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
+import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { logger } from '@/services/LoggingService';
 import type { CommentTreeNode } from '@/lib/utils/commentTree';
 import { COMMENT_MAX_DEPTH_MOBILE } from '@/config/comments';
@@ -116,6 +117,7 @@ export const ThreadedComment = memo(function ThreadedComment({
   const [editContent, setEditContent] = useState(comment.content);
   const [selectedEditCharacterId, setSelectedEditCharacterId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDiscardReplyConfirm, setShowDiscardReplyConfirm] = useState(false);
   const isMountedRef = useRef(true);
   const hasLoadedRef = useRef(false);
 
@@ -376,12 +378,22 @@ export const ThreadedComment = memo(function ThreadedComment({
     loadReplies();
   }, [loadReplies]);
 
-  const handleCancelReply = () => {
+  const discardReply = () => {
     setIsReplying(false);
     setReplyContent('');
     if (autosaveRefId) {
       postCachingService.remove(autosaveRefId);
     }
+  }
+
+  // Cancel throws away whatever is typed, and it sits next to the submit
+  // button -- confirm first so a misclick doesn't silently eat a draft.
+  const handleCancelReply = () => {
+    if (replyContent.trim()) {
+      setShowDiscardReplyConfirm(true);
+      return;
+    }
+    discardReply();
   }
 
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -903,6 +915,7 @@ export const ThreadedComment = memo(function ThreadedComment({
                     variant="ghost"
                     size="sm"
                     onClick={handleCancelReply}
+                    data-testid="cancel-reply-button"
                   >
                     Cancel
                   </Button>
@@ -1068,6 +1081,15 @@ export const ThreadedComment = memo(function ThreadedComment({
         confirmText="Delete"
         variant="danger"
         isLoading={isDeleting}
+      />
+
+      {/* Discard-draft confirmation for the reply form's Cancel button */}
+      <ConfirmDiscardDraft
+        isOpen={showDiscardReplyConfirm}
+        onKeepEditing={() => setShowDiscardReplyConfirm(false)}
+        onDiscard={discardReply}
+        noun="reply"
+        testId="discard-reply-modal"
       />
     </div>
   );
