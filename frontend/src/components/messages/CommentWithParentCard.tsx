@@ -14,6 +14,7 @@ import { useAdminMode } from '@/hooks/useAdminMode';
 import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { useUpdateComment, useDeleteComment } from '@/hooks/useCommentMutations';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
+import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { useToast } from '@/contexts/ToastContext';
 import { apiClient } from '@/lib/api';
 import { logger } from '@/services/LoggingService';
@@ -68,6 +69,7 @@ export function CommentWithParentCard({
   );
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [replyPostedId, setReplyPostedId] = useState<number | null>(null);
+  const [showDiscardReplyConfirm, setShowDiscardReplyConfirm] = useState(false);
 
   const portraitAvatars = game?.portrait_avatars ?? false;
   const isAuthor = currentUser?.id === comment.author_id;
@@ -153,6 +155,24 @@ export function CommentWithParentCard({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const discardReply = () => {
+    setIsReplying(false);
+    setReplyContent('');
+    if (autosaveRefId) {
+      postCachingService.remove(autosaveRefId);
+    }
+  };
+
+  // Cancel throws away whatever is typed, and it sits next to the submit
+  // button -- confirm first so a misclick doesn't silently eat a draft.
+  const handleCancelReply = () => {
+    if (replyContent.trim()) {
+      setShowDiscardReplyConfirm(true);
+      return;
+    }
+    discardReply();
   };
 
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -492,8 +512,9 @@ export function CommentWithParentCard({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setIsReplying(false); setReplyContent(''); }}
+                  onClick={handleCancelReply}
                   disabled={isSubmittingReply}
+                  data-testid="cancel-reply-button"
                 >
                   Cancel
                 </Button>
@@ -512,6 +533,15 @@ export function CommentWithParentCard({
         confirmText="Delete"
         variant="danger"
         isLoading={isDeleting}
+      />
+
+      {/* Discard-draft confirmation for the reply form's Cancel button */}
+      <ConfirmDiscardDraft
+        isOpen={showDiscardReplyConfirm}
+        onKeepEditing={() => setShowDiscardReplyConfirm(false)}
+        onDiscard={discardReply}
+        noun="reply"
+        testId="discard-reply-modal"
       />
     </Card>
   );
