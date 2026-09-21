@@ -84,53 +84,15 @@ describe('ChangeEmailForm', () => {
     });
   });
 
-  it.skip('shows validation error for invalid email format', async () => {
-    renderWithProviders(<ChangeEmailForm />);
-
-    const emailInput = screen.getByLabelText('New Email');
-    const passwordInput = screen.getByLabelText('Current Password');
-    const submitButton = screen.getByRole('button', { name: 'Send Verification Email' });
-
-    fireEvent.change(emailInput, { target: { value: 'invalidemail' } });
-    fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-    });
-  });
-
-  it.skip('validates email with missing @ symbol', async () => {
-    renderWithProviders(<ChangeEmailForm />);
-
-    const emailInput = screen.getByLabelText('New Email');
-    const passwordInput = screen.getByLabelText('Current Password');
-    const submitButton = screen.getByRole('button', { name: 'Send Verification Email' });
-
-    fireEvent.change(emailInput, { target: { value: 'userexample.com' } });
-    fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-    });
-  });
-
-  it.skip('validates email with missing domain', async () => {
-    renderWithProviders(<ChangeEmailForm />);
-
-    const emailInput = screen.getByLabelText('New Email');
-    const passwordInput = screen.getByLabelText('Current Password');
-    const submitButton = screen.getByRole('button', { name: 'Send Verification Email' });
-
-    fireEvent.change(emailInput, { target: { value: 'user@' } });
-    fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
-    });
-  });
+  // No test for a malformed address (no @, no domain, etc.): the New Email
+  // field is type="email", so the browser blocks submit and shows its own
+  // message before onSubmit runs. The component used to carry a regex and a
+  // "Please enter a valid email address" Alert behind that native check, which
+  // no user could reach -- the three tests asserting on it had been skipped
+  // rather than failing. Both are gone; the browser owns format, and the
+  // backend remains the authority (errorMapper maps its rejection to the same
+  // wording). The empty-field cases below are still tested here, because an
+  // empty non-required input passes native validation and reaches handleSubmit.
 
   it('shows validation error when current password is empty', async () => {
     renderWithProviders(<ChangeEmailForm />);

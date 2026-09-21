@@ -7,13 +7,14 @@ import { localDateTimeToUTC } from '../../utils/timezone';
  *
  * The regression they exist for: game create/update once sent dates as
  * "November 10, 2025 12:00 AM" instead of ISO 8601, which the backend rejects.
- * That was previously caught only in src/lib/__tests__/api.games.test.ts, which
- * had been excluded from the vitest run since 2025-10-17 and so caught nothing
- * for eleven months. Testing convertToISO8601 directly is both cheaper and
- * broader: CreateGameForm and EditGameModal both route their dates through it
- * via useGameForm's buildApiPayload, so one test covers every caller.
+ * That was previously caught only in a src/lib/ api.games test, which had
+ * been excluded from the vitest run since 2025-10-17 -- so it caught nothing
+ * for eleven months, and has since been deleted. Testing convertToISO8601
+ * directly is both cheaper and broader: CreateGameForm and EditGameModal both
+ * route their dates through it via useGameForm's buildApiPayload, so one test
+ * covers every caller.
  *
- * Timezone MATH is not retested here -- utils/__tests__/timezone.test.ts owns
+ * Timezone MATH is not retested here -- utils/timezone.test.ts owns
  * localDateTimeToUTC and utcToLocalDateTime. What is pinned here is the
  * delegating layer: the output FORMAT, and the empty-input guard that only
  * exists in this module.

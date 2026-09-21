@@ -1,14 +1,56 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, render, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CreateDeadlineModal } from './CreateDeadlineModal';
+
+/**
+ * The Deadline field is a react-datepicker (via DateTimeInput), not a native
+ * datetime-local input. It parses what is typed using its own dateFormat
+ * ("MMMM d, yyyy h:mm aa") and only calls onChange once that parse succeeds,
+ * so fireEvent.change with an ISO-ish "2025-12-31T23:59" sets no date at all
+ * and the form silently stays empty. Several tests here did exactly that and
+ * had been skipped rather than fixed. setDeadline() below types the format the
+ * picker actually reads.
+ */
+const DEADLINE_FORMAT: Intl.DateTimeFormatOptions = {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+};
+
+function typeDeadline(input: HTMLElement, date: Date) {
+  // Intl renders "January 1, 2020 at 12:00 PM" on this ICU build (a comma
+  // instead of " at " on others); the picker's dateFormat has neither, so
+  // both separators are normalized away. \s also covers the NBSP that some
+  // builds put before AM/PM.
+  const text = new Intl.DateTimeFormat('en-US', DEADLINE_FORMAT)
+    .format(date)
+    .replace(/\s/g, ' ')
+    .replace(/(\d{4})(?:,| at) /, '$1 ');
+  fireEvent.change(input, { target: { value: text } });
+}
 
 describe('CreateDeadlineModal', () => {
   const mockOnClose = vi.fn();
   const mockOnSubmit = vi.fn();
 
+  // Dates are relative to a pinned now, not hardcoded. These tests previously
+  // used a literal 2025-12-31 as "a future date", which silently became a past
+  // date and would have started failing on its own.
+  const NOW = new Date('2026-06-15T12:00:00Z');
+  const FUTURE = new Date('2026-12-31T23:59:00Z');
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('Visibility', () => {
@@ -134,8 +176,7 @@ describe('CreateDeadlineModal', () => {
       const deadlineInput = screen.getByPlaceholderText(/select deadline date and time/i);
 
       // datetime-local format: YYYY-MM-DDTHH:mm
-      const futureDateTime = '2025-12-31T23:59';
-      fireEvent.change(deadlineInput, { target: { value: futureDateTime } });
+      typeDeadline(deadlineInput, FUTURE);
 
       // react-datepicker doesn't set input value attribute directly
       // The value is managed internally by the DateTimeInput component
@@ -245,9 +286,7 @@ describe('CreateDeadlineModal', () => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
-    // Skipped: react-datepicker interactions are complex to test in unit tests
-    // This validation is covered by E2E tests
-    it.skip('should show error when deadline is in the past', async () => {
+    it('should show error when deadline is in the past', async () => {
       const user = userEvent.setup({ delay: null });
 
       render(
@@ -266,8 +305,7 @@ describe('CreateDeadlineModal', () => {
       await user.type(descriptionInput, 'Test description');
 
       // Use a date in the past
-      const pastDateTime = '2020-01-01T12:00';
-      fireEvent.change(deadlineInput, { target: { value: pastDateTime } });
+      typeDeadline(deadlineInput, new Date('2020-01-01T12:00:00Z'));
 
       const createButton = screen.getByRole('button', { name: /create deadline/i });
       await user.click(createButton);
@@ -279,9 +317,7 @@ describe('CreateDeadlineModal', () => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
-    // Skipped: react-datepicker interactions are complex to test in unit tests
-    // This validation is covered by E2E tests
-    it.skip('should accept title of exactly 100 characters', async () => {
+    it('should accept title of exactly 100 characters', async () => {
       const user = userEvent.setup({ delay: null });
 
       render(
@@ -302,8 +338,7 @@ describe('CreateDeadlineModal', () => {
       await user.type(descriptionInput, 'Test description');
 
       // Use a future date
-      const futureDateTime = '2025-12-31T23:59';
-      fireEvent.change(deadlineInput, { target: { value: futureDateTime } });
+      typeDeadline(deadlineInput, FUTURE);
 
       const createButton = screen.getByRole('button', { name: /create deadline/i });
       await user.click(createButton);
@@ -315,9 +350,7 @@ describe('CreateDeadlineModal', () => {
   });
 
   describe('Form submission', () => {
-    // Skipped: react-datepicker interactions are complex to test in unit tests
-    // This validation is covered by E2E tests
-    it.skip('should call onSubmit with correct data when form is valid', async () => {
+    it('should call onSubmit with correct data when form is valid', async () => {
       const user = userEvent.setup({ delay: null });
 
       render(
@@ -336,8 +369,7 @@ describe('CreateDeadlineModal', () => {
       await user.type(descriptionInput, 'Submit your action by this date');
 
       // Use a future date
-      const futureDateTime = '2025-12-31T23:59';
-      fireEvent.change(deadlineInput, { target: { value: futureDateTime } });
+      typeDeadline(deadlineInput, FUTURE);
 
       const createButton = screen.getByRole('button', { name: /create deadline/i });
       await user.click(createButton);
@@ -346,14 +378,12 @@ describe('CreateDeadlineModal', () => {
         expect(mockOnSubmit).toHaveBeenCalledWith({
           title: 'Phase 1 Deadline',
           description: 'Submit your action by this date',
-          deadline: expect.stringMatching(/2025-12-31T\d{2}:59:00\.\d{3}Z/), // ISO 8601 format
+          deadline: expect.stringMatching(/^2026-12-31T\d{2}:59:00\.\d{3}Z$/), // ISO 8601
         });
       });
     });
 
-    // Skipped: react-datepicker interactions are complex to test in unit tests
-    // This validation is covered by E2E tests
-    it.skip('should trim whitespace from title and description', async () => {
+    it('should trim whitespace from title and description', async () => {
       const user = userEvent.setup({ delay: null });
 
       render(
@@ -371,8 +401,7 @@ describe('CreateDeadlineModal', () => {
       await user.type(titleInput, '  Test Deadline  ');
       await user.type(descriptionInput, '  Test description  ');
 
-      const futureDateTime = '2025-12-31T23:59';
-      fireEvent.change(deadlineInput, { target: { value: futureDateTime } });
+      typeDeadline(deadlineInput, FUTURE);
 
       const createButton = screen.getByRole('button', { name: /create deadline/i });
       await user.click(createButton);
@@ -387,9 +416,7 @@ describe('CreateDeadlineModal', () => {
       });
     });
 
-    // Skipped: react-datepicker interactions are complex to test in unit tests
-    // This validation is covered by E2E tests
-    it.skip('should convert datetime-local to ISO 8601 format', async () => {
+    it('should convert datetime-local to ISO 8601 format', async () => {
       const user = userEvent.setup({ delay: null });
 
       render(
@@ -406,7 +433,7 @@ describe('CreateDeadlineModal', () => {
 
       await user.type(titleInput, 'Test');
       await user.type(descriptionInput, 'Test');
-      fireEvent.change(deadlineInput, { target: { value: '2025-12-31T23:59' } });
+      typeDeadline(deadlineInput, FUTURE);
 
       const createButton = screen.getByRole('button', { name: /create deadline/i });
       await user.click(createButton);

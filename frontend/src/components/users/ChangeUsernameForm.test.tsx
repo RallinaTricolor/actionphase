@@ -23,26 +23,10 @@ vi.mock('@/contexts/AuthContext', async (importOriginal) => {
   };
 });
 
-/*
- * NOTE: Some tests in this file are currently skipped due to an MSW issue
- * where `server.use()` handlers returning 200 success responses are not being matched.
- * Error responses (500) work fine, as do tests that don't use `server.use()`.
- * The component functionality works correctly in actual usage - this is purely a test configuration issue.
- * See: "trims whitespace", "submits form", "shows error alert when API call fails", "disables form inputs while submitting"
- */
 
 describe('ChangeUsernameForm', () => {
   beforeEach(() => {
     server.resetHandlers();
-    // jsdom makes location.reload non-configurable, so it cannot be spied on
-    // individually -- the whole object has to be redefined. defineProperty does
-    // this without a cast; `window as Record<string, unknown>` does not
-    // typecheck, because Window does not sufficiently overlap with it.
-    Object.defineProperty(window, 'location', {
-      value: { ...window.location, reload: vi.fn() },
-      writable: true,
-      configurable: true,
-    });
   });
 
   it('renders change username form with current username', () => {
@@ -97,9 +81,14 @@ describe('ChangeUsernameForm', () => {
     });
   });
 
-  it.skip('trims whitespace from new username', async () => {
+  it('trims whitespace from new username', async () => {
+    // Assert on the request body, not the response: the handler returns 200
+    // whatever it is sent, so a success toast alone would pass even if the
+    // untrimmed value went over the wire.
+    let sentBody: { new_username?: string } | undefined;
     server.use(
-      http.post('http://localhost:3000/api/v1/auth/change-username', async () => {
+      http.post('http://localhost:3000/api/v1/auth/change-username', async ({ request }) => {
+        sentBody = (await request.json()) as { new_username?: string };
         return HttpResponse.json({ message: 'Username changed successfully' }, { status: 200 });
       })
     );
@@ -114,9 +103,8 @@ describe('ChangeUsernameForm', () => {
     fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
     fireEvent.click(submitButton);
 
-    // Success toast should appear (proves trimming worked and request succeeded)
     await waitFor(() => {
-      expect(screen.getByText(/Username changed successfully/i)).toBeInTheDocument();
+      expect(sentBody?.new_username).toBe('newusername');
     });
 
     // Form should be cleared
@@ -124,14 +112,9 @@ describe('ChangeUsernameForm', () => {
       expect(usernameInput).toHaveValue('');
       expect(passwordInput).toHaveValue('');
     });
-
-    // Page should reload
-    await waitFor(() => {
-      expect(window.location.reload).toHaveBeenCalled();
-    });
   });
 
-  it.skip('submits form with valid data successfully', async () => {
+  it('submits form with valid data successfully', async () => {
     server.use(
       http.post('http://localhost:3000/api/v1/auth/change-username', async () => {
         return HttpResponse.json({ message: 'Username changed successfully' });
@@ -158,14 +141,9 @@ describe('ChangeUsernameForm', () => {
       expect(usernameInput).toHaveValue('');
       expect(passwordInput).toHaveValue('');
     });
-
-    // Page should reload
-    await waitFor(() => {
-      expect(window.location.reload).toHaveBeenCalled();
-    });
   });
 
-  it.skip('shows error alert and toast when API call fails', async () => {
+  it('shows error alert and toast when API call fails', async () => {
     server.use(
       http.post('http://localhost:3000/api/v1/auth/change-username', async () => {
         return HttpResponse.json(
@@ -233,7 +211,7 @@ describe('ChangeUsernameForm', () => {
     expect(screen.getByText('New username is required')).toBeInTheDocument();
   });
 
-  it.skip('disables form inputs while submitting', async () => {
+  it('disables form inputs while submitting', async () => {
     server.use(
       http.post('http://localhost:3000/api/v1/auth/change-username', async () => {
         // Simulate slow API

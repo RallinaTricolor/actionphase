@@ -111,7 +111,6 @@ export const ThreadedComment = memo(function ThreadedComment({
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
@@ -421,7 +420,13 @@ export const ThreadedComment = memo(function ThreadedComment({
     };
 
     try {
-      setIsSubmitting(true);
+      // No in-flight UI here (spinner, "Posting...", disabled fields) by
+      // design: the form closes and the optimistic reply renders before the
+      // first await, so the user already sees the result. An earlier version
+      // carried an isSubmitting flag driving a disabled state that setIsReplying
+      // (below) made unreachable -- two tests asserting on it had been skipped
+      // rather than failing. Failure is handled by the catch: it rolls the
+      // optimistic reply back and reopens the form with the content restored.
 
       // Only add optimistic reply if some rendered viewport will show children
       // at this depth; otherwise the reply would be inserted into a subtree that
@@ -486,8 +491,6 @@ export const ThreadedComment = memo(function ThreadedComment({
       // Restore reply form state so user can retry
       setReplyContent(optimisticReply.content);
       setIsReplying(true);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -863,7 +866,6 @@ export const ThreadedComment = memo(function ThreadedComment({
                     value={selectedCharacterId || ''}
                     onChange={(e) => setSelectedCharacterId(Number(e.target.value))}
                     className="mb-2"
-                    disabled={isSubmitting}
                   >
                     {controllableCharacters.map((char) => (
                       <option key={char.id} value={char.id}>
@@ -878,7 +880,6 @@ export const ThreadedComment = memo(function ThreadedComment({
                     value={replyContent}
                     onChange={setReplyContent}
                     placeholder="Write a reply..."
-                    disabled={isSubmitting}
                     characters={characters}
                     maxLength={10000}
                     warnOnUnsavedChanges
@@ -892,17 +893,16 @@ export const ThreadedComment = memo(function ThreadedComment({
                     type="submit"
                     variant="primary"
                     size="sm"
-                    disabled={isSubmitting || !replyContent.trim()}
+                    disabled={!replyContent.trim()}
                     data-faro-user-action-name="submit-comment"
                   >
-                    {isSubmitting ? 'Posting...' : 'Reply'}
+                    Reply
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={handleCancelReply}
-                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>

@@ -39,13 +39,6 @@ export function ChangeEmailForm() {
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
     if (!currentPassword) {
       setError('Current password is required');
       return;

@@ -322,6 +322,85 @@ tab — but *not* before reading one. See `e2e/pages/GameSettingsPage.ts`.
 
 ---
 
+## Frontend Test Layout: Co-locate, Always
+
+**A frontend test sits in the same directory as the module it covers, named after it.**
+
+```
+src/components/deadlines/UpcomingDeadlinesCard.tsx
+src/components/deadlines/UpcomingDeadlinesCard.test.tsx   ✅
+
+src/hooks/__tests__/useParticipantFit.test.ts             ❌
+```
+
+This mirrors the Go convention already used across the backend (`foo.go` /
+`foo_test.go` in one package) — one rule for both halves of the repo.
+
+**Why**, concretely: a test one directory away from its subject is a test you
+do not notice when you change the subject. It does not get renamed with it,
+moved with it, or deleted with it. That is not hypothetical here — the
+`src/lib/__tests__/api.games.test.ts` file sat excluded from the vitest run
+for eleven months without anyone noticing, because nothing about editing
+`src/lib/api/games.ts` pointed at it.
+
+**The one exception — `src/__tests__/`:** repo-wide guard tests that have no
+single subject module to sit beside. Currently `component-organization.test.ts`
+(enforces the `components/` domain layout *and this rule*), `retired-tokens.test.ts`
+(fails on retired design tokens), and `App.test.tsx`. A test belongs here only
+if it asserts something about the tree as a whole; if you can name one module
+it covers, it goes beside that module.
+
+Cross-cutting *integration* tests that span several modules still co-locate,
+next to the component that owns the flow — e.g.
+`dirtyReporting.integration.test.tsx`.
+
+**This is enforced.** `src/__tests__/component-organization.test.ts` fails the
+build on any `__tests__/` directory outside `src/__tests__/`. Eight of them had
+accumulated (`hooks/`, `lib/`, `lib/utils/`, `pages/`, `pages/admin/`,
+`pages/community/`, `utils/`, `components/utility-drawer/`) and were flattened
+on 2026-09-21; the guard is what keeps them from growing back one file at a
+time.
+
+---
+
+## No Skipped Tests
+
+**`it.skip` is not a way to leave a failing test in the tree.** A skipped test
+is strictly worse than no test: it looks like coverage in the file, reports as
+a pass, and never runs.
+
+When a test fails, it means one of three things — resolve it, don't skip it:
+
+1. **The test is right and the code is wrong** → fix the code.
+2. **The code is right and the test is stale** → fix the test's assertion.
+3. **The behavior it asserts should not exist** → delete the test *and* the
+   code that was there to satisfy it.
+
+All three showed up in the 14 skips cleared on 2026-09-21, and each one was
+hiding something real:
+
+- `ThreadedComment` had a `isSubmitting` flag driving "Posting...", a disabled
+  textarea and a disabled cancel button — all unreachable, because
+  `setIsReplying(false)` closes the form before the first `await`. Two skipped
+  tests were the only evidence. Deleted the dead state (case 3).
+- `ChangeUsernameForm` asserted `window.location.reload()`; the component had
+  moved to `queryClient.invalidateQueries(['currentUser'])` long before. The
+  file header blamed "an MSW issue" that did not exist (case 2).
+- `CreateDeadlineModal` drove a react-datepicker with
+  `fireEvent.change(..., '2025-12-31T23:59')`. The picker parses its own
+  `dateFormat`, so no date was ever set — and the hardcoded 2025 date had since
+  become a past date, so it would have failed anyway. Tests now type the format
+  the picker reads, against a pinned `vi.setSystemTime` (case 2).
+- `ChangeEmailForm` asserted a custom "Please enter a valid email address"
+  Alert behind a `type="email"` input. The browser blocks submit first, so no
+  user could ever see it. Deleted both the tests and the regex; the browser
+  owns format and the backend remains the authority (case 3).
+
+If a test genuinely cannot run yet, delete it and write down why — a TODO in
+the code under test is visible; a skipped test is not.
+
+---
+
 ## Quick Reference: Test File Locations
 
 | What | Where |
@@ -329,7 +408,9 @@ tab — but *not* before reading one. See `e2e/pages/GameSettingsPage.ts`.
 | HTTP handler tests | `pkg/<feature>/api_*_test.go` (same package) |
 | Service tests | `pkg/db/services/*_test.go` |
 | Middleware tests | `pkg/http/middleware/*_test.go` |
-| Frontend component tests | `frontend/src/components/**/*.test.tsx` |
+| Frontend component tests | beside the component: `Foo.tsx` -> `Foo.test.tsx` |
+| Frontend hook / lib / util tests | beside the module: `useFoo.ts` -> `useFoo.test.ts` |
+| Frontend repo-wide guard tests | `frontend/src/__tests__/` (only if no single subject) |
 | E2E tests | `frontend/e2e/**/*.spec.ts` |
 
 Reference implementations (good tests to copy patterns from):

@@ -45,3 +45,44 @@ describe('components/ organization', () => {
     expect(dirs).not.toContain('__tests__');
   });
 });
+
+/**
+ * Guard the placement of test files across all of `src/`.
+ *
+ * The same drift that produced a flat `components/` also produced eight
+ * scattered `__tests__/` directories (hooks/, lib/, pages/, utils/, ...) while
+ * newer tests were written beside their subject. They were flattened on
+ * 2026-09-21. This keeps them flat, for the reason the directory split was a
+ * problem in the first place: a test one directory away from its subject is a
+ * test you do not notice when you change the subject, and does not get renamed,
+ * moved or deleted with it.
+ *
+ * `src/__tests__/` is the deliberate exception -- it holds repo-wide guards
+ * like this file and retired-tokens.test.ts, which have no single subject
+ * module to sit beside.
+ */
+const SRC = join(process.cwd(), 'src');
+
+function findTestDirs(dir: string, found: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    if (entry === 'node_modules') continue;
+    const full = join(dir, entry);
+    if (!statSync(full).isDirectory()) continue;
+    if (entry === '__tests__') found.push(full);
+    else findTestDirs(full, found);
+  }
+  return found;
+}
+
+describe('test file placement', () => {
+  it('has no __tests__/ directory outside src/__tests__/', () => {
+    const offenders = findTestDirs(SRC)
+      .filter((d) => d !== join(SRC, '__tests__'))
+      .map((d) => d.slice(SRC.length + 1));
+
+    // A test belongs beside the module it covers: Foo.tsx -> Foo.test.tsx in
+    // the same directory. Only cross-cutting guards with no single subject go
+    // in src/__tests__/.
+    expect(offenders).toEqual([]);
+  });
+});
