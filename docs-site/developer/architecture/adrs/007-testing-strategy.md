@@ -445,7 +445,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../contexts/AuthContext';
-import { GamesList } from '../components/GamesList';
+import { GamesList } from '../components/games/GamesList';
 import { server } from '../mocks/server';
 import { http, HttpResponse } from 'msw';
 

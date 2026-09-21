@@ -6,7 +6,7 @@ import type { LoginRequest, RegisterRequest, User, RegisterResponse } from '../t
 import { isRegisterCreated } from '../types/auth';
 import type { AxiosResponse } from 'axios';
 import { logger } from '@/services/LoggingService';
-import { SessionExpiredModal } from '@/components/SessionExpiredModal';
+import { SessionExpiredModal } from '@/components/auth/SessionExpiredModal';
 import { setFaroUser, clearFaroUser } from '@/lib/faro';
 
 interface AuthContextValue {

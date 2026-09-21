@@ -5,17 +5,17 @@ import { apiClient } from '../lib/api';
 import { useCharacterComments } from '../hooks/useCharacterComments';
 import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel';
 import { useCharacterStats } from '../hooks/useCharacterStats';
-import CharacterAvatar from '../components/CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useOptionalGameContext } from '../contexts/GameContext';
-import { ParentCommentPreview } from '../components/ParentCommentPreview';
-import { MarkdownPreview } from '../components/MarkdownPreview';
-import { CollapsibleMarkdown } from '../components/CollapsibleMarkdown';
+import { ParentCommentPreview } from '@/components/messages/ParentCommentPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
+import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMarkdown';
 import { Spinner, Alert, Badge, Card, CardBody } from '../components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import type { CharacterMessage } from '../types/messages';
-import { CharacterActivityStats } from '../components/CharacterActivityStats';
-import { MessageCharacterButton } from '../components/MessageCharacterButton';
-import { FavoriteButton } from '../components/FavoriteButton';
+import { CharacterActivityStats } from '@/components/characters/CharacterActivityStats';
+import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
+import { FavoriteButton } from '@/components/messages/FavoriteButton';
 import { useFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 
 /**

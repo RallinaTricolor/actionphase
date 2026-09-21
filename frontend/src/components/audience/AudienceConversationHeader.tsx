@@ -1,7 +1,7 @@
 import React from 'react';
 import type { AudienceConversationListItem } from '../../types/conversations';
 import { Badge, Button } from '../ui';
-import CharacterAvatar from '../CharacterAvatar';
+import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { useOptionalGameContext } from '../../contexts/GameContext';
 
 interface AudienceConversationHeaderProps {

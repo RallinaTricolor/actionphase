@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { GameFormData } from '../components/GameFormFields';
+import type { GameFormData } from '@/components/games/GameFormFields';
 
 /**
  * Fields compared to decide whether the game form has unsaved edits.

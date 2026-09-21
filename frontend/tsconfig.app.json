@@ -33,7 +33,6 @@
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/**/__tests__/**",
     "src/test-utils/**",
     "src/setupTests.ts"
   ]

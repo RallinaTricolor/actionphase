@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useCommunities } from '../../hooks/useCommunities';
 import { Button, Input, Badge } from '../../components/ui';
-import { UserSearchSelect, type SelectedUser } from '../../components/UserSearchSelect';
+import { UserSearchSelect, type SelectedUser } from '@/components/participants/UserSearchSelect';
 import type { Community } from '../../types/communities';
 import { extractApiErrorMessage } from '@/lib/errors';
 

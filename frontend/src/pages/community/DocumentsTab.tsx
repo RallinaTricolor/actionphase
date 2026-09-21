@@ -10,9 +10,9 @@ import {
   Input,
   Checkbox,
 } from '../../components/ui';
-import { CommentEditor } from '../../components/CommentEditor';
-import { Modal } from '../../components/Modal';
-import { ConfirmModal } from '../../components/ConfirmModal';
+import { CommentEditor } from '@/components/messages/CommentEditor';
+import { Modal } from '@/components/common/modals/Modal';
+import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { useToast } from '../../contexts/ToastContext';
 import { useManageCommunityDocuments } from '../../hooks/useCommunities';
 import type { Community, CommunityDocument } from '../../types/communities';
