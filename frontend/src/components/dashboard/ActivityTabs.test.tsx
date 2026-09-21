@@ -266,6 +266,10 @@ describe('ActivityTabs', () => {
     it('handles many deadlines', () => {
       const manyDeadlines = Array.from({ length: 10 }, (_, i) => ({
         ...mockDeadlines[0],
+        // source_id tracks phase_id: the phase branch of the deadlines query
+        // selects gp.id as both. The mocked card here does not key on it, but
+        // leaving 10 rows on source_id 1 is a shape the API cannot return.
+        source_id: i + 1,
         phase_id: i + 1,
         phase_title: `Phase ${i + 1}`,
       }));

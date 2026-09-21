@@ -106,18 +106,26 @@ describe('UpcomingDeadlinesCard', () => {
 
   it('displays multiple deadlines', () => {
     const deadlines: DashboardDeadline[] = [
+      // source_id, not just phase_id: the row key is
+      // `${deadline_type}-${source_id}`, and for a 'phase' deadline the query
+      // selects `gp.id` as both, so the two always move together. Varying only
+      // phase_id built three rows sharing key `phase-1` -- a shape the backend
+      // cannot emit, and React warned about the duplicate.
       {
         ...baseDeadline,
+        source_id: 1,
         phase_id: 1,
         game_title: 'Game One',
       },
       {
         ...baseDeadline,
+        source_id: 2,
         phase_id: 2,
         game_title: 'Game Two',
       },
       {
         ...baseDeadline,
+        source_id: 3,
         phase_id: 3,
         game_title: 'Game Three',
       },
