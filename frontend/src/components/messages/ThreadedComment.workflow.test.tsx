@@ -834,7 +834,9 @@ describe('ThreadedComment', () => {
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test content');
 
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-reply-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       expect(screen.queryByPlaceholderText(/write a reply/i)).not.toBeInTheDocument();
     });
@@ -856,7 +858,9 @@ describe('ThreadedComment', () => {
       await user.click(screen.getByRole('button', { name: /reply/i }));
       const textarea = screen.getByPlaceholderText(/write a reply/i);
       await user.type(textarea, 'Test content');
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-reply-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       // Reopen form
       await user.click(screen.getByRole('button', { name: /reply/i }));
@@ -911,7 +915,9 @@ describe('ThreadedComment', () => {
 
       expect(localStorage.getItem(autosaveId)).toBeDefined();
 
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-reply-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       expect(localStorage.getItem(autosaveId)).toBeNull();
     });

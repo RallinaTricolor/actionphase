@@ -754,7 +754,7 @@ describe('Tab Layout', () => {
 
       await act(() => router.navigate('/other'));
 
-      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('discard-navigation-modal')).not.toBeInTheDocument();
     });
 
     it('shows confirmation dialog when navigating away with unsaved content', async () => {
@@ -766,7 +766,7 @@ describe('Tab Layout', () => {
 
       await act(() => router.navigate('/other'));
 
-      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+      expect(screen.getByTestId('discard-navigation-modal')).toBeInTheDocument();
       expect(screen.getByText(/you have unsaved text/i)).toBeInTheDocument();
     });
 
@@ -779,11 +779,11 @@ describe('Tab Layout', () => {
       });
 
       await act(() => router.navigate('/other'));
-      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+      expect(screen.getByTestId('discard-navigation-modal')).toBeInTheDocument();
 
-      await user.click(screen.getByRole('button', { name: 'Stay' }));
+      await user.click(screen.getByTestId('confirm-modal-cancel'));
 
-      await waitFor(() => expect(screen.queryByText('Leave page?')).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByTestId('discard-navigation-modal')).not.toBeInTheDocument());
       expect(router.state.location.pathname).toBe('/');
     });
 
@@ -796,9 +796,9 @@ describe('Tab Layout', () => {
       });
 
       await act(() => router.navigate('/other'));
-      expect(screen.getByText('Leave page?')).toBeInTheDocument();
+      expect(screen.getByTestId('discard-navigation-modal')).toBeInTheDocument();
 
-      await user.click(screen.getByRole('button', { name: 'Leave' }));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       expect(router.state.location.pathname).toBe('/other');
     });
@@ -812,7 +812,7 @@ describe('Tab Layout', () => {
 
       await act(() => router.navigate('/other'));
 
-      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('discard-navigation-modal')).not.toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/other');
     });
 
@@ -824,7 +824,7 @@ describe('Tab Layout', () => {
 
       await act(() => router.navigate('/other'));
 
-      expect(screen.queryByText('Leave page?')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('discard-navigation-modal')).not.toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/other');
     });
   });

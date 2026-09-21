@@ -8,11 +8,12 @@ import { CharacterAutocomplete } from '@/components/characters/CharacterAutocomp
 import { applyMarkdownFormat, formatForKey } from '@/components/common/markdown/markdownHotkeys';
 import type { MarkdownFormat } from '@/components/common/markdown/markdownHotkeys';
 import { SheetItemAutocomplete } from '@/components/characters/SheetItemAutocomplete';
-import { Button, Textarea, Modal } from '@/components/ui';
+import { Button, Textarea } from '@/components/ui';
 import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
 import type { Character } from '@/types/characters';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { postCachingService } from '@/services/PostCachingService';
+import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 
 /**
  * Inner component that calls useBlocker and renders the confirmation modal.
@@ -31,27 +32,18 @@ function UnsavedChangesGuard({ hasContent }: { hasContent: boolean }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasContent]);
 
+  // Same question the Cancel guards ask, reached by navigating away instead of
+  // by pressing Cancel -- so it shares their dialog. The trigger differs
+  // (useBlocker's reset/proceed rather than a plain callback), the prompt does not.
   return (
-    <Modal
+    <ConfirmDiscardDraft
       isOpen={blocker.state === 'blocked'}
-      onClose={() => blocker.reset?.()}
-      title="Leave page?"
-      size="sm"
-      footer={
-        <>
-          <Button variant="secondary" onClick={() => blocker.reset?.()}>
-            Stay
-          </Button>
-          <Button variant="danger" onClick={() => blocker.proceed?.()}>
-            Leave
-          </Button>
-        </>
-      }
-    >
-      <p className="text-content-primary">
-        You have unsaved text in this editor. If you leave, your changes will be lost.
-      </p>
-    </Modal>
+      onKeepEditing={() => blocker.reset?.()}
+      onDiscard={() => blocker.proceed?.()}
+      noun="draft"
+      message="You have unsaved text in this editor. If you leave, your changes will be lost."
+      testId="discard-navigation-modal"
+    />
   );
 }
 

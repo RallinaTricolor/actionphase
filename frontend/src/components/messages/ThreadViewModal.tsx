@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { ThreadedComment } from './ThreadedComment';
 import type { Message } from '@/types/messages';
 import type { CommentTreeNode } from '@/lib/utils/commentTree';
@@ -10,6 +9,7 @@ import { THREAD_VIEW_MAX_DEPTH } from '@/config/comments';
 import { LAYERS } from '@/config/layers';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
+import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 
 interface ThreadViewModalProps {
   gameId: number;
@@ -283,29 +283,16 @@ export function ThreadViewModal({
         />
       )}
 
-      {/* Discard confirmation — portaled to document.body so it escapes any parent stacking context */}
-      {showDiscardConfirm && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div
-            className="surface-raised rounded-lg shadow-xl border border-theme-default max-w-sm w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-content-primary mb-2">Discard unsaved reply?</h3>
-            <p className="text-content-secondary text-sm mb-6">
-              You have unsaved text in the reply editor. If you close this thread, your reply will be lost.
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => setShowDiscardConfirm(false)}>
-                Keep editing
-              </Button>
-              <Button variant="danger" onClick={onClose}>
-                Discard
-              </Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Closing the thread destroys any pending reply inside it, so this asks in
+          the same words as the reply editors' own Cancel guard. */}
+      <ConfirmDiscardDraft
+        isOpen={showDiscardConfirm}
+        onKeepEditing={() => setShowDiscardConfirm(false)}
+        onDiscard={onClose}
+        noun="reply"
+        message="You have unsaved text in the reply editor. If you close this thread, your reply will be lost."
+        testId="discard-thread-reply-modal"
+      />
     </>
   );
 }

@@ -22,6 +22,7 @@ import { useInfiniteScrollSentinel } from '@/hooks/useInfiniteScrollSentinel';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { postCachingService } from '@/services/PostCachingService';
+import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 
 interface PostCardProps {
   post: Message;
@@ -115,6 +116,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDiscardCommentConfirm, setShowDiscardCommentConfirm] = useState(false);
   const [isPostCollapsed, setIsPostCollapsed] = usePostCollapseState(post.id);
   const [threadModalComment, setThreadModalComment] = useState<Message | CommentTreeNode | null>(null);
   const gameContext = useOptionalGameContext();
@@ -355,12 +357,22 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     setThreadModalComment(comment);
   }, []);
 
-  const handleCancelComment = () => {
+  const discardComment = () => {
     setIsCommenting(false);
     setReplyContent('');
     if (autosaveRefId) {
       postCachingService.remove(autosaveRefId);
     }
+  }
+
+  // Cancel throws away whatever is typed, and it sits next to the submit
+  // button -- confirm first so a misclick doesn't silently eat a draft.
+  const handleCancelComment = () => {
+    if (replyContent.trim()) {
+      setShowDiscardCommentConfirm(true);
+      return;
+    }
+    discardComment();
   }
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -712,6 +724,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     variant="ghost"
                     onClick={handleCancelComment}
                     disabled={isSubmitting}
+                    data-testid="cancel-comment-button"
                   >
                     Cancel
                   </Button>
@@ -820,6 +833,15 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
           allowReadTracking={allowReadTracking}
         />
       )}
+
+      {/* Discard-draft confirmation for the comment form's Cancel button */}
+      <ConfirmDiscardDraft
+        isOpen={showDiscardCommentConfirm}
+        onKeepEditing={() => setShowDiscardCommentConfirm(false)}
+        onDiscard={discardComment}
+        noun="comment"
+        testId="discard-comment-modal"
+      />
     </div>
   );
 });

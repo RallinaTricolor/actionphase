@@ -227,7 +227,7 @@ describe('ThreadViewModal', () => {
       await user.click(screen.getByRole('button', { name: /close thread view/i }));
 
       expect(mockOnClose).not.toHaveBeenCalled();
-      expect(screen.getByText(/discard unsaved reply/i)).toBeInTheDocument();
+      expect(screen.getByTestId('discard-thread-reply-modal')).toBeInTheDocument();
     });
 
     it('should ignore a backdrop click entirely while a reply is pending', async () => {
@@ -259,7 +259,7 @@ describe('ThreadViewModal', () => {
       await user.click(document.querySelector('.fixed.inset-0') as HTMLElement);
 
       expect(mockOnClose).not.toHaveBeenCalled();
-      expect(screen.queryByText(/discard unsaved reply/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('discard-thread-reply-modal')).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { name: /thread view/i })).toBeInTheDocument();
       // The typed reply survives untouched — the point of the guard.
       expect(screen.getByPlaceholderText('Write a reply...')).toHaveValue('Half-written reply text');
@@ -358,7 +358,9 @@ describe('ThreadViewModal', () => {
       // Open reply, type content, then cancel (clears content and hides form)
       await user.click(screen.getByRole('button', { name: /reply to this comment/i }));
       await user.type(screen.getByPlaceholderText('Write a reply...'), 'Some text');
-      await user.click(screen.getByRole('button', { name: /cancel/i }));
+      // Cancel on a non-empty box asks before discarding.
+      await user.click(screen.getByTestId('cancel-reply-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
 
       // Now clicking backdrop should close immediately — no stale dirty entry
       await user.click(document.querySelector('.fixed.inset-0') as HTMLElement);
