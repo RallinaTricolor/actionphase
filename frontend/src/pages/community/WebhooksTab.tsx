@@ -10,8 +10,8 @@ import {
   Input,
   Checkbox,
 } from '../../components/ui';
-import { Modal } from '../../components/Modal';
-import { ConfirmModal } from '../../components/ConfirmModal';
+import { Modal } from '@/components/common/modals/Modal';
+import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { useToast } from '../../contexts/ToastContext';
 import { useCommunityWebhooks } from '../../hooks/useCommunities';
 import type {

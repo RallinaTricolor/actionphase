@@ -406,11 +406,10 @@ func (td *TestDatabase) CreateTestGame(t TestingInterface, gmUserID int32, title
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       title,
-		Description: pgtype.Text{String: "Test game created for testing purposes", Valid: true},
+		Description: "Test game created for testing purposes",
 		GmUserID:    gmUserID,
 		Genre:       pgtype.Text{String: "Test", Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test game: %v", err)
@@ -427,11 +426,10 @@ func (td *TestDatabase) CreateTestGameWithState(t TestingInterface, gmUserID int
 	// First create the game (state defaults to 'setup')
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:       title,
-		Description: pgtype.Text{String: "Test game created for testing purposes", Valid: true},
+		Description: "Test game created for testing purposes",
 		GmUserID:    gmUserID,
 		Genre:       pgtype.Text{String: "Test", Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test game: %v", err)
@@ -441,7 +439,7 @@ func (td *TestDatabase) CreateTestGameWithState(t TestingInterface, gmUserID int
 	if state != "setup" {
 		updatedGame, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 			ID:    game.ID,
-			State: pgtype.Text{String: state, Valid: true},
+			State: state,
 		})
 		if err != nil {
 			t.Fatalf("Failed to update game state to %s: %v", state, err)
@@ -462,7 +460,7 @@ func (td *TestDatabase) SetGameStateDirectly(t TestingInterface, gameID int32, s
 
 	updatedGame, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 		ID:    gameID,
-		State: pgtype.Text{String: state, Valid: true},
+		State: state,
 	})
 	if err != nil {
 		t.Fatalf("SetGameStateDirectly: failed to set game %d to state %s: %v", gameID, state, err)

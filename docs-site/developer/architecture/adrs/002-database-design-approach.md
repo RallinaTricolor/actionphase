@@ -40,8 +40,10 @@ We adopted a **Hybrid Relational-Document approach** using PostgreSQL with strat
 > tracked only a single high-water mark, so a migration merged with an older
 > timestamp than one already applied was skipped silently and permanently. goose
 > records one row per applied migration and fails loudly on that gap. The
-> decision to use versioned up/down migration files is unchanged — only the tool
-> implementing it. See `.claude/planning/migration-library-swap.md`.
+> decision to use versioned migrations with both directions is unchanged — only
+> the tool implementing it. goose keeps both directions in a single file
+> (`-- +goose Up` / `-- +goose Down`) rather than the `.up.sql`/`.down.sql` pair
+> golang-migrate used.
 
 ## Alternatives Considered
 
@@ -149,7 +151,7 @@ We adopted a **Hybrid Relational-Document approach** using PostgreSQL with strat
 > ❌ **The sample originally here did not match the schema** — it put
 > `preferences` on `users`, invented `games.game_config`, and made
 > `character_data` a JSONB column on `characters`. Corrected below from
-> `backend/pkg/db/schema.sql` (abridged).
+> `backend/pkg/db/migrations/` (abridged).
 
 ```sql
 -- Users: traditional relational. Preferences live in their OWN table,
@@ -252,7 +254,7 @@ by primary key, so it never needs one.
 ## Implementation Divergence (verified 2026-08-26)
 
 The shipped schema is **substantially more relational** than this ADR describes.
-`backend/pkg/db/schema.sql` contains exactly **two** JSONB columns, not four.
+`backend/pkg/db/migrations/` defines exactly **two** JSONB columns, not four.
 
 | ADR claims | Reality |
 |---|---|

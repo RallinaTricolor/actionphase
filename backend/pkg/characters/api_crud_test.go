@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupCharacterTestRouter creates a test router with auth middleware
@@ -607,10 +607,9 @@ func TestGetCharacter_AnonymousMode(t *testing.T) {
 	// Create anonymous game directly (CreateTestGame doesn't set IsAnonymous)
 	anonGame, err := queries.CreateGame(ctx, dbmodels.CreateGameParams{
 		Title:       "Anonymous Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
-		IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 	})
 	core.AssertNoError(t, err, "Creating anonymous game should succeed")
 
@@ -654,6 +653,70 @@ func TestGetCharacter_AnonymousMode(t *testing.T) {
 		if _, ok := response["character_type"]; ok {
 			t.Errorf("character_type should not be present in anonymous game response for regular players, got: %v", response["character_type"])
 		}
+	})
+
+	// The identity fields are the whole point of anonymous mode: a regular
+	// player must not learn who is behind a character. GET /characters/{id}
+	// began reporting `username` when the character responses were unified, so
+	// these pin that it is gated the same way the roster's has always been --
+	// and that user_id, which is the same disclosure one lookup removed, goes
+	// with it.
+	t.Run("player cannot see owner identity in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		if v, ok := response["username"]; ok {
+			t.Errorf("username must not be present for a regular player in an anonymous game, got: %v", v)
+		}
+		if v, ok := response["user_id"]; ok {
+			t.Errorf("user_id must not be present for a regular player in an anonymous game, got: %v", v)
+		}
+		// Asserted so a future change cannot "pass" this test by dropping the
+		// whole payload.
+		core.AssertEqual(t, "Mysterious Figure", response["name"], "the character itself is still returned")
+	})
+
+	t.Run("gm can see owner identity in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		core.AssertEqual(t, playerUser.Username, fmt.Sprintf("%v", response["username"]),
+			"the GM sees who plays the character")
+		if _, ok := response["user_id"]; !ok {
+			t.Error("user_id should be present for the GM in an anonymous game")
+		}
+	})
+
+	t.Run("audience can see owner identity in anonymous game", func(t *testing.T) {
+		req := httptest.NewRequest("GET", charURL, nil)
+		req.Header.Set("Authorization", "Bearer "+audienceToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		core.AssertNoError(t, err, "Response should be valid JSON")
+
+		core.AssertEqual(t, playerUser.Username, fmt.Sprintf("%v", response["username"]),
+			"the audience sees who plays the character")
 	})
 
 	t.Run("gm can see character_type in anonymous game", func(t *testing.T) {
@@ -840,7 +903,7 @@ func TestGetCharacter_AudienceAssignedPendingNPC_InProgress(t *testing.T) {
 		CharacterType: "npc",
 	})
 	core.AssertNoError(t, err, "Creating pending NPC should succeed")
-	core.AssertEqual(t, "pending", pendingNPC.Status.String, "NPC should start as pending")
+	core.AssertEqual(t, "pending", pendingNPC.Status, "NPC should start as pending")
 
 	err = characterService.AssignNPCToUser(ctx, pendingNPC.ID, int32(audienceUser.ID), int32(gmUser.ID))
 	core.AssertNoError(t, err, "Assigning NPC to audience user should succeed")
@@ -954,4 +1017,71 @@ func TestCharacterAPI_GetGameCharactersIncludesIsActive(t *testing.T) {
 		t.Errorf("is_active missing from response for inactive character %d; got keys %v", inactiveCharID, inactiveChar)
 	}
 	core.AssertEqual(t, false, isInactive, "Deactivated character should report is_active=false")
+}
+
+// TestGetCharacter_ReportsOwnerUsername pins the positive half of the anonymity
+// gate added when the character responses were unified.
+//
+// TestGetCharacter_AnonymousMode proves a regular player in an anonymous game
+// does NOT receive username/user_id. On its own that test would still pass if
+// the endpoint simply never sent them -- which is what it did before, and which
+// left a "Played by @..." block on CharacterPage dead since it was written.
+// This asserts the field genuinely arrives in an ordinary game.
+func TestGetCharacter_ReportsOwnerUsername(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	ctx := context.Background()
+
+	gmUser := testDB.CreateTestUser(t, "named_gm", "named_gm@example.com")
+	playerUser := testDB.CreateTestUser(t, "named_player", "named_player@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gmUser.ID), "Ordinary Game")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(playerUser.ID), "player")
+	core.AssertNoError(t, err, "Adding player should succeed")
+
+	playerUserID := int32(playerUser.ID)
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	char, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID:        game.ID,
+		UserID:        &playerUserID,
+		Name:          "Named Figure",
+		CharacterType: "player_character",
+	})
+	core.AssertNoError(t, err, "Creating character should succeed")
+
+	playerToken, _ := createTestAuthToken(app, playerUser)
+
+	req := httptest.NewRequest("GET", "/api/v1/characters/"+strconv.Itoa(int(char.ID)), nil)
+	req.Header.Set("Authorization", "Bearer "+playerToken)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	core.AssertEqual(t, http.StatusOK, w.Code, "Expected 200 OK")
+
+	// Raw map, not a typed struct: a struct would zero a missing username into
+	// "" and hide exactly the absence this test exists to catch.
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	core.AssertNoError(t, err, "Response should be valid JSON")
+
+	username, present := response["username"]
+	if !present {
+		t.Fatalf("username missing from GET /characters/{id}; got keys %v", response)
+	}
+	// Compared against the created user rather than the literal: CreateTestUser
+	// uniquifies the name it is given, so a hardcoded string would never match.
+	core.AssertEqual(t, playerUser.Username, fmt.Sprintf("%v", username), "username should name the character's owner")
+
+	// is_active is the other field this unification added to this endpoint.
+	isActive, present := response["is_active"]
+	if !present {
+		t.Errorf("is_active missing from GET /characters/{id}; got keys %v", response)
+	}
+	core.AssertEqual(t, true, isActive, "a live character reports is_active=true")
 }

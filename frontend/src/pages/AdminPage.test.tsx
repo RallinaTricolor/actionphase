@@ -3,11 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { AxiosResponse } from 'axios';
+import { makeAxiosResponse } from '../test-utils/factories';
 import { AdminPage } from './AdminPage';
 import { apiClient } from '../lib/api';
 import { ToastProvider } from '../contexts/ToastContext';
 import { AdminModeProvider } from '../contexts/AdminModeContext';
+import type { User as AdminListedUser } from '../lib/api/admin';
 
 // Mock the API client
 vi.mock('../lib/api', () => ({
@@ -79,7 +80,7 @@ describe('AdminPage', () => {
 
   describe('Banned Users Tab', () => {
     it('shows loading state initially', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.admin.listBannedUsers).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
@@ -92,10 +93,8 @@ describe('AdminPage', () => {
     });
 
     it('displays empty state when no banned users exist', async () => {
-      const user = userEvent.setup();
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      const user = userEvent.setup({ delay: null });
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
 
@@ -107,7 +106,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of banned users', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const bannedUsers = [
         {
           id: 1,
@@ -129,9 +128,7 @@ describe('AdminPage', () => {
         },
       ];
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: bannedUsers,
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse(bannedUsers));
 
       renderAdminPage();
 
@@ -152,7 +149,7 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       vi.mocked(apiClient.admin.listBannedUsers).mockRejectedValue(
         new Error('API Error')
       );
@@ -167,7 +164,7 @@ describe('AdminPage', () => {
     });
 
     it('unbans a user when unban button is clicked and confirmed via modal', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',
@@ -178,10 +175,8 @@ describe('AdminPage', () => {
         created_at: '2025-01-01T00:00:00Z',
       };
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [bannedUser],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.unbanUser).mockResolvedValue({} as Partial<AxiosResponse<unknown>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([bannedUser]));
+      vi.mocked(apiClient.admin.unbanUser).mockResolvedValue(makeAxiosResponse(undefined));
 
       renderAdminPage();
 
@@ -207,7 +202,7 @@ describe('AdminPage', () => {
     });
 
     it('does not unban user when confirmation modal is cancelled', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',
@@ -218,9 +213,7 @@ describe('AdminPage', () => {
         created_at: '2025-01-01T00:00:00Z',
       };
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [bannedUser],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([bannedUser]));
 
       renderAdminPage();
 
@@ -239,7 +232,7 @@ describe('AdminPage', () => {
     });
 
     it('shows error toast when unban fails', async () => {
-      const userActions = userEvent.setup();
+      const userActions = userEvent.setup({ delay: null });
       const bannedUser = {
         id: 1,
         username: 'banneduser',
@@ -250,9 +243,7 @@ describe('AdminPage', () => {
         created_at: '2025-01-01T00:00:00Z',
       };
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [bannedUser],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([bannedUser]));
       vi.mocked(apiClient.admin.unbanUser).mockRejectedValue(new Error('API Error'));
 
       renderAdminPage();
@@ -274,12 +265,8 @@ describe('AdminPage', () => {
 
   describe('Admins Tab', () => {
     it('switches to admins tab when clicked', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
 
@@ -306,12 +293,8 @@ describe('AdminPage', () => {
         },
       ];
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: admins,
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse(admins));
 
       renderAdminPage();
 
@@ -329,12 +312,8 @@ describe('AdminPage', () => {
     });
 
     it('displays empty state when no admins exist', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
 
@@ -346,9 +325,7 @@ describe('AdminPage', () => {
     });
 
     it('displays error state when API fails', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       vi.mocked(apiClient.admin.listAdmins).mockRejectedValue(new Error('API Error'));
 
       renderAdminPage();
@@ -363,9 +340,7 @@ describe('AdminPage', () => {
 
   describe('Tab Navigation', () => {
     it('shows Admin Mode tab by default', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
 
@@ -375,12 +350,8 @@ describe('AdminPage', () => {
     });
 
     it('switches between tabs correctly', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse([]));
 
       renderAdminPage();
 
@@ -419,12 +390,8 @@ describe('AdminPage', () => {
         },
       ];
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: admins,
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse(admins));
 
       renderAdminPage();
 
@@ -458,13 +425,9 @@ describe('AdminPage', () => {
         },
       ];
 
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue({
-        data: admins,
-      } as Partial<AxiosResponse<unknown[]>>);
-      vi.mocked(apiClient.admin.revokeAdminStatus).mockResolvedValue({} as Partial<AxiosResponse<unknown>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
+      vi.mocked(apiClient.admin.listAdmins).mockResolvedValue(makeAxiosResponse(admins));
+      vi.mocked(apiClient.admin.revokeAdminStatus).mockResolvedValue(makeAxiosResponse(undefined));
 
       renderAdminPage();
 
@@ -490,15 +453,33 @@ describe('AdminPage', () => {
   });
 
   describe('All Users Tab', () => {
-    const mockUsersResponse = (users: unknown[]) =>
-      vi.mocked(apiClient.admin.listUsers).mockResolvedValue({
-        data: { users, total: users.length, page: 1, page_size: 25 },
-      } as Partial<AxiosResponse<unknown>>);
+    // apiClient.admin.listUsers is typed to admin.ts's own hand-written
+    // UserListResponse, so the payload must be a complete User from THAT
+    // module (not the generated schema, whose User differs: it requires
+    // `password` and makes `createdAt` nullable). These defaults fill the
+    // required fields so each test can pass only what it asserts on.
+    const mockUsersResponse = (users: Partial<AdminListedUser>[]) =>
+      vi.mocked(apiClient.admin.listUsers).mockResolvedValue(
+        makeAxiosResponse({
+          users: users.map((u) => ({
+            id: 0,
+            username: '',
+            email: '',
+            createdAt: '2025-01-01T00:00:00Z',
+            email_verified: true,
+            is_admin: false,
+            is_banned: false,
+            pending_approval: false,
+            ...u,
+          })),
+          total: users.length,
+          page: 1,
+          page_size: 25,
+        }),
+      );
 
     it('shows All Users tab when clicked', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       mockUsersResponse([]);
 
       renderAdminPage();
@@ -511,9 +492,7 @@ describe('AdminPage', () => {
     });
 
     it('displays list of users', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       mockUsersResponse([
         {
           id: 2,
@@ -536,9 +515,7 @@ describe('AdminPage', () => {
     });
 
     it('shows ADMIN badge for admin users', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       mockUsersResponse([
         {
           id: 2,
@@ -561,9 +538,7 @@ describe('AdminPage', () => {
     });
 
     it('shows BANNED badge for banned users', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       mockUsersResponse([
         {
           id: 2,
@@ -586,9 +561,7 @@ describe('AdminPage', () => {
     });
 
     it('shows empty state when no users found', async () => {
-      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue({
-        data: [],
-      } as Partial<AxiosResponse<unknown[]>>);
+      vi.mocked(apiClient.admin.listBannedUsers).mockResolvedValue(makeAxiosResponse([]));
       mockUsersResponse([]);
 
       renderAdminPage();

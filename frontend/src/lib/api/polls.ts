@@ -1,6 +1,6 @@
 import { BaseApiClient } from './client';
 import type {
-  Poll,
+  PollListItem,
   PollWithOptions,
   PollResults,
   CreatePollRequest,
@@ -30,7 +30,7 @@ export class PollsApi extends BaseApiClient {
    */
   async getGamePolls(gameId: number, includeExpired: boolean = false) {
     const params = includeExpired ? '?include_expired=true' : '';
-    return this.client.get<Poll[]>(`/api/v1/games/${gameId}/polls${params}`);
+    return this.client.get<PollListItem[]>(`/api/v1/games/${gameId}/polls${params}`);
   }
 
   /**
@@ -39,7 +39,7 @@ export class PollsApi extends BaseApiClient {
    * @param phaseId - Phase ID
    */
   async getPollsByPhase(gameId: number, phaseId: number) {
-    return this.client.get<Poll[]>(`/api/v1/games/${gameId}/phases/${phaseId}/polls`);
+    return this.client.get<PollListItem[]>(`/api/v1/games/${gameId}/phases/${phaseId}/polls`);
   }
 
   /**
@@ -73,7 +73,7 @@ export class PollsApi extends BaseApiClient {
    * @param data - Updated poll data
    */
   async updatePoll(pollId: number, data: UpdatePollRequest) {
-    return this.client.put<Poll>(`/api/v1/polls/${pollId}`, data);
+    return this.client.put<PollWithOptions>(`/api/v1/polls/${pollId}`, data);
   }
 
   /**

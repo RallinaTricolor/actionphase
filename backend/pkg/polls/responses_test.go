@@ -60,6 +60,12 @@ func marshalToMap(t *testing.T, v any) map[string]any {
 	return m
 }
 
+// The wire-parity tests below compare decoded objects rather than raw JSON
+// bytes: the contract is the set of keys and values, not the order sqlc happens
+// to declare its struct fields in. (Field order shifted when sqlc moved to
+// generating from the migrations, which reordered columns without changing the
+// payload.)
+//
 // legacyPollResponse is the pre-DTO shape: the sqlc model embedded, with the
 // extra computed fields alongside it.
 type legacyPollResponse struct {
@@ -68,6 +74,28 @@ type legacyPollResponse struct {
 	HasVoted              bool            `json:"has_voted,omitempty"`
 	UserVoteOptionID      *int32          `json:"user_vote_option_id,omitempty"`
 	UserVoteOtherResponse *string         `json:"user_vote_other_response,omitempty"`
+}
+
+// addedSinceLegacy are the keys the DTOs emit that the embedded sqlc model did
+// not. The parity tests assert equality after removing them, so the legacy shape
+// still pins every field it used to -- a column silently vanishing from a
+// response is still a failure -- while the two intended additions are allowed.
+//
+//   - is_expired: computed from the deadline. Added because it was the one poll
+//     field the frontend already assumed existed and no endpoint sent, so
+//     PollsTab's expired/active split never worked.
+//   - user_has_voted on the DETAIL response: the flag was called has_voted here
+//     and user_has_voted on the list, and nothing on the frontend ever read the
+//     detail spelling. Renamed so a poll reports its vote status by one name.
+func withoutAdditions(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		if k == "is_expired" || k == "user_has_voted" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
 }
 
 type legacyPollListItem struct {
@@ -93,23 +121,21 @@ func TestPollResponseWireParity(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			want, err := json.Marshal(legacyPollResponse{
+			want := marshalToMap(t, legacyPollResponse{
 				CommonRoomPoll: samplePoll(), Options: tc.options,
 			})
-			require.NoError(t, err)
+			got := marshalToMap(t, toPollResponse(samplePoll(), tc.options, false))
 
-			got, err := json.Marshal(toPollResponse(samplePoll(), tc.options))
-			require.NoError(t, err)
-
-			assert.Equal(t, string(want), string(got),
-				"the DTO must emit the same JSON the embedded sqlc model did")
+			assert.Equal(t, want, withoutAdditions(got),
+				"the DTO must emit the same JSON the embedded sqlc model did, "+
+					"apart from the fields in withoutAdditions")
 		})
 	}
 }
 
 func TestPollResponseShape(t *testing.T) {
 	t.Run("nullable columns marshal as scalars, not wrapper objects", func(t *testing.T) {
-		m := marshalToMap(t, toPollResponse(samplePoll(), nil))
+		m := marshalToMap(t, toPollResponse(samplePoll(), nil, false))
 
 		assert.Equal(t, float64(11), m["phase_id"])
 		assert.Equal(t, float64(22), m["created_by_character_id"])
@@ -119,7 +145,7 @@ func TestPollResponseShape(t *testing.T) {
 	})
 
 	t.Run("NULL columns stay explicit nulls", func(t *testing.T) {
-		m := marshalToMap(t, toPollResponse(nullablePoll(), nil))
+		m := marshalToMap(t, toPollResponse(nullablePoll(), nil, false))
 
 		assert.Nil(t, m["phase_id"])
 		assert.Nil(t, m["created_by_character_id"])
@@ -127,56 +153,73 @@ func TestPollResponseShape(t *testing.T) {
 	})
 
 	t.Run("options key is present as null when no options are loaded", func(t *testing.T) {
-		m := marshalToMap(t, toPollResponse(samplePoll(), nil))
+		m := marshalToMap(t, toPollResponse(samplePoll(), nil, false))
 		require.Contains(t, m, "options")
 		assert.Nil(t, m["options"])
 	})
 
-	t.Run("computed vote fields are omitted when unset", func(t *testing.T) {
-		m := marshalToMap(t, toPollResponse(samplePoll(), nil))
-		assert.NotContains(t, m, "has_voted")
+	t.Run("the vote-choice fields are omitted when unset", func(t *testing.T) {
+		m := marshalToMap(t, toPollResponse(samplePoll(), nil, false))
 		assert.NotContains(t, m, "user_vote_option_id")
 		assert.NotContains(t, m, "user_vote_other_response")
 	})
 
-	t.Run("computed vote fields appear once set", func(t *testing.T) {
-		resp := toPollResponse(samplePoll(), nil)
+	t.Run("user_has_voted is always present, unlike the vote-choice fields", func(t *testing.T) {
+		// It is a required bool, not omitempty: "this caller has not voted" is a
+		// real answer and belongs on the wire as false, not as an absent key.
+		// The old has_voted was omitempty, so the detail endpoint could not say
+		// "no" -- another reason nothing read it.
+		m := marshalToMap(t, toPollResponse(samplePoll(), nil, false))
+		require.Contains(t, m, "user_has_voted")
+		assert.Equal(t, false, m["user_has_voted"])
+	})
+
+	t.Run("vote fields appear once set", func(t *testing.T) {
+		resp := toPollResponse(samplePoll(), nil, true)
 		optID := int32(9)
 		other := "write-in"
-		resp.HasVoted = true
 		resp.UserVoteOptionID = &optID
 		resp.UserVoteOtherResponse = &other
 
 		m := marshalToMap(t, resp)
-		assert.Equal(t, true, m["has_voted"])
+		assert.Equal(t, true, m["user_has_voted"])
 		assert.Equal(t, float64(9), m["user_vote_option_id"])
 		assert.Equal(t, "write-in", m["user_vote_other_response"])
+	})
+
+	t.Run("is_expired tracks the deadline", func(t *testing.T) {
+		// Deadlines are relative to now rather than the fixed testTime, which
+		// would flip this assertion's meaning depending on the wall clock.
+		past := samplePoll()
+		past.Deadline = ts(time.Now().Add(-time.Hour))
+		assert.Equal(t, true, marshalToMap(t, toPollResponse(past, nil, false))["is_expired"])
+
+		future := samplePoll()
+		future.Deadline = ts(time.Now().Add(time.Hour))
+		assert.Equal(t, false, marshalToMap(t, toPollResponse(future, nil, false))["is_expired"])
 	})
 }
 
 func TestToPollListItemWireParity(t *testing.T) {
 	for _, hasVoted := range []bool{true, false} {
-		want, err := json.Marshal(legacyPollListItem{
+		want := marshalToMap(t, legacyPollListItem{
 			CommonRoomPoll: samplePoll(), UserHasVoted: hasVoted,
 		})
-		require.NoError(t, err)
+		got := marshalToMap(t, toPollListItem(samplePoll(), hasVoted))
 
-		got, err := json.Marshal(toPollListItem(samplePoll(), hasVoted))
-		require.NoError(t, err)
-
-		assert.Equal(t, string(want), string(got))
+		// user_has_voted is not an addition here -- the list always had it, so
+		// it is dropped from both sides and asserted separately below.
+		assert.Equal(t, withoutAdditions(want), withoutAdditions(got))
+		assert.Equal(t, hasVoted, got["user_has_voted"])
 	}
 }
 
 func TestToPollSummaryWireParity(t *testing.T) {
 	// Nested under poll results, the summary carried the bare sqlc model.
-	want, err := json.Marshal(samplePoll())
-	require.NoError(t, err)
+	want := marshalToMap(t, samplePoll())
+	got := marshalToMap(t, toPollSummary(samplePoll()))
 
-	got, err := json.Marshal(toPollSummary(samplePoll()))
-	require.NoError(t, err)
-
-	assert.Equal(t, string(want), string(got))
+	assert.Equal(t, want, withoutAdditions(got))
 }
 
 func TestToPollVoteResponse(t *testing.T) {

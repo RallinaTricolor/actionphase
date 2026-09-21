@@ -712,11 +712,10 @@ func TestSetRandomLootForCharacterAuthorization(t *testing.T) {
 	})
 }
 
-// The `validate:"required"` struct tags on the loot request types are not executed
-// by anything (Bind is the only hook, and most Bind methods in this codebase return
-// a bare nil — see .claude/planning/request-validation.md). Without explicit checks
-// the API happily stores unnamed loot tables and items with empty data, and that
-// data string is what the frontend JSON.parses when granting the item.
+// These cases cover the constraints the loot request types declare as huma schema
+// tags. Without them the API happily stores unnamed loot tables and items with
+// empty data, and that data string is what the frontend JSON.parses when granting
+// the item.
 func TestLootTableRequestValidation(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()

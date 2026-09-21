@@ -28,8 +28,19 @@ type conversationsListOutput struct {
 
 type conversationDetailOutput struct {
 	Body struct {
-		Conversation *ConversationResponse             `json:"conversation"`
-		Participants []ConversationParticipantResponse `json:"participants"`
+		Conversation *ConversationResponse `json:"conversation"`
+		// nullable:"false" despite toConversationParticipantResponses opening
+		// with `if rows == nil { return nil }` -- a branch that IS reachable in
+		// principle, because sqlc returns a nil slice for zero rows. It is not
+		// reachable in practice: every AddConversationParticipant call runs in
+		// the same transaction that creates the conversation, so a
+		// zero-participant conversation cannot be committed.
+		//
+		// Tagged rather than left nullable because the alternative is dead
+		// `?? []` at four frontend sites, two of which already guard for it and
+		// two of which do not. If conversations ever become creatable without
+		// participants, drop this tag first.
+		Participants []ConversationParticipantResponse `json:"participants" nullable:"false"`
 	}
 }
 

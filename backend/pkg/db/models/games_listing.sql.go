@@ -15,13 +15,10 @@ const countFilteredGames = `-- name: CountFilteredGames :one
 SELECT COUNT(*)
 FROM games g
 WHERE
-  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
-  (g.is_public = true OR
-   ($5::boolean IS TRUE AND $6::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $6 AND is_admin = true)) OR
-   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
-
+  -- No visibility predicate -- see GetFilteredGames above. This clause list must
+  -- keep mirroring that query exactly or the count and the page disagree.
   -- Filter by states (optional array of states)
-  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (
@@ -42,14 +39,14 @@ WHERE
 
   -- Filter by search text (case-insensitive search in title and description)
   AND (
-    $7::text IS NULL OR $7 = '' OR
-    g.title ILIKE '%' || $7 || '%' OR
-    g.description::text ILIKE '%' || $7 || '%'
+    $5::text IS NULL OR $5 = '' OR
+    g.title ILIKE '%' || $5 || '%' OR
+    g.description::text ILIKE '%' || $5 || '%'
   )
 
   -- Filter by community. Must mirror GetFilteredGames exactly or the count and
   -- the page disagree and pagination breaks.
-  AND ($8::int IS NULL OR $8 = 0 OR g.community_id = $8)
+  AND ($6::int IS NULL OR $6 = 0 OR g.community_id = $6)
 `
 
 type CountFilteredGamesParams struct {
@@ -57,10 +54,8 @@ type CountFilteredGamesParams struct {
 	Column2 []string `json:"column_2"`
 	Column3 string   `json:"column_3"`
 	Column4 bool     `json:"column_4"`
-	Column5 bool     `json:"column_5"`
+	Column5 string   `json:"column_5"`
 	Column6 int32    `json:"column_6"`
-	Column7 string   `json:"column_7"`
-	Column8 int32    `json:"column_8"`
 }
 
 // Count games matching the same filters as GetFilteredGames (for pagination metadata)
@@ -72,8 +67,6 @@ func (q *Queries) CountFilteredGames(ctx context.Context, arg CountFilteredGames
 		arg.Column4,
 		arg.Column5,
 		arg.Column6,
-		arg.Column7,
-		arg.Column8,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -82,7 +75,7 @@ func (q *Queries) CountFilteredGames(ctx context.Context, arg CountFilteredGames
 
 const countPublicGames = `-- name: CountPublicGames :one
 
-SELECT COUNT(*) FROM games WHERE is_public = true
+SELECT COUNT(*) FROM games
 `
 
 // Parameters:
@@ -91,11 +84,16 @@ SELECT COUNT(*) FROM games WHERE is_public = true
 // $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
 // $4: has_open_spots (boolean, nullable) - only games with available spots
 // $5: sort_by (text) - 'recent_activity', 'created', 'start_date', 'alphabetical'
-// $6: admin_mode (boolean) - bypass is_public filter if user is admin
-// $7: admin_user_id (int, nullable) - user ID to validate admin status
-// $8: search (text, nullable) - case-insensitive search in title and description
-// $9: limit (int) - number of records per page
-// $10: offset (int) - number of records to skip
+// $6: search (text, nullable) - case-insensitive search in title and description
+// $7: limit (int) - number of records per page
+// $8: offset (int) - number of records to skip
+// $9: community_id (int, nullable) - 0/NULL means every community
+//
+// admin_mode and admin_user_id are GONE: they existed only to bypass the
+// is_public filter, which no longer exists. Admin mode itself is untouched --
+// it still gates moderation elsewhere via AdminModeMiddleware.
+// Every game is browseable since games.is_public was dropped, so this is now a
+// plain total. The name is kept because it is the listing's "total_count".
 func (q *Queries) CountPublicGames(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countPublicGames)
 	var count int64
@@ -107,7 +105,6 @@ const getAvailableStates = `-- name: GetAvailableStates :many
 
 SELECT DISTINCT state
 FROM games
-WHERE is_public = true
 ORDER BY state ASC
 `
 
@@ -116,19 +113,20 @@ ORDER BY state ASC
 // $2: states (text[], nullable) - array of game states to filter
 // $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
 // $4: has_open_spots (boolean, nullable) - only games with available spots
-// $5: admin_mode (boolean) - bypass is_public filter if user is admin
-// $6: admin_user_id (int, nullable) - user ID to validate admin status
-// $7: search (text, nullable) - case-insensitive search in title and description
-// $8: community_id (int, nullable) - 0/NULL means every community
-func (q *Queries) GetAvailableStates(ctx context.Context) ([]pgtype.Text, error) {
+// $5: search (text, nullable) - case-insensitive search in title and description
+// $6: community_id (int, nullable) - 0/NULL means every community
+//
+// No sort_by here: counting does not order. admin_mode and admin_user_id are
+// gone for the same reason as in GetFilteredGames above.
+func (q *Queries) GetAvailableStates(ctx context.Context) ([]string, error) {
 	rows, err := q.db.Query(ctx, getAvailableStates)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []pgtype.Text
+	var items []string
 	for rows.Next() {
-		var state pgtype.Text
+		var state string
 		if err := rows.Scan(&state); err != nil {
 			return nil, err
 		}
@@ -153,7 +151,6 @@ SELECT
   g.end_date,
   g.recruitment_deadline,
   g.max_players,
-  g.is_public,
   g.is_anonymous,
   g.auto_accept_audience,
   g.allow_group_conversations,
@@ -215,13 +212,12 @@ FROM games g
 INNER JOIN users u ON g.gm_user_id = u.id
 LEFT JOIN communities c ON c.id = g.community_id
 WHERE
-  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
-  (g.is_public = true OR
-   ($6::boolean IS TRUE AND $7::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $7 AND is_admin = true)) OR
-   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
-
+  -- Every game is browseable: per-game visibility was dropped with
+  -- games.is_public. Access is governed by state, participation and community
+  -- bans, not by a row flag -- so there is no visibility predicate here, and
+  -- the admin-mode bypass that used to sit beside it is gone with it.
   -- Filter by states (optional array of states)
-  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (
@@ -242,15 +238,15 @@ WHERE
 
   -- Filter by search text (case-insensitive search in title and description)
   AND (
-    $8::text IS NULL OR $8 = '' OR
-    g.title ILIKE '%' || $8 || '%' OR
-    g.description::text ILIKE '%' || $8 || '%'
+    $6::text IS NULL OR $6 = '' OR
+    g.title ILIKE '%' || $6 || '%' OR
+    g.description::text ILIKE '%' || $6 || '%'
   )
 
   -- Filter by community (0 or NULL means "every community"). Legacy games with
   -- community_id NULL are excluded when a community IS named -- they belong to
   -- none, so they are not in it.
-  AND ($11::int IS NULL OR $11 = 0 OR g.community_id = $11)
+  AND ($9::int IS NULL OR $9 = 0 OR g.community_id = $9)
 
 ORDER BY
   -- Dynamic sorting based on $5 parameter
@@ -270,37 +266,34 @@ ORDER BY
   -- Secondary sort by ID for consistency
   g.id DESC
 
-LIMIT $9::int
-OFFSET $10::int
+LIMIT $7::int
+OFFSET $8::int
 `
 
 type GetFilteredGamesParams struct {
-	Column1  int32       `json:"column_1"`
-	Column2  []string    `json:"column_2"`
-	Column3  string      `json:"column_3"`
-	Column4  bool        `json:"column_4"`
-	Column5  interface{} `json:"column_5"`
-	Column6  bool        `json:"column_6"`
-	Column7  int32       `json:"column_7"`
-	Column8  string      `json:"column_8"`
-	Column9  int32       `json:"column_9"`
-	Column10 int32       `json:"column_10"`
-	Column11 int32       `json:"column_11"`
+	Column1 int32       `json:"column_1"`
+	Column2 []string    `json:"column_2"`
+	Column3 string      `json:"column_3"`
+	Column4 bool        `json:"column_4"`
+	Column5 interface{} `json:"column_5"`
+	Column6 string      `json:"column_6"`
+	Column7 int32       `json:"column_7"`
+	Column8 int32       `json:"column_8"`
+	Column9 int32       `json:"column_9"`
 }
 
 type GetFilteredGamesRow struct {
 	ID                      int32              `json:"id"`
 	Title                   string             `json:"title"`
-	Description             pgtype.Text        `json:"description"`
+	Description             string             `json:"description"`
 	GmUserID                int32              `json:"gm_user_id"`
 	GmUsername              string             `json:"gm_username"`
-	State                   pgtype.Text        `json:"state"`
+	State                   string             `json:"state"`
 	Genre                   pgtype.Text        `json:"genre"`
 	StartDate               pgtype.Timestamptz `json:"start_date"`
 	EndDate                 pgtype.Timestamptz `json:"end_date"`
 	RecruitmentDeadline     pgtype.Timestamptz `json:"recruitment_deadline"`
 	MaxPlayers              pgtype.Int4        `json:"max_players"`
-	IsPublic                pgtype.Bool        `json:"is_public"`
 	IsAnonymous             bool               `json:"is_anonymous"`
 	AutoAcceptAudience      bool               `json:"auto_accept_audience"`
 	AllowGroupConversations bool               `json:"allow_group_conversations"`
@@ -332,8 +325,6 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 		arg.Column7,
 		arg.Column8,
 		arg.Column9,
-		arg.Column10,
-		arg.Column11,
 	)
 	if err != nil {
 		return nil, err
@@ -354,7 +345,6 @@ func (q *Queries) GetFilteredGames(ctx context.Context, arg GetFilteredGamesPara
 			&i.EndDate,
 			&i.RecruitmentDeadline,
 			&i.MaxPlayers,
-			&i.IsPublic,
 			&i.IsAnonymous,
 			&i.AutoAcceptAudience,
 			&i.AllowGroupConversations,

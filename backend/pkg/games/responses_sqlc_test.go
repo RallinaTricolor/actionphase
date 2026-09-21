@@ -40,7 +40,7 @@ func TestToGameParticipantResponse(t *testing.T) {
 	t.Run("matches the sqlc model it replaced", func(t *testing.T) {
 		p := models.GameParticipant{
 			ID: 1, GameID: 2, UserID: 3, Role: "player",
-			Status:   pgtype.Text{String: "active", Valid: true},
+			Status:   "active",
 			JoinedAt: sqlcTS(sqlcTestTime),
 		}
 		want, err := json.Marshal(p)
@@ -55,7 +55,7 @@ func TestToGameParticipantResponse(t *testing.T) {
 	t.Run("an active participant emits explicit nulls for removal fields", func(t *testing.T) {
 		m := sqlcMarshalToMap(t, toGameParticipantResponse(&models.GameParticipant{
 			ID: 1, GameID: 2, UserID: 3, Role: "player",
-			Status:   pgtype.Text{String: "active", Valid: true},
+			Status:   "active",
 			JoinedAt: sqlcTS(sqlcTestTime),
 		}))
 
@@ -68,7 +68,7 @@ func TestToGameParticipantResponse(t *testing.T) {
 	t.Run("a removed participant carries the removal metadata", func(t *testing.T) {
 		m := sqlcMarshalToMap(t, toGameParticipantResponse(&models.GameParticipant{
 			ID: 1, GameID: 2, UserID: 3, Role: "player",
-			Status:          pgtype.Text{String: "removed", Valid: true},
+			Status:          "removed",
 			JoinedAt:        sqlcTS(sqlcTestTime),
 			RemovedAt:       sqlcTS(sqlcTestTime),
 			RemovedByUserID: pgtype.Int4{Int32: 77, Valid: true},

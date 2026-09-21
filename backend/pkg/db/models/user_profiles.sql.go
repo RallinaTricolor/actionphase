@@ -99,7 +99,7 @@ type GetUserGamesParams struct {
 type GetUserGamesRow struct {
 	GameID             int32              `json:"game_id"`
 	Title              string             `json:"title"`
-	State              pgtype.Text        `json:"state"`
+	State              string             `json:"state"`
 	IsAnonymous        bool               `json:"is_anonymous"`
 	GmUserID           int32              `json:"gm_user_id"`
 	GmUsername         string             `json:"gm_username"`
@@ -172,15 +172,15 @@ LIMIT 1
 `
 
 type GetUserProfileRow struct {
-	ID          int32            `json:"id"`
-	Username    string           `json:"username"`
-	Email       string           `json:"email"`
-	DisplayName pgtype.Text      `json:"display_name"`
-	Bio         pgtype.Text      `json:"bio"`
-	AvatarUrl   pgtype.Text      `json:"avatar_url"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	Timezone    pgtype.Text      `json:"timezone"`
-	IsAdmin     pgtype.Bool      `json:"is_admin"`
+	ID          int32              `json:"id"`
+	Username    string             `json:"username"`
+	Email       string             `json:"email"`
+	DisplayName pgtype.Text        `json:"display_name"`
+	Bio         pgtype.Text        `json:"bio"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Timezone    pgtype.Text        `json:"timezone"`
+	IsAdmin     pgtype.Bool        `json:"is_admin"`
 }
 
 // User Profile Queries

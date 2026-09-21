@@ -50,7 +50,9 @@ type MessageResponse struct {
 type MessageThreadContextResponse struct {
 	// Chain is the target comment plus up to max_parents nearest ancestors,
 	// ordered parent-to-child (nearest included ancestor → target).
-	Chain []*MessageResponse `json:"chain"`
+	// nullable:"false": built with make([]*MessageResponse, len(...)), so never
+	// nil. See the note on PollResultsResponse for why the tag is needed.
+	Chain []*MessageResponse `json:"chain" nullable:"false"`
 	// RootPostID is the top-level post at the head of the full thread, even when
 	// Chain is trimmed and does not itself reach the root.
 	RootPostID int32 `json:"root_post_id"`

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { render, act, RenderOptions } from '@testing-library/react'
+import { render, act, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
@@ -53,14 +53,6 @@ export function createTestQueryClient(): QueryClient {
         // Disable retries in tests
         retry: false,
       },
-    },
-    // Suppress error logs during tests
-    logger: {
-      // eslint-disable-next-line no-console
-      log: console.log,
-      // eslint-disable-next-line no-console
-      warn: console.warn,
-      error: () => {}, // Suppress error logs in tests
     },
   })
 }

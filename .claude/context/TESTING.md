@@ -66,6 +66,18 @@ We now have tests for all of them. The lesson: **the right question is never "is
 
 This is the standard pattern. Every integration test follows it.
 
+> **Test routers mount huma operations.** Each handler package has its own
+> `setup*TestRouter` that builds a chi router with the real middleware, then
+> calls `RegisterHuma*(humaconfig.New(r, ...), handler)` so the test exercises
+> the same decode/validate/encode path as production. Mount at the same prefix
+> production uses — huma registers the `{id}` as part of each operation's path,
+> so the route is `/characters`, not `/characters/{id}`.
+>
+> **Schema validation failures are 422, not 400.** Anything enforced by a tag
+> (`minLength`, `enum`, `required`) is rejected by huma before the handler runs
+> and returns `http.StatusUnprocessableEntity`. Reserve 400 for the checks the
+> handler makes itself — cross-field and role-dependent rules.
+
 ```go
 func TestHandler_Endpoint(t *testing.T) {
     testDB := core.NewTestDatabase(t)
@@ -73,7 +85,9 @@ func TestHandler_Endpoint(t *testing.T) {
     defer testDB.CleanupTables(t, "affected_table", "users")
 
     app := core.NewTestApp(testDB.Pool)
-    router := setupTestRouter(app, testDB)
+    router := setupXTestRouter(app, testDB)  // per-package; builds a chi router,
+                                             // then registers the huma operations
+                                             // onto it with humaconfig.New
 
     gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
     player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -226,10 +240,13 @@ just sh backend
 just test-fe run
 
 # Frontend — a single file
-just test-fe run src/components/Foo.test.tsx
+just test-fe run src/components/games/GamesList.test.tsx
 
 # Frontend — watch mode
 just test-fe watch
+
+# Frontend — type-check the test tree against the generated API types
+just check-test-types
 
 # E2E — all tests (desktop + mobile)
 just e2e
@@ -322,6 +339,135 @@ tab — but *not* before reading one. See `e2e/pages/GameSettingsPage.ts`.
 
 ---
 
+## Frontend Test Layout: Co-locate, Always
+
+**A frontend test sits in the same directory as the module it covers, named after it.**
+
+```
+src/components/deadlines/UpcomingDeadlinesCard.tsx
+src/components/deadlines/UpcomingDeadlinesCard.test.tsx   ✅
+
+src/hooks/__tests__/useParticipantFit.test.ts             ❌
+```
+
+This mirrors the Go convention already used across the backend (`foo.go` /
+`foo_test.go` in one package) — one rule for both halves of the repo.
+
+**Why**, concretely: a test one directory away from its subject is a test you
+do not notice when you change the subject. It does not get renamed with it,
+moved with it, or deleted with it. That is not hypothetical here — the
+`src/lib/__tests__/api.games.test.ts` file sat excluded from the vitest run
+for eleven months without anyone noticing, because nothing about editing
+`src/lib/api/games.ts` pointed at it.
+
+**The one exception — `src/__tests__/`:** repo-wide guard tests that have no
+single subject module to sit beside. Currently `component-organization.test.ts`
+(enforces the `components/` domain layout *and this rule*), `retired-tokens.test.ts`
+(fails on retired design tokens), and `App.test.tsx`. A test belongs here only
+if it asserts something about the tree as a whole; if you can name one module
+it covers, it goes beside that module.
+
+Cross-cutting *integration* tests that span several modules still co-locate,
+next to the component that owns the flow — e.g.
+`dirtyReporting.integration.test.tsx`.
+
+**This is enforced.** `src/__tests__/component-organization.test.ts` fails the
+build on any `__tests__/` directory outside `src/__tests__/`. Eight of them had
+accumulated (`hooks/`, `lib/`, `lib/utils/`, `pages/`, `pages/admin/`,
+`pages/community/`, `utils/`, `components/utility-drawer/`) and were flattened
+on 2026-09-21; the guard is what keeps them from growing back one file at a
+time.
+
+---
+
+## No Skipped Tests
+
+**`it.skip` is not a way to leave a failing test in the tree.** A skipped test
+is strictly worse than no test: it looks like coverage in the file, reports as
+a pass, and never runs.
+
+When a test fails, it means one of three things — resolve it, don't skip it:
+
+1. **The test is right and the code is wrong** → fix the code.
+2. **The code is right and the test is stale** → fix the test's assertion.
+3. **The behavior it asserts should not exist** → delete the test *and* the
+   code that was there to satisfy it.
+
+All three showed up in the 14 skips cleared on 2026-09-21, and each one was
+hiding something real:
+
+- `ThreadedComment` had a `isSubmitting` flag driving "Posting...", a disabled
+  textarea and a disabled cancel button — all unreachable, because
+  `setIsReplying(false)` closes the form before the first `await`. Two skipped
+  tests were the only evidence. Deleted the dead state (case 3).
+- `ChangeUsernameForm` asserted `window.location.reload()`; the component had
+  moved to `queryClient.invalidateQueries(['currentUser'])` long before. The
+  file header blamed "an MSW issue" that did not exist (case 2).
+- `CreateDeadlineModal` drove a react-datepicker with
+  `fireEvent.change(..., '2025-12-31T23:59')`. The picker parses its own
+  `dateFormat`, so no date was ever set — and the hardcoded 2025 date had since
+  become a past date, so it would have failed anyway. Tests now type the format
+  the picker reads, against a pinned `vi.setSystemTime` (case 2).
+- `ChangeEmailForm` asserted a custom "Please enter a valid email address"
+  Alert behind a `type="email"` input. The browser blocks submit first, so no
+  user could ever see it. Deleted both the tests and the regex; the browser
+  owns format and the backend remains the authority (case 3).
+
+If a test genuinely cannot run yet, delete it and write down why — a TODO in
+the code under test is visible; a skipped test is not.
+
+---
+
+## Frontend Mocks: Use the Typed Factories
+
+**Never hand-roll an object literal for an API shape.** `frontend/src/test-utils/factories.ts`
+has a factory per wire shape, each returning the **full generated type**, so a
+field added on the backend breaks *one* file instead of the dozens of test files
+that used to build mocks by hand.
+
+```typescript
+import { makeMessage, makeCharacter } from '../test-utils/factories';
+
+// Pass only the fields the test is actually about; the rest are filled in.
+const comment = makeMessage({ content: 'hello', reply_count: 2 });
+const npc = makeCharacter({ character_type: 'npc', status: 'approved' });
+```
+
+Available: `makeMessage`, `makeCommentWithDepth`, `makeCharacter`, `makeUser`,
+`makeAuthContext`, `makeUseAuthResult`, `makeConversation`,
+`makeConversationParticipant`, `makeConversationListItem`,
+`makeConversationWithDetails`, `makeGameWithDetails`, `makeGameListItem`,
+`makeGameParticipant`, `makeGamePhase`, `makeDashboardGameCard`,
+`makeDashboardDeadline`, `makeAxiosResponse`, `makeQueryResult`,
+`makeMutationResult`, `makeInfiniteQueryResult`.
+
+**A mock is a claim about the wire.** If the compiler says a field is missing,
+add it with a value the server would really send — **do not cast it away**. A
+`as any` or `as Character` here re-creates exactly the drift the generated types
+were introduced to kill: mocks asserting shapes no endpoint returns, and tests
+that pass against fiction.
+
+`just check-test-types` type-checks the test tree (`tsconfig.test.json`) against
+these contracts. It runs in `just verify`.
+
+**Import the specific module, not the barrel.** `test-utils/index.ts`
+deliberately does **not** re-export the factories: ESM has no tree-shaking at
+test runtime, so importing the barrel loads six context providers and the whole
+UI library — measured at 1.36s versus 42ms for `factories` alone.
+
+```typescript
+// ✅ specific
+import { makeCharacter } from '../test-utils/factories';
+import { renderWithProviders } from '../test-utils/render';
+
+// ❌ drags in everything for one fixture
+import { makeCharacter, renderWithProviders } from '../test-utils';
+```
+
+**See**: `.claude/context/CODE_GENERATION.md` for where these types come from.
+
+---
+
 ## Quick Reference: Test File Locations
 
 | What | Where |
@@ -329,7 +475,9 @@ tab — but *not* before reading one. See `e2e/pages/GameSettingsPage.ts`.
 | HTTP handler tests | `pkg/<feature>/api_*_test.go` (same package) |
 | Service tests | `pkg/db/services/*_test.go` |
 | Middleware tests | `pkg/http/middleware/*_test.go` |
-| Frontend component tests | `frontend/src/components/**/*.test.tsx` |
+| Frontend component tests | beside the component: `Foo.tsx` -> `Foo.test.tsx` |
+| Frontend hook / lib / util tests | beside the module: `useFoo.ts` -> `useFoo.test.ts` |
+| Frontend repo-wide guard tests | `frontend/src/__tests__/` (only if no single subject) |
 | E2E tests | `frontend/e2e/**/*.spec.ts` |
 
 Reference implementations (good tests to copy patterns from):

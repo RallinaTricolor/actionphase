@@ -44,7 +44,7 @@ BEGIN
   -- Purpose: Test player character creation without needing full game setup
   -- Participants: GM + approved Player 1 (no character yet)
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     300,
     'E2E Test: Character Creation',
@@ -53,7 +53,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '2 days',
     NOW()
   );
@@ -87,7 +86,7 @@ BEGIN
   -- ============================================
   -- GAME #301: Character Pending State Test (character starts in pending state after creation)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     301,
     'E2E Test: Character Approval - Pending State',
@@ -96,7 +95,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -112,7 +110,7 @@ BEGIN
   -- ============================================
   -- GAME #321: Character View Pending Test (GM can view pending characters)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     600,
     'E2E Test: Character Approval - View Pending',
@@ -121,7 +119,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -134,7 +131,7 @@ BEGIN
   -- ============================================
   -- GAME #322: Character Approval Test (GM can approve character)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     601,
     'E2E Test: Character Approval - Approve',
@@ -143,7 +140,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -159,7 +155,7 @@ BEGIN
   -- ============================================
   -- GAME #323: Character Rejection Test (GM can reject character and player sees rejection)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     602,
     'E2E Test: Character Approval - Reject',
@@ -168,7 +164,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -181,7 +176,7 @@ BEGIN
   -- ============================================
   -- GAME #324: Character Resubmission Test (rejected character can be edited and resubmitted)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     603,
     'E2E Test: Character Approval - Resubmit',
@@ -190,7 +185,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -214,7 +208,7 @@ BEGIN
   -- ============================================
   -- GAME #325: Character In-Game Test (approved characters appear in active game)
   -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     604,
     'E2E Test: Character Approval - In Game',
@@ -223,7 +217,6 @@ BEGIN
     gm_id,
     4,
     'character_creation',
-    true,
     NOW() - INTERVAL '3 days',
     NOW()
   );
@@ -251,7 +244,7 @@ BEGIN
   -- Purpose: Test GM and Audience sending private messages as different characters
   -- Participants: GM (with 3 NPCs) + Audience (with 1 assigned NPC) + 2 Players
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     302,
     'E2E Test: GM Messaging',
@@ -260,7 +253,6 @@ BEGIN
     gm_id,
     6,
     'in_progress',
-    true,
     NOW() - INTERVAL '10 days',
     NOW()
   );

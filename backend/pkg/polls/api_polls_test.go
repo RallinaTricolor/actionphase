@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupPollTestRouter creates a test router with auth middleware
@@ -84,7 +83,7 @@ func TestPollResultsAccess(t *testing.T) {
 	_, err = queries.CreateAudienceApplication(context.Background(), db.CreateAudienceApplicationParams{
 		GameID: game.ID,
 		UserID: int32(audienceUser.ID),
-		Status: pgtype.Text{String: "active", Valid: true},
+		Status: "active",
 	})
 	core.AssertNoError(t, err, "Adding audience member to game should succeed")
 
@@ -277,7 +276,7 @@ func TestPollResults_AnonymousGame(t *testing.T) {
 
 	anonGame, err := queries.CreateGame(ctx, db.CreateGameParams{
 		Title:       "Anonymous Poll Test Game",
-		Description: pgtype.Text{String: "Test", Valid: true},
+		Description: "Test",
 		GmUserID:    int32(gmUser.ID),
 		IsAnonymous: true,
 	})
@@ -535,8 +534,14 @@ func TestGetPoll_ShowsUserVoteOptionID(t *testing.T) {
 	body := w.Body.String()
 	core.AssertTrue(t, strings.Contains(body, "user_vote_option_id"), "Response should contain user_vote_option_id")
 	core.AssertTrue(t, strings.Contains(body, strconv.Itoa(int(votedOptionID))), "Response should contain the voted option ID")
-	// has_voted must be true
-	core.AssertTrue(t, strings.Contains(body, `"has_voted":true`), "Response should show has_voted: true")
+	// The flag is user_has_voted, matching the list endpoint. It used to be
+	// has_voted here and nothing on the frontend read that spelling.
+	//
+	// Asserted with the leading quote so this cannot pass on a substring of
+	// "user_has_voted" -- which is exactly how it kept passing against the old
+	// name after the rename.
+	core.AssertTrue(t, strings.Contains(body, `"user_has_voted":true`), "Response should show user_has_voted: true")
+	core.AssertTrue(t, !strings.Contains(body, `,"has_voted":`), "Response should no longer carry the old has_voted field")
 }
 
 // TestPollVoting_GMAndCoGMBlocked tests that GMs and co-GMs cannot vote on polls
@@ -1236,7 +1241,7 @@ func TestPollVisibilityByRole(t *testing.T) {
 	_, err = queries.CreateAudienceApplication(ctx, db.CreateAudienceApplicationParams{
 		GameID: game.ID,
 		UserID: int32(audienceUser.ID),
-		Status: pgtype.Text{String: "active", Valid: true},
+		Status: "active",
 	})
 	core.AssertNoError(t, err, "Adding audience member should succeed")
 

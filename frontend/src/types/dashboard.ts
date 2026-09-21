@@ -4,65 +4,35 @@
  * Type definitions for the user dashboard data aggregation feature.
  */
 
-export interface DashboardGameCard {
-  game_id: number;
-  title: string;
-  description?: string | null;
-  state: string;
-  genre?: string | null;
-  gm_user_id: number;
-  gm_username: string;
-  user_role: string; // player, gm, co_gm, audience
-  has_pending_action: boolean;
-  pending_applications: number;
-  unread_comments: number;
-  unvoted_polls: number;
-  current_phase_id?: number | null;
-  current_phase_type?: string | null;
-  current_phase_title?: string | null;
-  current_phase_deadline?: string | null; // ISO 8601 timestamp
-  deadline_status: 'critical' | 'warning' | 'normal';
-  is_urgent: boolean;
-  updated_at: string; // ISO 8601 timestamp
-  created_at: string; // ISO 8601 timestamp
-}
+import type { components } from './api.gen';
 
-export interface DashboardMessage {
-  message_id: number;
-  game_id: number;
-  game_title: string;
-  author_name: string;
-  character_name?: string | null;
-  content: string; // Truncated to 100 chars
-  message_type: 'post' | 'comment' | 'private_message';
-  phase_id?: number | null;
-  created_at: string; // ISO 8601 timestamp
-}
+/**
+ * Generated. A game card on the dashboard.
+ *
+ * Six fields were declared `| null` and are in fact OMITTED: every one is an
+ * `omitempty` pointer on the Go side, so a nil value drops the key rather than
+ * marshalling null. All read sites already truthy-guard, so narrowing changes
+ * nothing except the type telling the truth.
+ *
+ * `deadline_status` keeps its union because the Go field is now enum-tagged --
+ * it generated as bare `string` until then, so aliasing would have silently
+ * widened it.
+ */
+export type DashboardGameCard = components['schemas']['DashboardGameCard'];
 
-export interface DashboardDeadline {
-  deadline_type: string; // "phase", "deadline", or "poll"
-  source_id: number;
-  phase_id: number;
-  game_id: number;
-  game_title: string;
-  title: string;
-  phase_type: string;
-  phase_title: string;
-  phase_number: number;
-  end_time: string; // ISO 8601 timestamp
-  has_pending_submission: boolean;
-  hours_remaining: number;
-}
+/** Generated. A recent-message preview. `message_type` is pinned by the
+ *  message_type Postgres ENUM. */
+export type DashboardMessage = components['schemas']['DashboardMessage'];
 
-export interface DashboardData {
-  user_id: number;
-  has_games: boolean;
-  player_games: DashboardGameCard[];
-  gm_games: DashboardGameCard[];
-  audience_games: DashboardGameCard[];
-  mixed_role_games: DashboardGameCard[];
-  recent_messages: DashboardMessage[];
-  upcoming_deadlines: DashboardDeadline[];
-  unread_notifications: number;
-  notifications_by_type: Record<string, number>;
-}
+/** Generated. An upcoming phase or arbitrary deadline. */
+export type DashboardDeadline = components['schemas']['DashboardDeadline'];
+
+/**
+ * Generated. The whole dashboard payload.
+ *
+ * Its six arrays needed a backend `nullable:"false"` first: groupGamesByRole
+ * make()s all four of its returns, with a comment saying so, and the two
+ * transform helpers do the same. Without the tags every `.map()` on the
+ * dashboard would have needed a dead `?? []`.
+ */
+export type DashboardData = components['schemas']['DashboardData'];

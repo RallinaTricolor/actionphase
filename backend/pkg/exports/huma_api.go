@@ -6,8 +6,6 @@ package exports
 //
 //   - a dynamic status code (200 vs 202), via a `Status` field on the output
 //   - a streamed file download with custom headers, via huma.StreamResponse
-//
-// See .claude/planning/huma-migration.md.
 
 import (
 	"context"

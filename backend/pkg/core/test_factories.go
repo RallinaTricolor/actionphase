@@ -118,7 +118,6 @@ type GameBuilder struct {
 	genre               string
 	state               string
 	maxPlayers          int32
-	isPublic            bool
 	isAnonymous         bool
 	startDate           *time.Time
 	endDate             *time.Time
@@ -136,7 +135,6 @@ func (f *TestDataFactory) NewGame() *GameBuilder {
 		genre:       "Fantasy",
 		state:       "setup",
 		maxPlayers:  4,
-		isPublic:    true,
 	}
 }
 
@@ -170,11 +168,6 @@ func (b *GameBuilder) WithMaxPlayers(maxPlayers int32) *GameBuilder {
 	return b
 }
 
-func (b *GameBuilder) AsPrivate() *GameBuilder {
-	b.isPublic = false
-	return b
-}
-
 func (b *GameBuilder) WithAnonymous() *GameBuilder {
 	b.isAnonymous = true
 	return b
@@ -199,11 +192,10 @@ func (b *GameBuilder) WithRecruitmentDeadline(deadline time.Time) *GameBuilder {
 func (b *GameBuilder) Create() db.Game {
 	params := db.CreateGameParams{
 		Title:       b.title,
-		Description: pgtype.Text{String: b.description, Valid: true},
+		Description: b.description,
 		GmUserID:    b.gmUserID,
 		Genre:       pgtype.Text{String: b.genre, Valid: true},
 		MaxPlayers:  pgtype.Int4{Int32: b.maxPlayers, Valid: true},
-		IsPublic:    pgtype.Bool{Bool: b.isPublic, Valid: true},
 		IsAnonymous: b.isAnonymous,
 	}
 
@@ -229,7 +221,7 @@ func (b *GameBuilder) Create() db.Game {
 	if b.state != "setup" {
 		updateParams := db.UpdateGameStateParams{
 			ID:    game.ID,
-			State: pgtype.Text{String: b.state, Valid: true},
+			State: b.state,
 		}
 		game, err = queries.UpdateGameState(context.Background(), updateParams)
 		if err != nil {
@@ -376,7 +368,7 @@ func (b *GameParticipantBuilder) Create() db.GameParticipant {
 		updateParams := db.UpdateParticipantStatusParams{
 			GameID: b.gameID,
 			UserID: b.userID,
-			Status: pgtype.Text{String: b.status, Valid: true},
+			Status: b.status,
 		}
 		participant, err = queries.UpdateParticipantStatus(context.Background(), updateParams)
 		if err != nil {
@@ -584,7 +576,7 @@ func (b *CharacterBuilder) Create() db.Character {
 		GameID:        b.gameID,
 		Name:          b.name,
 		CharacterType: b.characterType,
-		Status:        pgtype.Text{String: b.status, Valid: true},
+		Status:        b.status,
 	}
 
 	if b.userID != nil {

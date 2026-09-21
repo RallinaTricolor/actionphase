@@ -17,7 +17,6 @@ describe('AudienceConversationHeader', () => {
     last_message_content: 'Ready to go!',
     last_sender_name: 'Alice',
     last_sender_username: 'alice',
-    last_sender_avatar_url: null,
   };
 
   it('renders conversation subject', () => {
@@ -77,7 +76,7 @@ describe('AudienceConversationHeader', () => {
   });
 
   it('calls onBack when back button is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const handleBack = vi.fn();
 
     render(

@@ -1,8 +1,6 @@
 package deadlines
 
 // Huma (type-first) implementation of the deadline API.
-//
-// See .claude/planning/huma-migration.md.
 
 import (
 	"context"

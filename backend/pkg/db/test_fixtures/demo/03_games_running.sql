@@ -34,7 +34,7 @@ BEGIN
   -- ============================================
   -- GAME #1: Active Common Room Phase
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, is_anonymous, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_anonymous, created_at, updated_at)
   VALUES (
     'Shadows Over Innsmouth',
     'A Lovecraftian horror investigation in a cursed fishing town.',
@@ -42,7 +42,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     true,
     NOW() - INTERVAL '7 days',
     NOW()
@@ -76,7 +75,7 @@ BEGIN
   -- ============================================
   -- GAME #2: Active Action Phase (with actions)
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     'The Heist at Goldstone Bank',
     'A thrilling heist scenario where planning is everything.',
@@ -84,7 +83,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '10 days',
     NOW()
   ) RETURNING id INTO game2_id;
@@ -134,7 +132,7 @@ BEGIN
   -- ============================================
   -- GAME #3: Active Published Action Phase (Results)
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     'Starfall Station',
     'A sci-fi mystery on a remote space station.',
@@ -142,7 +140,6 @@ BEGIN
     gm_id,
     4,
     'in_progress',
-    true,
     NOW() - INTERVAL '14 days',
     NOW()
   ) RETURNING id INTO game3_id;
@@ -179,7 +176,7 @@ BEGIN
   -- ============================================
   -- GAME #5: Complex Phase History
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     'The Dragon of Mount Krag',
     'An epic fantasy campaign with a long history.',
@@ -187,7 +184,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '45 days',
     NOW()
   ) RETURNING id INTO game5_id;
@@ -227,7 +223,7 @@ BEGIN
   -- ============================================
   -- GAME #6: Many Mixed Phases
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     'Chronicles of Westmarch',
     'A long-running sandbox campaign with rich history.',
@@ -235,7 +231,6 @@ BEGIN
     gm_id,
     6,
     'in_progress',
-    true,
     NOW() - INTERVAL '60 days',
     NOW()
   ) RETURNING id INTO game6_id;
@@ -282,7 +277,7 @@ BEGIN
   -- ============================================
   -- GAME #9: Completed Campaign
   -- ============================================
-  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     'COMPLETED: Tales of the Arcane',
     'A completed magical mystery campaign.',
@@ -290,7 +285,6 @@ BEGIN
     gm_id,
     4,
     'completed',
-    true,
     NOW() - INTERVAL '90 days',
     NOW() - INTERVAL '5 days'
   ) RETURNING id INTO game9_id;

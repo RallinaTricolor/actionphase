@@ -6,6 +6,7 @@ import { useGamePermissions } from './useGamePermissions';
 import { useAuth } from '../contexts/AuthContext';
 import { useAdminMode } from '../contexts/AdminModeContext';
 import { apiClient } from '../lib/api';
+import { makeGameParticipant, makeGameWithDetails } from '../test-utils/factories';
 import type { GameWithDetails } from '../types/games';
 import type { GameParticipant } from '../types/games';
 
@@ -38,28 +39,30 @@ const createWrapper = () => {
     createElement(QueryClientProvider, { client: queryClient }, children);
 };
 
-const MOCK_GAME: GameWithDetails = {
+const MOCK_GAME: GameWithDetails = makeGameWithDetails({
   id: 10,
   title: 'Test Game',
   description: 'A game',
   gm_user_id: 1, // current user is GM
   state: 'in_progress',
   max_players: 5,
-  is_public: true,
   is_anonymous: false,
-  game_config: {},
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-};
-
-const makeParticipant = (userId: number, role: string): GameParticipant => ({
-  id: userId * 10,
-  game_id: 10,
-  user_id: userId,
-  role,
-  joined_at: new Date().toISOString(),
-  username: `user${userId}`,
 });
+
+const makeParticipant = (
+  userId: number,
+  role: GameParticipant['role'],
+): GameParticipant =>
+  makeGameParticipant({
+    id: userId * 10,
+    game_id: 10,
+    user_id: userId,
+    role,
+    joined_at: new Date().toISOString(),
+    username: `user${userId}`,
+  });
 
 describe('useGamePermissions', () => {
   beforeEach(() => {
@@ -172,7 +175,7 @@ describe('useGamePermissions', () => {
   // stays the user's real identity, which "Leave Game" and the public-viewer
   // banner still depend on.
   describe('completed games grant audience-level access to everyone', () => {
-    const completedGameWithRole = async (role: string | null) => {
+    const completedGameWithRole = async (role: GameParticipant['role'] | null) => {
       vi.mocked(apiClient.games.getGameWithDetails).mockResolvedValue({
         data: { ...MOCK_GAME, gm_user_id: 99, state: 'completed' },
       } as never);

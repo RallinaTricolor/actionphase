@@ -1,6 +1,6 @@
 ---
 name: testing-patterns
-description: Testing guide for ActionPhase. Covers when to write tests (V&V criteria), backend handler and service test patterns, frontend component tests, and E2E rules. Use when deciding whether to write a test, writing any type of test, or debugging failures. CRITICAL: tests must verify behavior, not just execution — read the V&V decision framework before writing anything.
+description: Testing guide for ActionPhase. Covers when to write tests (V&V criteria), backend handler and service test patterns (huma operations, 422 validation), frontend component tests with the typed factories, and E2E rules. Use when deciding whether to write a test, writing any type of test, or debugging failures. CRITICAL: tests must verify behavior, not just execution — read the V&V decision framework before writing anything.
 ---
 
 # Testing Patterns
@@ -68,7 +68,17 @@ Work bottom-up. E2E only after lower layers pass for the same feature.
 
 ## Backend Handler Test Pattern
 
-Standard pattern for all HTTP handler integration tests:
+Standard pattern for all HTTP handler integration tests.
+
+> Test routers mount **huma operations**: build a chi router with the real
+> middleware, then `RegisterHuma*(humaconfig.New(r, ...), handler)`, so the test
+> exercises the same decode/validate/encode path as production. Mount at the
+> prefix production uses — huma registers `{id}` as part of the operation path,
+> so it is `/characters`, not `/characters/{id}`.
+>
+> **Schema-tag validation fails with 422**, not 400. `minLength`, `enum` and
+> `required` are enforced before the handler runs. 400 is for the handler's own
+> cross-field and role-dependent checks.
 
 ```go
 func TestHandler_Operation(t *testing.T) {
@@ -77,7 +87,8 @@ func TestHandler_Operation(t *testing.T) {
     defer testDB.CleanupTables(t, "affected_table", "users")
 
     app := core.NewTestApp(testDB.Pool)
-    router := setupTestRouter(app, testDB)
+    router := setupXTestRouter(app, testDB)  // per-package; registers the huma
+                                             // operations onto a chi router
 
     gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
     player := testDB.CreateTestUser(t, "player", "player@example.com")
@@ -158,7 +169,10 @@ Write the test at the layer where the bug lives:
 just test                  # All tests
 just test-mocks            # Fast unit tests (no DB, ~300ms)
 just test-integration      # DB integration tests only
-just ci-test               # Full CI suite (lint + test + race)
+
+# Do NOT use `just ci-test` locally: it runs the slow race suite, and concurrent
+# runs clobber the shared test template DB. Use `just test`, and `just verify`
+# as the pre-push gate.
 
 # Run specific package or test (runs in the backend container)
 just test-run TestGameAPI_ListAll
@@ -170,6 +184,7 @@ just test-run TestGameAPI_ListAll
 # Frontend
 just test-fe run           # All frontend tests
 just test-fe watch         # Watch mode
+just check-test-types      # Type-check tests against the generated API types
 
 # E2E
 just e2e                   # Desktop + mobile
@@ -179,6 +194,30 @@ just e2e-test file <spec>  # One spec file
 just e2e-test report       # HTML report
 just load-e2e              # Load E2E fixtures
 ```
+
+---
+
+## Frontend Mocks: Use the Typed Factories
+
+**Never hand-roll an object literal for an API shape.** Factories in
+`frontend/src/test-utils/factories.ts` return the **full generated type**, so a
+backend field addition breaks one file instead of dozens.
+
+```typescript
+import { makeMessage } from '../test-utils/factories';
+
+const comment = makeMessage({ content: 'hello', reply_count: 2 });
+```
+
+**A mock is a claim about the wire.** If the compiler reports a missing field,
+add it with a value the server would really send — never silence it with a cast.
+That cast re-creates the exact drift the generated types were introduced to kill.
+
+Import the specific module, not the `test-utils` barrel: the barrel pulls in six
+providers and the whole UI library (1.36s vs 42ms). Factories are deliberately
+not re-exported from it.
+
+`just check-test-types` enforces this. **See**: `.claude/context/CODE_GENERATION.md`
 
 ---
 
@@ -203,6 +242,8 @@ just load-e2e              # Load E2E fixtures
 | Task | Resource |
 |------|----------|
 | Full pattern reference with examples | `.claude/context/TESTING.md` |
+| Typed mock factories (never hand-roll a mock) | `.claude/context/TESTING.md` (Frontend Mocks) |
+| Where the generated types come from | `.claude/context/CODE_GENERATION.md` |
 | E2E rules, debugging, fixtures | [e2e-testing.md](resources/e2e-testing.md) |
 | Test fixture data and setup | [test-fixtures.md](resources/test-fixtures.md) |
 | Frontend component testing | `.claude/context/TESTING.md` (Frontend section) |

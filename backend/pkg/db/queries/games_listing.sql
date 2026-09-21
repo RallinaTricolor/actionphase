@@ -12,7 +12,6 @@ SELECT
   g.end_date,
   g.recruitment_deadline,
   g.max_players,
-  g.is_public,
   g.is_anonymous,
   g.auto_accept_audience,
   g.allow_group_conversations,
@@ -74,13 +73,12 @@ FROM games g
 INNER JOIN users u ON g.gm_user_id = u.id
 LEFT JOIN communities c ON c.id = g.community_id
 WHERE
-  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
-  (g.is_public = true OR
-   ($6::boolean IS TRUE AND $7::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $7 AND is_admin = true)) OR
-   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
-
+  -- Every game is browseable: per-game visibility was dropped with
+  -- games.is_public. Access is governed by state, participation and community
+  -- bans, not by a row flag -- so there is no visibility predicate here, and
+  -- the admin-mode bypass that used to sit beside it is gone with it.
   -- Filter by states (optional array of states)
-  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (
@@ -101,15 +99,15 @@ WHERE
 
   -- Filter by search text (case-insensitive search in title and description)
   AND (
-    $8::text IS NULL OR $8 = '' OR
-    g.title ILIKE '%' || $8 || '%' OR
-    g.description::text ILIKE '%' || $8 || '%'
+    $6::text IS NULL OR $6 = '' OR
+    g.title ILIKE '%' || $6 || '%' OR
+    g.description::text ILIKE '%' || $6 || '%'
   )
 
   -- Filter by community (0 or NULL means "every community"). Legacy games with
   -- community_id NULL are excluded when a community IS named -- they belong to
   -- none, so they are not in it.
-  AND ($11::int IS NULL OR $11 = 0 OR g.community_id = $11)
+  AND ($9::int IS NULL OR $9 = 0 OR g.community_id = $9)
 
 ORDER BY
   -- Dynamic sorting based on $5 parameter
@@ -130,8 +128,8 @@ ORDER BY
   g.id DESC
 
 -- Pagination
-LIMIT $9::int
-OFFSET $10::int;
+LIMIT $7::int
+OFFSET $8::int;
 
 -- Parameters:
 -- $1: user_id (int, nullable) - for participation enrichment
@@ -139,27 +137,29 @@ OFFSET $10::int;
 -- $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
 -- $4: has_open_spots (boolean, nullable) - only games with available spots
 -- $5: sort_by (text) - 'recent_activity', 'created', 'start_date', 'alphabetical'
--- $6: admin_mode (boolean) - bypass is_public filter if user is admin
--- $7: admin_user_id (int, nullable) - user ID to validate admin status
--- $8: search (text, nullable) - case-insensitive search in title and description
--- $9: limit (int) - number of records per page
--- $10: offset (int) - number of records to skip
+-- $6: search (text, nullable) - case-insensitive search in title and description
+-- $7: limit (int) - number of records per page
+-- $8: offset (int) - number of records to skip
+-- $9: community_id (int, nullable) - 0/NULL means every community
+--
+-- admin_mode and admin_user_id are GONE: they existed only to bypass the
+-- is_public filter, which no longer exists. Admin mode itself is untouched --
+-- it still gates moderation elsewhere via AdminModeMiddleware.
 
 -- name: CountPublicGames :one
-SELECT COUNT(*) FROM games WHERE is_public = true;
+-- Every game is browseable since games.is_public was dropped, so this is now a
+-- plain total. The name is kept because it is the listing's "total_count".
+SELECT COUNT(*) FROM games;
 
 -- name: CountFilteredGames :one
 -- Count games matching the same filters as GetFilteredGames (for pagination metadata)
 SELECT COUNT(*)
 FROM games g
 WHERE
-  -- Show public games, OR games user is in, OR all games if admin mode enabled and user is admin
-  (g.is_public = true OR
-   ($5::boolean IS TRUE AND $6::int IS NOT NULL AND EXISTS(SELECT 1 FROM users WHERE id = $6 AND is_admin = true)) OR
-   ($1::int IS NOT NULL AND (g.gm_user_id = $1 OR EXISTS(SELECT 1 FROM game_participants WHERE game_id = g.id AND user_id = $1 AND status = 'active'))))
-
+  -- No visibility predicate -- see GetFilteredGames above. This clause list must
+  -- keep mirroring that query exactly or the count and the page disagree.
   -- Filter by states (optional array of states)
-  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (
@@ -180,27 +180,27 @@ WHERE
 
   -- Filter by search text (case-insensitive search in title and description)
   AND (
-    $7::text IS NULL OR $7 = '' OR
-    g.title ILIKE '%' || $7 || '%' OR
-    g.description::text ILIKE '%' || $7 || '%'
+    $5::text IS NULL OR $5 = '' OR
+    g.title ILIKE '%' || $5 || '%' OR
+    g.description::text ILIKE '%' || $5 || '%'
   )
 
   -- Filter by community. Must mirror GetFilteredGames exactly or the count and
   -- the page disagree and pagination breaks.
-  AND ($8::int IS NULL OR $8 = 0 OR g.community_id = $8);
+  AND ($6::int IS NULL OR $6 = 0 OR g.community_id = $6);
 
 -- Parameters:
 -- $1: user_id (int, nullable) - for participation enrichment
 -- $2: states (text[], nullable) - array of game states to filter
 -- $3: participation_filter (text, nullable) - 'my_games', 'applied', 'not_joined'
 -- $4: has_open_spots (boolean, nullable) - only games with available spots
--- $5: admin_mode (boolean) - bypass is_public filter if user is admin
--- $6: admin_user_id (int, nullable) - user ID to validate admin status
--- $7: search (text, nullable) - case-insensitive search in title and description
--- $8: community_id (int, nullable) - 0/NULL means every community
+-- $5: search (text, nullable) - case-insensitive search in title and description
+-- $6: community_id (int, nullable) - 0/NULL means every community
+--
+-- No sort_by here: counting does not order. admin_mode and admin_user_id are
+-- gone for the same reason as in GetFilteredGames above.
 
 -- name: GetAvailableStates :many
 SELECT DISTINCT state
 FROM games
-WHERE is_public = true
 ORDER BY state ASC;

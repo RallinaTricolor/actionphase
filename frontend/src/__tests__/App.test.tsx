@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { makeUseAuthResult } from '../test-utils/factories'
 
 // Mock the auth hook
 vi.mock('../hooks/useAuth', () => ({
@@ -30,13 +31,13 @@ vi.mock('../pages/GameDetailsPage', () => ({
   ),
 }))
 
-vi.mock('../components/ProtectedRoute', () => ({
+vi.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="protected-route">{children}</div>
   ),
 }))
 
-vi.mock('../components/ErrorBoundary', () => ({
+vi.mock('@/components/common/errors/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),
@@ -45,14 +46,6 @@ vi.mock('../components/ErrorBoundary', () => ({
 import { useAuth } from '../hooks/useAuth'
 
 // Type for mocked useAuth return value
-type MockedUseAuthReturn = Partial<ReturnType<typeof useAuth>> & {
-  isAuthenticated: boolean;
-  user: { id: number; username: string } | null;
-  login: ReturnType<typeof vi.fn>;
-  logout: ReturnType<typeof vi.fn>;
-  isLoading: boolean;
-};
-
 // We'll test the AppRoutes component directly since App already includes BrowserRouter
 const TestAppRoutes = ({ initialEntries }: { initialEntries: string[] }) => (
   <MemoryRouter initialEntries={initialEntries}>
@@ -138,13 +131,7 @@ describe('App', () => {
 
   describe('when user is not authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
     })
 
     it('renders home page at root route', () => {
@@ -187,13 +174,7 @@ describe('App', () => {
 
   describe('when user is authenticated', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
     })
 
     it('renders home page at root route even when authenticated', () => {
@@ -241,13 +222,7 @@ describe('App', () => {
 
   describe('GameDetailsPageWrapper', () => {
     beforeEach(() => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
     })
 
     it('renders game details with numeric game ID', () => {
@@ -289,13 +264,7 @@ describe('App', () => {
 
   describe('Error Boundary integration', () => {
     it('wraps the entire app in error boundary', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       render(<TestAppRoutes initialEntries={['/']} />)
 
@@ -305,13 +274,7 @@ describe('App', () => {
 
   describe('QueryClient configuration', () => {
     it('provides QueryClient to all components', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       // The QueryClientProvider is used internally
       // We verify this by checking that the app renders without QueryClient errors
@@ -325,13 +288,7 @@ describe('App', () => {
 
   describe('Protected Routes', () => {
     it('wraps dashboard in ProtectedRoute', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       render(<TestAppRoutes initialEntries={['/dashboard']} />)
 
@@ -340,13 +297,7 @@ describe('App', () => {
     })
 
     it('wraps games page in ProtectedRoute', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       render(<TestAppRoutes initialEntries={['/games']} />)
 
@@ -355,13 +306,7 @@ describe('App', () => {
     })
 
     it('wraps game details in ProtectedRoute', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       render(<TestAppRoutes initialEntries={['/games/123']} />)
 
@@ -370,13 +315,7 @@ describe('App', () => {
     })
 
     it('does not wrap home page in ProtectedRoute', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       render(<TestAppRoutes initialEntries={['/']} />)
 
@@ -385,13 +324,7 @@ describe('App', () => {
     })
 
     it('does not wrap login page in ProtectedRoute', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       render(<TestAppRoutes initialEntries={['/login']} />)
 
@@ -402,13 +335,7 @@ describe('App', () => {
 
   describe('Route navigation behavior', () => {
     it('handles multiple routes with different initial entries', () => {
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       // Test dashboard route
       const { unmount: unmount1 } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
@@ -429,25 +356,13 @@ describe('App', () => {
   describe('Authentication state changes', () => {
     it('handles authentication state change from unauthenticated to authenticated', () => {
       // Start unauthenticated
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       const { rerender } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('login-page')).toBeInTheDocument()
 
       // Become authenticated
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       rerender(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
@@ -455,25 +370,13 @@ describe('App', () => {
 
     it('handles authentication state change from authenticated to unauthenticated', () => {
       // Start authenticated
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: true,
-        user: { id: 1, username: 'testuser' },
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: true }))
 
       const { rerender } = render(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
 
       // Become unauthenticated
-      vi.mocked(useAuth).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-        isLoading: false,
-      } as MockedUseAuthReturn)
+      vi.mocked(useAuth).mockReturnValue(makeUseAuthResult({ isAuthenticated: false }))
 
       rerender(<TestAppRoutes initialEntries={['/dashboard']} />)
       expect(screen.getByTestId('login-page')).toBeInTheDocument()

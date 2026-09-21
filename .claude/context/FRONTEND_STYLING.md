@@ -705,7 +705,7 @@ function StatusDashboard() {
 **ALWAYS use the MarkdownPreview component** for rendering markdown content. It has built-in dark mode support.
 
 ```tsx
-import { MarkdownPreview } from '@/components/MarkdownPreview';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 
 // Basic usage
 <MarkdownPreview content={markdownText} />
@@ -865,7 +865,7 @@ Before submitting a PR with frontend changes:
 - **UI Component Library:** `frontend/src/components/ui/`
 - **Component Documentation:** `frontend/src/components/ui/README.md`
 - **Theme Test Page:** Navigate to `/theme-test` in browser
-- **MarkdownPreview Component:** `frontend/src/components/MarkdownPreview.tsx`
+- **MarkdownPreview Component:** `frontend/src/components/common/markdown/MarkdownPreview.tsx`
 - **CSS Variables:** Defined in `frontend/src/index.css`
 - **Theme Provider:** `frontend/src/contexts/ThemeContext.tsx`
 

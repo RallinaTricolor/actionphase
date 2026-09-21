@@ -7,8 +7,8 @@ vi.mock('@/services/LoggingService', () => ({
 }));
 
 vi.mock('@opentelemetry/api', () => ({
-  context: { with: vi.fn((ctx, fn) => fn()), active: vi.fn(() => ({})) },
-  trace: { getTracer: vi.fn(() => ({ startActiveSpan: vi.fn((name, fn) => fn({ end: vi.fn(), setStatus: vi.fn(), recordException: vi.fn() })) })) },
+  context: { with: vi.fn((_ctx, fn) => fn()), active: vi.fn(() => ({})) },
+  trace: { getTracer: vi.fn(() => ({ startActiveSpan: vi.fn((_name, fn) => fn({ end: vi.fn(), setStatus: vi.fn(), recordException: vi.fn() })) })) },
   propagation: { inject: vi.fn() },
   SpanStatusCode: { OK: 'OK', ERROR: 'ERROR' },
 }));

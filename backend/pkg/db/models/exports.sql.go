@@ -21,7 +21,7 @@ WHERE id = (
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at
+RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at
 `
 
 // Atomically claim the oldest pending job. SKIP LOCKED keeps this correct
@@ -42,8 +42,8 @@ func (q *Queries) ClaimNextGameExport(ctx context.Context) (GameExport, error) {
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -53,7 +53,7 @@ const createGameExport = `-- name: CreateGameExport :one
 
 INSERT INTO game_exports (game_id, requested_by_user_id, status)
 VALUES ($1, $2, 'pending')
-RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at
+RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at
 `
 
 type CreateGameExportParams struct {
@@ -94,14 +94,14 @@ func (q *Queries) CreateGameExport(ctx context.Context, arg CreateGameExportPara
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const getActiveGameExport = `-- name: GetActiveGameExport :one
-SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at FROM game_exports
+SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at FROM game_exports
 WHERE game_id = $1 AND status IN ('pending', 'running')
 LIMIT 1
 `
@@ -123,8 +123,8 @@ func (q *Queries) GetActiveGameExport(ctx context.Context, gameID int32) (GameEx
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -205,7 +205,7 @@ func (q *Queries) GetGameContentFingerprint(ctx context.Context, gameID int32) (
 }
 
 const getGameExport = `-- name: GetGameExport :one
-SELECT ge.id, ge.game_id, ge.requested_by_user_id, ge.status, ge.content_fingerprint, ge.storage_path, ge.size_bytes, ge.file_count, ge.error_message, ge.progress_note, ge.started_at, ge.completed_at, ge.expires_at, ge.created_at, g.title AS game_title
+SELECT ge.id, ge.game_id, ge.requested_by_user_id, ge.status, ge.content_fingerprint, ge.storage_path, ge.size_bytes, ge.file_count, ge.error_message, ge.progress_note, ge.started_at, ge.completed_at, ge.created_at, ge.expires_at, g.title AS game_title
 FROM game_exports ge
 JOIN games g ON g.id = ge.game_id
 WHERE ge.id = $1
@@ -224,8 +224,8 @@ type GetGameExportRow struct {
 	ProgressNote       pgtype.Text        `json:"progress_note"`
 	StartedAt          pgtype.Timestamptz `json:"started_at"`
 	CompletedAt        pgtype.Timestamptz `json:"completed_at"`
-	ExpiresAt          pgtype.Timestamptz `json:"expires_at"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt          pgtype.Timestamptz `json:"expires_at"`
 	GameTitle          string             `json:"game_title"`
 }
 
@@ -247,15 +247,15 @@ func (q *Queries) GetGameExport(ctx context.Context, id int32) (GetGameExportRow
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 		&i.GameTitle,
 	)
 	return i, err
 }
 
 const getLatestGameExport = `-- name: GetLatestGameExport :one
-SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at FROM game_exports
+SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at FROM game_exports
 WHERE game_id = $1
 ORDER BY created_at DESC
 LIMIT 1
@@ -278,14 +278,14 @@ func (q *Queries) GetLatestGameExport(ctx context.Context, gameID int32) (GameEx
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const getReusableGameExport = `-- name: GetReusableGameExport :one
-SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at FROM game_exports
+SELECT id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at FROM game_exports
 WHERE game_id = $1
   AND status = 'complete'
   AND storage_path IS NOT NULL
@@ -323,8 +323,8 @@ func (q *Queries) GetReusableGameExport(ctx context.Context, arg GetReusableGame
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -527,7 +527,7 @@ type ListExportCharacterDataRow struct {
 	ModuleType  string      `json:"module_type"`
 	FieldName   string      `json:"field_name"`
 	FieldValue  pgtype.Text `json:"field_value"`
-	FieldType   pgtype.Text `json:"field_type"`
+	FieldType   string      `json:"field_type"`
 	IsPublic    pgtype.Bool `json:"is_public"`
 }
 
@@ -572,7 +572,7 @@ type ListExportCharactersRow struct {
 	ID             int32              `json:"id"`
 	Name           string             `json:"name"`
 	CharacterType  string             `json:"character_type"`
-	Status         pgtype.Text        `json:"status"`
+	Status         string             `json:"status"`
 	IsActive       bool               `json:"is_active"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	PlayerUsername pgtype.Text        `json:"player_username"`
@@ -611,7 +611,7 @@ const listExportCommentTree = `-- name: ListExportCommentTree :many
 WITH RECURSIVE tree AS (
     SELECT m.id, m.parent_id, m.character_id, m.author_id, m.content,
            m.created_at, m.is_edited, m.edit_count, m.thread_depth,
-           ARRAY[m.created_at]::timestamp[] AS path
+           ARRAY[m.created_at]::timestamptz[] AS path
     FROM messages m
     WHERE m.parent_id = $1
       AND m.is_draft = FALSE
@@ -635,16 +635,16 @@ ORDER BY t.path
 `
 
 type ListExportCommentTreeRow struct {
-	ID             int32              `json:"id"`
-	ParentID       pgtype.Int4        `json:"parent_id"`
-	Content        string             `json:"content"`
-	CreatedAt      pgtype.Timestamp   `json:"created_at"`
-	IsEdited       bool               `json:"is_edited"`
-	EditCount      int32              `json:"edit_count"`
-	ThreadDepth    int32              `json:"thread_depth"`
-	Path           []pgtype.Timestamp `json:"path"`
-	CharacterName  string             `json:"character_name"`
-	AuthorUsername string             `json:"author_username"`
+	ID             int32                `json:"id"`
+	ParentID       pgtype.Int4          `json:"parent_id"`
+	Content        string               `json:"content"`
+	CreatedAt      pgtype.Timestamptz   `json:"created_at"`
+	IsEdited       bool                 `json:"is_edited"`
+	EditCount      int32                `json:"edit_count"`
+	ThreadDepth    int32                `json:"thread_depth"`
+	Path           []pgtype.Timestamptz `json:"path"`
+	CharacterName  string               `json:"character_name"`
+	AuthorUsername string               `json:"author_username"`
 }
 
 // Entire descendant tree of one post in a single recursive pass, ordered by
@@ -831,7 +831,7 @@ ORDER BY sort_rank, role, username
 type ListExportParticipantsRow struct {
 	UserID         int32              `json:"user_id"`
 	Role           string             `json:"role"`
-	Status         pgtype.Text        `json:"status"`
+	Status         string             `json:"status"`
 	JoinedAt       pgtype.Timestamptz `json:"joined_at"`
 	IsFormerPlayer bool               `json:"is_former_player"`
 	Username       string             `json:"username"`
@@ -1109,15 +1109,15 @@ ORDER BY m.created_at
 `
 
 type ListExportPostsRow struct {
-	ID                    int32            `json:"id"`
-	PhaseID               pgtype.Int4      `json:"phase_id"`
-	Content               string           `json:"content"`
-	CreatedAt             pgtype.Timestamp `json:"created_at"`
-	IsEdited              bool             `json:"is_edited"`
-	EditCount             int32            `json:"edit_count"`
-	MentionedCharacterIds []int32          `json:"mentioned_character_ids"`
-	CharacterName         string           `json:"character_name"`
-	AuthorUsername        string           `json:"author_username"`
+	ID                    int32              `json:"id"`
+	PhaseID               pgtype.Int4        `json:"phase_id"`
+	Content               string             `json:"content"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	IsEdited              bool               `json:"is_edited"`
+	EditCount             int32              `json:"edit_count"`
+	MentionedCharacterIds []int32            `json:"mentioned_character_ids"`
+	CharacterName         string             `json:"character_name"`
+	AuthorUsername        string             `json:"author_username"`
 }
 
 // Top-level common room posts. Comments are fetched per-post as a tree.
@@ -1214,7 +1214,7 @@ SET status = 'complete',
     completed_at = NOW(),
     expires_at = NOW() + $6::interval
 WHERE id = $1
-RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at
+RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at
 `
 
 type MarkGameExportCompleteParams struct {
@@ -1251,8 +1251,8 @@ func (q *Queries) MarkGameExportComplete(ctx context.Context, arg MarkGameExport
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -1278,7 +1278,7 @@ SET status = 'failed',
     progress_note = NULL,
     completed_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, expires_at, created_at
+RETURNING id, game_id, requested_by_user_id, status, content_fingerprint, storage_path, size_bytes, file_count, error_message, progress_note, started_at, completed_at, created_at, expires_at
 `
 
 type MarkGameExportFailedParams struct {
@@ -1302,8 +1302,8 @@ func (q *Queries) MarkGameExportFailed(ctx context.Context, arg MarkGameExportFa
 		&i.ProgressNote,
 		&i.StartedAt,
 		&i.CompletedAt,
-		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 	)
 	return i, err
 }

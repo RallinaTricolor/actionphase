@@ -309,7 +309,6 @@ type BotPreventionServiceInterface interface {
 //	    GMUserID:    int32(gmUser.ID),
 //	    Genre:       "Fantasy RPG",
 //	    MaxPlayers:  6,
-//	    IsPublic:    true,
 //	})
 //
 //	// Transition game to accept players
@@ -356,9 +355,6 @@ type GameServiceInterface interface {
 
 	// GetGameWithDetails retrieves a game with additional metadata
 	GetGameWithDetails(ctx context.Context, gameID int32) (*models.GetGameWithDetailsRow, error)
-
-	// GetRecruitingGames retrieves all games currently accepting new players
-	GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error)
 
 	// CanUserJoinGame checks if a user is eligible to join a specific game
 	CanUserJoinGame(ctx context.Context, gameID, userID int32) (string, error)
@@ -555,7 +551,6 @@ type CreateGameRequest struct {
 	EndDate                 *time.Time
 	RecruitmentDeadline     *time.Time
 	MaxPlayers              int32
-	IsPublic                bool
 	IsAnonymous             bool
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool
@@ -584,7 +579,6 @@ type UpdateGameRequest struct {
 	EndDate                 *time.Time
 	RecruitmentDeadline     *time.Time
 	MaxPlayers              int32
-	IsPublic                bool
 	IsAnonymous             bool
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool
@@ -734,8 +728,7 @@ type ActionSubmissionServiceInterface interface {
 	//
 	// A staged result is one narrative beat split across several parts
 	// separated by timers, so the player reads "the sword swings toward your
-	// head..." and waits before learning whether it connects. See
-	// .claude/planning/staged-result-reveals.md.
+	// head..." and waits before learning whether it connects.
 
 	// CreateStagedResultChain creates a whole chain in one transaction:
 	// parts[0] becomes an ordinary head result, and each later part is linked
@@ -1946,17 +1939,20 @@ type UserProfile struct {
 
 // UserGame represents a game the user has participated in.
 type UserGame struct {
-	GameID      int32               `json:"game_id"`
-	Title       string              `json:"title"`
-	State       string              `json:"state"`
-	IsAnonymous bool                `json:"is_anonymous"`
-	UserRole    string              `json:"user_role"` // "player", "co_gm", "audience"
-	GMUsername  string              `json:"gm_username"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
-	StartDate   *time.Time          `json:"start_date"`
-	EndDate     *time.Time          `json:"end_date"`
-	Characters  []UserGameCharacter `json:"characters"` // Empty for anonymous games
+	GameID      int32      `json:"game_id"`
+	Title       string     `json:"title"`
+	State       GameState  `json:"state"`
+	IsAnonymous bool       `json:"is_anonymous"`
+	UserRole    string     `json:"user_role"` // "player", "co_gm", "audience"
+	GMUsername  string     `json:"gm_username"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	StartDate   *time.Time `json:"start_date"`
+	EndDate     *time.Time `json:"end_date"`
+	// nullable:"false": GetUserGames sets this to []core.UserGameCharacter{} on
+	// every map insert and only ever appends, so it is never nil -- an
+	// anonymous game yields an empty array, not null.
+	Characters []UserGameCharacter `json:"characters" nullable:"false"` // Empty for anonymous games
 }
 
 // UserGameCharacter represents a character the user played in a game.
@@ -1979,8 +1975,10 @@ type UserGameHistoryMetadata struct {
 
 // UserProfileResponse is the complete response for a user profile.
 type UserProfileResponse struct {
-	User     UserProfile             `json:"user"`
-	Games    []UserGame              `json:"games"`
+	User UserProfile `json:"user"`
+	// nullable:"false": GetUserGames returns make([]core.UserGame, 0,
+	// len(gameMap)), so this is never nil.
+	Games    []UserGame              `json:"games" nullable:"false"`
 	Metadata UserGameHistoryMetadata `json:"metadata"`
 }
 

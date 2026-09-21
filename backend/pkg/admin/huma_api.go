@@ -2,9 +2,9 @@ package admin
 
 // Huma (type-first) implementation of the admin API.
 //
-// This is the reference implementation for the migration: admin was converted
-// first, its chi handlers deleted, and api_test.go repointed here with its
-// assertions unchanged. See .claude/planning/huma-migration.md.
+// This is the reference implementation: admin was converted first, its chi
+// handlers deleted, and api_test.go repointed here with its assertions
+// unchanged.
 //
 // The point of a type-first handler is that the OpenAPI spec is *derived* from
 // the Go signature rather than written beside it. Path/query params, request

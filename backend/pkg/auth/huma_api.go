@@ -21,14 +21,13 @@ package auth
 // Not converted: V1DiscordCallback. It answers a browser redirect (302 to the
 // frontend) and writes plain-text errors via http.Error, so it has no JSON
 // shape to document -- the same reasoning that leaves /ping on chi.
-//
-// See .claude/planning/huma-migration.md.
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -134,13 +133,21 @@ func clientMeta(ctx context.Context) (ip, userAgent string) {
 
 // loginBody accepts either a username or an email in `username`, matching the
 // chi handler: it prefers `email` when both are sent, and treats a `username`
-// containing "@" as an email. Neither field is required on its own, because
-// either one may carry the identifier -- the handler rejects the request when
-// both are empty, exactly as before.
+// containing "@" as an email.
+//
+// Username and Email are each optional because there are two fields for one
+// value -- requiring either would break the other path, so the handler enforces
+// the real rule (reject when both are empty) rather than the schema.
+//
+// Password is NOT one of them, and used to be declared required:"false"
+// alongside them. Nothing accepts a login without a password: it goes straight
+// to CheckPasswordHash. That declaration reached the frontend as
+// `password?: string`, so a payload missing it type-checked and failed at
+// runtime. RegisterBody below has always had this right.
 type loginBody struct {
 	Username      string `json:"username,omitempty" required:"false" doc:"Username or email address"`
 	Email         string `json:"email,omitempty" required:"false" doc:"Email address; takes precedence over username"`
-	Password      string `json:"password" required:"false" doc:"Account password"`
+	Password      string `json:"password" required:"true" doc:"Account password"`
 	Fingerprint   string `json:"fingerprint,omitempty" required:"false" maxLength:"512" doc:"Device fingerprint, recorded on the session"`
 	HCaptchaToken string `json:"hcaptcha_token,omitempty" required:"false"`
 	HoneypotValue string `json:"honeypot_value,omitempty" required:"false"`
@@ -1304,15 +1311,9 @@ func RegisterHumaAuthRateLimited(api huma.API, h *Handler) {
 		Description: "Creates an account and returns a token. Responds 202 with a " +
 			"pending-approval notice instead when the instance requires admin " +
 			"approval of new accounts. Rate limited.",
-		Tags:     []string{tagAuth},
-		Security: noAuth,
-		Responses: map[string]*huma.Response{
-			"422": {Description: "Request failed validation"},
-			"202": {Description: "Account created and awaiting admin approval"},
-			"400": {Description: "Validation failed, username taken, or blocked by bot prevention"},
-			"403": {Description: "IP address or device fingerprint is banned"},
-			"429": {Description: "Too many attempts"},
-		},
+		Tags:      []string{tagAuth},
+		Security:  noAuth,
+		Responses: registerResponses(api),
 	}, h.HumaRegister)
 
 	huma.Register(api, huma.Operation{
@@ -1364,9 +1365,92 @@ func RegisterHumaAuthProbe(api huma.API, h *Handler) {
 			"expired token yields 200 with {\"user\": null}, so the frontend can " +
 			"poll it without provoking console errors. A token whose session has " +
 			"been revoked also reads as signed out.",
-		Tags:     []string{tagAuth},
-		Security: noAuth,
+		Tags:      []string{tagAuth},
+		Security:  noAuth,
+		Responses: meResponses(api),
 	}, h.HumaMe)
+}
+
+// meResponses describes the two shapes /me answers with.
+//
+// meOutput carries them in a `Body any`, which huma cannot reflect -- the
+// operation rendered as `schema: {}`, so the generated TypeScript for the
+// endpoint the frontend polls on every page load was `unknown`.
+//
+// Declared as a oneOf rather than one flattened object with everything
+// optional: the response really is a user OR {"user": null}, never a merge, and
+// a merged schema would describe a payload the server never sends. huma fills a
+// response schema only when it is nil, so pre-setting it here survives
+// registration.
+func meResponses(api huma.API) map[string]*huma.Response {
+	registry := api.OpenAPI().Components.Schemas
+
+	return map[string]*huma.Response{
+		"200": {
+			Description: "The signed-in user, or a null user when not signed in",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: &huma.Schema{
+						OneOf: []*huma.Schema{
+							huma.SchemaFromType(registry, reflect.TypeFor[authUser]()),
+							huma.SchemaFromType(registry, reflect.TypeFor[nullUserBody]()),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// registerResponses documents both shapes POST /register answers with.
+//
+// registerOutput.Body is `any` because the endpoint returns a created user on
+// 201 and a pending-approval notice on 202, so huma had nothing to reflect and
+// rendered the 201 as `schema: {}` -- the generated TypeScript for account
+// creation was `unknown`. The 202 was worse: declared with a description and no
+// content, it generated as `content?: never`, i.e. a body that does not exist.
+//
+// Unlike /me this needs no oneOf. There the two shapes share one status code,
+// so the union had to live inside a single schema; here they are already
+// separated by status, which OpenAPI models natively and openapi-typescript
+// keys on. Each status gets its own concrete schema.
+//
+// huma fills a response schema only when it is nil, and it only ever touches
+// DefaultStatus (201) -- see huma.go's Register, which resolves the body field
+// against op.DefaultStatus alone. Pre-setting both here therefore survives
+// registration, and the 202 would never have been filled in regardless.
+//
+// Registry.Schema, NOT huma.SchemaFromType: the latter inlines the whole object
+// every time, which is what /me's oneOf does. An inlined schema has no name, so
+// openapi-typescript emits an anonymous object literal and there is nothing for
+// the frontend to alias -- which would defeat the point. Registry.Schema
+// registers the type under a name and hands back a $ref, so both shapes land in
+// components/schemas and AuthUser is shared with /me rather than duplicated.
+func registerResponses(api huma.API) map[string]*huma.Response {
+	registry := api.OpenAPI().Components.Schemas
+
+	return map[string]*huma.Response{
+		"201": {
+			Description: "Account created; the user and a session token",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: registry.Schema(reflect.TypeFor[authUser](), true, "AuthUser"),
+				},
+			},
+		},
+		"202": {
+			Description: "Account created and awaiting admin approval",
+			Content: map[string]*huma.MediaType{
+				"application/json": {
+					Schema: registry.Schema(reflect.TypeFor[pendingApprovalBody](), true, "PendingApprovalBody"),
+				},
+			},
+		},
+		"400": {Description: "Validation failed, username taken, or blocked by bot prevention"},
+		"403": {Description: "IP address or device fingerprint is banned"},
+		"422": {Description: "Request failed validation"},
+		"429": {Description: "Too many attempts"},
+	}
 }
 
 // RegisterHumaAuthProtected registers the routes behind full authentication.

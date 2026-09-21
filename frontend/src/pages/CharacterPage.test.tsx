@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { UseInfiniteQueryResult, UseQueryResult } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { CharacterPage } from './CharacterPage';
 import { stubRenderedHeight } from '../test-utils/renderedHeight';
+import { makeInfiniteQueryResult, makeQueryResult } from '../test-utils/factories';
 import * as useCharacterCommentsModule from '../hooks/useCharacterComments';
 import * as useCharacterStatsModule from '../hooks/useCharacterStats';
-import type { Character, CharacterData } from '../types/characters';
+import type {
+  Character,
+  CharacterActivityStats,
+  CharacterData,
+} from '../types/characters';
 import type { CharacterMessage, CharacterMessagesResponse } from '../types/messages';
 
 // Mock hooks
@@ -53,8 +58,8 @@ const mockCharacter: Character = {
   game_id: 1,
   name: 'Aelindra',
   character_type: 'player_character',
-  status: 'active',
-  avatar_url: null,
+  status: 'approved',
+  avatar_url: undefined,
   is_active: true,
   username: 'testplayer',
   created_at: '2025-01-01T00:00:00Z',
@@ -92,6 +97,7 @@ const mockComment: CharacterMessage = {
     message_type: 'post',
     author_username: 'someone',
     character_name: 'Other Character',
+    character_avatar_url: null,
   },
 };
 
@@ -156,11 +162,12 @@ describe('CharacterPage', () => {
       gameId: undefined,
     });
     // Default: stats not loaded (undefined data)
-    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue(
+      makeQueryResult<CharacterActivityStats>({
       data: undefined,
       isLoading: false,
       isError: false,
-    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
+    }));
   });
 
   it('shows loading state while character loads', () => {
@@ -168,16 +175,17 @@ describe('CharacterPage', () => {
       data: undefined,
       isLoading: true,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: undefined,
       isLoading: true,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -190,16 +198,20 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -212,16 +224,20 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -233,21 +249,23 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: {
         pages: [{
           messages: [mockMessage, mockComment],
           pagination: { total: 2, limit: 20, offset: 0 },
         }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -263,9 +281,10 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: undefined,
       isLoading: false,
       isError: true,
@@ -273,7 +292,7 @@ describe('CharacterPage', () => {
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -287,21 +306,23 @@ describe('CharacterPage', () => {
         data: mockCharacter,
         isLoading: false,
         isError: false,
-      } as Partial<UseQueryResult<Character>>);
+      });
 
-      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
         data: {
           pages: [{
             messages,
             pagination: { total: messages.length, limit: 20, offset: 0 },
           }],
+          pageParams: [0],
         },
         isLoading: false,
         isError: false,
         fetchNextPage: vi.fn(),
         hasNextPage: false,
         isFetchingNextPage: false,
-      } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+      }));
 
       return renderCharacterPage();
     }
@@ -351,21 +372,23 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: {
         pages: [{
           messages: [mockMessage],
           pagination: { total: 1, limit: 20, offset: 0 },
         }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -377,21 +400,23 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: {
         pages: [{
           messages: [mockMessage],
           pagination: { total: 1, limit: 20, offset: 0 },
         }],
+        pageParams: [0],
       },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -406,22 +431,27 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
-    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue(
+      makeQueryResult<CharacterActivityStats>({
       data: { public_messages: 42, private_messages: 13 },
       isLoading: false,
       isError: false,
-    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
+    }));
 
     renderCharacterPage();
 
@@ -435,22 +465,27 @@ describe('CharacterPage', () => {
       data: mockCharacter,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
-    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue({
+    vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue(
+      makeQueryResult<CharacterActivityStats>({
       data: { public_messages: 7 },
       isLoading: false,
       isError: false,
-    } as Partial<ReturnType<typeof useCharacterStatsModule.useCharacterStats>>);
+    }));
 
     renderCharacterPage();
 
@@ -463,16 +498,17 @@ describe('CharacterPage', () => {
       data: undefined,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
       data: undefined,
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage('not-a-number');
 
@@ -484,16 +520,20 @@ describe('CharacterPage', () => {
       data: { ...mockCharacter, character_type: 'player_character' },
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -506,16 +546,20 @@ describe('CharacterPage', () => {
       data: characterWithoutType as Character,
       isLoading: false,
       isError: false,
-    } as Partial<UseQueryResult<Character>>);
+    });
 
-    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-      data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+    vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+      data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),
       hasNextPage: false,
       isFetchingNextPage: false,
-    } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+    }));
 
     renderCharacterPage();
 
@@ -531,16 +575,20 @@ describe('CharacterPage', () => {
         data: mockCharacter,
         isLoading: false,
         isError: false,
-      } as Partial<UseQueryResult<Character>>);
+      });
 
-      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-        data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+        data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
         isLoading: false,
         isError: false,
         fetchNextPage: vi.fn(),
         hasNextPage: false,
         isFetchingNextPage: false,
-      } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+      }));
 
       return renderCharacterPage();
     }
@@ -588,16 +636,20 @@ describe('CharacterPage', () => {
         data: mockCharacter,
         isLoading: false,
         isError: false,
-      } as Partial<UseQueryResult<Character>>);
+      });
 
-      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue({
-        data: { pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }] },
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+      makeInfiniteQueryResult<CharacterMessagesResponse>({
+        data: {
+        pages: [{ messages: [], pagination: { total: 0, limit: 20, offset: 0 } }],
+        pageParams: [0],
+      },
         isLoading: false,
         isError: false,
         fetchNextPage: vi.fn(),
         hasNextPage: false,
         isFetchingNextPage: false,
-      } as Partial<UseInfiniteQueryResult<CharacterMessagesResponse>>);
+      }));
 
       characterFieldsResult = fields;
       return renderCharacterPage();

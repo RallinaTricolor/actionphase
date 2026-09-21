@@ -118,7 +118,6 @@ type MockGameRepository struct {
 	GetGameFn            func(ctx context.Context, id int32) (db.Game, error)
 	GetGamesByUserFn     func(ctx context.Context, userID int32) ([]db.GetGamesByUserRow, error)
 	GetGamesByGMFn       func(ctx context.Context, gmUserID int32) ([]db.Game, error)
-	GetRecruitingGamesFn func(ctx context.Context) ([]db.GetRecruitingGamesRow, error)
 	GetGameWithDetailsFn func(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error)
 	UpdateGameFn         func(ctx context.Context, params db.UpdateGameParams) (db.Game, error)
 	UpdateGameStateFn    func(ctx context.Context, params db.UpdateGameStateParams) (db.Game, error)
@@ -151,13 +150,6 @@ func (m *MockGameRepository) GetGamesByGM(ctx context.Context, gmUserID int32) (
 		return m.GetGamesByGMFn(ctx, gmUserID)
 	}
 	return []db.Game{}, nil
-}
-
-func (m *MockGameRepository) GetRecruitingGames(ctx context.Context) ([]db.GetRecruitingGamesRow, error) {
-	if m.GetRecruitingGamesFn != nil {
-		return m.GetRecruitingGamesFn(ctx)
-	}
-	return []db.GetRecruitingGamesRow{}, nil
 }
 
 func (m *MockGameRepository) GetGameWithDetails(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error) {

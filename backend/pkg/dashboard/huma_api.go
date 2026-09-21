@@ -3,8 +3,7 @@ package dashboard
 // Huma (type-first) implementation of the dashboard API.
 //
 // The response schema is derived from *core.DashboardData, so the documented
-// shape cannot drift from what the handler actually returns. See
-// .claude/planning/huma-migration.md.
+// shape cannot drift from what the handler actually returns.
 
 import (
 	"context"

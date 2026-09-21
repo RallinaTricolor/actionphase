@@ -26,7 +26,7 @@ BEGIN
   audience2_id := get_worker_user_id('TestAudience2', 0);
   player1_id := get_worker_user_id('TestPlayer1', 0);
 
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, is_public, created_at, updated_at)
+  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
   VALUES (
     game_id,
     'E2E Test: Co-GM Action Results',
@@ -35,7 +35,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '14 days',
     NOW()
   );

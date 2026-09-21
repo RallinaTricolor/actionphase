@@ -1,8 +1,6 @@
 package users
 
 // Huma (type-first) implementation of the user profile and avatar API.
-//
-// See .claude/planning/huma-migration.md.
 
 import (
 	"bytes"

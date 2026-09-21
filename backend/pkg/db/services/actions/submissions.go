@@ -37,7 +37,7 @@ func (as *ActionSubmissionService) SubmitAction(ctx context.Context, req core.Su
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
 		as.Logger.Warn(ctx, "Cannot submit action to completed/cancelled game",
 			"game_id", req.GameID,
-			"game_state", game.State.String,
+			"game_state", game.State,
 		)
 		return nil, err
 	}

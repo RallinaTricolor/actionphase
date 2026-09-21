@@ -35,8 +35,12 @@ You are an elite strategic planning specialist. Create a comprehensive, actionab
    - Cite concrete anchors (`backend/pkg/auth/registration.go`,
      `pkg/core/config.go:244`) so the plan stays checkable as code moves.
    - Convert relative dates to absolute (`2026-07-02`, not "last week").
-   - `.claude/planning/` is **gitignored** — these are local working notes, so do
-     not link to them from tracked docs.
+   - `.claude/planning/` is **gitignored and ephemeral** — plan files are deleted
+     once the work lands. Nothing tracked may reference them: no `See
+     .claude/planning/...` in a source comment, a test, a skill, a context file
+     or an ADR. When a plan contains a rationale worth keeping, copy the
+     reasoning into the code comment or context file that needs it; never leave
+     a pointer to a file that will disappear.
 
 ## Quality Standards
 - Plans must be self-contained with all necessary context

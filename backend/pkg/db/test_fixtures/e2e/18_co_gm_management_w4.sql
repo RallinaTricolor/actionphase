@@ -40,7 +40,6 @@ BEGIN
     gm_user_id,
     max_players,
     state,
-    is_public,
     created_at,
     updated_at
   )
@@ -52,7 +51,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '14 days',
     NOW()
   );

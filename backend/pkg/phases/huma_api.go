@@ -5,7 +5,7 @@ package phases
 //
 // Two registration functions, because phases are mounted at two prefixes:
 // the per-game routes under /games/{gameID}, and the phase-id operations at
-// /phases. See .claude/planning/huma-migration.md gotcha 10.
+// /phases.
 
 import (
 	"context"
@@ -983,7 +983,7 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 	//
 	// Epilogue must be included: a player writing an epilogue needs to see what
 	// happened to everyone else, which is the whole reason that state exists.
-	if !canManage && !isAudience && !core.IsPublicArchive(game.State.String) {
+	if !canManage && !isAudience && !core.IsPublicArchive(game.State) {
 		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM, audience, or any user of a public archive game can view all action results"),
 			"Get game action results forbidden")
 	}

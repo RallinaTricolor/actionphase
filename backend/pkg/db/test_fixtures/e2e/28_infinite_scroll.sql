@@ -26,7 +26,7 @@ BEGIN
 
   INSERT INTO games (
     id, title, description, genre, gm_user_id,
-    max_players, state, is_public, created_at, updated_at
+    max_players, state, created_at, updated_at
   ) VALUES (
     710,
     'E2E Test: Infinite Scroll',
@@ -35,7 +35,6 @@ BEGIN
     gm_id,
     5,
     'in_progress',
-    true,
     NOW() - INTERVAL '7 days',
     NOW()
   );

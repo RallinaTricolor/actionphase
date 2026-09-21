@@ -2,10 +2,11 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { simpleApi } from '../lib/simple-api';
-import type { LoginRequest, RegisterRequest, User, AuthResponse } from '../types/auth';
+import type { LoginRequest, RegisterRequest, User, RegisterResponse } from '../types/auth';
+import { isRegisterCreated } from '../types/auth';
 import type { AxiosResponse } from 'axios';
 import { logger } from '@/services/LoggingService';
-import { SessionExpiredModal } from '@/components/SessionExpiredModal';
+import { SessionExpiredModal } from '@/components/auth/SessionExpiredModal';
 import { setFaroUser, clearFaroUser } from '@/lib/faro';
 
 interface AuthContextValue {
@@ -19,7 +20,7 @@ interface AuthContextValue {
 
   // Auth methods
   login: (data: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<AxiosResponse<AuthResponse>>;
+  register: (data: RegisterRequest) => Promise<AxiosResponse<RegisterResponse>>;
   logout: () => void;
   clearError: () => void;
 
@@ -101,7 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return response;
     },
     onSuccess: (response) => {
-      const token = response.data.Token || response.data.token;
+      const token = response.data.Token;
       logger.info('Login successful', { hasToken: !!token });
 
       if (token) {
@@ -130,8 +131,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return response;
     },
     onSuccess: (response) => {
-      const token = response.data.Token || response.data.token;
-      logger.info('Registration successful', { hasToken: !!token });
+      // 202 means the account awaits admin approval: no token is issued, and
+      // the body is a {status, error} notice rather than a user. The two
+      // shapes share no fields, so this narrowing is now required by the type
+      // rather than left to the `if (token)` guard below happening to skip it.
+      const token = isRegisterCreated(response.data) ? response.data.Token : undefined;
+      logger.info('Registration successful', {
+        hasToken: !!token,
+        pendingApproval: response.status === 202,
+      });
 
       if (token) {
         apiClient.setAuthToken(token);

@@ -81,7 +81,6 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		"title", req.Title,
 		"gm_user_id", req.GMUserID,
 		"genre", req.Genre,
-		"is_public", req.IsPublic,
 		"is_anonymous", req.IsAnonymous,
 		"auto_accept_audience", req.AutoAcceptAudience,
 		"has_schedule", req.CommonRoomOpenDay != nil,
@@ -146,14 +145,13 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 
 	game, err := queries.CreateGame(ctx, models.CreateGameParams{
 		Title:                   req.Title,
-		Description:             pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		Description:             req.Description,
 		GmUserID:                req.GMUserID,
 		Genre:                   pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:               startDate,
 		EndDate:                 endDate,
 		RecruitmentDeadline:     recruitmentDeadline,
 		MaxPlayers:              pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
-		IsPublic:                pgtype.Bool{Bool: req.IsPublic, Valid: true},
 		IsAnonymous:             req.IsAnonymous,
 		AutoAcceptAudience:      req.AutoAcceptAudience,
 		AllowGroupConversations: req.AllowGroupConversations,
@@ -265,7 +263,7 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 	)
 
 	// Validate state transition
-	currentState := currentGame.State.String
+	currentState := currentGame.State
 	if !isValidTransition(currentState, newState) {
 		gs.Logger.Warn(ctx, "Invalid game state transition",
 			"game_id", gameID,
@@ -279,7 +277,7 @@ func (gs *GameService) UpdateGameState(ctx context.Context, gameID int32, newSta
 
 	game, err := queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 		ID:    gameID,
-		State: pgtype.Text{String: newState, Valid: true},
+		State: newState,
 	})
 	if err != nil {
 		gs.Logger.LogError(ctx, err, "Failed to update game state",
@@ -513,7 +511,7 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	if req.CommunityID != nil {
 		isMove := !game.CommunityID.Valid || game.CommunityID.Int32 != *req.CommunityID
 		if isMove {
-			if game.State.String != core.GameStateSetup {
+			if game.State != core.GameStateSetup {
 				return nil, core.ErrGameCommunityLocked
 			}
 			if err := gs.validateGameCommunity(ctx, *req.CommunityID); err != nil {
@@ -562,13 +560,12 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 	updatedGame, err := queries.UpdateGame(ctx, models.UpdateGameParams{
 		ID:                      req.ID,
 		Title:                   req.Title,
-		Description:             pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		Description:             req.Description,
 		Genre:                   pgtype.Text{String: req.Genre, Valid: req.Genre != ""},
 		StartDate:               startDate,
 		EndDate:                 endDate,
 		RecruitmentDeadline:     recruitmentDeadline,
 		MaxPlayers:              pgtype.Int4{Int32: req.MaxPlayers, Valid: req.MaxPlayers > 0},
-		IsPublic:                pgtype.Bool{Bool: req.IsPublic, Valid: true},
 		IsAnonymous:             req.IsAnonymous,
 		AutoAcceptAudience:      req.AutoAcceptAudience,
 		AllowGroupConversations: req.AllowGroupConversations,
@@ -640,13 +637,13 @@ func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) err
 	}
 
 	// Verify the game is in cancelled state
-	if game.State.String != core.GameStateCancelled {
+	if game.State != core.GameStateCancelled {
 		gs.Logger.Warn(ctx, "Cannot delete game: not in cancelled state",
 			"game_id", gameID,
-			"current_state", game.State.String,
+			"current_state", game.State,
 			"required_state", core.GameStateCancelled,
 		)
-		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State.String)
+		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State)
 	}
 
 	// Delete the game (SQL query enforces cancelled state as well)
@@ -674,12 +671,6 @@ func (gs *GameService) GetGameWithDetails(ctx context.Context, gameID int32) (*m
 	queries := models.New(gs.DB)
 	game, err := queries.GetGameWithDetails(ctx, gameID)
 	return &game, err
-}
-
-// GetRecruitingGames - Get games currently accepting players
-func (gs *GameService) GetRecruitingGames(ctx context.Context) ([]models.GetRecruitingGamesRow, error) {
-	queries := models.New(gs.DB)
-	return queries.GetRecruitingGames(ctx)
 }
 
 // CanUserJoinGame - Check if user can join a game
@@ -713,7 +704,7 @@ func (gs *GameService) AddGameParticipant(ctx context.Context, gameID, userID in
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
 		gs.Logger.Warn(ctx, "Cannot add participant to completed/cancelled game",
 			"game_id", gameID,
-			"game_state", game.State.String,
+			"game_state", game.State,
 		)
 		return nil, err
 	}
@@ -767,11 +758,12 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 	queries := models.New(gs.DB)
 
 	// Convert filters to sqlc parameters
-	// Note: sqlc generated Column1-10 parameter names, mapping:
-	// Column1 = user_id, Column2 = states, Column3 = participation_filter
-	// Column4 = has_open_spots, Column5 = sort_by
-	// Column6 = admin_mode, Column7 = admin_user_id, Column8 = search
-	// Column9 = limit, Column10 = offset
+	// Note: sqlc generates positional Column names. GetFilteredGames maps:
+	// Column1 = user_id, Column2 = states, Column3 = participation_filter,
+	// Column4 = has_open_spots, Column5 = sort_by, Column6 = search,
+	// Column7 = limit, Column8 = offset, Column9 = community_id.
+	// CountFilteredGames has no sort_by or pagination, so it maps:
+	// Column1..Column4 the same, Column5 = search, Column6 = community_id.
 	var userID int32
 	if filters.UserID != nil {
 		userID = *filters.UserID
@@ -791,11 +783,6 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 	sortBy := filters.SortBy
 	if sortBy == "" {
 		sortBy = "recent_activity"
-	}
-
-	var adminUserID int32
-	if filters.AdminUserID != nil {
-		adminUserID = *filters.AdminUserID
 	}
 
 	// 0 means "every community" in the SQL, which is also the zero value, so a
@@ -825,10 +812,8 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 		Column2: filters.States,
 		Column3: participationFilter,
 		Column4: hasOpenSpots,
-		Column5: filters.AdminMode,
-		Column6: adminUserID,
-		Column7: filters.Search,
-		Column8: communityID,
+		Column5: filters.Search,
+		Column6: communityID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to count games: %w", err)
@@ -836,17 +821,15 @@ func (gs *GameService) GetFilteredGames(ctx context.Context, filters core.GameLi
 
 	// Execute query with pagination
 	rows, err := queries.GetFilteredGames(ctx, models.GetFilteredGamesParams{
-		Column1:  userID,
-		Column2:  filters.States,
-		Column3:  participationFilter,
-		Column4:  hasOpenSpots,
-		Column5:  sortBy,
-		Column6:  filters.AdminMode,
-		Column7:  adminUserID,
-		Column8:  filters.Search,
-		Column9:  limit,
-		Column10: offset,
-		Column11: communityID,
+		Column1: userID,
+		Column2: filters.States,
+		Column3: participationFilter,
+		Column4: hasOpenSpots,
+		Column5: sortBy,
+		Column6: filters.Search,
+		Column7: limit,
+		Column8: offset,
+		Column9: communityID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch games: %w", err)
@@ -903,13 +886,8 @@ func (gs *GameService) getListingMetadata(ctx context.Context, queries *models.Q
 		return core.GameListingMetadata{}, err
 	}
 
-	// Convert pgtype.Text to []string
 	states := make([]string, 0, len(statesDB))
-	for _, s := range statesDB {
-		if s.Valid {
-			states = append(states, s.String)
-		}
-	}
+	states = append(states, statesDB...)
 
 	return core.GameListingMetadata{
 		TotalCount:      int(totalCount),
@@ -922,16 +900,15 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 	return &core.EnrichedGameListItem{
 		ID:                      row.ID,
 		Title:                   row.Title,
-		Description:             textToString(row.Description),
+		Description:             row.Description,
 		GMUserID:                row.GmUserID,
 		GMUsername:              row.GmUsername,
-		State:                   textToString(row.State),
+		State:                   row.State,
 		Genre:                   nullTextToStringPtr(row.Genre),
 		StartDate:               timestamptzToTimePtr(row.StartDate),
 		EndDate:                 timestamptzToTimePtr(row.EndDate),
 		RecruitmentDeadline:     timestamptzToTimePtr(row.RecruitmentDeadline),
 		MaxPlayers:              nullInt4ToInt32Ptr(row.MaxPlayers),
-		IsPublic:                boolToBool(row.IsPublic),
 		IsAnonymous:             row.IsAnonymous,
 		AutoAcceptAudience:      row.AutoAcceptAudience,
 		AllowGroupConversations: row.AllowGroupConversations,
@@ -952,13 +929,6 @@ func enrichedGameFromRow(row models.GetFilteredGamesRow) *core.EnrichedGameListI
 }
 
 // Helper conversion functions for pgtype to Go types
-func textToString(t pgtype.Text) string {
-	if t.Valid {
-		return t.String
-	}
-	return ""
-}
-
 func nullTextToStringPtr(t pgtype.Text) *string {
 	if t.Valid && t.String != "" {
 		return &t.String
@@ -985,13 +955,6 @@ func nullInt4ToInt32Ptr(i pgtype.Int4) *int32 {
 		return &i.Int32
 	}
 	return nil
-}
-
-func boolToBool(b pgtype.Bool) bool {
-	if b.Valid {
-		return b.Bool
-	}
-	return false
 }
 
 func interfaceToStringPtr(i interface{}) *string {
@@ -1178,7 +1141,7 @@ func (gs *GameService) CreateAudienceApplication(ctx context.Context, gameID, us
 	participant, err := queries.CreateAudienceApplication(ctx, models.CreateAudienceApplicationParams{
 		GameID: gameID,
 		UserID: userID,
-		Status: pgtype.Text{String: status, Valid: true},
+		Status: status,
 	})
 
 	if err != nil {
@@ -1239,7 +1202,7 @@ func (gs *GameService) CanUserViewGame(ctx context.Context, gameID, userID int32
 	}
 
 	// Public Archive Mode: completed and epilogue games are viewable by anyone
-	if game.State.Valid && core.IsPublicArchive(game.State.String) {
+	if core.IsPublicArchive(game.State) {
 		return true, nil
 	}
 

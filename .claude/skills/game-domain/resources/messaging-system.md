@@ -2,7 +2,7 @@
 
 Message types, storage, and visibility rules.
 
-Source of truth: `backend/pkg/db/schema.sql`,
+Source of truth: `backend/pkg/db/migrations/`,
 `backend/pkg/db/queries/messages.sql`, `backend/pkg/db/services/messages/`.
 
 ## Two Storage Systems

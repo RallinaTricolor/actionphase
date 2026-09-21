@@ -66,10 +66,9 @@ func newBanEnforcementFixture(t *testing.T) *banEnforcementFixture {
 	newGame := func(communityID pgtype.Int4, title string) models.Game {
 		g, err := queries.CreateGame(ctx, models.CreateGameParams{
 			Title:       title,
-			Description: pgtype.Text{String: "ban enforcement fixture", Valid: true},
+			Description: "ban enforcement fixture",
 			GmUserID:    int32(gm.ID),
 			MaxPlayers:  pgtype.Int4{Int32: 6, Valid: true},
-			IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 			CommunityID: communityID,
 		})
 		require.NoError(t, err)
@@ -77,7 +76,7 @@ func newBanEnforcementFixture(t *testing.T) *banEnforcementFixture {
 		// Applications are only accepted in recruitment.
 		g, err = queries.UpdateGameState(ctx, models.UpdateGameStateParams{
 			ID:    g.ID,
-			State: pgtype.Text{String: core.GameStateRecruitment, Valid: true},
+			State: core.GameStateRecruitment,
 		})
 		require.NoError(t, err)
 		return g
@@ -288,7 +287,7 @@ func TestBanEnforcement_ApproveApplication(t *testing.T) {
 	// GM can still see and reject it.
 	after, err := queries.GetGameApplication(ctx, app2.ID)
 	require.NoError(t, err)
-	assert.Equal(t, core.ApplicationStatusPending, after.Status.String)
+	assert.Equal(t, core.ApplicationStatusPending, after.Status)
 }
 
 // Path 5: closing recruitment converts approved applications into participants.
@@ -352,7 +351,6 @@ func TestBanEnforcement_CreateGame(t *testing.T) {
 				Description: "created during ban enforcement tests",
 				GMUserID:    int32(tc.user.ID),
 				CommunityID: f.community.ID,
-				IsPublic:    true,
 			})
 
 			if tc.wantRefuse {
@@ -376,7 +374,6 @@ func TestBanEnforcement_ScopedToOneCommunity(t *testing.T) {
 		Description: "banned community",
 		GMUserID:    int32(f.banned.ID),
 		CommunityID: f.community.ID,
-		IsPublic:    true,
 	})
 	require.ErrorIs(t, err, core.ErrUserBannedFromCommunity)
 
@@ -385,7 +382,6 @@ func TestBanEnforcement_ScopedToOneCommunity(t *testing.T) {
 		Description: "unrelated community",
 		GMUserID:    int32(f.banned.ID),
 		CommunityID: f.otherComm.ID,
-		IsPublic:    true,
 	})
 	require.NoError(t, err, "a ban in one community must not reach another")
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, createElement, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { Tab } from '../components/TabNavigation';
+import type { Tab } from '@/components/layout/TabNavigation';
 import type { GameState } from '../types/games';
 import { clearForeignTabParams } from '../utils/tabParams';
 import { isPublicArchive } from '@/lib/gamePermissions';

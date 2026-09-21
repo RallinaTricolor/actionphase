@@ -4,7 +4,7 @@ package handouts
 //
 // Two registration functions, because handouts are mounted at two prefixes:
 // the per-game routes under /games/{gameID}, and the cross-game list at
-// /handouts. See .claude/planning/huma-migration.md gotcha 10.
+// /handouts.
 
 import (
 	"context"

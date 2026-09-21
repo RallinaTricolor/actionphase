@@ -83,7 +83,6 @@ func TestCreateGame_AllowGroupConversations(t *testing.T) {
 			Description:             "Testing toggle",
 			GMUserID:                int32(fixtures.TestUser.ID),
 			CommunityID:             int32(fixtures.TestCommunity.ID),
-			IsPublic:                true,
 			AllowGroupConversations: true,
 		})
 		core.AssertNoError(t, err, "Game creation should succeed")
@@ -91,8 +90,7 @@ func TestCreateGame_AllowGroupConversations(t *testing.T) {
 		// Disable group conversations
 		requestBody := UpdateGameRequest{
 			Title:                   game.Title,
-			Description:             game.Description.String,
-			IsPublic:                true,
+			Description:             game.Description,
 			AllowGroupConversations: false,
 		}
 		bodyBytes, _ := json.Marshal(requestBody)
@@ -238,7 +236,6 @@ func TestUpdateGame_WithSettings(t *testing.T) {
 		Description:        "Testing game update with settings",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		IsAnonymous:        false,
 		AutoAcceptAudience: false,
 	})
@@ -291,8 +288,7 @@ func TestUpdateGame_WithSettings(t *testing.T) {
 			// Create update request payload
 			requestBody := UpdateGameRequest{
 				Title:              game.Title,
-				Description:        game.Description.String,
-				IsPublic:           true,
+				Description:        game.Description,
 				IsAnonymous:        tt.isAnonymous,
 				AutoAcceptAudience: tt.autoAcceptAudience,
 			}
@@ -346,7 +342,6 @@ func TestCreateGame_SettingsPersistAfterRefresh(t *testing.T) {
 		Description:        "Testing settings persistence",
 		GMUserID:           int32(fixtures.TestUser.ID),
 		CommunityID:        int32(fixtures.TestCommunity.ID),
-		IsPublic:           true,
 		IsAnonymous:        true,
 		AutoAcceptAudience: true,
 	})
@@ -364,8 +359,7 @@ func TestCreateGame_SettingsPersistAfterRefresh(t *testing.T) {
 	_, err = gameService.UpdateGame(context.Background(), core.UpdateGameRequest{
 		ID:                 game.ID,
 		Title:              game.Title,
-		Description:        game.Description.String,
-		IsPublic:           true,
+		Description:        game.Description,
 		IsAnonymous:        false,
 		AutoAcceptAudience: false,
 	})
@@ -490,8 +484,7 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 	t.Run("rejects when only open fields present", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:              game.Title,
-			Description:        game.Description.String,
-			IsPublic:           true,
+			Description:        game.Description,
 			CommonRoomOpenDay:  &openDay,
 			CommonRoomOpenTime: &openTime,
 		}
@@ -507,8 +500,7 @@ func TestUpdateGame_CommonRoomSchedule_PartialFill(t *testing.T) {
 	t.Run("rejects when all day/time fields present but timezone missing", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
-			Description:         game.Description.String,
-			IsPublic:            true,
+			Description:         game.Description,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
 			CommonRoomCloseDay:  &closeDay,
@@ -558,8 +550,7 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 	t.Run("saves schedule fields", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:               game.Title,
-			Description:         game.Description.String,
-			IsPublic:            true,
+			Description:         game.Description,
 			CommonRoomOpenDay:   &openDay,
 			CommonRoomOpenTime:  &openTime,
 			CommonRoomCloseDay:  &closeDay,
@@ -593,8 +584,7 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 	t.Run("clears schedule when fields omitted", func(t *testing.T) {
 		updateBody := UpdateGameRequest{
 			Title:       game.Title,
-			Description: game.Description.String,
-			IsPublic:    true,
+			Description: game.Description,
 		}
 		bodyBytes, _ := json.Marshal(updateBody)
 		req := httptest.NewRequest(http.MethodPut, "/api/v1/games/"+strconv.Itoa(int(game.ID)), bytes.NewBuffer(bodyBytes))

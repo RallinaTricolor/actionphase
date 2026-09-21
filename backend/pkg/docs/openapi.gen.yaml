@@ -309,6 +309,54 @@ components:
                 - content
                 - delay_minutes
             type: object
+        ApplicationListItemResponse:
+            additionalProperties: false
+            properties:
+                applied_at:
+                    format: date-time
+                    type: string
+                avatar_url:
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                message:
+                    type: string
+                reviewed_at:
+                    format: date-time
+                    type: string
+                reviewed_by_user_id:
+                    format: int32
+                    type: integer
+                role:
+                    enum:
+                        - player
+                        - audience
+                    type: string
+                status:
+                    enum:
+                        - pending
+                        - approved
+                        - rejected
+                        - withdrawn
+                    type: string
+                user_id:
+                    format: int32
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - game_id
+                - user_id
+                - username
+                - role
+                - status
+                - applied_at
+            type: object
         ApplyToGameBody:
             additionalProperties: false
             properties:
@@ -425,6 +473,57 @@ components:
                 npcs: {}
             required:
                 - npcs
+            type: object
+        AuthUser:
+            additionalProperties: false
+            properties:
+                Token:
+                    type: string
+                avatar_url:
+                    type: string
+                banned_at:
+                    format: date-time
+                    type: string
+                banned_by_user_id:
+                    format: int32
+                    type: integer
+                bio:
+                    type: string
+                createdAt:
+                    format: date-time
+                    type:
+                        - string
+                        - "null"
+                discord_username:
+                    type: string
+                email:
+                    type: string
+                email_verified:
+                    type: boolean
+                id:
+                    format: int64
+                    type: integer
+                is_admin:
+                    type: boolean
+                is_banned:
+                    type: boolean
+                pending_approval:
+                    type: boolean
+                pending_approval_since:
+                    format: date-time
+                    type: string
+                username:
+                    type: string
+            required:
+                - id
+                - username
+                - email
+                - email_verified
+                - is_admin
+                - is_banned
+                - createdAt
+                - pending_approval
+                - Token
             type: object
         AutoAcceptAudienceBody:
             additionalProperties: false
@@ -645,6 +744,9 @@ components:
                     type: boolean
                 message_type:
                     description: '"post" or "comment"'
+                    enum:
+                        - post
+                        - comment
                     type: string
                 parent:
                     $ref: '#/components/schemas/ParentContextResponse'
@@ -678,9 +780,7 @@ components:
                 messages:
                     items:
                         $ref: '#/components/schemas/CharacterMessageResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationResponse'
             required:
@@ -690,6 +790,13 @@ components:
         CharacterResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
+                assigned_username:
+                    description: Username controlling this NPC
+                    type: string
                 avatar_url:
                     description: Character portrait URL
                     type: string
@@ -710,6 +817,9 @@ components:
                     description: Character ID
                     format: int32
                     type: integer
+                is_active:
+                    description: False once the character has been retired
+                    type: boolean
                 name:
                     description: Character name
                     type: string
@@ -726,11 +836,15 @@ components:
                     description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
+                username:
+                    description: Owning player's username
+                    type: string
             required:
                 - id
                 - game_id
                 - name
                 - status
+                - is_active
                 - created_at
                 - updated_at
             type: object
@@ -965,6 +1079,10 @@ components:
                     format: date-time
                     type: string
                 your_role:
+                    enum:
+                        - ""
+                        - moderator
+                        - owner
                     type: string
             required:
                 - id
@@ -1023,6 +1141,10 @@ components:
             additionalProperties: false
             properties:
                 action:
+                    enum:
+                        - banned
+                        - unbanned
+                        - modified
                     type: string
                 actor_user_id:
                     format: int32
@@ -1076,6 +1198,9 @@ components:
                     format: int32
                     type: integer
                 status:
+                    enum:
+                        - draft
+                        - published
                     type: string
                 title:
                     type: string
@@ -1136,10 +1261,17 @@ components:
                     type: string
                 events:
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 id:
                     format: int32
                     type: integer
@@ -1169,56 +1301,13 @@ components:
                 - created_at
                 - updated_at
             type: object
-        ControllableCharacterResponse:
-            additionalProperties: false
-            properties:
-                avatar_url:
-                    description: Character portrait URL
-                    type: string
-                character_type:
-                    description: Character kind
-                    enum:
-                        - player_character
-                        - npc
-                    type: string
-                created_at:
-                    format: date-time
-                    type: string
-                game_id:
-                    description: Game the character belongs to
-                    format: int32
-                    type: integer
-                id:
-                    description: Character ID
-                    format: int32
-                    type: integer
-                name:
-                    description: Character name
-                    type: string
-                status:
-                    description: Approval status
-                    enum:
-                        - pending
-                        - approved
-                    type: string
-                updated_at:
-                    format: date-time
-                    type: string
-                user_id:
-                    description: Owning player
-                    format: int32
-                    type: integer
-            required:
-                - id
-                - game_id
-                - name
-                - character_type
-                - created_at
-                - updated_at
-            type: object
         ControllableCharacterWithGameResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
                 assigned_username:
                     description: Username controlling this NPC
                     type: string
@@ -1226,7 +1315,7 @@ components:
                     description: Character portrait URL
                     type: string
                 character_type:
-                    description: Character kind
+                    description: Absent when an anonymous game hides it from the caller
                     enum:
                         - player_character
                         - npc
@@ -1257,6 +1346,9 @@ components:
                     description: Character ID
                     format: int32
                     type: integer
+                is_active:
+                    description: False once the character has been retired
+                    type: boolean
                 name:
                     description: Character name
                     type: string
@@ -1270,7 +1362,7 @@ components:
                     format: date-time
                     type: string
                 user_id:
-                    description: Owning player
+                    description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
                 user_role:
@@ -1292,7 +1384,8 @@ components:
                 - id
                 - game_id
                 - name
-                - character_type
+                - status
+                - is_active
                 - created_at
                 - updated_at
             type: object
@@ -1304,9 +1397,7 @@ components:
                 participants:
                     items:
                         $ref: '#/components/schemas/ConversationParticipantResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - conversation
                 - participants
@@ -2034,6 +2125,15 @@ components:
                 events:
                     description: Game states to announce
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -2065,23 +2165,17 @@ components:
                 audience_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 gm_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_games:
                     type: boolean
                 mixed_role_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 notifications_by_type:
                     additionalProperties:
                         format: int64
@@ -2090,24 +2184,18 @@ components:
                 player_games:
                     items:
                         $ref: '#/components/schemas/DashboardGameCard'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 recent_messages:
                     items:
                         $ref: '#/components/schemas/DashboardMessage'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 unread_notifications:
                     format: int64
                     type: integer
                 upcoming_deadlines:
                     items:
                         $ref: '#/components/schemas/DashboardDeadline'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 user_id:
                     format: int32
                     type: integer
@@ -2187,6 +2275,10 @@ components:
                 current_phase_type:
                     type: string
                 deadline_status:
+                    enum:
+                        - critical
+                        - warning
+                        - normal
                     type: string
                 description:
                     type: string
@@ -2208,6 +2300,16 @@ components:
                     format: int64
                     type: integer
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -2259,6 +2361,10 @@ components:
                     format: int32
                     type: integer
                 message_type:
+                    enum:
+                        - post
+                        - comment
+                        - private_message
                     type: string
                 phase_id:
                     format: int32
@@ -2399,6 +2505,11 @@ components:
                 field_name:
                     type: string
                 field_type:
+                    enum:
+                        - text
+                        - number
+                        - boolean
+                        - json
                     type: string
                 field_value:
                     type: string
@@ -2406,8 +2517,15 @@ components:
                     format: int32
                     type: integer
                 module_type:
+                    enum:
+                        - skills
+                        - inventory
+                        - numbers
                     type: string
                 operation:
+                    enum:
+                        - upsert
+                        - delete
                     type: string
                 updated_at:
                     format: date-time
@@ -2449,11 +2567,18 @@ components:
                     format: date-time
                     type: string
                 current_phase_type:
+                    enum:
+                        - action
+                        - common_room
                     type: string
                 current_players:
                     format: int32
                     type: integer
                 deadline_urgency:
+                    enum:
+                        - critical
+                        - warning
+                        - normal
                     type: string
                 description:
                     type: string
@@ -2474,8 +2599,6 @@ components:
                     type: integer
                 is_anonymous:
                     type: boolean
-                is_public:
-                    type: boolean
                 max_players:
                     format: int32
                     type: integer
@@ -2488,6 +2611,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -2495,6 +2628,12 @@ components:
                     format: date-time
                     type: string
                 user_relationship:
+                    enum:
+                        - gm
+                        - co_gm
+                        - participant
+                        - audience
+                        - applied
                     type: string
             required:
                 - id
@@ -2503,7 +2642,6 @@ components:
                 - gm_user_id
                 - gm_username
                 - state
-                - is_public
                 - is_anonymous
                 - auto_accept_audience
                 - allow_group_conversations
@@ -2596,6 +2734,11 @@ components:
                     format: int64
                     type: integer
                 status:
+                    enum:
+                        - pending
+                        - running
+                        - complete
+                        - failed
                     type: string
             required:
                 - id
@@ -2610,9 +2753,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - favorite_comment_ids
             type: object
@@ -2719,9 +2860,7 @@ components:
                 favorites:
                     items:
                         $ref: '#/components/schemas/FavoriteCommentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/FavoritesPaginationResponse'
             required:
@@ -2810,72 +2949,21 @@ components:
                 - status
                 - applied_at
             type: object
-        GameCharacterResponse:
-            additionalProperties: false
-            properties:
-                assigned_user_id:
-                    description: User controlling this NPC
-                    format: int32
-                    type: integer
-                assigned_username:
-                    description: Username controlling this NPC
-                    type: string
-                avatar_url:
-                    description: Character portrait URL
-                    type: string
-                character_type:
-                    description: Character kind
-                    enum:
-                        - player_character
-                        - npc
-                    type: string
-                created_at:
-                    format: date-time
-                    type: string
-                game_id:
-                    description: Game the character belongs to
-                    format: int32
-                    type: integer
-                id:
-                    description: Character ID
-                    format: int32
-                    type: integer
-                is_active:
-                    description: False once the character has been retired
-                    type: boolean
-                name:
-                    description: Character name
-                    type: string
-                status:
-                    description: Approval status
-                    enum:
-                        - pending
-                        - approved
-                    type: string
-                updated_at:
-                    format: date-time
-                    type: string
-                user_id:
-                    description: Owning player
-                    format: int32
-                    type: integer
-                username:
-                    description: Owning player's username
-                    type: string
-            required:
-                - id
-                - game_id
-                - name
-                - character_type
-                - is_active
-                - created_at
-                - updated_at
-            type: object
         GameListingMetadataResponse:
             additionalProperties: false
             properties:
                 available_states:
                     items:
+                        description: Game lifecycle state
+                        enum:
+                            - setup
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -2915,14 +3003,35 @@ components:
                 games:
                     items:
                         $ref: '#/components/schemas/EnrichedGameListItemResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 metadata:
                     $ref: '#/components/schemas/GameListingMetadataResponse'
             required:
                 - games
                 - metadata
+            type: object
+        GameLogEntryResponse:
+            additionalProperties: false
+            properties:
+                created_at:
+                    format: date-time
+                    type: string
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                message:
+                    type: string
+                type:
+                    type: string
+            required:
+                - id
+                - game_id
+                - type
+                - message
+                - created_at
             type: object
         GameLootTableContentResponse:
             additionalProperties: false
@@ -3069,6 +3178,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -3085,6 +3204,46 @@ components:
                 - auto_accept_audience
                 - allow_group_conversations
                 - portrait_avatars
+                - created_at
+                - updated_at
+            type: object
+        GameStateChangedResponse:
+            additionalProperties: false
+            properties:
+                created_at:
+                    format: date-time
+                    type: string
+                description:
+                    type: string
+                gm_user_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
+                    type: string
+                title:
+                    type: string
+                updated_at:
+                    format: date-time
+                    type: string
+            required:
+                - id
+                - title
+                - description
+                - gm_user_id
+                - state
                 - created_at
                 - updated_at
             type: object
@@ -3153,6 +3312,16 @@ components:
                     format: date-time
                     type: string
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -3160,6 +3329,7 @@ components:
                     format: date-time
                     type: string
             required:
+                - current_players
                 - id
                 - title
                 - description
@@ -3169,7 +3339,6 @@ components:
                 - auto_accept_audience
                 - allow_group_conversations
                 - portrait_avatars
-                - current_players
                 - created_at
                 - updated_at
             type: object
@@ -3333,8 +3502,18 @@ components:
         InactiveCharacterResponse:
             additionalProperties: false
             properties:
+                assigned_user_id:
+                    description: User controlling this NPC
+                    format: int32
+                    type: integer
+                assigned_username:
+                    description: Username controlling this NPC
+                    type: string
+                avatar_url:
+                    description: Character portrait URL
+                    type: string
                 character_type:
-                    description: Character kind
+                    description: Absent when an anonymous game hides it from the caller
                     enum:
                         - player_character
                         - npc
@@ -3356,7 +3535,7 @@ components:
                     format: int32
                     type: integer
                 is_active:
-                    description: Always false in this list
+                    description: False once the character has been retired
                     type: boolean
                 name:
                     description: Character name
@@ -3380,20 +3559,22 @@ components:
                     format: date-time
                     type: string
                 user_id:
-                    description: Current owner
+                    description: Owning player, absent for unassigned NPCs
                     format: int32
                     type: integer
+                username:
+                    description: Owning player's username
+                    type: string
             required:
+                - current_owner_username
+                - original_owner_username
                 - id
                 - game_id
                 - name
-                - character_type
                 - status
                 - is_active
                 - created_at
                 - updated_at
-                - current_owner_username
-                - original_owner_username
             type: object
         ListAudienceMembersResponse:
             additionalProperties: false
@@ -3427,6 +3608,23 @@ components:
                 username:
                     description: Username or email address
                     type: string
+            required:
+                - password
+            type: object
+        LootTableContentResponse:
+            additionalProperties: false
+            properties:
+                data:
+                    type: string
+                id:
+                    format: int32
+                    type: integer
+                name:
+                    type: string
+            required:
+                - id
+                - name
+                - data
             type: object
         LootTableItemBody:
             additionalProperties: false
@@ -3453,9 +3651,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - post_id
                 - read_comment_ids
@@ -3588,9 +3784,7 @@ components:
                 chain:
                     items:
                         $ref: '#/components/schemas/MessageResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_full_thread:
                     type: boolean
                 root_post_id:
@@ -3619,9 +3813,7 @@ components:
                 data:
                     items:
                         $ref: '#/components/schemas/NotificationResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationInfo'
             required:
@@ -3718,9 +3910,7 @@ components:
                     description: Top-level comments and their nested replies, flattened
                     items:
                         $ref: '#/components/schemas/ThreadedCommentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 has_more:
                     description: Whether more top-level comments exist beyond this page
                     type: boolean
@@ -3840,6 +4030,63 @@ components:
                 - character_name
                 - character_avatar_url
             type: object
+        ParticipantListItemResponse:
+            additionalProperties: false
+            properties:
+                avatar_url:
+                    type:
+                        - string
+                        - "null"
+                game_id:
+                    format: int32
+                    type: integer
+                id:
+                    format: int32
+                    type: integer
+                is_former_player:
+                    type: boolean
+                joined_at:
+                    format: date-time
+                    type: string
+                role:
+                    enum:
+                        - player
+                        - co_gm
+                        - audience
+                    type: string
+                status:
+                    enum:
+                        - active
+                        - inactive
+                        - removed
+                    type: string
+                user_id:
+                    format: int32
+                    type: integer
+                username:
+                    type: string
+            required:
+                - id
+                - game_id
+                - user_id
+                - username
+                - role
+                - status
+                - joined_at
+                - avatar_url
+                - is_former_player
+            type: object
+        PendingApprovalBody:
+            additionalProperties: false
+            properties:
+                error:
+                    type: string
+                status:
+                    type: string
+            required:
+                - status
+                - error
+            type: object
         PhaseResponse:
             additionalProperties: false
             properties:
@@ -3873,6 +4120,10 @@ components:
                     format: int32
                     type: integer
                 phase_type:
+                    enum:
+                        - common_room
+                        - action
+                        - interlude
                     type: string
                 start_time:
                     format: date-time
@@ -3927,6 +4178,8 @@ components:
                     type: integer
                 is_deleted:
                     type: boolean
+                is_expired:
+                    type: boolean
                 phase_id:
                     format: int32
                     type:
@@ -3944,6 +4197,7 @@ components:
                 user_has_voted:
                     type: boolean
             required:
+                - user_has_voted
                 - id
                 - game_id
                 - phase_id
@@ -3960,7 +4214,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
-                - user_has_voted
+                - is_expired
             type: object
         PollOptionRequest:
             additionalProperties: false
@@ -4027,14 +4281,14 @@ components:
                 game_id:
                     format: int32
                     type: integer
-                has_voted:
-                    type: boolean
                 hide_results_from_players:
                     type: boolean
                 id:
                     format: int32
                     type: integer
                 is_deleted:
+                    type: boolean
+                is_expired:
                     type: boolean
                 options:
                     items:
@@ -4056,12 +4310,16 @@ components:
                 updated_at:
                     format: date-time
                     type: string
+                user_has_voted:
+                    type: boolean
                 user_vote_option_id:
                     format: int32
                     type: integer
                 user_vote_other_response:
                     type: string
             required:
+                - options
+                - user_has_voted
                 - id
                 - game_id
                 - phase_id
@@ -4078,7 +4336,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
-                - options
+                - is_expired
             type: object
         PollResultsResponse:
             additionalProperties: false
@@ -4086,15 +4344,11 @@ components:
                 option_results:
                     items:
                         $ref: '#/components/schemas/OptionResult'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 other_responses:
                     items:
                         $ref: '#/components/schemas/OtherResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 poll:
                     $ref: '#/components/schemas/PollSummary'
                 show_individual_votes:
@@ -4144,6 +4398,8 @@ components:
                     type: integer
                 is_deleted:
                     type: boolean
+                is_expired:
+                    type: boolean
                 phase_id:
                     format: int32
                     type:
@@ -4175,6 +4431,7 @@ components:
                 - is_deleted
                 - created_at
                 - updated_at
+                - is_expired
             type: object
         PollVoteResponse:
             additionalProperties: false
@@ -4298,9 +4555,7 @@ components:
                     items:
                         format: int32
                         type: integer
-                    type:
-                        - array
-                        - "null"
+                    type: array
             required:
                 - post_id
                 - unread_comment_ids
@@ -4492,6 +4747,30 @@ components:
                 - edited_at
                 - edit_count
             type: object
+        PublicApplicantResponse:
+            additionalProperties: false
+            properties:
+                applied_at:
+                    format: date-time
+                    type: string
+                avatar_url:
+                    type: string
+                id:
+                    format: int32
+                    type: integer
+                role:
+                    enum:
+                        - player
+                        - audience
+                    type: string
+                username:
+                    type: string
+            required:
+                - id
+                - username
+                - role
+                - applied_at
+            type: object
         ReadMarkerResponse:
             additionalProperties: false
             properties:
@@ -4553,9 +4832,7 @@ components:
                 comments:
                     items:
                         $ref: '#/components/schemas/CommentWithParentResponse'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 pagination:
                     $ref: '#/components/schemas/PaginationResponse'
             required:
@@ -5019,8 +5296,6 @@ components:
                     type: string
                 is_anonymous:
                     type: boolean
-                is_public:
-                    type: boolean
                 max_players:
                     format: int32
                     type: integer
@@ -5047,7 +5322,15 @@ components:
             properties:
                 state:
                     description: Target game state
-                    minLength: 1
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
             required:
                 - state
@@ -5212,6 +5495,15 @@ components:
                 events:
                     description: Game states to announce
                     items:
+                        description: Game state a webhook may announce; setup is excluded
+                        enum:
+                            - recruitment
+                            - character_creation
+                            - in_progress
+                            - paused
+                            - epilogue
+                            - completed
+                            - cancelled
                         type: string
                     type:
                         - array
@@ -5266,8 +5558,6 @@ components:
                     type: boolean
                 is_banned:
                     type: boolean
-                password:
-                    type: string
                 pending_approval:
                     type: boolean
                 pending_approval_since:
@@ -5280,7 +5570,6 @@ components:
                 - username
                 - email
                 - email_verified
-                - password
                 - is_admin
                 - is_banned
                 - createdAt
@@ -5292,9 +5581,7 @@ components:
                 characters:
                     items:
                         $ref: '#/components/schemas/UserGameCharacter'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 created_at:
                     format: date-time
                     type: string
@@ -5316,6 +5603,16 @@ components:
                         - string
                         - "null"
                 state:
+                    description: Game lifecycle state
+                    enum:
+                        - setup
+                        - recruitment
+                        - character_creation
+                        - in_progress
+                        - paused
+                        - epilogue
+                        - completed
+                        - cancelled
                     type: string
                 title:
                     type: string
@@ -5451,9 +5748,7 @@ components:
                 games:
                     items:
                         $ref: '#/components/schemas/UserGame'
-                    type:
-                        - array
-                        - "null"
+                    type: array
                 metadata:
                     $ref: '#/components/schemas/UserGameHistoryMetadata'
                 user:
@@ -6282,8 +6577,66 @@ paths:
                 "200":
                     content:
                         application/json:
-                            schema: {}
-                    description: OK
+                            schema:
+                                oneOf:
+                                    - additionalProperties: false
+                                      properties:
+                                        Token:
+                                            type: string
+                                        avatar_url:
+                                            type: string
+                                        banned_at:
+                                            format: date-time
+                                            type: string
+                                        banned_by_user_id:
+                                            format: int32
+                                            type: integer
+                                        bio:
+                                            type: string
+                                        createdAt:
+                                            format: date-time
+                                            type:
+                                                - string
+                                                - "null"
+                                        discord_username:
+                                            type: string
+                                        email:
+                                            type: string
+                                        email_verified:
+                                            type: boolean
+                                        id:
+                                            format: int64
+                                            type: integer
+                                        is_admin:
+                                            type: boolean
+                                        is_banned:
+                                            type: boolean
+                                        pending_approval:
+                                            type: boolean
+                                        pending_approval_since:
+                                            format: date-time
+                                            type: string
+                                        username:
+                                            type: string
+                                      required:
+                                        - id
+                                        - username
+                                        - email
+                                        - email_verified
+                                        - is_admin
+                                        - is_banned
+                                        - createdAt
+                                        - pending_approval
+                                        - Token
+                                      type: object
+                                    - additionalProperties: false
+                                      properties:
+                                        user:
+                                            $ref: '#/components/schemas/AuthUser'
+                                      required:
+                                        - user
+                                      type: object
+                    description: The signed-in user, or a null user when not signed in
                 default:
                     content:
                         application/problem+json:
@@ -6368,9 +6721,14 @@ paths:
                 "201":
                     content:
                         application/json:
-                            schema: {}
-                    description: Created
+                            schema:
+                                $ref: '#/components/schemas/AuthUser'
+                    description: Account created; the user and a session token
                 "202":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PendingApprovalBody'
                     description: Account created and awaiting admin approval
                 "400":
                     description: Validation failed, username taken, or blocked by bot prevention
@@ -8257,13 +8615,6 @@ paths:
                   name: sort_by
                   schema:
                     type: string
-                - description: '"true" enables admin mode for an authenticated admin'
-                  explode: false
-                  in: query
-                  name: admin_mode
-                  schema:
-                    description: '"true" enables admin mode for an authenticated admin'
-                    type: string
                 - description: 1-based page number; defaults to 1
                   explode: false
                   in: query
@@ -8326,7 +8677,7 @@ paths:
             tags:
                 - Games
         get:
-            description: Returns the game's settings and metadata.
+            description: Returns the game's settings and metadata, the GM's username, the current player count and the owning community. Identical to getGameDetails.
             operationId: getGame
             parameters:
                 - description: Game ID
@@ -8342,7 +8693,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameResponse'
+                                $ref: '#/components/schemas/GameWithDetailsResponse'
                     description: OK
                 "401":
                     description: Not authenticated
@@ -8562,11 +8913,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/PublicApplicantResponse'
+                                type: array
                     description: OK
                 "403":
                     description: The game is not recruiting
@@ -8651,11 +8999,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/ApplicationListItemResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -8872,7 +9217,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    $ref: '#/components/schemas/GameCharacterResponse'
+                                    $ref: '#/components/schemas/CharacterResponse'
                                 type:
                                     - array
                                     - "null"
@@ -8967,7 +9312,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    $ref: '#/components/schemas/ControllableCharacterResponse'
+                                    $ref: '#/components/schemas/CharacterResponse'
                                 type:
                                     - array
                                     - "null"
@@ -9676,7 +10021,7 @@ paths:
                 - Deadlines
     /games/{gameID}/details:
         get:
-            description: As getGame, plus the GM's username and the current player count.
+            description: 'Alias of getGame, kept for existing callers: the two answer with the same shape from the same query.'
             operationId: getGameDetails
             parameters:
                 - description: Game ID
@@ -10286,11 +10631,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/GameLogEntryResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10327,11 +10669,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/GameLootTableResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10486,11 +10825,8 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
+                                    $ref: '#/components/schemas/LootTableContentResponse'
+                                type: array
                     description: OK
                 "401":
                     description: Not authenticated
@@ -10732,8 +11068,7 @@ paths:
                         application/json:
                             schema:
                                 items:
-                                    additionalProperties: {}
-                                    type: object
+                                    $ref: '#/components/schemas/ParticipantListItemResponse'
                                 type:
                                     - array
                                     - "null"
@@ -12620,7 +12955,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/GameResponse'
+                                $ref: '#/components/schemas/GameStateChangedResponse'
                     description: OK
                 "400":
                     description: Invalid request body
@@ -12696,29 +13031,6 @@ paths:
             summary: Unread comment IDs per post
             tags:
                 - Common Room
-    /games/recruiting:
-        get:
-            description: Games currently accepting applications.
-            operationId: listRecruitingGames
-            responses:
-                "200":
-                    content:
-                        application/json:
-                            schema:
-                                items:
-                                    additionalProperties: {}
-                                    type: object
-                                type:
-                                    - array
-                                    - "null"
-                    description: OK
-                "401":
-                    description: Not authenticated
-            security:
-                - BearerAuth: []
-            summary: List recruiting games
-            tags:
-                - Games
     /handouts:
         get:
             description: Returns published handouts from every in_progress game the caller takes part in, each carrying its game's title so the client can group without a request per game.

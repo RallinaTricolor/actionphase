@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { GameWithDetails, CreateGameRequest } from '../types/games';
 import type { CharacterSheetConfig } from '../types/characters';
-import type { GameFormData } from '../components/GameFormFields';
+import type { GameFormData } from '@/components/games/GameFormFields';
 import { convertToISO8601, formatDateTimeLocal } from '../lib/utils/dates';
 import { useUploadGameBanner, useDeleteGameBanner } from './useGameBanner';
 
@@ -208,7 +208,7 @@ export function useGameForm(initialData?: GameWithDetails) {
     // Timezone is captured from the browser at submission time rather than stored in form state.
     // On re-edit the stored timezone is discarded — the next save uses whatever the GM's browser reports.
     // This is intentional: we assume GMs configure schedules from their home timezone.
-    const scheduleTimezone = hasSchedule ? Intl.DateTimeFormat().resolvedOptions().timeZone : null;
+    const scheduleTimezone = hasSchedule ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
     if (hasSchedule && !scheduleTimezone) {
       return { payload: null, error: 'Could not detect your timezone. Please try again.' };
     }
@@ -230,10 +230,14 @@ export function useGameForm(initialData?: GameWithDetails) {
       allow_group_conversations: formData.allow_group_conversations ?? true,
       portrait_avatars: formData.portrait_avatars ?? false,
       character_sheet: buildCharacterSheetConfig(formData),
-      common_room_open_day: hasSchedule ? Number(formData.common_room_open_day) : null,
-      common_room_open_time: hasSchedule ? String(formData.common_room_open_time) : null,
-      common_room_close_day: hasSchedule ? Number(formData.common_room_close_day) : null,
-      common_room_close_time: hasSchedule ? String(formData.common_room_close_time) : null,
+      // undefined, not null, when there is no schedule. These are `*T` with
+      // omitempty on the Go side, so the wire contract is an ABSENT key; JSON
+      // null happens to unmarshal to the same nil pointer, but the generated
+      // type spells it `?: T` and undefined is what actually matches.
+      common_room_open_day: hasSchedule ? Number(formData.common_room_open_day) : undefined,
+      common_room_open_time: hasSchedule ? String(formData.common_room_open_time) : undefined,
+      common_room_close_day: hasSchedule ? Number(formData.common_room_close_day) : undefined,
+      common_room_close_time: hasSchedule ? String(formData.common_room_close_time) : undefined,
       schedule_timezone: scheduleTimezone,
     };
 
@@ -247,11 +251,30 @@ export function useGameForm(initialData?: GameWithDetails) {
     setInitialFormData(next);
   }, []);
 
+  // Fills in a default the form chose for itself, moving the baseline for THAT
+  // FIELD ONLY so it does not read as a user edit.
+  //
+  // Not resetFormData({ ...formData, field: value }): that rebases the entire
+  // baseline onto current formData, so anything the user had already typed gets
+  // absorbed into it and the form stops looking dirty. That is a real bug, not
+  // a hypothetical -- callers apply defaults from async data (the community
+  // picker waits on a fetch), so a user typing before it resolves silently
+  // loses the unsaved-edit guard and can close the form discarding their work.
+  // Applying both updates functionally also avoids capturing a stale formData.
+  const applySelfDefault = useCallback(
+    (field: keyof GameFormData, value: string | number | boolean) => {
+      setFormData(prev => ({ ...prev, [field]: value }));
+      setInitialFormData(prev => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
   return {
     formData,
     setFormData,
     initialFormData,
     resetFormData,
+    applySelfDefault,
     handleChange,
     error,
     setError,

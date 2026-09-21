@@ -15,7 +15,7 @@ const activatePhase = `-- name: ActivatePhase :one
 UPDATE game_phases
 SET is_active = true, activated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at
 `
 
 func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -32,9 +32,10 @@ func (q *Queries) ActivatePhase(ctx context.Context, id int32) (GamePhase, error
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -207,7 +208,7 @@ INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_sub
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
         CASE WHEN $8 THEN NOW() ELSE NULL END,
         CASE WHEN $8 THEN NOW() ELSE NULL END)
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type CreateActionResultParams struct {
@@ -246,14 +247,16 @@ func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResult
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -264,7 +267,7 @@ func (q *Queries) CreateActionResult(ctx context.Context, arg CreateActionResult
 const createGamePhase = `-- name: CreateGamePhase :one
 INSERT INTO game_phases (game_id, phase_type, phase_number, title, description, start_time, end_time, deadline)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at
 `
 
 type CreateGamePhaseParams struct {
@@ -301,9 +304,10 @@ func (q *Queries) CreateGamePhase(ctx context.Context, arg CreateGamePhaseParams
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -350,7 +354,7 @@ INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_sub
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
         CASE WHEN $8 THEN NOW() ELSE NULL END,
         $9, $10)
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type CreateStagedResultPartParams struct {
@@ -399,14 +403,16 @@ func (q *Queries) CreateStagedResultPart(ctx context.Context, arg CreateStagedRe
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -429,7 +435,7 @@ const deactivatePhase = `-- name: DeactivatePhase :one
 UPDATE game_phases
 SET is_active = false, end_time = NOW()
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at
 `
 
 func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -446,9 +452,10 @@ func (q *Queries) DeactivatePhase(ctx context.Context, id int32) (GamePhase, err
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -524,7 +531,7 @@ func (q *Queries) DeleteStagedPart(ctx context.Context, id int32) error {
 }
 
 const getActionResult = `-- name: GetActionResult :one
-SELECT id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at FROM action_results WHERE id = $1
+SELECT id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at FROM action_results WHERE id = $1
 `
 
 func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, error) {
@@ -533,14 +540,16 @@ func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, 
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -549,7 +558,7 @@ func (q *Queries) GetActionResult(ctx context.Context, id int32) (ActionResult, 
 }
 
 const getActionSubmission = `-- name: GetActionSubmission :one
-SELECT id, game_id, user_id, phase_id, character_id, content, submitted_at, updated_at FROM action_submissions WHERE id = $1
+SELECT id, game_id, phase_id, user_id, character_id, content, submitted_at, created_at, updated_at FROM action_submissions WHERE id = $1
 `
 
 func (q *Queries) GetActionSubmission(ctx context.Context, id int32) (ActionSubmission, error) {
@@ -558,18 +567,19 @@ func (q *Queries) GetActionSubmission(ctx context.Context, id int32) (ActionSubm
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
+		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
 		&i.SubmittedAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getActivePhase = `-- name: GetActivePhase :one
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at FROM game_phases
 WHERE game_id = $1 AND is_active = true
 `
 
@@ -587,9 +597,10 @@ func (q *Queries) GetActivePhase(ctx context.Context, gameID int32) (GamePhase, 
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -619,15 +630,15 @@ WITH RECURSIVE head AS (
     JOIN head h ON h.parent_result_id = p.id
 ),
 chain AS (
-    SELECT r.id, r.game_id, r.user_id, r.phase_id, r.character_id, r.action_submission_id, r.gm_user_id, r.content, r.is_published, r.sent_at, r.parent_result_id, r.reveal_delay_minutes, r.released_at, 1 AS part_number
+    SELECT r.id, r.game_id, r.phase_id, r.user_id, r.action_submission_id, r.content, r.is_published, r.sent_at, r.created_at, r.updated_at, r.gm_user_id, r.character_id, r.parent_result_id, r.reveal_delay_minutes, r.released_at, 1 AS part_number
     FROM action_results r
     WHERE r.id = (SELECT id FROM head WHERE parent_result_id IS NULL)
     UNION ALL
-    SELECT child.id, child.game_id, child.user_id, child.phase_id, child.character_id, child.action_submission_id, child.gm_user_id, child.content, child.is_published, child.sent_at, child.parent_result_id, child.reveal_delay_minutes, child.released_at, c.part_number + 1
+    SELECT child.id, child.game_id, child.phase_id, child.user_id, child.action_submission_id, child.content, child.is_published, child.sent_at, child.created_at, child.updated_at, child.gm_user_id, child.character_id, child.parent_result_id, child.reveal_delay_minutes, child.released_at, c.part_number + 1
     FROM action_results child
     JOIN chain c ON child.parent_result_id = c.id
 )
-SELECT c.id, c.game_id, c.user_id, c.phase_id, c.character_id, c.action_submission_id, c.gm_user_id, c.content, c.is_published, c.sent_at, c.parent_result_id, c.reveal_delay_minutes, c.released_at, c.part_number,
+SELECT c.id, c.game_id, c.phase_id, c.user_id, c.action_submission_id, c.content, c.is_published, c.sent_at, c.created_at, c.updated_at, c.gm_user_id, c.character_id, c.parent_result_id, c.reveal_delay_minutes, c.released_at, c.part_number,
        (SELECT COUNT(*) FROM chain) AS part_count,
        (SELECT bool_or(is_published) FROM chain) AS any_published
 FROM chain c
@@ -638,14 +649,16 @@ LIMIT 1
 type GetChainTailForAppendRow struct {
 	ID                 int32              `json:"id"`
 	GameID             int32              `json:"game_id"`
-	UserID             int32              `json:"user_id"`
 	PhaseID            int32              `json:"phase_id"`
-	CharacterID        pgtype.Int4        `json:"character_id"`
+	UserID             int32              `json:"user_id"`
 	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
-	GmUserID           int32              `json:"gm_user_id"`
 	Content            string             `json:"content"`
 	IsPublished        pgtype.Bool        `json:"is_published"`
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	GmUserID           int32              `json:"gm_user_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
 	ParentResultID     pgtype.Int4        `json:"parent_result_id"`
 	RevealDelayMinutes pgtype.Int4        `json:"reveal_delay_minutes"`
 	ReleasedAt         pgtype.Timestamptz `json:"released_at"`
@@ -672,14 +685,16 @@ func (q *Queries) GetChainTailForAppend(ctx context.Context, id int32) (GetChain
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -718,7 +733,7 @@ type GetDueStagedPartsRow struct {
 //
 // A chain is a linked list: each part points at its predecessor via
 // parent_result_id, and reveal_delay_minutes is measured from the moment that
-// predecessor became visible. See .claude/planning/staged-result-reveals.md.
+// predecessor became visible.
 // Parts whose wait has elapsed and which the release worker should now reveal.
 //
 // Due-ness is computed entirely in SQL from the parent's release time, which is
@@ -763,7 +778,7 @@ func (q *Queries) GetDueStagedParts(ctx context.Context) ([]GetDueStagedPartsRow
 }
 
 const getGameActions = `-- name: GetGameActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 JOIN game_phases gp ON acts.phase_id = gp.id
@@ -775,11 +790,12 @@ ORDER BY gp.phase_number, acts.submitted_at
 type GetGameActionsRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
 	CharacterName pgtype.Text        `json:"character_name"`
@@ -799,11 +815,12 @@ func (q *Queries) GetGameActions(ctx context.Context, gameID int32) ([]GetGameAc
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
+			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
 			&i.SubmittedAt,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
 			&i.CharacterName,
@@ -821,7 +838,7 @@ func (q *Queries) GetGameActions(ctx context.Context, gameID int32) ([]GetGameAc
 }
 
 const getGamePhases = `-- name: GetGamePhases :many
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at FROM game_phases
 WHERE game_id = $1
 ORDER BY phase_number
 `
@@ -846,9 +863,10 @@ func (q *Queries) GetGamePhases(ctx context.Context, gameID int32) ([]GamePhase,
 			&i.EndTime,
 			&i.Deadline,
 			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.IsPublished,
 			&i.ActivatedAt,
-			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -887,7 +905,7 @@ chain_position AS (
            END)::timestamptz AS unlocks_at
     FROM chain
 )
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, results.parent_result_id, results.reveal_delay_minutes, results.released_at, u.username, gp.phase_type, gp.phase_number,
+SELECT results.id, results.game_id, results.phase_id, results.user_id, results.action_submission_id, results.content, results.is_published, results.sent_at, results.created_at, results.updated_at, results.gm_user_id, results.character_id, results.parent_result_id, results.reveal_delay_minutes, results.released_at, u.username, gp.phase_type, gp.phase_number,
        c.name as character_name,
        cp.part_number, cp.part_count, cp.unlocks_at
 FROM action_results results
@@ -902,14 +920,16 @@ ORDER BY gp.phase_number, results.id
 type GetGameResultsRow struct {
 	ID                 int32              `json:"id"`
 	GameID             int32              `json:"game_id"`
-	UserID             int32              `json:"user_id"`
 	PhaseID            int32              `json:"phase_id"`
-	CharacterID        pgtype.Int4        `json:"character_id"`
+	UserID             int32              `json:"user_id"`
 	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
-	GmUserID           int32              `json:"gm_user_id"`
 	Content            string             `json:"content"`
 	IsPublished        pgtype.Bool        `json:"is_published"`
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	GmUserID           int32              `json:"gm_user_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
 	ParentResultID     pgtype.Int4        `json:"parent_result_id"`
 	RevealDelayMinutes pgtype.Int4        `json:"reveal_delay_minutes"`
 	ReleasedAt         pgtype.Timestamptz `json:"released_at"`
@@ -947,14 +967,16 @@ func (q *Queries) GetGameResults(ctx context.Context, gameID int32) ([]GetGameRe
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
-			&i.CharacterID,
+			&i.UserID,
 			&i.ActionSubmissionID,
-			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
 			&i.SentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUserID,
+			&i.CharacterID,
 			&i.ParentResultID,
 			&i.RevealDelayMinutes,
 			&i.ReleasedAt,
@@ -990,7 +1012,7 @@ func (q *Queries) GetLatestPhaseNumber(ctx context.Context, gameID int32) (inter
 }
 
 const getPhase = `-- name: GetPhase :one
-SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at FROM game_phases WHERE id = $1
+SELECT id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at FROM game_phases WHERE id = $1
 `
 
 func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
@@ -1007,15 +1029,16 @@ func (q *Queries) GetPhase(ctx context.Context, id int32) (GamePhase, error) {
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getPhaseActions = `-- name: GetPhaseActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, u.username, c.name as character_name
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 LEFT JOIN characters c ON acts.character_id = c.id
@@ -1026,11 +1049,12 @@ ORDER BY acts.submitted_at
 type GetPhaseActionsRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
 	CharacterName pgtype.Text        `json:"character_name"`
@@ -1048,11 +1072,12 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
+			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
 			&i.SubmittedAt,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
 			&i.CharacterName,
@@ -1068,7 +1093,7 @@ func (q *Queries) GetPhaseActions(ctx context.Context, phaseID int32) ([]GetPhas
 }
 
 const getPhaseResults = `-- name: GetPhaseResults :many
-SELECT results.id, results.game_id, results.user_id, results.phase_id, results.character_id, results.action_submission_id, results.gm_user_id, results.content, results.is_published, results.sent_at, results.parent_result_id, results.reveal_delay_minutes, results.released_at, u.username, gm.username as gm_username,
+SELECT results.id, results.game_id, results.phase_id, results.user_id, results.action_submission_id, results.content, results.is_published, results.sent_at, results.created_at, results.updated_at, results.gm_user_id, results.character_id, results.parent_result_id, results.reveal_delay_minutes, results.released_at, u.username, gm.username as gm_username,
        c.name as character_name
 FROM action_results results
 JOIN users u ON results.user_id = u.id
@@ -1081,14 +1106,16 @@ ORDER BY results.id DESC
 type GetPhaseResultsRow struct {
 	ID                 int32              `json:"id"`
 	GameID             int32              `json:"game_id"`
-	UserID             int32              `json:"user_id"`
 	PhaseID            int32              `json:"phase_id"`
-	CharacterID        pgtype.Int4        `json:"character_id"`
+	UserID             int32              `json:"user_id"`
 	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
-	GmUserID           int32              `json:"gm_user_id"`
 	Content            string             `json:"content"`
 	IsPublished        pgtype.Bool        `json:"is_published"`
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	GmUserID           int32              `json:"gm_user_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
 	ParentResultID     pgtype.Int4        `json:"parent_result_id"`
 	RevealDelayMinutes pgtype.Int4        `json:"reveal_delay_minutes"`
 	ReleasedAt         pgtype.Timestamptz `json:"released_at"`
@@ -1114,14 +1141,16 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
-			&i.CharacterID,
+			&i.UserID,
 			&i.ActionSubmissionID,
-			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
 			&i.SentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUserID,
+			&i.CharacterID,
 			&i.ParentResultID,
 			&i.RevealDelayMinutes,
 			&i.ReleasedAt,
@@ -1140,7 +1169,7 @@ func (q *Queries) GetPhaseResults(ctx context.Context, phaseID int32) ([]GetPhas
 }
 
 const getPhaseSubmissions = `-- name: GetPhaseSubmissions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, u.username, c.name as character_name
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 LEFT JOIN characters c ON acts.character_id = c.id
@@ -1151,11 +1180,12 @@ ORDER BY acts.submitted_at
 type GetPhaseSubmissionsRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
 	CharacterName pgtype.Text        `json:"character_name"`
@@ -1173,11 +1203,12 @@ func (q *Queries) GetPhaseSubmissions(ctx context.Context, phaseID int32) ([]Get
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
+			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
 			&i.SubmittedAt,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
 			&i.CharacterName,
@@ -1266,15 +1297,15 @@ WITH RECURSIVE head AS (
 ),
 chain AS (
     -- Descend from the head, numbering as we go.
-    SELECT r.id, r.game_id, r.user_id, r.phase_id, r.character_id, r.action_submission_id, r.gm_user_id, r.content, r.is_published, r.sent_at, r.parent_result_id, r.reveal_delay_minutes, r.released_at, 1 AS part_number
+    SELECT r.id, r.game_id, r.phase_id, r.user_id, r.action_submission_id, r.content, r.is_published, r.sent_at, r.created_at, r.updated_at, r.gm_user_id, r.character_id, r.parent_result_id, r.reveal_delay_minutes, r.released_at, 1 AS part_number
     FROM action_results r
     WHERE r.id = (SELECT id FROM head WHERE parent_result_id IS NULL)
     UNION ALL
-    SELECT child.id, child.game_id, child.user_id, child.phase_id, child.character_id, child.action_submission_id, child.gm_user_id, child.content, child.is_published, child.sent_at, child.parent_result_id, child.reveal_delay_minutes, child.released_at, c.part_number + 1
+    SELECT child.id, child.game_id, child.phase_id, child.user_id, child.action_submission_id, child.content, child.is_published, child.sent_at, child.created_at, child.updated_at, child.gm_user_id, child.character_id, child.parent_result_id, child.reveal_delay_minutes, child.released_at, c.part_number + 1
     FROM action_results child
     JOIN chain c ON child.parent_result_id = c.id
 )
-SELECT c.id, c.game_id, c.user_id, c.phase_id, c.character_id, c.action_submission_id, c.gm_user_id, c.content, c.is_published, c.sent_at, c.parent_result_id, c.reveal_delay_minutes, c.released_at, c.part_number, (SELECT COUNT(*) FROM chain) AS part_count
+SELECT c.id, c.game_id, c.phase_id, c.user_id, c.action_submission_id, c.content, c.is_published, c.sent_at, c.created_at, c.updated_at, c.gm_user_id, c.character_id, c.parent_result_id, c.reveal_delay_minutes, c.released_at, c.part_number, (SELECT COUNT(*) FROM chain) AS part_count
 FROM chain c
 ORDER BY c.part_number
 `
@@ -1282,14 +1313,16 @@ ORDER BY c.part_number
 type GetResultChainRow struct {
 	ID                 int32              `json:"id"`
 	GameID             int32              `json:"game_id"`
-	UserID             int32              `json:"user_id"`
 	PhaseID            int32              `json:"phase_id"`
-	CharacterID        pgtype.Int4        `json:"character_id"`
+	UserID             int32              `json:"user_id"`
 	ActionSubmissionID pgtype.Int4        `json:"action_submission_id"`
-	GmUserID           int32              `json:"gm_user_id"`
 	Content            string             `json:"content"`
 	IsPublished        pgtype.Bool        `json:"is_published"`
 	SentAt             pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	GmUserID           int32              `json:"gm_user_id"`
+	CharacterID        pgtype.Int4        `json:"character_id"`
 	ParentResultID     pgtype.Int4        `json:"parent_result_id"`
 	RevealDelayMinutes pgtype.Int4        `json:"reveal_delay_minutes"`
 	ReleasedAt         pgtype.Timestamptz `json:"released_at"`
@@ -1315,14 +1348,16 @@ func (q *Queries) GetResultChain(ctx context.Context, id int32) ([]GetResultChai
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
-			&i.CharacterID,
+			&i.UserID,
 			&i.ActionSubmissionID,
-			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
 			&i.SentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUserID,
+			&i.CharacterID,
 			&i.ParentResultID,
 			&i.RevealDelayMinutes,
 			&i.ReleasedAt,
@@ -1340,7 +1375,7 @@ func (q *Queries) GetResultChain(ctx context.Context, id int32) ([]GetResultChai
 }
 
 const getScheduledPhasesToActivate = `-- name: GetScheduledPhasesToActivate :many
-SELECT gp.id, gp.game_id, gp.phase_type, gp.phase_number, gp.title, gp.description, gp.start_time, gp.end_time, gp.deadline, gp.is_active, gp.is_published, gp.activated_at, gp.created_at
+SELECT gp.id, gp.game_id, gp.phase_type, gp.phase_number, gp.title, gp.description, gp.start_time, gp.end_time, gp.deadline, gp.is_active, gp.created_at, gp.updated_at, gp.is_published, gp.activated_at
 FROM game_phases gp
 JOIN games g ON gp.game_id = g.id
 WHERE gp.is_active = false
@@ -1374,9 +1409,10 @@ func (q *Queries) GetScheduledPhasesToActivate(ctx context.Context) ([]GamePhase
 			&i.EndTime,
 			&i.Deadline,
 			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.IsPublished,
 			&i.ActivatedAt,
-			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1479,7 +1515,7 @@ func (q *Queries) GetUnpublishedResultsCount(ctx context.Context, phaseID int32)
 }
 
 const getUserAction = `-- name: GetUserAction :one
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, c.name as character_name
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, c.name as character_name
 FROM action_submissions acts
 LEFT JOIN characters c ON acts.character_id = c.id
 WHERE acts.game_id = $1 AND acts.user_id = $2 AND acts.phase_id = $3
@@ -1494,11 +1530,12 @@ type GetUserActionParams struct {
 type GetUserActionRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	CharacterName pgtype.Text        `json:"character_name"`
 }
@@ -1509,11 +1546,12 @@ func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (G
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
+		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
 		&i.SubmittedAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.CharacterName,
 	)
@@ -1521,7 +1559,7 @@ func (q *Queries) GetUserAction(ctx context.Context, arg GetUserActionParams) (G
 }
 
 const getUserActions = `-- name: GetUserActions :many
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, gp.phase_type, gp.phase_number, c.name as character_name
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, gp.phase_type, gp.phase_number, c.name as character_name
 FROM action_submissions acts
 JOIN game_phases gp ON acts.phase_id = gp.id
 LEFT JOIN characters c ON acts.character_id = c.id
@@ -1537,11 +1575,12 @@ type GetUserActionsParams struct {
 type GetUserActionsRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	PhaseType     string             `json:"phase_type"`
 	PhaseNumber   int32              `json:"phase_number"`
@@ -1560,11 +1599,12 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
+			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
 			&i.SubmittedAt,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PhaseType,
 			&i.PhaseNumber,
@@ -1581,7 +1621,7 @@ func (q *Queries) GetUserActions(ctx context.Context, arg GetUserActionsParams) 
 }
 
 const getUserPhaseResults = `-- name: GetUserPhaseResults :many
-SELECT id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at FROM action_results
+SELECT id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at FROM action_results
 WHERE phase_id = $1 AND user_id = $2
 ORDER BY id DESC
 `
@@ -1613,14 +1653,16 @@ func (q *Queries) GetUserPhaseResults(ctx context.Context, arg GetUserPhaseResul
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
-			&i.CharacterID,
+			&i.UserID,
 			&i.ActionSubmissionID,
-			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
 			&i.SentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUserID,
+			&i.CharacterID,
 			&i.ParentResultID,
 			&i.RevealDelayMinutes,
 			&i.ReleasedAt,
@@ -1636,7 +1678,7 @@ func (q *Queries) GetUserPhaseResults(ctx context.Context, arg GetUserPhaseResul
 }
 
 const getUserPhaseSubmission = `-- name: GetUserPhaseSubmission :one
-SELECT id, game_id, user_id, phase_id, character_id, content, submitted_at, updated_at FROM action_submissions
+SELECT id, game_id, phase_id, user_id, character_id, content, submitted_at, created_at, updated_at FROM action_submissions
 WHERE phase_id = $1 AND user_id = $2
 `
 
@@ -1651,11 +1693,12 @@ func (q *Queries) GetUserPhaseSubmission(ctx context.Context, arg GetUserPhaseSu
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
+		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
 		&i.SubmittedAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -1822,7 +1865,7 @@ func (q *Queries) GetUserResults(ctx context.Context, arg GetUserResultsParams) 
 
 const listAllActionSubmissions = `-- name: ListAllActionSubmissions :many
 
-SELECT acts.id, acts.game_id, acts.user_id, acts.phase_id, acts.character_id, acts.content, acts.submitted_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
+SELECT acts.id, acts.game_id, acts.phase_id, acts.user_id, acts.character_id, acts.content, acts.submitted_at, acts.created_at, acts.updated_at, u.username, c.name as character_name, gp.phase_type, gp.phase_number, gp.title as phase_title
 FROM action_submissions acts
 JOIN users u ON acts.user_id = u.id
 JOIN game_phases gp ON acts.phase_id = gp.id
@@ -1843,11 +1886,12 @@ type ListAllActionSubmissionsParams struct {
 type ListAllActionSubmissionsRow struct {
 	ID            int32              `json:"id"`
 	GameID        int32              `json:"game_id"`
-	UserID        int32              `json:"user_id"`
 	PhaseID       int32              `json:"phase_id"`
+	UserID        int32              `json:"user_id"`
 	CharacterID   pgtype.Int4        `json:"character_id"`
 	Content       string             `json:"content"`
 	SubmittedAt   pgtype.Timestamptz `json:"submitted_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	Username      string             `json:"username"`
 	CharacterName pgtype.Text        `json:"character_name"`
@@ -1882,11 +1926,12 @@ func (q *Queries) ListAllActionSubmissions(ctx context.Context, arg ListAllActio
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
+			&i.UserID,
 			&i.CharacterID,
 			&i.Content,
 			&i.SubmittedAt,
+			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Username,
 			&i.CharacterName,
@@ -1929,7 +1974,7 @@ SET is_published = true,
     sent_at = COALESCE(sent_at, NOW()),
     released_at = CASE WHEN parent_result_id IS NULL THEN COALESCE(released_at, NOW()) ELSE released_at END
 WHERE id IN (SELECT id FROM chain)
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 // Publishing a chain head (or an ordinary single result) makes it visible at
@@ -1962,14 +2007,16 @@ func (q *Queries) PublishActionResult(ctx context.Context, id int32) ([]ActionRe
 		if err := rows.Scan(
 			&i.ID,
 			&i.GameID,
-			&i.UserID,
 			&i.PhaseID,
-			&i.CharacterID,
+			&i.UserID,
 			&i.ActionSubmissionID,
-			&i.GmUserID,
 			&i.Content,
 			&i.IsPublished,
 			&i.SentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.GmUserID,
+			&i.CharacterID,
 			&i.ParentResultID,
 			&i.RevealDelayMinutes,
 			&i.ReleasedAt,
@@ -2004,7 +2051,7 @@ const releaseStagedPart = `-- name: ReleaseStagedPart :one
 UPDATE action_results
 SET released_at = NOW()
 WHERE id = $1 AND released_at IS NULL
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 // Reveal one part. Guarded on released_at IS NULL so a double-tick or a
@@ -2016,14 +2063,16 @@ func (q *Queries) ReleaseStagedPart(ctx context.Context, id int32) (ActionResult
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -2038,7 +2087,7 @@ ON CONFLICT (game_id, user_id, phase_id)
 DO UPDATE SET content = $5, character_id = $4,
               submitted_at = COALESCE(action_submissions.submitted_at, NOW()),
               updated_at = NOW()
-RETURNING id, game_id, user_id, phase_id, character_id, content, submitted_at, updated_at
+RETURNING id, game_id, phase_id, user_id, character_id, content, submitted_at, created_at, updated_at
 `
 
 type SubmitActionParams struct {
@@ -2065,11 +2114,12 @@ func (q *Queries) SubmitAction(ctx context.Context, arg SubmitActionParams) (Act
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
+		&i.UserID,
 		&i.CharacterID,
 		&i.Content,
 		&i.SubmittedAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -2079,7 +2129,7 @@ const updateActionResult = `-- name: UpdateActionResult :one
 UPDATE action_results
 SET content = $2
 WHERE id = $1 AND is_published = false
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type UpdateActionResultParams struct {
@@ -2093,14 +2143,16 @@ func (q *Queries) UpdateActionResult(ctx context.Context, arg UpdateActionResult
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,
@@ -2113,7 +2165,7 @@ const updatePhase = `-- name: UpdatePhase :one
 UPDATE game_phases
 SET title = $2, description = $3, start_time = $4, end_time = $5, deadline = $6
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at
 `
 
 type UpdatePhaseParams struct {
@@ -2147,9 +2199,10 @@ func (q *Queries) UpdatePhase(ctx context.Context, arg UpdatePhaseParams) (GameP
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -2158,7 +2211,7 @@ const updatePhaseDeadline = `-- name: UpdatePhaseDeadline :one
 UPDATE game_phases
 SET deadline = $2
 WHERE id = $1
-RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, is_published, activated_at, created_at
+RETURNING id, game_id, phase_type, phase_number, title, description, start_time, end_time, deadline, is_active, created_at, updated_at, is_published, activated_at
 `
 
 type UpdatePhaseDeadlineParams struct {
@@ -2180,9 +2233,10 @@ func (q *Queries) UpdatePhaseDeadline(ctx context.Context, arg UpdatePhaseDeadli
 		&i.EndTime,
 		&i.Deadline,
 		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IsPublished,
 		&i.ActivatedAt,
-		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -2191,7 +2245,7 @@ const updateStagedPartDelay = `-- name: UpdateStagedPartDelay :one
 UPDATE action_results
 SET reveal_delay_minutes = $2
 WHERE id = $1 AND released_at IS NULL AND parent_result_id IS NOT NULL
-RETURNING id, game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at
+RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type UpdateStagedPartDelayParams struct {
@@ -2222,14 +2276,16 @@ func (q *Queries) UpdateStagedPartDelay(ctx context.Context, arg UpdateStagedPar
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
-		&i.UserID,
 		&i.PhaseID,
-		&i.CharacterID,
+		&i.UserID,
 		&i.ActionSubmissionID,
-		&i.GmUserID,
 		&i.Content,
 		&i.IsPublished,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
 		&i.ParentResultID,
 		&i.RevealDelayMinutes,
 		&i.ReleasedAt,

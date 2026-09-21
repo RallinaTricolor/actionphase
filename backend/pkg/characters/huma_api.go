@@ -4,7 +4,7 @@ package characters
 //
 // Two registration functions, because characters are mounted at two prefixes:
 // the roster routes under /games/{gameID}, and the per-character operations at
-// /characters. See .claude/planning/huma-migration.md gotcha 10.
+// /characters.
 
 import (
 	"context"
@@ -65,11 +65,11 @@ type characterOutput struct {
 }
 
 type gameCharacterListOutput struct {
-	Body []*GameCharacterResponse
+	Body []*CharacterResponse
 }
 
 type controllableListOutput struct {
-	Body []*ControllableCharacterResponse
+	Body []*CharacterResponse
 }
 
 type controllableWithGameListOutput struct {
@@ -157,6 +157,12 @@ func ptrText(v pgtype.Text) *string {
 	}
 	s := v.String
 	return &s
+}
+
+// ptrOf returns a pointer to v. Used for NOT NULL columns that map to an
+// optional (*string) field in the API response contract.
+func ptrOf(v string) *string {
+	return &v
 }
 
 func ptrInt(v pgtype.Int4) *int32 {
@@ -291,7 +297,7 @@ func (h *Handler) humaCreateCharacter(ctx context.Context, in *createCharacterIn
 		GameID:        character.GameID,
 		Name:          character.Name,
 		CharacterType: &charType,
-		Status:        character.Status.String,
+		Status:        character.Status,
 		CreatedAt:     character.CreatedAt.Time,
 		UpdatedAt:     character.UpdatedAt.Time,
 		UserID:        ptrInt(character.UserID),
@@ -330,8 +336,8 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 	// Hide other players' unapproved characters once a game is running: their
 	// existence is itself information. Owners and assigned controllers still
 	// see their own.
-	if game.State.String == "in_progress" && !isGM && !isOwner && !isAssignedUser {
-		if character.Status.String == "pending" || character.Status.String == "rejected" {
+	if game.State == "in_progress" && !isGM && !isOwner && !isAssignedUser {
+		if character.Status == "pending" || character.Status == "rejected" {
 			h.App.ObsLogger.Warn(ctx, "Get character not found", "character_id", in.ID)
 			return nil, huma.Error404NotFound("character not found")
 		}
@@ -341,11 +347,29 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 		ID:        character.ID,
 		GameID:    character.GameID,
 		Name:      character.Name,
-		Status:    character.Status.String,
+		Status:    character.Status,
+		IsActive:  character.IsActive,
 		CreatedAt: character.CreatedAt.Time,
 		UpdatedAt: character.UpdatedAt.Time,
-		UserID:    ptrInt(character.UserID),
 		AvatarURL: ptrText(character.AvatarUrl),
+	}
+
+	// Identity is gated on the same rule the roster uses. Both the id and the
+	// username go together: leaking the user_id in an anonymous game is the
+	// same disclosure as leaking the name, just one lookup removed.
+	if canSeePlayerNames(game.IsAnonymous, userRole) {
+		resp.UserID = ptrInt(character.UserID)
+		if character.UserID.Valid {
+			if owner, err := h.UserService.GetUserByID(int(character.UserID.Int32)); err == nil {
+				resp.Username = ptrOf(owner.Username)
+			} else {
+				// A missing owner is not fatal -- the character still renders,
+				// just without attribution, exactly as it did before this
+				// endpoint reported a username at all.
+				h.App.ObsLogger.Warn(ctx, "Failed to load character owner for username",
+					"error", err, "character_id", character.ID, "user_id", character.UserID.Int32)
+			}
+		}
 	}
 
 	// In an anonymous game the type would leak whether a character is a player's
@@ -385,28 +409,33 @@ func (h *Handler) humaGetGameCharacters(ctx context.Context, in *gameIDInput) (*
 
 	// Built as an empty slice rather than a nil one so a game with no
 	// characters encodes as [] rather than null.
-	resp := make([]*GameCharacterResponse, 0, len(characters))
+	resp := make([]*CharacterResponse, 0, len(characters))
 	for _, char := range characters {
 		// Unapproved characters belonging to *other* players stay hidden from
 		// regular players; the caller's own are always included.
-		if !privileged && (char.Status.String == "pending" || char.Status.String == "rejected") {
+		if !privileged && (char.Status == "pending" || char.Status == "rejected") {
 			if !char.UserID.Valid || char.UserID.Int32 != authUser.ID {
 				continue
 			}
 		}
 
-		item := &GameCharacterResponse{
-			ID:            char.ID,
-			GameID:        char.GameID,
-			Name:          char.Name,
-			CharacterType: char.CharacterType,
-			Status:        ptrText(char.Status),
+		item := &CharacterResponse{
+			ID:     char.ID,
+			GameID: char.GameID,
+			Name:   char.Name,
+			// The roster reports the type to everyone, unlike GET
+			// /characters/{id}: this list is what separates the cast into
+			// players and NPCs, and withholding it would collapse both groups
+			// to empty for a player in an anonymous game. The type alone does
+			// not name anyone -- the identity fields below are what do.
+			CharacterType: ptrOf(char.CharacterType),
+			Status:        char.Status,
 			IsActive:      char.IsActive,
-			CreatedAt:     char.CreatedAt.Time,
-			UpdatedAt:     char.UpdatedAt.Time,
 			// The portrait belongs to the character, not the player, so it
 			// survives anonymous mode.
 			AvatarURL: ptrText(char.AvatarUrl),
+			CreatedAt: char.CreatedAt.Time,
+			UpdatedAt: char.UpdatedAt.Time,
 		}
 
 		if showNames {
@@ -436,18 +465,26 @@ func (h *Handler) humaGetUserControllableCharacters(ctx context.Context, in *gam
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
-	resp := make([]*ControllableCharacterResponse, 0, len(characters))
+	resp := make([]*CharacterResponse, 0, len(characters))
 	for _, char := range characters {
-		resp = append(resp, &ControllableCharacterResponse{
+		resp = append(resp, &CharacterResponse{
 			ID:            char.ID,
 			GameID:        char.GameID,
 			Name:          char.Name,
-			CharacterType: char.CharacterType,
-			CreatedAt:     char.CreatedAt.Time,
-			UpdatedAt:     char.UpdatedAt.Time,
-			UserID:        ptrInt(char.UserID),
-			Status:        ptrText(char.Status),
+			CharacterType: ptrOf(char.CharacterType),
+			Status:        char.Status,
 			AvatarURL:     ptrText(char.AvatarUrl),
+			// Always true: the query filters to active characters. Reported
+			// rather than omitted so this payload has the same shape as every
+			// other character response -- a caller that reads is_active gets
+			// the right answer instead of undefined.
+			IsActive:  true,
+			CreatedAt: char.CreatedAt.Time,
+			UpdatedAt: char.UpdatedAt.Time,
+			// No anonymity check needed: this endpoint returns only characters
+			// the caller controls, so they are never learning about someone
+			// else. No username is joined here either way.
+			UserID: ptrInt(char.UserID),
 		})
 	}
 
@@ -480,19 +517,28 @@ func (h *Handler) humaGetUserControllableCharactersAcrossGames(ctx context.Conte
 	resp := make([]*ControllableCharacterWithGameResponse, 0, len(characters))
 	for _, char := range characters {
 		item := &ControllableCharacterWithGameResponse{
-			ControllableCharacterResponse: ControllableCharacterResponse{
+			CharacterResponse: CharacterResponse{
 				ID:            char.ID,
 				GameID:        char.GameID,
 				Name:          char.Name,
-				CharacterType: char.CharacterType,
-				CreatedAt:     char.CreatedAt.Time,
-				UpdatedAt:     char.UpdatedAt.Time,
-				UserID:        ptrInt(char.UserID),
-				Status:        ptrText(char.Status),
+				CharacterType: ptrOf(char.CharacterType),
+				Status:        char.Status,
 				AvatarURL:     ptrText(char.AvatarUrl),
+				// Always true -- the query filters on c.is_active. See the
+				// per-game controllable list for why it is reported, not
+				// omitted.
+				IsActive:  true,
+				CreatedAt: char.CreatedAt.Time,
+				UpdatedAt: char.UpdatedAt.Time,
+				UserID:    ptrInt(char.UserID),
+				// Safe without a canSeePlayerNames check -- see the note on
+				// ControllableCharacterWithGameResponse. The caller gets only
+				// their own characters, or their own game's cast as GM/co-GM.
+				Username:         ptrText(char.OwnerUsername),
+				AssignedUsername: ptrText(char.AssignedUsername),
 			},
 			GameTitle:           char.GameTitle,
-			GameState:           ptrText(char.GameState),
+			GameState:           ptrOf(char.GameState),
 			GameIsAnonymous:     char.GameIsAnonymous,
 			GamePortraitAvatars: char.GamePortraitAvatars,
 			// Absent means "all defaults", which the frontend owns. The drawer
@@ -500,12 +546,7 @@ func (h *Handler) humaGetUserControllableCharactersAcrossGames(ctx context.Conte
 			// without it a game that renamed a tab would render the default name
 			// here and read as a bug.
 			GameCharacterSheet: core.CharacterSheetConfigForResponse(char.GameCharacterSheet),
-			// Who plays each character, for the GM's cast list. Named `username`
-			// to match the per-game payload the drawer's in-game list reads, so
-			// one row renderer serves both.
-			Username:         ptrText(char.OwnerUsername),
-			AssignedUsername: ptrText(char.AssignedUsername),
-			UserRole:         char.UserRole,
+			UserRole:           char.UserRole,
 		}
 		resp = append(resp, item)
 	}
@@ -739,17 +780,24 @@ func (h *Handler) humaListInactiveCharacters(ctx context.Context, in *gameIDInpu
 	resp := make([]*InactiveCharacterResponse, 0, len(characters))
 	for _, char := range characters {
 		resp = append(resp, &InactiveCharacterResponse{
-			ID:                    char.ID,
-			GameID:                char.GameID,
-			Name:                  char.Name,
-			CharacterType:         char.CharacterType,
-			Status:                char.Status.String,
-			IsActive:              char.IsActive,
-			CreatedAt:             char.CreatedAt.Time,
-			UpdatedAt:             char.UpdatedAt.Time,
+			CharacterResponse: CharacterResponse{
+				ID:            char.ID,
+				GameID:        char.GameID,
+				Name:          char.Name,
+				CharacterType: ptrOf(char.CharacterType),
+				Status:        char.Status,
+				// Always false -- that is what "inactive" means here.
+				IsActive:  char.IsActive,
+				CreatedAt: char.CreatedAt.Time,
+				UpdatedAt: char.UpdatedAt.Time,
+				// GM-only endpoint, so no anonymity check: a GM always passes
+				// canSeePlayerNames. Username is the current owner, the same
+				// person CurrentOwnerUsername names.
+				UserID:   ptrInt(char.UserID),
+				Username: ptrText(char.CurrentOwnerUsername),
+			},
 			CurrentOwnerUsername:  ptrText(char.CurrentOwnerUsername),
 			OriginalOwnerUsername: ptrText(char.OriginalOwnerUsername),
-			UserID:                ptrInt(char.UserID),
 			OriginalOwnerUserID:   ptrInt(char.OriginalOwnerUserID),
 		})
 	}
@@ -855,7 +903,7 @@ func (h *Handler) humaGetCharacterData(ctx context.Context, in *characterIDInput
 			CharacterID: data.CharacterID,
 			ModuleType:  data.ModuleType,
 			FieldName:   data.FieldName,
-			FieldType:   ptrText(data.FieldType),
+			FieldType:   ptrOf(data.FieldType),
 			CreatedAt:   data.CreatedAt.Time,
 			UpdatedAt:   data.UpdatedAt.Time,
 			FieldValue:  ptrText(data.FieldValue),
@@ -898,7 +946,7 @@ func (h *Handler) canViewPrivateCharacterData(ctx context.Context, characterID i
 	}
 
 	// Completed or epilogue: the archive is open to everyone who was there.
-	if gameErr == nil && game.State.Valid && core.IsPublicArchive(game.State.String) {
+	if gameErr == nil && core.IsPublicArchive(game.State) {
 		h.App.ObsLogger.Debug(ctx, "Participant viewing character data in completed game",
 			"character_id", characterID, "user_id", *userID, "game_id", character.GameID, "role", userRole)
 		return true
@@ -1055,7 +1103,7 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 				CharacterID: row.CharacterID,
 				ModuleType:  row.ModuleType,
 				FieldName:   row.FieldName,
-				FieldType:   ptrText(row.FieldType),
+				FieldType:   ptrOf(row.FieldType),
 				CreatedAt:   row.CreatedAt.Time,
 				UpdatedAt:   row.UpdatedAt.Time,
 				FieldValue:  ptrText(row.FieldValue),
@@ -1071,6 +1119,10 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 // characterFromModel builds the single-character body from a full character
 // row. Used by the operations that always disclose the type, because the caller
 // is a GM or the character's owner.
+//
+// It sets no username: a plain character row carries only user_id, and the
+// owner's name needs a join. Handlers that have it fill Username in afterwards,
+// gated by canSeePlayerNames.
 func characterFromModel(c *models.Character) *CharacterResponse {
 	charType := c.CharacterType
 	return &CharacterResponse{
@@ -1078,7 +1130,9 @@ func characterFromModel(c *models.Character) *CharacterResponse {
 		GameID:        c.GameID,
 		Name:          c.Name,
 		CharacterType: &charType,
-		Status:        c.Status.String,
+		Status:        c.Status,
+		AvatarURL:     ptrText(c.AvatarUrl),
+		IsActive:      c.IsActive,
 		CreatedAt:     c.CreatedAt.Time,
 		UpdatedAt:     c.UpdatedAt.Time,
 		UserID:        ptrInt(c.UserID),

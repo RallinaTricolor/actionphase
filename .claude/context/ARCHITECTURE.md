@@ -2,7 +2,7 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
-**Last Verified**: August 2026
+**Last Verified**: 2026-09-21
 
 ## Core Architectural Principles
 
@@ -18,7 +18,8 @@ ActionPhase follows **Clean Architecture** with clear separation of concerns:
 
 ### Backend
 - **Language**: Go 1.25
-- **Router**: Chi (HTTP routing and middleware)
+- **HTTP**: huma (type-first handlers; OpenAPI spec generated from Go types)
+  mounted on Chi (routing and middleware) via the humachi adapter
 - **Database**: PostgreSQL with JSONB for flexible game data
 - **Query Builder**: sqlc (type-safe SQL → Go code generation)
 - **Authentication**: JWT bearer tokens backed by server-side sessions
@@ -36,13 +37,17 @@ ActionPhase follows **Clean Architecture** with clear separation of concerns:
 ## Request Processing Flow
 
 ```
-HTTP Request → Middleware Stack → Handler → Service → Repository → Database
-     ↓              ↓               ↓         ↓          ↓           ↓
-Correlation ID  Auth/CORS       Validate  Business   SQL Queries  PostgreSQL
-Request Trace   Rate Limit      Bind      Logic      Type-Safe    ACID Ops
-Metrics         Recovery        Error     Domain     Connection   Constraints
-                                Handling   Rules      Pooling
+HTTP Request → Middleware Stack → huma operation → Handler → Service → Repository → Database
+     ↓              ↓                  ↓              ↓         ↓          ↓           ↓
+Correlation ID  Auth/CORS        Decode Input    Authorize  Business  SQL Queries  PostgreSQL
+Request Trace   Rate Limit       Validate tags   Delegate   Logic     Type-Safe    ACID Ops
+Metrics         Recovery         422 on failure  Map to     Domain    Connection   Constraints
+                                 Encode Output   Response   Rules     Pooling
 ```
+
+Chi still owns routing, mounting and middleware. huma owns decode, validation
+and encoding — which is what lets the OpenAPI spec be generated rather than
+maintained by hand.
 
 ## Backend Architecture Patterns
 
@@ -94,11 +99,11 @@ func (s *GameService) CreateGame(ctx context.Context, req *CreateGameRequest) (*
 db/
 ├── queries/        # SQL query files (*.sql)
 ├── models/         # Generated Go types (from sqlc)
-├── migrations/     # Database schema migrations
+├── migrations/     # Database schema migrations (the schema source of truth;
+│                   #   sqlc generates models/ directly from these)
 ├── services/       # Service implementations using queries
 │                   #   (phases/, actions/, messages/ are multi-file subpackages)
 ├── test_fixtures/  # Seed SQL + apply scripts (common/, demo/, e2e/, perf/)
-├── schema.sql      # Full generated schema
 └── sqlc.yaml       # sqlc configuration
 ```
 
@@ -121,61 +126,127 @@ RETURNING id, title, description, gm_user_id, state, created_at;
 
 ### 4. HTTP Handler Pattern
 
-**Location**: `backend/pkg/*/api.go` (one handler package per domain)
+**Type-first huma operations.** A handler is
+`func(ctx, *Input) (*Output, error)` — it never touches `http.ResponseWriter`.
+huma decodes and validates the Input from its schema tags and encodes the
+Output, so `backend/pkg/docs/openapi.gen.yaml` is *generated* from the Go types
+rather than maintained by hand.
 
-Current handler packages (each has an `api.go`): `admin`, `auth`, `avatars`, `characters`, `conversations`, `dashboard`, `deadlines`, `exports`, `games`, `handouts`, `notifications`, `phases`, `polls`, `users`
+**Location**: `backend/pkg/<domain>/`, three files per handler package:
+
+| File | Holds |
+|---|---|
+| `requests.go` | Request body structs + schema tags (the validation rules) |
+| `responses.go` | Response body structs — the wire contract |
+| `huma_api.go` | Input/Output wrappers, handlers, `huma.Register` calls |
+
+Handler packages: `admin`, `auth`, `avatars`, `characters`, `communities`,
+`conversations`, `dashboard`, `deadlines`, `exports`, `games`, `handouts`,
+`messages`, `notifications`, `phases`, `polls`, `users`
 
 ```go
-func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
-    // 1. Get context values (user, correlation ID)
-    ctx := r.Context()
-    user := middleware.GetUserFromContext(ctx)
-    correlationID := middleware.GetCorrelationID(ctx)
+// Input bundles path/query params with the body; Output wraps the body.
+type createCharacterInput struct {
+    GameID int32 `path:"gameID" doc:"Game ID"`
+    Body   *CreateCharacterRequest
+}
 
-    // 2. Parse and validate request.
-    //    render.Bind decodes the body, then calls the request type's Bind
-    //    method — the only hook that runs after decoding, and so the place
-    //    validation belongs. Failures render as 400.
-    data := &CreateGameRequest{}
-    if err := render.Bind(r, data); err != nil {
-        core.WriteError(w, core.ErrInvalidRequest(err, correlationID))
-        return
-    }
+type characterOutput struct {
+    Body *CharacterResponse
+}
 
-    // 3. Call service layer
-    game, err := h.service.CreateGame(ctx, data)
+func (h *Handler) humaCreateCharacter(ctx context.Context, in *createCharacterInput) (*characterOutput, error) {
+    defer h.App.ObsLogger.LogOperation(ctx, "api_create_character")()
+
+    // 1. Authenticate (401 when the middleware populated no user)
+    authUser, err := h.authUser(ctx)
     if err != nil {
-        core.WriteError(w, err)
-        return
+        return nil, err
     }
 
-    // 4. Return success response
-    core.WriteJSON(w, http.StatusCreated, game)
+    // 2. Authorize — role-dependent rules the schema cannot express
+    if !isGM {
+        return nil, huma.Error403Forbidden("only the GM can create NPCs")
+    }
+
+    // 3. Delegate to the service
+    character, err := h.CharacterService.CreateCharacter(ctx, core.CreateCharacterRequest{
+        GameID: in.GameID,
+        Name:   in.Body.Name,
+    })
+    if err != nil {
+        h.App.ObsLogger.Error(ctx, "Failed to create character", "error", err)
+        return nil, huma.Error500InternalServerError(err.Error())
+    }
+
+    // 4. Map to the response contract
+    return &characterOutput{Body: toCharacterResponse(character)}, nil
 }
 ```
 
-**Request validation lives in `Bind`.** Tag the request struct and execute the
-tags with `core.ValidateStruct`:
+Registration declares the status and the errors the operation can produce;
+these become the documented responses:
 
 ```go
-type RenameCharacterRequest struct {
-    Name string `json:"name" validate:"required,min=1,max=255"`
-}
+huma.Register(api, huma.Operation{
+    OperationID:   "createCharacter",
+    Method:        http.MethodPost,
+    Path:          "/characters",
+    Summary:       "Create a character",
+    Tags:          []string{"Characters"},
+    Security:      bearer,
+    DefaultStatus: http.StatusCreated,
+    Responses: map[string]*huma.Response{
+        "422": {Description: "Request failed validation"},
+        "401": {Description: "Not authenticated"},
+        "403": {Description: "Not allowed, or email not verified"},
+    },
+}, h.humaCreateCharacter)
+```
 
-func (r *RenameCharacterRequest) Bind(req *http.Request) error {
-    return core.ValidateStruct(r)
+**Request validation lives in schema tags**, enforced by huma before the handler
+runs (422, with the field named). The same tags are published in the spec, so
+validation and documentation cannot drift:
+
+```go
+type CreateCharacterRequest struct {
+    Name          string `json:"name" minLength:"1" maxLength:"255" doc:"Character name"`
+    CharacterType string `json:"character_type" enum:"player_character,npc" doc:"Character kind"`
+    UserID        *int32 `json:"user_id,omitempty" required:"false" doc:"Owning player"`
 }
 ```
 
-It trims string fields in place before validating (so `"   "` fails `required`)
-and names fields by their JSON key in the error. Rules the tags cannot express —
-cross-field constraints, `json.Valid` — stay as explicit checks in `Bind`
-alongside it.
+A field is required unless marked `required:"false"`; optional fields are
+pointers with `omitempty`, so the key is absent rather than `null`. huma's
+`minLength` counts raw characters, so a body with a `minLength` string field
+implements `Resolve` to trim first:
 
-A `validate` tag on a struct whose `Bind` returns a bare `nil` enforces nothing,
-so wire both up in the same change. And do not rely on the service to reject bad
-input: service errors render as a 500 "unexpected error", not the 400 a bad
+```go
+func (b *CreateCharacterRequest) Resolve(huma.Context) []error {
+    return humaconfig.TrimStrings(b)
+}
+```
+
+Rules the schema cannot see — role-dependent, cross-field, or cross-row — stay
+as explicit checks in the handler. Do not rely on the service to reject bad
+input: service errors render as a 500 "unexpected error", not the 422 a bad
 payload deserves.
+
+**Errors are returned, not written**: `huma.Error4xx…`/`Error5xx…`, plus
+`humaErr(errResp)` to convert a `*core.ErrResponse` and
+`core.NotFoundOr500(err, "character")` for a missing row. They render as RFC 7807
+problem documents carrying the correlation ID in `instance` (`pkg/humaconfig`).
+
+**Chi is not going away.** huma mounts onto the chi router via humachi, so
+routing, mounts and every `r.Use` middleware are unchanged. Middleware that
+wrapped a chi route has a context-based twin for in-handler use, e.g.
+`core.RequireVerifiedEmailCtx(ctx, h.App.Pool)`.
+
+> ⚠️ The pre-huma pattern — `func(w http.ResponseWriter, r *http.Request)` with
+> `render.Bind`, `core.ValidateStruct`, `core.WriteJSON`/`core.WriteError` — is
+> **fully retired**. No JSON API endpoint uses it. Never add one.
+
+**See**: `.claude/skills/backend-dev-guidelines/resources/huma-handlers.md`
 
 ### 5. Authentication Pattern
 
@@ -310,10 +381,23 @@ if err != nil {
 
 ```
 components/
-├── ComponentName.tsx          # Component implementation
-├── ComponentName.test.tsx     # Component tests (co-located)
-├── __tests__/                 # Shared test utilities for components
+├── <domain>/                  # One directory per bounded context — NO loose
+│   ├── ComponentName.tsx      #   .tsx files sit directly in components/
+│   └── ComponentName.test.tsx # Tests co-located beside their component
 └── ui/                        # UI component library (Button, Card, Input, etc.)
+
+# Domains mirror the backend's bounded contexts (backend/pkg/<domain>/):
+#   actions  admin  audience  auth  characters  common  conversations
+#   dashboard  deadlines  games  handouts  layout  messages  notifications
+#   participants  phases  polls  users  utility-drawer
+#
+# games/ nests further: games/dialogs/ and games/applications/.
+# common/ holds cross-cutting pieces, itself split by kind:
+#   common/markdown/  MarkdownPreview, CollapsibleMarkdown, markdownHotkeys
+#   common/modals/    Modal + the Confirm* dialogs built on it
+#   common/errors/    ErrorBoundary, ErrorDisplay
+# Import across domains via the @/ alias — @/components/games/GamesList —
+# never a relative ../ hop. A guard test enforces the no-loose-files rule.
 
 hooks/
 ├── useCustomHook.ts          # Custom hooks
@@ -522,10 +606,18 @@ log.Info().
 
 **RESTful design with `/api/v1/` versioning**
 
-- **Standard HTTP status codes** (200, 201, 400, 401, 404, 500)
-- **Structured error responses** with correlation IDs
-- **Input validation** at handler layer
+- **Standard HTTP status codes** (200, 201, 400, 401, 403, 404, 422, 500)
+- **RFC 7807 problem documents** for errors, correlation ID in `instance`
+- **Input validation** from schema tags, enforced by huma before the handler
 - **Rate limiting** on sensitive endpoints
+
+**The spec is generated, not written.** `backend/pkg/docs/openapi.gen.yaml` is
+produced from the Go types by `just gen-openapi`, and
+`frontend/src/types/api.gen.ts` from that spec by `just gen-api-types`. Both are
+committed, and `just verify` fails when either is stale. Never hand-edit a
+`.gen.` file.
+
+**See**: `.claude/context/CODE_GENERATION.md`
 
 **See**: `/docs-site/developer/architecture/adrs/004-api-design-principles.md`
 
@@ -535,7 +627,11 @@ log.Info().
 - `backend/pkg/core/interfaces.go` - All service contracts
 - `backend/pkg/core/*.go` - Business entities, split per domain (games, characters, phases, ...)
 - `backend/pkg/core/errors.go` - Error types
-- `backend/pkg/http/root.go` - API routing and middleware
+- `backend/pkg/http/root.go` - chi routing, mounts and middleware
+- `backend/pkg/http/huma.go` - huma API wiring and spec merging
+- `backend/pkg/humaconfig/` - huma config, RFC 7807 errors, `TrimStrings`
+- `backend/pkg/<domain>/{requests,responses,huma_api}.go` - The API surface
+- `backend/pkg/docs/openapi.gen.yaml` - GENERATED spec (never hand-edit)
 
 **Backend Services**:
 - `backend/pkg/db/services/` - Service implementations
@@ -565,16 +661,20 @@ log.Info().
 **Implement BOTH backend and frontend together before moving to next feature**
 
 1. **Backend**:
-   - Database migration (if needed)
-   - SQL queries (sqlc)
+   - Database migration (if needed): `just migration create <name>`
+   - SQL queries → `just sqlgen`
    - Service interface definition
    - Write unit tests first (TDD)
    - Service implementation
-   - Handler implementation
+   - Request/response structs with schema tags (`requests.go` / `responses.go`)
+   - Handler + `huma.Register` (`huma_api.go`)
+   - **Regenerate the spec**: `just gen-openapi`, commit `openapi.gen.yaml`
    - Write API endpoint tests
    - Run tests: `just test`
 
 2. **Frontend**:
+   - **Regenerate types**: `just gen-api-types`, commit `api.gen.ts`
+   - Alias the generated schema in `src/types/<domain>.ts` (don't hand-write it)
    - API client method
    - Custom hooks
    - Write hook tests
@@ -584,7 +684,7 @@ log.Info().
 
 3. **Manual Testing**: Test complete feature in UI before moving on
 
-4. **Documentation**: Update API docs and relevant guides
+4. **Verify**: `just verify` — catches a stale spec or stale frontend types
 
 ### Bug Fix Workflow
 
@@ -637,6 +737,7 @@ log.Info().
 - [ ] Write tests first (TDD approach)
 - [ ] Follow established patterns (see examples above)
 - [ ] Add correlation IDs for observability
-- [ ] Validate inputs at handler layer
-- [ ] Handle errors with typed error responses
+- [ ] Put input constraints in schema tags, not hand-rolled handler checks
+- [ ] Return huma errors; never write to a `ResponseWriter`
+- [ ] Regenerate + commit `openapi.gen.yaml` and `api.gen.ts` after any API change
 - [ ] Update documentation

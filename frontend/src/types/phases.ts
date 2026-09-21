@@ -1,116 +1,83 @@
-export interface GamePhase {
-  id: number;
-  game_id: number;
-  phase_type: 'common_room' | 'action' | 'interlude';
-  phase_number: number;
-  title?: string;
-  description?: string;
-  start_time: string;
-  end_time?: string;
-  deadline?: string;
-  is_active: boolean;
-  is_published: boolean; // For action phases: whether GM has published results
-  activated_at?: string; // Set when phase is first activated; null means never activated
-  created_at: string;
+import type { components } from './api.gen';
 
-  // Calculated fields from API
-  time_remaining?: number; // seconds until deadline
-  is_expired?: boolean;
-}
+/**
+ * Generated. A phase as returned by every phase endpoint.
+ *
+ * Two fields the hand-written predecessor got wrong, both in the direction that
+ * suppresses the error rather than causing one:
+ *
+ * `start_time` was declared required. It means "auto-activate at", not "when
+ * this phase began", and migration 20260401152638 dropped its NOT NULL and
+ * cleared it on inactive phases — so a GM who creates a phase without
+ * scheduling it gets a row with no start_time. `CurrentPhaseDisplay` rendered
+ * `new Date(phase.start_time)` on it unguarded and printed "Invalid Date" in
+ * two places; the `deadline` field beside it was guarded, so the pattern was
+ * understood and this one was missed because the type promised it was safe.
+ *
+ * `is_expired` was declared optional and is in fact always sent (a plain `bool`
+ * on the Go side). That is the poll `is_expired` bug inverted — there an absent
+ * field was typed present, here a present field was typed absent, and both let
+ * a `filter`/guard silently do nothing.
+ */
+export type GamePhase = components['schemas']['PhaseResponse'];
 
-export interface CreatePhaseRequest {
-  phase_type: 'common_room' | 'action' | 'interlude';
-  title?: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
-  deadline?: string;
-}
+// Request types
+//
+// Generated from the OpenAPI spec (`just gen-api-types`) rather than written by
+// hand, so an unknown property is a build failure instead of a 422 at runtime.
+//
+// Note what is NOT here: the hand-written UpdatePhaseRequest carried
+// `end_time`, which PUT /phases/{id} rejects outright (every schema is
+// additionalProperties:false). EditPhaseModal happened to build its payload
+// from only the four permitted fields, so it never fired — it would have 422'd
+// the moment anyone added an end-time control. Create still accepts end_time;
+// update genuinely does not.
+/** POST /games/{gameID}/phases */
+export type CreatePhaseRequest = components['schemas']['CreatePhaseBody'];
 
-export interface UpdatePhaseRequest {
-  title?: string;
-  description?: string;
-  start_time?: string;
-  end_time?: string;
-  deadline?: string;
-}
+/** PUT /phases/{id} */
+export type UpdatePhaseRequest = components['schemas']['UpdatePhaseBody'];
 
-export interface UpdateDeadlineRequest {
-  deadline: string;
-}
+/** PUT /phases/{id}/deadline — distinct from PATCH /deadlines/{deadlineId},
+ *  which takes the wider DeadlineBody (see types/deadlines.ts). */
+export type UpdateDeadlineRequest = components['schemas']['UpdateDeadlineBody'];
 
-export interface ActionSubmission {
-  id: number;
-  game_id: number;
-  user_id: number;
-  phase_id: number;
-  character_id?: number;
-  content: string;
-  submitted_at: string;
-  updated_at: string;
-}
+/**
+ * Generated. A bare action submission, without the joined phase/author columns
+ * that ActionWithDetails carries.
+ */
+export type ActionSubmission = components['schemas']['ActionResponse'];
 
-export interface ActionSubmissionRequest {
-  character_id?: number;
-  content: string;
-}
+/** POST /games/{gameID}/actions */
+export type ActionSubmissionRequest = components['schemas']['SubmitActionBody'];
 
-export interface ActionWithDetails extends ActionSubmission {
-  username?: string;
-  character_name?: string;
-  phase_type?: string;
-  phase_number?: number;
-  phase_title?: string;
-}
+/**
+ * Generated. An action with the joined phase and author columns.
+ *
+ * `phase_title` is gone: no Go struct has ever carried it, so
+ * `action.phase_title || action.phase_type.replace(...)` in ActionsList always
+ * took the right-hand branch. The dead left side is removed with it.
+ *
+ * `username` is required here, not optional as the hand-written type claimed —
+ * it is a plain `string` on the wire. The `||` chains that coalesce it stay
+ * valid; they just cannot fire any more.
+ */
+export type ActionWithDetails = components['schemas']['ActionWithDetailsResponse'];
 
-export interface ActionResult {
-  id: number;
-  game_id: number;
-  user_id: number;
-  phase_id: number;
-  character_id?: number;
-  action_submission_id?: number;
-  gm_user_id: number;
-  content: string;
-  is_published: boolean;
-  sent_at: string;
-  phase_type?: string;
-  phase_number?: number;
-  gm_username?: string;
-  username?: string;
-  character_name?: string;
-
-  // Staged reveal fields. All optional: an ordinary single-part result omits
-  // every one of them, so existing code that never mentions staging is
-  // unaffected.
-  //
-  // part_number / part_count are present only for a result that belongs to a
-  // multi-part chain, and describe its position ("Part 2 of 3").
-  part_number?: number;
-  part_count?: number;
-
-  // When this part became visible to its recipient. Absent while the part is
-  // still locked — this, NOT an empty content string, is how you tell a locked
-  // part from a released one. A player's response carries locked parts with
-  // content blanked server-side.
-  released_at?: string;
-
-  // When a locked part is due to be revealed, for the countdown. Present only
-  // for the next part due out; later parts have no knowable unlock time until
-  // their predecessor releases, and show a plain "pending" state instead.
-  unlocks_at?: string;
-
-  // The configured wait, as distinct from unlocks_at's resolved wall-clock
-  // time. The GM's editor needs the configured value to populate its delay
-  // selector; unlocks_at cannot supply it, since it is absent until the parent
-  // releases and is a timestamp rather than a duration. Absent on a chain head.
-  reveal_delay_minutes?: number;
-
-  // The part this one follows. Absent on a chain head and on any unstaged
-  // result. Returned by the edit endpoints so a newly appended part can be
-  // placed in the chain without re-fetching the list.
-  parent_result_id?: number;
-}
+/**
+ * Generated. An action result with its joined phase, author and staging columns.
+ *
+ * `sent_at` is now optional, matching `*time.Time` with omitempty on the Go
+ * side. Every read site already guarded it (`result.sent_at && ...`), so this
+ * only makes the type agree with code that was already correct.
+ *
+ * The staged-reveal fields keep their meaning: `released_at` absent is how you
+ * tell a locked part from a released one (NOT an empty content string -- a
+ * player's response carries locked parts with content blanked server-side), and
+ * `unlocks_at` is present only for the next part due out, since later parts have
+ * no knowable unlock time until their predecessor releases.
+ */
+export type ActionResult = components['schemas']['ActionResultWithDetailsResponse'];
 
 // One part of a staged result chain as the GM composes it. The head must carry
 // delay_minutes: 0 — its delay is meaningless because it releases on publish,
@@ -120,31 +87,13 @@ export interface StagedResultPart {
   delay_minutes: number;
 }
 
-export interface DraftCharacterUpdate {
-  id: number;
-  action_result_id: number;
-  character_id: number;
-  module_type: 'skills' | 'inventory' | 'numbers';
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  operation: 'upsert' | 'delete';
-  created_at: string;
-  updated_at: string;
-}
+export type DraftCharacterUpdate = components['schemas']['DraftCharacterUpdateResponse'];
 
-export interface CreateDraftCharacterUpdateRequest {
-  character_id: number;
-  module_type: 'skills' | 'inventory' | 'numbers';
-  field_name: string;
-  field_value: string;
-  field_type: 'text' | 'number' | 'boolean' | 'json';
-  operation: 'upsert' | 'delete';
-}
+/** POST /games/{gameID}/results/{resultId}/character-updates */
+export type CreateDraftCharacterUpdateRequest = components['schemas']['CreateDraftUpdateBody'];
 
-export interface UpdateDraftCharacterUpdateRequest {
-  field_value: string;
-}
+/** PUT /games/{gameID}/results/{resultId}/character-updates/{draftId} */
+export type UpdateDraftCharacterUpdateRequest = components['schemas']['UpdateDraftUpdateBody'];
 
 // Phase display helpers
 export const PHASE_TYPE_LABELS: Record<GamePhase['phase_type'], string> = {

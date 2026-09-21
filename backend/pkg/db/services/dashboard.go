@@ -232,7 +232,7 @@ func transformGameCard(game db.GetUserDashboardGamesRow) *core.DashboardGameCard
 	card := &core.DashboardGameCard{
 		GameID:              game.ID,
 		Title:               game.Title,
-		State:               stringValue(game.State),
+		State:               core.GameState(game.State),
 		Genre:               ptrStringValue(game.Genre),
 		GMUserID:            game.GmUserID,
 		GMUsername:          stringValue(game.GmUsername),
@@ -244,9 +244,10 @@ func transformGameCard(game db.GetUserDashboardGamesRow) *core.DashboardGameCard
 		CreatedAt:           game.CreatedAt.Time,
 	}
 
-	// Set description (optional field)
-	if game.Description.Valid {
-		desc := game.Description.String
+	// description is NOT NULL, so the absent case is the empty string; keep
+	// omitting the key rather than emitting "" (the field is omitempty).
+	if game.Description != "" {
+		desc := game.Description
 		card.Description = &desc
 	}
 

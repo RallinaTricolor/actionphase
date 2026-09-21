@@ -425,7 +425,7 @@ WHERE phase_id = $1 AND is_published = false;
 --
 -- A chain is a linked list: each part points at its predecessor via
 -- parent_result_id, and reveal_delay_minutes is measured from the moment that
--- predecessor became visible. See .claude/planning/staged-result-reveals.md.
+-- predecessor became visible.
 
 -- name: GetDueStagedParts :many
 -- Parts whose wait has elapsed and which the release worker should now reveal.

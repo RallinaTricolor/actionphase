@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -265,8 +264,7 @@ func TestConversationAPI_CreateConversation_GroupRestriction(t *testing.T) {
 	_, err = gameService.UpdateGame(context.Background(), core.UpdateGameRequest{
 		ID:                      game.ID,
 		Title:                   game.Title,
-		Description:             game.Description.String,
-		IsPublic:                true,
+		Description:             game.Description,
 		AllowGroupConversations: false,
 	})
 	core.AssertNoError(t, err, "Should update game to disable group conversations")
@@ -764,10 +762,9 @@ func TestConversationAPI_GetConversationMessages(t *testing.T) {
 		queries := models.New(testDB.Pool)
 		anonGame, err := queries.CreateGame(context.Background(), models.CreateGameParams{
 			Title:       "Anonymous Test Game",
-			Description: pgtype.Text{String: "Test", Valid: true},
+			Description: "Test",
 			GmUserID:    int32(anonGM.ID),
 			IsAnonymous: true,
-			IsPublic:    pgtype.Bool{Bool: true, Valid: true},
 		})
 		core.AssertNoError(t, err, "Should create anonymous game")
 

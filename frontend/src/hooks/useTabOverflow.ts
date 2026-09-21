@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { Tab } from '../components/TabNavigation';
+import type { Tab } from '@/components/layout/TabNavigation';
 
 /**
  * Width reserved for the "More" button when it is going to be shown.

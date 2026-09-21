@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { GamesList } from '../components/GamesList';
-import { CreateGameForm } from '../components/CreateGameForm';
-import { ApplyToGameModal } from '../components/ApplyToGameModal';
-import { Modal } from '../components/Modal';
-import { FilterBar } from '../components/FilterBar';
-import { Pagination } from '../components/Pagination';
+import { GamesList } from '@/components/games/GamesList';
+import { CreateGameForm } from '@/components/games/CreateGameForm';
+import { ApplyToGameModal } from '@/components/games/applications/ApplyToGameModal';
+import { Modal } from '@/components/common/modals/Modal';
+import { FilterBar } from '@/components/games/FilterBar';
+import { Pagination } from '@/components/layout/Pagination';
 import { Input } from '../components/ui';
 import { useGameListing } from '../hooks/useGameListing';
 import { useActiveCommunities } from '../hooks/useCommunities';
@@ -131,7 +131,7 @@ export const GamesPage = () => {
         hasOpenSpots={filters.has_open_spots}
         communityId={filters.community_id}
         sortBy={filters.sort_by || 'recent_activity'}
-        availableStates={metadata.available_states}
+        availableStates={metadata.available_states ?? []}
         communities={communities}
         onStatesChange={setStates}
         onParticipationChange={setParticipation}

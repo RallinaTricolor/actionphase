@@ -34,7 +34,6 @@ type GameRepository interface {
 	GetGame(ctx context.Context, id int32) (db.Game, error)
 	GetGamesByUser(ctx context.Context, userID int32) ([]db.GetGamesByUserRow, error)
 	GetGamesByGM(ctx context.Context, gmUserID int32) ([]db.Game, error)
-	GetRecruitingGames(ctx context.Context) ([]db.GetRecruitingGamesRow, error)
 	GetGameWithDetails(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error)
 	UpdateGame(ctx context.Context, params db.UpdateGameParams) (db.Game, error)
 	UpdateGameState(ctx context.Context, params db.UpdateGameStateParams) (db.Game, error)

@@ -13,23 +13,23 @@ import { usePollsByPhase } from '../hooks';
 import { useCommentReadMode } from '../hooks/useUserPreferences';
 import { useProvideGameUtilityContext } from '../contexts/UtilityDrawerContext';
 import type { GameUtilityContext } from '../components/utility-drawer/types';
-import { GameHeader } from '../components/GameHeader';
-import { GameBanner } from '../components/GameBanner';
-import { GameApplicationStatus } from '../components/GameApplicationStatus';
-import { GameActions } from '../components/GameActions';
-import { TabNavigation } from '../components/TabNavigation';
-import { GameTabContent } from '../components/GameTabContent';
-import { ApplyToGameModal } from '../components/ApplyToGameModal';
-import { EditGameModal } from '../components/EditGameModal';
-import { CompleteGameConfirmationDialog } from '../components/CompleteGameConfirmationDialog';
-import { EpilogueGameConfirmationDialog } from '../components/EpilogueGameConfirmationDialog';
-import { PauseGameConfirmationDialog } from '../components/PauseGameConfirmationDialog';
-import { CancelGameConfirmationDialog } from '../components/CancelGameConfirmationDialog';
-import { LeaveGameConfirmationDialog } from '../components/LeaveGameConfirmationDialog';
-import { DeleteGameConfirmationDialog } from '../components/DeleteGameConfirmationDialog';
-import { WithdrawApplicationConfirmationDialog } from '../components/WithdrawApplicationConfirmationDialog';
-import { DeadlineStrip } from '../components/DeadlineStrip';
-import type { CreateDeadlineRequest, UnifiedDeadline } from '../types/deadlines';
+import { GameHeader } from '@/components/games/GameHeader';
+import { GameBanner } from '@/components/games/GameBanner';
+import { GameApplicationStatus } from '@/components/games/applications/GameApplicationStatus';
+import { GameActions } from '@/components/games/GameActions';
+import { TabNavigation } from '@/components/layout/TabNavigation';
+import { GameTabContent } from '@/components/games/GameTabContent';
+import { ApplyToGameModal } from '@/components/games/applications/ApplyToGameModal';
+import { EditGameModal } from '@/components/games/EditGameModal';
+import { CompleteGameConfirmationDialog } from '@/components/games/dialogs/CompleteGameConfirmationDialog';
+import { EpilogueGameConfirmationDialog } from '@/components/games/dialogs/EpilogueGameConfirmationDialog';
+import { PauseGameConfirmationDialog } from '@/components/games/dialogs/PauseGameConfirmationDialog';
+import { CancelGameConfirmationDialog } from '@/components/games/dialogs/CancelGameConfirmationDialog';
+import { LeaveGameConfirmationDialog } from '@/components/games/dialogs/LeaveGameConfirmationDialog';
+import { DeleteGameConfirmationDialog } from '@/components/games/dialogs/DeleteGameConfirmationDialog';
+import { WithdrawApplicationConfirmationDialog } from '@/components/games/dialogs/WithdrawApplicationConfirmationDialog';
+import { DeadlineStrip } from '@/components/deadlines/DeadlineStrip';
+import type { CreateDeadlineRequest, UpdateDeadlineRequest, UnifiedDeadline } from '../types/deadlines';
 import { getDeadlineTarget } from '../utils/deadlineTarget';
 import { clearForeignTabParams } from '../utils/tabParams';
 import { logger } from '@/services/LoggingService';
@@ -277,7 +277,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
 
   // Update deadline mutation
   const updateDeadlineMutation = useMutation({
-    mutationFn: ({ deadlineId, data }: { deadlineId: number; data: CreateDeadlineRequest }) =>
+    mutationFn: ({ deadlineId, data }: { deadlineId: number; data: UpdateDeadlineRequest }) =>
       apiClient.deadlines.updateDeadline(deadlineId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deadlines', gameId] });
@@ -298,7 +298,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     await createDeadlineMutation.mutateAsync(data);
   };
 
-  const handleUpdateDeadline = async (deadlineId: number, data: CreateDeadlineRequest) => {
+  const handleUpdateDeadline = async (deadlineId: number, data: UpdateDeadlineRequest) => {
     await updateDeadlineMutation.mutateAsync({ deadlineId, data });
   };
 

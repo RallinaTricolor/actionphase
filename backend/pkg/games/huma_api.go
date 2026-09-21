@@ -5,7 +5,7 @@ package games
 // Two registration functions, because the game routes divide by middleware
 // rather than by mount: the public listing group runs jwtauth.Verifier only
 // (auth is optional and merely enriches the result), while everything else is
-// fully authenticated. See .claude/planning/huma-migration.md gotcha 19.
+// fully authenticated.
 
 import (
 	"context"
@@ -133,18 +133,21 @@ func (h *Handler) requireLootTableInGame(ctx context.Context, tableID, gameID in
 	return nil
 }
 
-// gameResponseFrom builds the full game payload the create, read and update
-// endpoints share. The chi handlers repeated this block five times; the shape
-// was identical each time, so a single builder cannot drift.
+// gameResponseFrom builds the payload the create and update endpoints share.
+// The chi handlers repeated this block five times; the shape was identical each
+// time, so a single builder cannot drift.
+//
+// WRITE PATH ONLY. Reads go through gameWithDetailsFor: create and update have
+// only the row they just wrote, while a read can afford the joins.
 //
 // UpdateGameState deliberately does NOT use this — see humaUpdateGameState.
 func gameResponseFrom(game *models.Game) *GameResponse {
 	resp := &GameResponse{
 		ID:                      game.ID,
 		Title:                   game.Title,
-		Description:             game.Description.String,
+		Description:             game.Description,
 		GMUserID:                game.GmUserID,
-		State:                   game.State.String,
+		State:                   core.GameState(game.State),
 		IsAnonymous:             game.IsAnonymous,
 		AutoAcceptAudience:      game.AutoAcceptAudience,
 		AllowGroupConversations: game.AllowGroupConversations,
@@ -205,7 +208,7 @@ func applicationResponseFrom(app *models.GameApplication) *GameApplicationRespon
 		GameID:    app.GameID,
 		UserID:    app.UserID,
 		Role:      app.Role,
-		Status:    app.Status.String,
+		Status:    app.Status,
 		AppliedAt: app.AppliedAt.Time,
 	}
 	if app.Message.Valid {
@@ -300,7 +303,6 @@ type updateGameBody struct {
 	// A POINTER, unlike most of this body: absent means "leave the community
 	// alone", not "clear it". Only honoured while the game is in setup.
 	CommunityID             *int32                     `json:"community_id,omitempty" required:"false" minimum:"1"`
-	IsPublic                bool                       `json:"is_public,omitempty" required:"false"`
 	IsAnonymous             bool                       `json:"is_anonymous,omitempty" required:"false"`
 	AutoAcceptAudience      bool                       `json:"auto_accept_audience,omitempty" required:"false"`
 	AllowGroupConversations bool                       `json:"allow_group_conversations,omitempty" required:"false"`
@@ -359,7 +361,7 @@ func sheetConfigValue(sheet *core.CharacterSheetConfig) core.CharacterSheetConfi
 }
 
 type updateGameStateBody struct {
-	State string `json:"state" minLength:"1" doc:"Target game state"`
+	State core.GameState `json:"state" doc:"Target game state"`
 }
 
 type applyToGameBody struct {
@@ -455,27 +457,35 @@ type gameWithDetailsOutput struct {
 	Body *GameWithDetailsResponse
 }
 
+// gameStateOutput carries the reduced shape the state endpoint really sends.
+// See GameStateChangedResponse for why it is not gameOutput.
+type gameStateOutput struct {
+	Body *GameStateChangedResponse
+}
+
 type gameListingOutput struct {
 	Body *GameListingResponse
 }
 
-// recruitingGamesOutput keeps the untyped map shape the chi handler encoded,
-// and with it the nil-slice behaviour: an empty result serializes as null, not
-// [] (gotcha 12). Both are preserved rather than corrected, since either change
-// is frontend-visible.
-type recruitingGamesOutput struct {
-	Body []map[string]any
-}
-
-// participantsOutput is likewise a nil-able slice of maps: null when empty.
+// participantsOutput is a nil-able slice: null when empty, because the handler
+// appends to a `var response []T`. That is the wire contract the chi handler
+// set, so it is left alone rather than normalised to [].
 type participantsOutput struct {
-	Body []map[string]any
+	Body []ParticipantListItemResponse
 }
 
 // applicationsOutput is built with make(...,0), so an empty list is [].
 // The difference from participantsOutput is inherited from the chi handlers.
 type applicationsOutput struct {
-	Body []map[string]any
+	Body []ApplicationListItemResponse `nullable:"false"`
+}
+
+// publicApplicantsOutput is the unauthenticated recruitment view. It was
+// sharing applicationsOutput while both were []map[string]any, but the two
+// endpoints send different shapes -- this one withholds status and review
+// information -- so they need separate types now that the shapes are named.
+type publicApplicantsOutput struct {
+	Body []PublicApplicantResponse `nullable:"false"`
 }
 
 type applicationOutput struct {
@@ -530,15 +540,19 @@ type actionSubmissionsOutput struct {
 }
 
 type gameLogsOutput struct {
-	Body []map[string]any
+	Body []GameLogEntryResponse `nullable:"false"`
 }
 
 type gameStatsOutput struct {
 	Body any
 }
 
+// lootTablesOutput reuses GameLootTableResponse, the same type the create
+// endpoint answers with. The handler's own comment asked for these keys to be
+// kept in sync with AddGameLootTable "because both are typed as LootTable on the
+// frontend"; sharing the struct makes that structural instead of a request.
 type lootTablesOutput struct {
-	Body []map[string]any
+	Body []GameLootTableResponse `nullable:"false"`
 }
 
 type lootTableOutput struct {
@@ -546,7 +560,7 @@ type lootTableOutput struct {
 }
 
 type lootContentsOutput struct {
-	Body []map[string]any
+	Body []LootTableContentResponse `nullable:"false"`
 }
 
 type lootContentOutput struct {
@@ -610,7 +624,6 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 		EndDate:                 in.Body.EndDate.ToTimePtr(),
 		RecruitmentDeadline:     in.Body.RecruitmentDeadline.ToTimePtr(),
 		MaxPlayers:              in.Body.MaxPlayers,
-		IsPublic:                true, // All games are now public
 		IsAnonymous:             in.Body.IsAnonymous,
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
@@ -652,19 +665,30 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 	return &gameOutput{Body: gameResponseFrom(game)}, nil
 }
 
-func (h *Handler) humaGetGame(ctx context.Context, in *gameScopedInput) (*gameOutput, error) {
+// humaGetGame and humaGetGameWithDetails answer with the SAME shape, from the
+// same query. GET /games/{gameID} used to send the bare row from context, which
+// meant the two endpoints disagreed about what a game is for no reason beyond
+// which query each happened to call -- there is no field a caller of one is
+// entitled to and a caller of the other is not, and their auth is identical.
+//
+// /details is kept as an alias rather than removed so existing callers keep
+// working; both now route through gameWithDetailsFor.
+func (h *Handler) humaGetGame(ctx context.Context, in *gameScopedInput) (*gameWithDetailsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game")()
 
-	game, err := gameFromCtx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &gameOutput{Body: gameResponseFrom(game)}, nil
+	return h.gameWithDetailsFor(ctx)
 }
 
 func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInput) (*gameWithDetailsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_game_with_details")()
 
+	return h.gameWithDetailsFor(ctx)
+}
+
+// gameWithDetailsFor loads the game named by the request context and builds the
+// read-path payload. The joins it adds over the bare row cost three LEFT JOINs
+// on a single-row lookup.
+func (h *Handler) gameWithDetailsFor(ctx context.Context) (*gameWithDetailsOutput, error) {
 	gameID, err := gameIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -676,19 +700,21 @@ func (h *Handler) humaGetGameWithDetails(ctx context.Context, in *gameScopedInpu
 	}
 
 	resp := &GameWithDetailsResponse{
-		ID:                      game.ID,
-		Title:                   game.Title,
-		Description:             game.Description.String,
-		GMUserID:                game.GmUserID,
-		State:                   game.State.String,
-		IsAnonymous:             game.IsAnonymous,
-		AutoAcceptAudience:      game.AutoAcceptAudience,
-		AllowGroupConversations: game.AllowGroupConversations,
-		PortraitAvatars:         game.PortraitAvatars,
-		CharacterSheet:          characterSheetResponse(game.CharacterSheet),
-		CurrentPlayers:          game.CurrentPlayers,
-		CreatedAt:               game.CreatedAt.Time,
-		UpdatedAt:               game.UpdatedAt.Time,
+		GameResponse: GameResponse{
+			ID:                      game.ID,
+			Title:                   game.Title,
+			Description:             game.Description,
+			GMUserID:                game.GmUserID,
+			State:                   core.GameState(game.State),
+			IsAnonymous:             game.IsAnonymous,
+			AutoAcceptAudience:      game.AutoAcceptAudience,
+			AllowGroupConversations: game.AllowGroupConversations,
+			PortraitAvatars:         game.PortraitAvatars,
+			CharacterSheet:          characterSheetResponse(game.CharacterSheet),
+			CreatedAt:               game.CreatedAt.Time,
+			UpdatedAt:               game.UpdatedAt.Time,
+		},
+		CurrentPlayers: game.CurrentPlayers,
 	}
 
 	if game.GmUsername.Valid {
@@ -774,7 +800,6 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 		RecruitmentDeadline:     in.Body.RecruitmentDeadline,
 		MaxPlayers:              in.Body.MaxPlayers,
 		CommunityID:             in.Body.CommunityID,
-		IsPublic:                in.Body.IsPublic,
 		IsAnonymous:             in.Body.IsAnonymous,
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
@@ -856,7 +881,7 @@ type updateGameStateInput struct {
 // That is what the chi handler sent, and the frontend refetches the game after
 // a state change rather than merging this response, so the shape is preserved
 // as-is rather than quietly widened to gameResponseFrom.
-func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateInput) (*gameOutput, error) {
+func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateInput) (*gameStateOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_update_game_state")()
 
 	if err := h.requireGMFlag(ctx, "only the GM can update this game state", "Update game state forbidden"); err != nil {
@@ -872,7 +897,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		return nil, err
 	}
 
-	updatedGame, err := h.GameService.UpdateGameState(ctx, game.ID, in.Body.State)
+	updatedGame, err := h.GameService.UpdateGameState(ctx, game.ID, string(in.Body.State))
 	if err != nil {
 		// A rejected transition is a client-side precondition failure, not a
 		// bug: the request was well formed and authorized, but the move is not
@@ -882,22 +907,22 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 		if errors.Is(err, core.ErrInvalidStateTransition) {
 			return nil, h.logAndErr(ctx,
 				core.ErrWithStatus(http.StatusConflict,
-					fmt.Sprintf("cannot change game state from %s to %s", game.State.String, in.Body.State)),
+					fmt.Sprintf("cannot change game state from %s to %s", game.State, in.Body.State)),
 				"Invalid game state transition requested",
-				"game_id", game.ID, "from_state", game.State.String, "to_state", in.Body.State)
+				"game_id", game.ID, "from_state", game.State, "to_state", in.Body.State)
 		}
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update game state", "error", err, "game_id", game.ID)
 	}
 
-	h.settleRecruitment(ctx, game, updatedGame, in.Body.State, user.ID)
-	h.notifyStateChange(ctx, game, updatedGame, in.Body.State, user.ID)
+	h.settleRecruitment(ctx, game, updatedGame, string(in.Body.State), user.ID)
+	h.notifyStateChange(ctx, game, updatedGame, string(in.Body.State), user.ID)
 
-	return &gameOutput{Body: &GameResponse{
+	return &gameStateOutput{Body: &GameStateChangedResponse{
 		ID:          updatedGame.ID,
 		Title:       updatedGame.Title,
-		Description: updatedGame.Description.String,
+		Description: updatedGame.Description,
 		GMUserID:    updatedGame.GmUserID,
-		State:       updatedGame.State.String,
+		State:       core.GameState(updatedGame.State),
 		CreatedAt:   updatedGame.CreatedAt.Time,
 		UpdatedAt:   updatedGame.UpdatedAt.Time,
 	}}, nil
@@ -910,7 +935,7 @@ func (h *Handler) humaUpdateGameState(ctx context.Context, in *updateGameStateIn
 // failure here is logged but must not fail the request — otherwise the caller
 // would see an error for a change that did happen.
 func (h *Handler) settleRecruitment(ctx context.Context, game, updatedGame *models.Game, newState string, actorID int32) {
-	if game.State.String != core.GameStateRecruitment || newState == core.GameStateRecruitment {
+	if game.State != core.GameStateRecruitment || newState == core.GameStateRecruitment {
 		return
 	}
 
@@ -967,7 +992,7 @@ func (h *Handler) settleRecruitment(ctx context.Context, game, updatedGame *mode
 // it is not terminal — the game is still writable.
 func (h *Handler) notifyStateChange(ctx context.Context, game, updatedGame *models.Game, newState string, actorID int32) {
 	isPauseResume := newState == core.GameStatePaused ||
-		(newState == core.GameStateInProgress && game.State.String == core.GameStatePaused)
+		(newState == core.GameStateInProgress && game.State == core.GameStatePaused)
 	isEndgame := newState == core.GameStateEpilogue ||
 		newState == core.GameStateCompleted ||
 		newState == core.GameStateCancelled
@@ -1002,7 +1027,6 @@ type filteredGamesInput struct {
 	HasOpenSpots  string `query:"has_open_spots" required:"false" doc:"\"true\" or \"false\"; anything else is ignored"`
 	CommunityID   string `query:"community_id" required:"false" doc:"Only games in this community; omit for all"`
 	SortBy        string `query:"sort_by" required:"false"`
-	AdminMode     string `query:"admin_mode" required:"false" doc:"\"true\" enables admin mode for an authenticated admin"`
 	Page          string `query:"page" required:"false" doc:"1-based page number; defaults to 1"`
 	PageSize      string `query:"page_size" required:"false" doc:"1-100; defaults to 20"`
 }
@@ -1059,11 +1083,6 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 		filters.UserID = &userID
 	}
 
-	if in.AdminMode == "true" && userID != 0 {
-		filters.AdminMode = true
-		filters.AdminUserID = &userID
-	}
-
 	result, err := h.GameService.GetFilteredGames(ctx, filters)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get filtered games", "error", err)
@@ -1074,7 +1093,7 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 		Metadata: GameListingMetadataResponse{
 			TotalCount:      result.Metadata.TotalCount,
 			FilteredCount:   result.Metadata.FilteredCount,
-			AvailableStates: result.Metadata.AvailableStates,
+			AvailableStates: core.GameStates(result.Metadata.AvailableStates),
 			Page:            result.Metadata.Page,
 			PageSize:        result.Metadata.PageSize,
 			TotalPages:      result.Metadata.TotalPages,
@@ -1090,13 +1109,12 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 			Description:             game.Description,
 			GMUserID:                game.GMUserID,
 			GMUsername:              game.GMUsername,
-			State:                   game.State,
+			State:                   core.GameState(game.State),
 			Genre:                   game.Genre,
 			StartDate:               game.StartDate,
 			EndDate:                 game.EndDate,
 			RecruitmentDeadline:     game.RecruitmentDeadline,
 			MaxPlayers:              game.MaxPlayers,
-			IsPublic:                game.IsPublic,
 			IsAnonymous:             game.IsAnonymous,
 			AutoAcceptAudience:      game.AutoAcceptAudience,
 			AllowGroupConversations: game.AllowGroupConversations,
@@ -1114,69 +1132,6 @@ func (h *Handler) humaGetFilteredGames(ctx context.Context, in *filteredGamesInp
 	}
 
 	return &gameListingOutput{Body: response}, nil
-}
-
-type emptyInput struct{}
-
-func (h *Handler) humaGetRecruitingGames(ctx context.Context, in *emptyInput) (*recruitingGamesOutput, error) {
-	defer h.App.ObsLogger.LogOperation(ctx, "api_get_recruiting_games")()
-
-	games, err := h.GameService.GetRecruitingGames(ctx)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get recruiting games", "error", err)
-	}
-
-	// Nil slice, not make(...): an empty list serializes as null here, matching
-	// the chi handler.
-	var response []map[string]any
-	for _, game := range games {
-		gameData := map[string]any{
-			"id":              game.ID,
-			"title":           game.Title,
-			"description":     game.Description,
-			"gm_user_id":      game.GmUserID,
-			"gm_username":     game.GmUsername,
-			"state":           game.State,
-			"current_players": game.CurrentPlayers,
-			"created_at":      game.CreatedAt.Time,
-			"updated_at":      game.UpdatedAt.Time,
-		}
-
-		if game.Genre.Valid {
-			gameData["genre"] = game.Genre.String
-		}
-		if game.StartDate.Valid {
-			gameData["start_date"] = game.StartDate.Time
-		}
-		if game.EndDate.Valid {
-			gameData["end_date"] = game.EndDate.Time
-		}
-		if game.RecruitmentDeadline.Valid {
-			gameData["recruitment_deadline"] = game.RecruitmentDeadline.Time
-		}
-		if game.MaxPlayers.Valid {
-			gameData["max_players"] = game.MaxPlayers.Int32
-		}
-		if game.CommonRoomOpenDay.Valid {
-			gameData["common_room_open_day"] = game.CommonRoomOpenDay.Int16
-		}
-		if game.CommonRoomOpenTime.Valid {
-			gameData["common_room_open_time"] = formatPgtypeTime(game.CommonRoomOpenTime)
-		}
-		if game.CommonRoomCloseDay.Valid {
-			gameData["common_room_close_day"] = game.CommonRoomCloseDay.Int16
-		}
-		if game.CommonRoomCloseTime.Valid {
-			gameData["common_room_close_time"] = formatPgtypeTime(game.CommonRoomCloseTime)
-		}
-		if game.ScheduleTimezone.Valid {
-			gameData["schedule_timezone"] = game.ScheduleTimezone.String
-		}
-
-		response = append(response, gameData)
-	}
-
-	return &recruitingGamesOutput{Body: response}, nil
 }
 
 // Participants
@@ -1211,7 +1166,7 @@ func (h *Handler) humaLeaveGame(ctx context.Context, in *gameScopedInput) (*noCo
 			return nil, h.logAndErr(ctx, core.ErrNotFound("you are not associated with this game"),
 				"User is neither participant nor applicant", "error", err, "game_id", gameID, "user_id", userID)
 		}
-	} else if application.Status.String == core.ApplicationStatusPending {
+	} else if application.Status == core.ApplicationStatusPending {
 		// Deleted rather than marked withdrawn, so the user can reapply.
 		//
 		// Approved audience applications no longer reach here:
@@ -1250,7 +1205,9 @@ func (h *Handler) humaGetGameParticipants(ctx context.Context, in *gameScopedInp
 		}
 	}
 
-	var response []map[string]any
+	// var, not make(...,0): an empty list serializes as null here. Preserved
+	// from the chi handler -- see participantsOutput.
+	var response []ParticipantListItemResponse
 	for _, participant := range participants {
 		role := participant.Role
 		isFormerPlayer := participant.IsFormerPlayer
@@ -1261,27 +1218,26 @@ func (h *Handler) humaGetGameParticipants(ctx context.Context, in *gameScopedInp
 			isFormerPlayer = false
 		}
 
-		participantData := map[string]any{
-			"id":       participant.ID,
-			"game_id":  participant.GameID,
-			"user_id":  participant.UserID,
-			"username": participant.Username,
+		item := ParticipantListItemResponse{
+			ID:       participant.ID,
+			GameID:   participant.GameID,
+			UserID:   participant.UserID,
+			Username: participant.Username,
 			// Email is intentionally omitted for privacy.
-			"role":             role,
-			"status":           participant.Status,
-			"joined_at":        participant.JoinedAt.Time,
-			"is_former_player": isFormerPlayer,
+			Role:           role,
+			Status:         participant.Status,
+			JoinedAt:       participant.JoinedAt.Time,
+			IsFormerPlayer: isFormerPlayer,
 		}
 
 		// Explicit null rather than an absent key: the client reads this
-		// directly to decide whether to render an avatar.
+		// directly to decide whether to render an avatar. AvatarURL has no
+		// omitempty, so a nil pointer marshals as null.
 		if participant.AvatarUrl.Valid {
-			participantData["avatar_url"] = participant.AvatarUrl.String
-		} else {
-			participantData["avatar_url"] = nil
+			item.AvatarURL = &participant.AvatarUrl.String
 		}
 
-		response = append(response, participantData)
+		response = append(response, item)
 	}
 
 	return &participantsOutput{Body: response}, nil
@@ -1580,31 +1536,33 @@ func (h *Handler) humaGetGameApplications(ctx context.Context, in *gameScopedInp
 	}
 
 	// make(...,0): an empty list is [] here, unlike the participants endpoint.
-	response := make([]map[string]any, 0)
+	response := make([]ApplicationListItemResponse, 0)
 	for _, app := range applications {
-		appData := map[string]any{
-			"id":       app.ID,
-			"game_id":  app.GameID,
-			"user_id":  app.UserID,
-			"username": app.Username,
+		item := ApplicationListItemResponse{
+			ID:       app.ID,
+			GameID:   app.GameID,
+			UserID:   app.UserID,
+			Username: app.Username,
 			// Email is intentionally omitted for privacy.
-			"role":       app.Role,
-			"status":     app.Status,
-			"applied_at": app.AppliedAt.Time,
+			Role:      app.Role,
+			Status:    app.Status,
+			AppliedAt: app.AppliedAt.Time,
 		}
+		// Each of these four is omitempty, so leaving the pointer nil drops the
+		// key entirely -- matching the `if x.Valid` blocks these replace.
 		if app.AvatarUrl.Valid {
-			appData["avatar_url"] = app.AvatarUrl.String
+			item.AvatarURL = &app.AvatarUrl.String
 		}
 		if app.Message.Valid {
-			appData["message"] = app.Message.String
+			item.Message = &app.Message.String
 		}
 		if app.ReviewedAt.Valid {
-			appData["reviewed_at"] = app.ReviewedAt.Time
+			item.ReviewedAt = &app.ReviewedAt.Time
 		}
 		if app.ReviewedByUserID.Valid {
-			appData["reviewed_by_user_id"] = app.ReviewedByUserID.Int32
+			item.ReviewedByUserID = &app.ReviewedByUserID.Int32
 		}
-		response = append(response, appData)
+		response = append(response, item)
 	}
 
 	return &applicationsOutput{Body: response}, nil
@@ -1719,7 +1677,7 @@ func (h *Handler) humaGetMyGameApplication(ctx context.Context, in *gameScopedIn
 	// IsPublished is never set for them. A surviving audience application is
 	// therefore a rejection (approvals delete the row), and the applicant should
 	// see "rejected" right away rather than a permanent, misleading "pending".
-	displayStatus := application.Status.String
+	displayStatus := application.Status
 	if application.Role != core.RoleAudience && !application.IsPublished {
 		displayStatus = core.ApplicationStatusPending
 	}
@@ -1751,7 +1709,7 @@ func (h *Handler) humaGetMyGameApplication(ctx context.Context, in *gameScopedIn
 	return &myApplicationOutput{Body: response}, nil
 }
 
-func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScopedInput) (*applicationsOutput, error) {
+func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScopedInput) (*publicApplicantsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_public_game_applicants")()
 
 	gameID, err := gameIDFromCtx(ctx)
@@ -1765,7 +1723,7 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 		return nil, err
 	}
 
-	if !game.State.Valid || game.State.String != core.GameStateRecruitment {
+	if game.State != core.GameStateRecruitment {
 		return nil, h.logAndErr(ctx, core.ErrForbidden("applicant list is only visible during recruitment"),
 			"Get public game applicants forbidden")
 	}
@@ -1777,21 +1735,21 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 
 	// Username and role only — no status, no review information. This endpoint
 	// is readable by anyone.
-	response := make([]map[string]any, 0)
+	response := make([]PublicApplicantResponse, 0)
 	for _, applicant := range applicants {
-		applicantData := map[string]any{
-			"id":         applicant.ID,
-			"username":   applicant.Username,
-			"role":       applicant.Role,
-			"applied_at": applicant.AppliedAt.Time,
+		item := PublicApplicantResponse{
+			ID:        applicant.ID,
+			Username:  applicant.Username,
+			Role:      applicant.Role,
+			AppliedAt: applicant.AppliedAt.Time,
 		}
 		if applicant.AvatarUrl.Valid {
-			applicantData["avatar_url"] = applicant.AvatarUrl.String
+			item.AvatarURL = &applicant.AvatarUrl.String
 		}
-		response = append(response, applicantData)
+		response = append(response, item)
 	}
 
-	return &applicationsOutput{Body: response}, nil
+	return &publicApplicantsOutput{Body: response}, nil
 }
 
 func (h *Handler) humaWithdrawGameApplication(ctx context.Context, in *gameScopedInput) (*noContentOutput, error) {
@@ -1813,12 +1771,12 @@ func (h *Handler) humaWithdrawGameApplication(ctx context.Context, in *gameScope
 	}
 
 	switch {
-	case application.Status.String == core.ApplicationStatusPending:
+	case application.Status == core.ApplicationStatusPending:
 		// Deleted rather than marked withdrawn, so the user can reapply.
 		if err := h.GameApplicationService.DeleteGameApplication(ctx, application.ID, authUser.ID); err != nil {
 			return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete application", "error", err, "application_id", application.ID)
 		}
-	case application.Status.String == core.ApplicationStatusApproved && application.Role == core.RoleAudience:
+	case application.Status == core.ApplicationStatusApproved && application.Role == core.RoleAudience:
 		// Audience applications create a participant row immediately on
 		// approval. If that participant later left or was removed, the
 		// 'approved' application row is stale — it no longer represents any live
@@ -1864,7 +1822,7 @@ func (h *Handler) humaListAudienceMembers(ctx context.Context, in *gameScopedInp
 			UserID:   member.UserID,
 			Username: member.Username,
 			Role:     member.Role,
-			Status:   member.Status.String,
+			Status:   member.Status,
 			JoinedAt: member.JoinedAt.Time,
 		}
 	}
@@ -2205,7 +2163,7 @@ func (h *Handler) humaGetGameLogs(ctx context.Context, in *gameScopedInput) (*ga
 
 	// Once a game is over its log becomes readable by any participant; while it
 	// is running the log would reveal GM activity, so it is GM-only.
-	if game.State.String != core.GameStateCompleted && game.State.String != core.GameStateCancelled {
+	if game.State != core.GameStateCompleted && game.State != core.GameStateCancelled {
 		if err := h.requireGMFlag(ctx, "only the GM can retrieve game logs while the game is running", "Game logs access forbidden"); err != nil {
 			return nil, err
 		}
@@ -2216,14 +2174,16 @@ func (h *Handler) humaGetGameLogs(ctx context.Context, in *gameScopedInput) (*ga
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game logs", "error", err, "game_id", gameID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]GameLogEntryResponse, 0)
 	for _, log := range logs {
-		response = append(response, map[string]any{
-			"id":         log.ID,
-			"game_id":    log.GameID,
-			"type":       log.Type,
-			"message":    log.Message.String,
-			"created_at": log.CreatedAt.Time,
+		response = append(response, GameLogEntryResponse{
+			ID:     log.ID,
+			GameID: log.GameID,
+			Type:   log.Type,
+			// .String, not a pointer: a NULL message flattens to "", which is
+			// what this endpoint has always sent.
+			Message:   log.Message.String,
+			CreatedAt: log.CreatedAt.Time,
 		})
 	}
 
@@ -2253,9 +2213,9 @@ func (h *Handler) humaGetGameStats(ctx context.Context, in *gameScopedInput) (*g
 
 	// Checked before the view permission so an in-progress game reports the
 	// actual reason rather than a 403.
-	if game.State.String != core.GameStateCompleted {
+	if game.State != core.GameStateCompleted {
 		return nil, h.logAndErr(ctx, core.ErrConflict("statistics are only available for completed games"),
-			"Game stats requested for non-completed game", "game_id", gameID, "state", game.State.String)
+			"Game stats requested for non-completed game", "game_id", gameID, "state", game.State)
 	}
 
 	authUser := core.GetAuthenticatedUser(ctx)
@@ -2318,17 +2278,16 @@ func (h *Handler) humaGetGameLootTables(ctx context.Context, in *lootTablesInput
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game loot tables", "error", err, "game_id", gameID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]GameLootTableResponse, 0)
 	for _, lootTable := range lootTables {
-		// Keep these keys in sync with the model returned by AddGameLootTable —
-		// both are typed as LootTable on the frontend, so a field present in one
-		// and missing from the other is a shape mismatch the types do not catch.
-		response = append(response, map[string]any{
-			"id":         lootTable.ID,
-			"game_id":    lootTable.GameID,
-			"name":       lootTable.Name,
-			"created_at": lootTable.CreatedAt.Time,
-			"updated_at": lootTable.UpdatedAt.Time,
+		// Same struct AddGameLootTable returns, so the two endpoints cannot
+		// drift apart. They previously had to be kept in sync by hand.
+		response = append(response, GameLootTableResponse{
+			ID:        lootTable.ID,
+			GameID:    lootTable.GameID,
+			Name:      lootTable.Name,
+			CreatedAt: lootTable.CreatedAt.Time,
+			UpdatedAt: lootTable.UpdatedAt.Time,
 		})
 	}
 
@@ -2439,12 +2398,13 @@ func (h *Handler) humaGetGameLootTableContents(ctx context.Context, in *tableSco
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table contents", "error", err, "table_id", in.TableID)
 	}
 
-	response := make([]map[string]any, 0)
+	response := make([]LootTableContentResponse, 0)
 	for _, item := range contents {
-		response = append(response, map[string]any{
-			"id":   item.ID,
-			"name": item.Name,
-			"data": item.Data.String,
+		response = append(response, LootTableContentResponse{
+			ID:   item.ID,
+			Name: item.Name,
+			// .String, not a pointer: a NULL data column flattens to "".
+			Data: item.Data.String,
 		})
 	}
 
@@ -2711,24 +2671,16 @@ func RegisterHumaGamesPublicApplicants(api huma.API, h *Handler) {
 	}, h.humaGetPublicGameApplicants)
 }
 
-// RegisterHumaGamesCollection registers the two operations that need no game
-// context: the recruiting list and game creation. They live on the /games
-// router itself, outside the /{gameID} subrouter.
+// RegisterHumaGamesCollection registers the operation that needs no game
+// context: game creation. It lives on the /games router itself, outside the
+// /{gameID} subrouter.
+//
+// GET /recruiting used to live here too. It was removed as redundant: the
+// filtered listing answers the same question server-side via
+// `GET /games/?states=recruitment`, with pagination and a typed response, and
+// the frontend route /games/recruiting is already a redirect to it.
 func RegisterHumaGamesCollection(api huma.API, h *Handler) {
 	bearer := []map[string][]string{{"BearerAuth": {}}}
-
-	huma.Register(api, huma.Operation{
-		OperationID: "listRecruitingGames",
-		Method:      http.MethodGet,
-		Path:        "/recruiting",
-		Summary:     "List recruiting games",
-		Description: "Games currently accepting applications.",
-		Tags:        []string{"Games"},
-		Security:    bearer,
-		Responses: map[string]*huma.Response{
-			"401": {Description: "Not authenticated"},
-		},
-	}, h.humaGetRecruitingGames)
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createGame",
@@ -2761,7 +2713,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Method:      http.MethodGet,
 		Path:        "/",
 		Summary:     "Get a game",
-		Description: "Returns the game's settings and metadata.",
+		Description: "Returns the game's settings and metadata, the GM's username, the current player count and the owning community. Identical to getGameDetails.",
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
@@ -2775,7 +2727,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Method:      http.MethodGet,
 		Path:        "/details",
 		Summary:     "Get a game with details",
-		Description: "As getGame, plus the GM's username and the current player count.",
+		Description: "Alias of getGame, kept for existing callers: the two answer with the same shape from the same query.",
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
