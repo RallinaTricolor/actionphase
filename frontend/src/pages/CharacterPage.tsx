@@ -19,6 +19,22 @@ import { FavoriteButton } from '@/components/messages/FavoriteButton';
 import { useFavoriteCommentIDs, useSetCommentFavorite } from '../hooks/useFavorites';
 
 /**
+ * Whether an error is an HTTP 404.
+ *
+ * Mirrors the same check in useGameExport; kept local rather than shared, since
+ * two call sites do not yet justify a utility.
+ */
+function isNotFound(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: { status?: number } }).response?.status === 'number' &&
+    (error as { response: { status: number } }).response.status === 404
+  );
+}
+
+/**
  * CharacterPage - Displays a character's profile and public activity feed
  *
  * Features:
@@ -51,6 +67,12 @@ export function CharacterPage() {
     queryKey: ['character', characterIdNum],
     queryFn: () => apiClient.characters.getCharacter(characterIdNum!).then(res => res.data),
     enabled: !!characterIdNum && !isNaN(characterIdNum),
+    // A 404 is a verdict, not a blip. The global default (retry: 1) would run
+    // it again ~1s later, and since the page only knows it failed once retries
+    // are exhausted, that doubled how long the feed rendered beneath an
+    // unresolved character.
+    retry: (failureCount, error) =>
+      isNotFound(error) ? false : failureCount < 1,
   });
 
   const { data: gameData } = useQuery({
@@ -117,6 +139,40 @@ export function CharacterPage() {
     );
   }
 
+  // Nothing below may render until the character resolves. The stats line and
+  // the activity feed fetch independently of it, and the comments endpoint
+  // answers 200 by design -- so while the character request was still in
+  // flight, a hidden NPC's feed painted and was then yanked away when the 404
+  // landed. Holding the whole page is what makes the gate airtight; gating only
+  // the error state left a visible window.
+  if (isLoadingCharacter) {
+    return (
+      <div className="min-h-screen bg-surface-sunken py-8">
+        <div className="max-w-5xl mx-auto px-4 flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      </div>
+    );
+  }
+
+  // A character the caller may not see answers 404, and the whole page goes
+  // with it -- the stats line and activity feed below fetch independently, so
+  // rendering them around a failed header turned "not found" into a partial
+  // profile. Deliberately does not distinguish "no such character" from "not
+  // yours to see": a hidden NPC answers 404 precisely so the two are
+  // indistinguishable, and a more specific message here would undo that.
+  if (isCharacterError) {
+    return (
+      <div className="min-h-screen bg-surface-sunken py-8">
+        <div className="max-w-5xl mx-auto px-4">
+          <Alert variant="danger" title="Character not found">
+            No character exists at this address, or you cannot view it.
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
   const allMessages = data?.pages.flatMap((page) => page.messages) ?? [];
 
   return (
@@ -132,8 +188,6 @@ export function CharacterPage() {
                 <div className="h-5 w-32 surface-raised rounded animate-pulse" />
               </div>
             </div>
-          ) : isCharacterError ? (
-            <Alert variant="danger">Failed to load character.</Alert>
           ) : characterData ? (
             <div className="flex items-center gap-4">
               <CharacterAvatar

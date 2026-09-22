@@ -47,12 +47,20 @@ type CharacterResponse struct {
 	Name   string `json:"name" doc:"Character name"`
 	// A pointer because an anonymous game withholds it from regular players,
 	// not because the column is nullable.
-	CharacterType *string   `json:"character_type,omitempty" required:"false" enum:"player_character,npc" doc:"Absent when an anonymous game hides it from the caller"`
-	Status        string    `json:"status" enum:"pending,approved" doc:"Approval status"`
-	AvatarURL     *string   `json:"avatar_url,omitempty" required:"false" doc:"Character portrait URL"`
-	IsActive      bool      `json:"is_active" doc:"False once the character has been retired"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CharacterType *string `json:"character_type,omitempty" required:"false" enum:"player_character,npc" doc:"Absent when an anonymous game hides it from the caller"`
+	Status        string  `json:"status" enum:"pending,approved" doc:"Approval status"`
+	AvatarURL     *string `json:"avatar_url,omitempty" required:"false" doc:"Character portrait URL"`
+	// Reported on every character the caller can see -- hiding conceals WHICH
+	// characters are hidden, not that the mechanic exists. A hidden character
+	// is omitted from the response outright for callers who may not see it, so
+	// this flag never discloses anything the row itself did not.
+	//
+	// Optional in the schema rather than required, so consumers test `=== true`
+	// rather than falsiness: an absent key must read as "not hidden".
+	IsHidden  *bool     `json:"is_hidden,omitempty" required:"false" doc:"NPC concealed from regular players; absent when the caller may not see the distinction"`
+	IsActive  bool      `json:"is_active" doc:"False once the character has been retired"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Identity. All four are withheld together in an anonymous game; each is
 	// also absent when its own column is NULL (an unassigned NPC has no owner).

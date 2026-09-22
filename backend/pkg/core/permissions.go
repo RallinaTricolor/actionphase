@@ -175,6 +175,38 @@ func CanSeeUsernamesInAnonymousGame(ctx context.Context, db *pgxpool.Pool, game 
 	return participant.Role == "co_gm" || participant.Role == "audience"
 }
 
+// CanSeeHiddenCharacter reports whether a caller may learn that a hidden
+// character EXISTS.
+//
+// Hiding conceals a character's presence in the cast, never content it has
+// authored: a hidden NPC's common room posts and conversation messages render
+// normally for everyone, naming it. What hiding removes is DISCOVERY — the
+// roster, the profile, mention resolution, and starting a conversation with it.
+//
+// GMs, co-GMs and audience members always see hidden characters, as does the
+// user an NPC is assigned to (they control it). Audience inclusion is
+// deliberate and matches the rest of the domain: audience members already read
+// every private conversation and every action submission, so hiding an NPC from
+// them would be the anomaly.
+//
+// Like anonymity, this is a play-time protection rather than a permanent one —
+// callers OR in IsPublicArchive(game.State) at the call site, so a completed or
+// epilogue game discloses hidden NPCs to everyone. That is kept at the call
+// site rather than folded in here so this stays a pure role check, testable
+// without a game.
+//
+// This is the ONLY definition of the rule. Every gate calls it rather than
+// re-deriving the role comparison: two copies of a visibility check are free to
+// drift, and the way that failure shows up is a hidden character leaking
+// through whichever gate was forgotten.
+func CanSeeHiddenCharacter(userRole string, isOwnerOrAssigned bool) bool {
+	if isOwnerOrAssigned {
+		return true
+	}
+
+	return userRole == "gm" || userRole == "co_gm" || userRole == "audience"
+}
+
 // CanUserControlNPC checks if a user can control an NPC character.
 // This includes:
 // 1. The NPC is assigned to the user (via npc_assignments table)

@@ -101,6 +101,67 @@ describe('CharactersList', () => {
     })
   })
 
+  describe('Hidden NPCs', () => {
+    // The backend omits hidden NPCs from a player's roster and WITHHOLDS the
+    // is_hidden field from them entirely (absent, never false). These tests feed
+    // the component the two real response shapes rather than one synthetic list,
+    // because the absent-vs-false distinction is the whole rule.
+    const hiddenNpc = makeCharacter({
+      id: 9,
+      name: 'Masked Informant',
+      game_id: 123,
+      character_type: 'npc',
+      status: 'approved',
+      is_hidden: true,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    })
+
+    it('shows a Hidden badge to the GM, who receives is_hidden: true', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/characters', () =>
+          HttpResponse.json([...mockCharacters, hiddenNpc])
+        )
+      )
+
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Masked Informant')[0]).toBeInTheDocument()
+      })
+      expect(screen.getAllByTestId('character-hidden-badge')[0]).toBeInTheDocument()
+    })
+
+    it('shows no Hidden badge on a normal NPC', async () => {
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="gm" currentUserId={1} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Villain NPC')[0]).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('character-hidden-badge')).not.toBeInTheDocument()
+    })
+
+    it('does not render the hidden NPC at all for a player', async () => {
+      // What the backend actually sends a player: the NPC is omitted from the
+      // response, and no is_hidden field appears on anything. There is no
+      // client-side filter -- a second copy of the rule is what drifts.
+      renderWithProviders(
+        <CharactersList gameId={123} userRole="player" currentUserId={1} gameState="in_progress" isParticipant={true} />,
+      { gameId: 123 })
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Hero Character')[0]).toBeInTheDocument()
+      })
+
+      expect(screen.queryByText('Masked Informant')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('character-hidden-badge')).not.toBeInTheDocument()
+    })
+  })
+
   describe('Character rendering', () => {
     it('should render character list when data is loaded', async () => {
       renderWithProviders(

@@ -36,7 +36,7 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 	}
 
 	// Extract character mentions from content
-	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID)
+	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID, req.AuthorID)
 	if err != nil {
 		// Log error but don't fail the post creation
 		// Mention extraction is a non-critical feature

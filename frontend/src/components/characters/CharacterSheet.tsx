@@ -15,6 +15,7 @@ import { TabNavigation } from '@/components/layout/TabNavigation';
 import type { Tab } from '@/components/layout/TabNavigation';
 import { Button, Badge, Input } from '@/components/ui';
 import { useRenameCharacter } from '@/hooks/useCharacters';
+import { CharacterActionsMenu } from './CharacterActionsMenu';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
@@ -149,6 +150,16 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
     queryFn: () => apiClient.characters.getCharacter(characterId).then(res => res.data),
     enabled: !!characterId
   });
+
+  // The hide/reveal control is GM-only, so it checks userRole rather than
+  // canEdit -- canEdit is also true for a character's owner, who must not be
+  // able to hide anything. NPC-only, matching the backend's 400.
+  const isGameMaster = userRole === 'gm' || userRole === 'co_gm';
+  const canToggleHidden = isGameMaster && character?.character_type === 'npc';
+
+  // `=== true` rather than a truthiness check: is_hidden is optional in the
+  // schema, so an absent key must read as "not hidden".
+  const isCharacterHidden = character?.is_hidden === true;
 
   const { data: characterData = [], isLoading } = useQuery({
     queryKey: ['characterData', characterId],
@@ -395,6 +406,13 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                   <h2 className="min-w-0 text-lg md:text-2xl font-bold text-content-primary break-words md:truncate">
                     {character?.name || 'Character Sheet'}
                   </h2>
+                  {/* Only entitled callers ever receive is_hidden, so this
+                      badge cannot appear for someone who should not know. */}
+                  {isCharacterHidden && (
+                    <Badge variant="warning" data-testid="character-hidden-badge">
+                      Hidden
+                    </Badge>
+                  )}
                   {canEdit && character && (
                     <button
                       onClick={handleStartEditingName}
@@ -441,7 +459,19 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               )}
             </div>
           </div>
-          {onClose && (
+          {/* GM actions sit beside the close control rather than in a band of
+              their own: hide/reveal is rare enough that it should cost no
+              vertical space on a sheet opened to read the tabs below. Outside
+              the `onClose` guard, so it survives a discard-confirm and renders
+              on the non-modal sheet too. */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <CharacterActionsMenu
+              characterId={characterId}
+              gameId={character?.game_id}
+              isHidden={isCharacterHidden}
+              canToggleHidden={canToggleHidden}
+            />
+            {onClose && (
             confirmingClose ? (
               <ConfirmDiscardEdits
                 onDiscard={onClose}
@@ -461,7 +491,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 </svg>
               </Button>
             )
-          )}
+            )}
+          </div>
         </div>
 
         {/* Module Tabs - Filter out modules user cannot view */}

@@ -174,13 +174,65 @@ func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID
 	}
 }
 
+// authorCanSeeHiddenCharacters reports whether the message's author is entitled
+// to know that the game's hidden characters exist, by role.
+//
+// Per-character ownership is handled by the caller, since it varies per row.
+// A lookup failure resolves to false: a failed check must never read as
+// elevated access.
+func (s *MessageService) authorCanSeeHiddenCharacters(ctx context.Context, gameID, authorUserID int32) bool {
+	queries := models.New(s.DB)
+
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		s.Logger.LogError(ctx, err, "Failed to get game for hidden-character check",
+			"game_id", gameID, "user_id", authorUserID)
+		return false
+	}
+
+	// A public archive discloses its hidden cast to everyone.
+	if core.IsPublicArchive(game.State) {
+		return true
+	}
+
+	if game.GmUserID == authorUserID {
+		return true
+	}
+
+	participant, err := queries.GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: gameID,
+		UserID: authorUserID,
+	})
+	if err != nil {
+		return false
+	}
+
+	return core.CanSeeHiddenCharacter(participant.Role, false)
+}
+
 // extractCharacterMentions parses content for @CharacterName mentions and returns character IDs.
 // It deduplicates mentions and gracefully handles non-existent character names.
 // It skips mentions inside code blocks (inline backticks or fenced code blocks).
 //
 // Strategy: Get all characters in the game, then check if @CharacterName appears in content.
 // This approach handles multi-word names correctly (e.g., "Test Player 2 Character").
-func (s *MessageService) extractCharacterMentions(ctx context.Context, content string, gameID int32) ([]int32, error) {
+//
+// Mentions resolve only to characters the AUTHOR may see. A hidden NPC named by
+// a player -- whether guessed or copied from a post the NPC wrote -- does not
+// resolve, so none of the three things a mention produces can confirm the
+// character exists: no notification fires, no ID lands in
+// messages.mentioned_character_ids, and the frontend renders plain text instead
+// of a mention pill. An @mention is an outbound reference to a character, the
+// same act as naming one when starting a conversation, so it is gated the same
+// way.
+//
+// The GM's own posts resolve hidden NPCs normally, which is what keeps a hidden
+// NPC mentionable at all.
+//
+// Resolution is decided at WRITE time and never recomputed: hiding an NPC does
+// not strip it from posts that already mention it, and revealing one does not
+// retroactively add it.
+func (s *MessageService) extractCharacterMentions(ctx context.Context, content string, gameID, authorUserID int32) ([]int32, error) {
 	queries := models.New(s.DB)
 
 	// Get all characters in this game
@@ -188,6 +240,9 @@ func (s *MessageService) extractCharacterMentions(ctx context.Context, content s
 	if err != nil {
 		return nil, fmt.Errorf("failed to get game characters: %w", err)
 	}
+
+	// Resolve the author's entitlement once, not per character.
+	authorSeesHidden := s.authorCanSeeHiddenCharacters(ctx, gameID, authorUserID)
 
 	// Remove code blocks before extracting mentions
 	// This regex matches:
@@ -201,6 +256,16 @@ func (s *MessageService) extractCharacterMentions(ctx context.Context, content s
 
 	// For each character, check if @CharacterName appears in non-code content
 	for _, char := range characters {
+		// A hidden NPC the author may not see is skipped BEFORE the name match,
+		// so the mention degrades to ordinary text exactly as a typo does.
+		if char.IsHidden && !authorSeesHidden {
+			isOwnerOrAssigned := (char.UserID.Valid && char.UserID.Int32 == authorUserID) ||
+				(char.AssignedUserID.Valid && char.AssignedUserID.Int32 == authorUserID)
+			if !isOwnerOrAssigned {
+				continue
+			}
+		}
+
 		// Escape special regex characters in character name
 		escapedName := regexp.QuoteMeta(char.Name)
 
