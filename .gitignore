@@ -22,7 +22,12 @@ var/
 .installed.cfg
 *.egg
 
-# Exception: Keep stub file in backend docs dist for embed directive
+# Exception: Keep stub file in backend docs dist so //go:embed all:dist compiles
+# on a fresh clone. The blanket `dist/` rule above excludes the directory itself,
+# and git cannot re-include a file inside an excluded directory -- so the
+# directory must be un-ignored first, then its contents ignored individually.
+!backend/pkg/docs/dist/
+backend/pkg/docs/dist/*
 !backend/pkg/docs/dist/README.md
 
 # PyInstaller
