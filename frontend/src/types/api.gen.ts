@@ -826,6 +826,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/characters/{id}/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Hide or reveal an NPC
+         * @description Conceals an NPC from regular players, or reveals it. GM only, NPCs only. A hidden NPC is absent from the roster, its profile is reported as not found, it cannot be @-mentioned or added to a conversation by a player -- but content it has already authored stays visible to everyone. Hiding is lifted once the game becomes a public archive.
+         */
+        put: operations["setCharacterHidden"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/characters/{id}/reassign": {
         parameters: {
             query?: never;
@@ -1881,23 +1901,6 @@ export interface paths {
         head?: never;
         /** Edit a message */
         patch: operations["updateConversationMessage"];
-        trace?: never;
-    };
-    "/games/{gameID}/conversations/{conversationId}/participants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add a participant */
-        post: operations["addConversationParticipant"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/games/{gameID}/conversations/{conversationId}/read": {
@@ -3728,10 +3731,6 @@ export interface components {
              */
             user_id: number;
         };
-        AddParticipantRequest: {
-            /** Format: int32 */
-            character_id: number;
-        };
         AppendStagedPartBody: {
             /** @description Part content */
             content: string;
@@ -3988,6 +3987,8 @@ export interface components {
             id: number;
             /** @description False once the character has been retired */
             is_active: boolean;
+            /** @description NPC concealed from regular players; absent when the caller may not see the distinction */
+            is_hidden?: boolean;
             /** @description Character name */
             name: string;
             /**
@@ -4275,6 +4276,8 @@ export interface components {
             id: number;
             /** @description False once the character has been retired */
             is_active: boolean;
+            /** @description NPC concealed from regular players; absent when the caller may not see the distinction */
+            is_hidden?: boolean;
             /** @description Character name */
             name: string;
             /**
@@ -5360,6 +5363,8 @@ export interface components {
             id: number;
             /** @description False once the character has been retired */
             is_active: boolean;
+            /** @description NPC concealed from regular players; absent when the caller may not see the distinction */
+            is_hidden?: boolean;
             /** @description Character name */
             name: string;
             /**
@@ -6024,6 +6029,10 @@ export interface components {
             /** Format: date-time */
             last_seen_at: string;
             user_agent?: string;
+        };
+        SetCharacterHiddenRequest: {
+            /** @description Whether regular players may discover this NPC */
+            is_hidden: boolean;
         };
         StagedPartBody: {
             /** @description Part content */
@@ -8550,6 +8559,68 @@ export interface operations {
             };
             /** @description Not allowed to edit this character, or this module */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setCharacterHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Character ID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SetCharacterHiddenRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterResponse"];
+                };
+            };
+            /** @description Character is not an NPC */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can hide or reveal characters */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such character */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11712,44 +11783,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivateMessageResponse"];
-                };
-            };
-            /** @description Error */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
-                };
-            };
-        };
-    };
-    addConversationParticipant: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Game ID */
-                gameID: number;
-                /** @description Conversation ID */
-                conversationId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["AddParticipantRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessOutputBody"];
                 };
             };
             /** @description Error */

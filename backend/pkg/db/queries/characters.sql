@@ -327,3 +327,11 @@ LEFT JOIN messages m ON m.character_id = c.id
 LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
 WHERE c.game_id = $1
 GROUP BY c.id;
+
+-- Hidden NPCs. Whether the caller may SEE a hidden character is decided by
+-- core.CanSeeHiddenCharacter, never here -- this query only writes the flag.
+-- name: SetCharacterHidden :one
+UPDATE characters
+SET is_hidden = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;

@@ -549,6 +549,15 @@ function CharacterCard({
                   Your Character
                 </Badge>
               )}
+              {/* A hidden NPC is absent from this list entirely for callers
+                  who may not see it, so the badge only ever renders for the GM
+                  and audience. `=== true` because the field is optional in the
+                  schema: an absent key reads as "not hidden". */}
+              {character.is_hidden === true && (
+                <Badge variant="warning" size="sm">
+                  <span data-testid="character-hidden-badge">Hidden</span>
+                </Badge>
+              )}
             </div>
           </div>
         </div>

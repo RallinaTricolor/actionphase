@@ -265,3 +265,147 @@ describe('CharacterSheet', () => {
     expect(updateDepthError).toBeNull();
   });
 });
+
+describe('CharacterSheet hidden-NPC control', () => {
+  /** A character of a given type, optionally already hidden. */
+  function npcResponse(overrides: Record<string, unknown> = {}) {
+    return {
+      ...mockCharacter('Masked Informant'),
+      character_type: 'npc',
+      ...overrides,
+    };
+  }
+
+  function setupWith(character: Record<string, unknown>) {
+    server.use(
+      http.get(`/api/v1/characters/${CHARACTER_ID}`, () => HttpResponse.json(character)),
+      http.get(`/api/v1/characters/${CHARACTER_ID}/data`, () =>
+        HttpResponse.json([characterDataRow()])
+      )
+    );
+  }
+
+  it('offers the hide action to a GM viewing an NPC', async () => {
+    const user = userEvent.setup();
+    setupWith(npcResponse({ is_hidden: false }));
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats userRole="gm" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('character-actions-menu')).toBeInTheDocument();
+    });
+
+    // The action lives behind the kebab, so it costs no room on the sheet.
+    expect(screen.queryByText('Hide from players')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Character actions' }));
+    expect(screen.getByText('Hide from players')).toBeInTheDocument();
+  });
+
+  it('does not offer the menu for a player character, even to the GM', async () => {
+    // Hiding is NPC-only; the backend answers 400 for a player character, so the
+    // control must not be reachable for one.
+    setupWith({ ...mockCharacter(), character_type: 'player_character', is_hidden: false });
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats userRole="gm" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Character')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('character-actions-menu')).not.toBeInTheDocument();
+  });
+
+  it('does not offer the menu to a player who owns the character', async () => {
+    // canEdit is true for an owner, so a canEdit-based check would wrongly show
+    // the control here. The gate is the ROLE.
+    setupWith(npcResponse({ is_hidden: false }));
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit userRole="player" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('character-actions-menu')).not.toBeInTheDocument();
+  });
+
+  it('shows the Hidden badge when the character is hidden', async () => {
+    setupWith(npcResponse({ is_hidden: true }));
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats userRole="gm" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('character-hidden-badge')).toBeInTheDocument();
+    });
+  });
+
+  it('omits the Hidden badge when is_hidden is false', async () => {
+    setupWith(npcResponse({ is_hidden: false }));
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit userRole="player" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('character-hidden-badge')).not.toBeInTheDocument();
+  });
+
+  it('omits the Hidden badge when is_hidden is absent entirely', async () => {
+    // The field is optional in the schema, so a response can omit it -- an
+    // older client, a cached payload, or an endpoint that does not set it.
+    // `=== true` must read undefined as "not hidden", never as hidden.
+    setupWith(npcResponse());
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit userRole="player" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('character-hidden-badge')).not.toBeInTheDocument();
+  });
+
+  it('sends the new state when the GM picks the hide action', async () => {
+    const user = userEvent.setup();
+    let requestBody: unknown = null;
+
+    setupWith(npcResponse({ is_hidden: false }));
+    server.use(
+      http.put(`/api/v1/characters/${CHARACTER_ID}/hidden`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json(npcResponse({ is_hidden: true }));
+      })
+    );
+
+    renderWithProviders(
+      <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats userRole="gm" />,
+      { gameId: 1 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('character-actions-menu')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Character actions' }));
+    await user.click(screen.getByTestId('character-hidden-menu-item'));
+
+    await waitFor(() => {
+      expect(requestBody).toEqual({ is_hidden: true });
+    });
+  });
+});

@@ -50,8 +50,8 @@ type messagesOutput struct {
 	}
 }
 
-// successOutput is the {"success": true} envelope used by the read-marker and
-// participant endpoints.
+// successOutput is the {"success": true} envelope used by the read-marker
+// endpoint.
 type successOutput struct {
 	Body struct {
 		Success bool `json:"success" doc:"Always true; the operation failed otherwise"`
@@ -104,12 +104,6 @@ type sendMessageInput struct {
 
 type messageOutput struct {
 	Body *PrivateMessageResponse
-}
-
-type addParticipantInput struct {
-	GameID         int32 `path:"gameID" doc:"Game ID"`
-	ConversationID int32 `path:"conversationId" doc:"Conversation ID"`
-	Body           *AddParticipantRequest
 }
 
 type messageIDInput struct {
@@ -205,14 +199,6 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 		Summary:     "Mark a conversation as read",
 		Tags:        []string{"Conversations"},
 	}, h.markAsRead)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "addConversationParticipant",
-		Method:      http.MethodPost,
-		Path:        "/conversations/{conversationId}/participants",
-		Summary:     "Add a participant",
-		Tags:        []string{"Conversations"},
-	}, h.addParticipant)
 }
 
 // authUser resolves the caller. The auth middleware runs ahead of every route
@@ -246,6 +232,73 @@ func (h *Handler) requireAccess(ctx context.Context, conversationID, userID int3
 	return nil
 }
 
+// rejectUnseeableHiddenParticipants refuses a conversation that names a hidden
+// NPC the caller is not entitled to know exists.
+//
+// This is the conversation half of the hidden-NPC rule: the GM's hidden NPC can
+// still OPEN a conversation with a player -- the GM passes this check -- but a
+// player cannot start one toward it, because to a player that character does
+// not exist.
+//
+// 403 rather than 404 here, unlike GET /characters/{id}. The caller supplied a
+// list of IDs rather than addressing one resource, and the error names no
+// character, so it discloses only that some participant was not permitted --
+// the same answer an unrelated permission failure would give.
+//
+// Note this does NOT verify the caller controls any participant character;
+// that gap predates hidden NPCs and is tracked separately.
+// isAdmin is threaded in from the caller's AuthenticatedUser rather than
+// hardcoded: IsUserGameMasterCtx grants GM equivalence to an admin with admin
+// mode enabled, and dropping the flag would deny that admin a conversation the
+// GM they are standing in for could create.
+func (h *Handler) rejectUnseeableHiddenParticipants(ctx context.Context, game *models.Game, userID int32, isAdmin bool, characterIDs []int32) error {
+	// The archive exemption and the privileged roles are both cheap to settle
+	// once, before touching any character row.
+	if core.IsPublicArchive(game.State) {
+		return nil
+	}
+
+	userRole := "player"
+	if core.IsUserGameMasterCtx(ctx, userID, isAdmin, *game, h.App.Pool) {
+		userRole = "gm"
+	} else if participants, err := h.GameService.GetGameParticipants(ctx, game.ID); err == nil {
+		for _, p := range participants {
+			if p.UserID == userID {
+				userRole = p.Role
+				break
+			}
+		}
+	}
+	if core.CanSeeHiddenCharacter(userRole, false) {
+		return nil
+	}
+
+	for _, charID := range characterIDs {
+		character, err := h.CharacterService.GetCharacter(ctx, charID)
+		if err != nil {
+			// A character that cannot be loaded is not this check's business:
+			// CreateConversation fails on it immediately afterwards.
+			continue
+		}
+		if !character.IsHidden {
+			continue
+		}
+		// Owning or being assigned the NPC is the one way a non-privileged
+		// caller may name it.
+		isOwnerOrAssigned := character.UserID.Valid && character.UserID.Int32 == userID
+		if !isOwnerOrAssigned && core.CanUserControlNPC(ctx, h.App.Pool, charID, userID) {
+			isOwnerOrAssigned = true
+		}
+		if !isOwnerOrAssigned {
+			h.App.Logger.Warn("Conversation rejected: hidden participant",
+				"game_id", game.ID, "user_id", userID, "character_id", charID)
+			return huma.Error403Forbidden("one or more participants are not available")
+		}
+	}
+
+	return nil
+}
+
 func (h *Handler) createConversation(ctx context.Context, in *createConversationInput) (*createConversationOutput, error) {
 	authUser, err := h.authUser(ctx)
 	if err != nil {
@@ -266,6 +319,10 @@ func (h *Handler) createConversation(ctx context.Context, in *createConversation
 	}
 	if !game.AllowGroupConversations && len(in.Body.CharacterIDs) > 2 {
 		return nil, huma.Error400BadRequest("group conversations are not allowed in this game")
+	}
+
+	if err := h.rejectUnseeableHiddenParticipants(ctx, game, userID, authUser.IsAdmin, in.Body.CharacterIDs); err != nil {
+		return nil, err
 	}
 
 	conv, err := h.ConversationService.CreateConversation(ctx, core.CreateConversationRequest{
@@ -523,29 +580,6 @@ func (h *Handler) markAsRead(ctx context.Context, in *conversationIDInput) (*suc
 		h.App.Logger.Error("Failed to mark conversation as read", "error", err, "conversation_id", in.ConversationID, "user_id", userID)
 		return nil, huma.Error500InternalServerError("Failed to mark as read")
 	}
-
-	out := &successOutput{}
-	out.Body.Success = true
-	return out, nil
-}
-
-func (h *Handler) addParticipant(ctx context.Context, in *addParticipantInput) (*successOutput, error) {
-	authUser, err := h.authUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	userID := int32(authUser.ID)
-
-	if err := h.requireAccess(ctx, in.ConversationID, userID, authUser.IsAdmin, "Failed to add participant"); err != nil {
-		return nil, err
-	}
-
-	if err := h.ConversationService.AddParticipant(ctx, in.ConversationID, in.Body.CharacterID); err != nil {
-		h.App.Logger.Error("Failed to add participant", "error", err, "conversation_id", in.ConversationID, "character_id", in.Body.CharacterID)
-		return nil, huma.Error500InternalServerError("Failed to add participant")
-	}
-
-	h.App.Logger.Info("Participant added successfully", "conversation_id", in.ConversationID, "character_id", in.Body.CharacterID)
 
 	out := &successOutput{}
 	out.Body.Success = true

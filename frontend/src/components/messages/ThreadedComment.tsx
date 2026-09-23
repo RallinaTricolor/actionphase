@@ -8,6 +8,7 @@ import type { Character } from '@/types/characters';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
 import { Button, Select } from '@/components/ui';
 import { FavoriteButton } from './FavoriteButton';
 import { useAdminMode } from '@/hooks/useAdminMode';
@@ -597,7 +598,7 @@ export const ThreadedComment = memo(function ThreadedComment({
           <div className="flex-1 min-w-0">
             {/* Desktop: horizontal layout */}
             <div className="hidden md:block">
-              <Link to={`/characters/${comment.character_id}`} className="font-semibold text-sm text-content-primary hover:underline" data-testid="comment-author">{comment.character_name}</Link>
+              <CharacterNameLink characterId={comment.character_id} name={comment.character_name} className="font-semibold text-sm text-content-primary" data-testid="comment-author" />
               <span className="text-xs text-content-secondary ml-2">
                 {comment.author_username && !screenshotModeEnabled ? <><Link to={`/users/${comment.author_username}`} className="hover:underline">@{comment.author_username}</Link>{' · '}</> : ''}{formatDate(comment.created_at)}
                 {comment.is_edited && !comment.is_deleted && (
@@ -616,7 +617,7 @@ export const ThreadedComment = memo(function ThreadedComment({
             {/* Mobile: compact layout */}
             <div className="md:hidden">
               <div className="flex items-center gap-1 flex-wrap text-xs">
-                <Link to={`/characters/${comment.character_id}`} className="font-semibold text-content-primary hover:underline" data-testid="comment-author">{comment.character_name}</Link>
+                <CharacterNameLink characterId={comment.character_id} name={comment.character_name} className="font-semibold text-content-primary" data-testid="comment-author" />
                 {isAuthor && !screenshotModeEnabled && (
                   <span className="bg-interactive-primary-subtle text-content-primary px-1 py-0.5 rounded">You</span>
                 )}

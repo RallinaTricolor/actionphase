@@ -92,3 +92,10 @@ type RenameCharacterRequest struct {
 func (r *RenameCharacterRequest) Resolve(huma.Context) []error {
 	return requiredName(&r.Name, "name")
 }
+
+// SetCharacterHiddenRequest represents a request to hide or reveal an NPC.
+//
+// No Resolve: there are no string fields to trim, and a bool needs no bound.
+type SetCharacterHiddenRequest struct {
+	IsHidden bool `json:"is_hidden" doc:"Whether regular players may discover this NPC"`
+}

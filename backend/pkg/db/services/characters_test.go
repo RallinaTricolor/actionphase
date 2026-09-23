@@ -2130,3 +2130,51 @@ func TestCharacterService_AddToCharacterData(t *testing.T) {
 		require.Error(t, err, "a failed write must not be reported as success")
 	})
 }
+
+func TestCharacterService_SetCharacterHidden(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "npc_assignments", "characters", "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	npc, err := characterService.CreateCharacter(context.Background(), CreateCharacterRequest{
+		GameID:        fixtures.TestGame.ID,
+		Name:          "Hidden Informant",
+		CharacterType: "npc",
+	})
+	core.AssertNoError(t, err, "Failed to create NPC")
+
+	t.Run("new characters are visible by default", func(t *testing.T) {
+		core.AssertEqual(t, false, npc.IsHidden, "A newly created character should not be hidden")
+	})
+
+	t.Run("hide persists", func(t *testing.T) {
+		updated, err := characterService.SetCharacterHidden(context.Background(), npc.ID, true)
+		core.AssertNoError(t, err, "Failed to hide character")
+		core.AssertEqual(t, true, updated.IsHidden, "Returned character should be hidden")
+
+		// Read back: a correct return value with no write is the failure this
+		// guards against.
+		reread, err := characterService.GetCharacter(context.Background(), npc.ID)
+		core.AssertNoError(t, err, "Failed to re-read character")
+		core.AssertEqual(t, true, reread.IsHidden, "Hidden flag should be persisted")
+	})
+
+	t.Run("reveal persists", func(t *testing.T) {
+		updated, err := characterService.SetCharacterHidden(context.Background(), npc.ID, false)
+		core.AssertNoError(t, err, "Failed to reveal character")
+		core.AssertEqual(t, false, updated.IsHidden, "Returned character should be visible")
+
+		reread, err := characterService.GetCharacter(context.Background(), npc.ID)
+		core.AssertNoError(t, err, "Failed to re-read character")
+		core.AssertEqual(t, false, reread.IsHidden, "Revealed flag should be persisted")
+	})
+
+	t.Run("nonexistent character", func(t *testing.T) {
+		_, err := characterService.SetCharacterHidden(context.Background(), 99999, true)
+		core.AssertError(t, err, "Should fail for nonexistent character")
+	})
+}

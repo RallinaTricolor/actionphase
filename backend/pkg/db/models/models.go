@@ -153,6 +153,8 @@ type Character struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	// NPC concealed from regular players in the roster, profile, mentions and conversation creation. Content the character authored stays visible.
+	IsHidden bool `json:"is_hidden"`
 }
 
 type CharacterDatum struct {

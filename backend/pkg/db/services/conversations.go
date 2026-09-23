@@ -447,43 +447,6 @@ func (s *ConversationService) GetUnreadMessageCount(ctx context.Context, convers
 	return count, nil
 }
 
-// AddParticipant adds a character to an existing conversation
-func (s *ConversationService) AddParticipant(ctx context.Context, conversationID int32, characterID int32) error {
-	// Get character to find the user_id
-	char, err := s.Queries.GetCharacter(ctx, characterID)
-	if err != nil {
-		return fmt.Errorf("failed to get character: %w", err)
-	}
-
-	// For NPCs without a user_id, use the GM's user_id
-	var participantUserID int32
-	if !char.UserID.Valid {
-		// Get the game via conversation
-		conv, err := s.Queries.GetConversation(ctx, conversationID)
-		if err != nil {
-			return fmt.Errorf("failed to get conversation: %w", err)
-		}
-		game, err := s.Queries.GetGame(ctx, conv.GameID)
-		if err != nil {
-			return fmt.Errorf("failed to get game: %w", err)
-		}
-		participantUserID = game.GmUserID
-	} else {
-		participantUserID = char.UserID.Int32
-	}
-
-	_, err = s.Queries.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
-		ConversationID: conversationID,
-		UserID:         participantUserID,
-		CharacterID:    pgtype.Int4{Int32: characterID, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to add participant: %w", err)
-	}
-
-	return nil
-}
-
 // notifyPrivateMessage triggers notifications for all conversation participants except the sender
 // This runs in a goroutine and should not fail the parent operation
 func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversationID, senderUserID, senderCharacterID int32, messageID int32) {

@@ -1906,4 +1906,69 @@ describe('PostCard', () => {
     });
   });
 
+
+  describe('Hidden NPC author links', () => {
+    // A hidden NPC's profile 404s by design for a player, so its name must not
+    // render as a link. The gate is roster membership: the backend omits hidden
+    // NPCs from GET /games/{id}/characters for anyone not entitled to see them,
+    // so a post author absent from that response is one this viewer cannot open.
+    const hiddenAuthorPost = makeMessage({
+      ...mockPost,
+      character_id: 99,
+      character_name: 'Masked Informant',
+    });
+
+    function renderPost(post: Message) {
+      return renderWithProviders(
+        <PostCard
+          post={post}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />,
+        { gameId: 1 }
+      );
+    }
+
+    it('renders the author name as plain text when the roster omits them', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/characters', () =>
+          HttpResponse.json([makeCharacter({ id: 1, game_id: 1, name: 'GM Character' })])
+        )
+      );
+
+      renderPost(hiddenAuthorPost);
+
+      await waitFor(() => {
+        expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('link', { name: 'Masked Informant' })
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it('links the author name when the roster includes them', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/characters', () =>
+          HttpResponse.json([
+            makeCharacter({ id: 99, game_id: 1, name: 'Masked Informant', is_hidden: true }),
+          ])
+        )
+      );
+
+      renderPost(hiddenAuthorPost);
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Masked Informant' })).toHaveAttribute(
+          'href',
+          '/characters/99'
+        );
+      });
+    });
+  });
+
 });

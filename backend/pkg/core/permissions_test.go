@@ -794,3 +794,47 @@ func TestIsPublicArchive(t *testing.T) {
 		})
 	}
 }
+
+// TestCanSeeHiddenCharacter covers the hidden-NPC discovery rule:
+// GMs, co-GMs and audience members always see hidden characters, as does the
+// user who owns or is assigned the character. Regular players do not.
+//
+// Deliberately takes no database: the rule is a pure role comparison, and the
+// archive exemption is applied by callers (IsPublicArchive) rather than folded
+// in here.
+func TestCanSeeHiddenCharacter(t *testing.T) {
+	tests := []struct {
+		name              string
+		userRole          string
+		isOwnerOrAssigned bool
+		want              bool
+	}{
+		{name: "gm sees hidden characters", userRole: "gm", want: true},
+		{name: "co-gm sees hidden characters", userRole: "co_gm", want: true},
+		{name: "audience sees hidden characters", userRole: "audience", want: true},
+		{name: "player does not see hidden characters", userRole: "player", want: false},
+		{name: "unknown role does not see hidden characters", userRole: "", want: false},
+		{
+			name:              "assigned controller sees the NPC they control",
+			userRole:          "player",
+			isOwnerOrAssigned: true,
+			want:              true,
+		},
+		{
+			name:              "ownership alone is enough without a privileged role",
+			userRole:          "",
+			isOwnerOrAssigned: true,
+			want:              true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CanSeeHiddenCharacter(tt.userRole, tt.isOwnerOrAssigned)
+			if got != tt.want {
+				t.Errorf("CanSeeHiddenCharacter(%q, %v) = %v, want %v",
+					tt.userRole, tt.isOwnerOrAssigned, got, tt.want)
+			}
+		})
+	}
+}

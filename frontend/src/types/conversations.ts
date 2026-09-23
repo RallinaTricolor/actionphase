@@ -64,9 +64,6 @@ export type CreateConversationRequest = components['schemas']['CreateConversatio
 /** POST /games/{gameID}/conversations/{conversationId}/messages */
 export type SendMessageRequest = components['schemas']['SendMessageRequest'];
 
-/** POST /games/{gameID}/conversations/{conversationId}/participants */
-export type AddParticipantRequest = components['schemas']['AddParticipantRequest'];
-
 /** PATCH /games/{gameID}/conversations/{conversationId}/messages/{messageId} */
 export type UpdateMessageRequest = components['schemas']['UpdateMessageRequest'];
 

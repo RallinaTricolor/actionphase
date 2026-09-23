@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { Message } from '@/types/messages';
 import type { Character } from '@/types/characters';
@@ -8,6 +7,7 @@ import { ThreadViewModal } from './ThreadViewModal';
 import { apiClient } from '@/lib/api';
 import { CommentEditor } from './CommentEditor';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { useMarkPostAsRead, usePostUnreadCommentIDs, usePostManualReadCommentIDs, useToggleCommentRead } from '@/hooks/useReadTracking';
 import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '@/hooks/useFavorites';
@@ -512,7 +512,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
               <div>
                 <div className="flex items-start justify-between mb-1">
                   <div>
-                    <Link to={`/characters/${post.character_id}`} className="font-bold text-xl text-content-primary hover:underline">{post.character_name}</Link>
+                    <CharacterNameLink characterId={post.character_id} name={post.character_name} className="font-bold text-xl text-content-primary" />
                     <p className="text-sm text-content-secondary">
                       {post.author_username && !screenshotModeEnabled ? `Posted by @${post.author_username} · ` : 'Posted '}{formatDate(post.created_at)}
                       {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}
@@ -581,7 +581,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                       className="md:w-16 md:h-16"
                     />
                     <div className="flex-1">
-                      <Link to={`/characters/${post.character_id}`} className="font-bold text-xl text-content-primary hover:underline">{post.character_name}</Link>
+                      <CharacterNameLink characterId={post.character_id} name={post.character_name} className="font-bold text-xl text-content-primary" />
                       <p className="text-sm text-content-secondary">
                         {post.author_username && !screenshotModeEnabled ? `Posted by @${post.author_username} · ` : 'Posted '}{formatDate(post.created_at)}
                         {post.is_edited && <span className="ml-1 text-content-tertiary">(edited)</span>}

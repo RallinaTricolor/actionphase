@@ -104,6 +104,32 @@ moves the *player* to the audience role). Inactive characters are listed via
 
 **See**: [character-workflows.md](resources/character-workflows.md)
 
+### Hidden NPCs (added 2026-09-22)
+
+`characters.is_hidden` conceals an NPC from regular players. GMs, co-GMs and
+audience members see it normally, as does an assigned controller.
+
+🔑 **Hiding conceals PRESENCE IN THE CAST, not authored content.** A hidden NPC
+posts in the common room and opens conversations exactly as any NPC does, and
+those messages render for everyone, named. What hiding removes is *discovery*:
+the roster, the profile (404, never 403), the stats/sheet batch maps,
+`@mention` resolution, and a player's ability to start a conversation with it.
+
+- Single rule: `core.CanSeeHiddenCharacter` (`backend/pkg/core/permissions.go`)
+- Lifted by `IsPublicArchive` — a completed or epilogue game discloses its
+  hidden cast, like anonymous usernames and poll vote attribution
+- Mentions gate on the **author's** entitlement: the GM's mention of a hidden
+  NPC resolves, a player's silently does not (no pill, no notification, no
+  `mentioned_character_ids` entry). Resolution is decided at write time and
+  never recomputed
+- `is_hidden` is reported on every character the caller can see; hiding
+  conceals WHICH characters are hidden, not that the mechanic exists. The field
+  is optional, so consumers test `=== true` (absent reads as not hidden)
+- ❌ NOT TRUE: "a hidden NPC cannot speak" / "hiding removes its posts"
+- GM-only to set (`PUT /api/v1/characters/{id}/hidden`), NPCs only (400 otherwise)
+
+
+
 ---
 
 ## Core Concepts

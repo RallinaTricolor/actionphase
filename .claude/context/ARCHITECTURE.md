@@ -539,6 +539,51 @@ Both columns are nullable and were **not** backfilled, so pre-existing
 notifications keep one-at-a-time behaviour. New notification types opt in by
 setting the context pair in their `Notify*` helper.
 
+### Hidden NPCs (added 2026-09-22)
+
+`characters.is_hidden` conceals an NPC from regular players. It is a column, not
+a third `character_type`: the type is constrained to two values and load-bearing
+in the roster split, anonymous-mode suppression and NPC assignment, so a third
+value would turn every `== "npc"` comparison into a two-value check.
+
+**Hiding conceals PRESENCE IN THE CAST, never authored content.** A hidden NPC's
+common room posts and conversation messages render normally for everyone, named.
+What hiding removes is *discovery*. A change that filtered the NPC's posts would
+break the feature's purpose, and
+`TestGetGamePosts_HiddenNPCContentStaysVisible` exists to fail if one lands.
+
+`core.CanSeeHiddenCharacter(userRole, isOwnerOrAssigned)` is the ONLY definition
+of the rule — GM, co-GM, audience, or the assigned controller. Callers OR in
+`IsPublicArchive(game.State)` at the call site, so a completed or epilogue game
+discloses its hidden cast, mirroring anonymous usernames and poll vote
+attribution. Audience inclusion is deliberate: they already read every private
+conversation and action submission.
+
+Six gates enforce it. Filtering the roster alone leaks the NPC through the other
+five:
+
+| Gate | Behaviour |
+|---|---|
+| `GET /games/{id}/characters` | Row omitted |
+| `GET /characters/{id}` | **404, not 403** — a 403 confirms it exists |
+| `GET /games/{id}/characters/stats` | Map key omitted (the key IS the disclosure) |
+| `GET /games/{id}/characters/data` | Map key omitted |
+| `POST /games/{id}/conversations` | 403 on a hidden participant |
+| `extractCharacterMentions` | Resolves only what the **author** may see |
+
+The mention gate is author-scoped, not content-scoped, and kills three things at
+once: the notification, the `mentioned_character_ids` field on the wire, and the
+frontend mention pill. An unresolved mention degrades to plain text like a typo.
+Resolution happens at write time and is never recomputed, so hiding an NPC does
+not strip it from posts that already mention it.
+
+**Visibility and reporting are separate decisions.** The gate above decides
+whether a caller sees a row at all; `is_hidden` is then reported on every row
+they can see. Hiding conceals *which* characters are hidden, not that the
+mechanic exists — that is documented — so a flag on an already-visible row
+discloses nothing further. The field is optional in the schema, so consumers
+test `=== true`: an absent key reads as "not hidden".
+
 ### Character Sheet Storage
 
 The sheet is **five flat tabs**, each one `module_type` in `character_data`.

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
+import { renderWithProviders } from '@/test-utils/render';
+import { makeCharacter } from '@/test-utils/factories';
 import userEvent from '@testing-library/user-event';
 import { ParentCommentPreview } from './ParentCommentPreview';
 import { stubRenderedHeight } from '@/test-utils/renderedHeight';
@@ -212,5 +216,65 @@ describe('ParentCommentPreview', () => {
 
     expect(screen.queryByText('Expand')).not.toBeInTheDocument();
     expect(screen.queryByText('Collapse')).not.toBeInTheDocument();
+  });
+
+  describe('character profile link', () => {
+    // The parent author's name must only link where the viewer may open the
+    // profile. A hidden NPC's profile 404s by design, and this preview is also
+    // rendered by the cross-game inbox (UnreadInboxItemCard), which passes a
+    // raw character_id straight from the API with no roster to check it
+    // against. Outside a GameProvider the safe answer is plain text.
+    it('renders plain text outside a game context, even with a character id', async () => {
+      renderWithProviders(
+        <ParentCommentPreview content="Parent content" characterId={99} characterName="Masked Informant" />
+      );
+
+      expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Masked Informant' })
+      ).not.toBeInTheDocument();
+    });
+
+    it('links the name when the roster includes the character', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/characters', () =>
+          HttpResponse.json([makeCharacter({ id: 7, game_id: 1, name: 'Town Crier' })])
+        )
+      );
+
+      renderWithProviders(
+        <ParentCommentPreview content="Parent content" characterId={7} characterName="Town Crier" />,
+        { gameId: 1 }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Town Crier' })).toHaveAttribute(
+          'href',
+          '/characters/7'
+        );
+      });
+    });
+
+    it('renders plain text when the roster omits the character', async () => {
+      server.use(
+        http.get('/api/v1/games/:gameId/characters', () =>
+          HttpResponse.json([makeCharacter({ id: 7, game_id: 1, name: 'Town Crier' })])
+        )
+      );
+
+      renderWithProviders(
+        <ParentCommentPreview content="Parent content" characterId={99} characterName="Masked Informant" />,
+        { gameId: 1 }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Masked Informant')).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('link', { name: 'Masked Informant' })
+        ).not.toBeInTheDocument();
+      });
+    });
   });
 });

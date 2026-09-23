@@ -68,7 +68,7 @@ func (q *Queries) AssignNPCToUser(ctx context.Context, arg AssignNPCToUserParams
 const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (game_id, user_id, name, character_type, status)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
 `
 
 type CreateCharacterParams struct {
@@ -100,6 +100,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -216,7 +217,7 @@ func (q *Queries) DeleteCharacterModule(ctx context.Context, arg DeleteCharacter
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id FROM characters WHERE id = $1
+SELECT id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden FROM characters WHERE id = $1
 `
 
 func (q *Queries) GetCharacter(ctx context.Context, id int32) (Character, error) {
@@ -234,6 +235,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int32) (Character, error)
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -306,7 +308,7 @@ func (q *Queries) GetCharacterActivityStatsByGame(ctx context.Context, gameID in
 }
 
 const getCharacterByNameAndGame = `-- name: GetCharacterByNameAndGame :one
-SELECT id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id FROM characters
+SELECT id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden FROM characters
 WHERE name = $1 AND game_id = $2
 LIMIT 1
 `
@@ -332,6 +334,7 @@ func (q *Queries) GetCharacterByNameAndGame(ctx context.Context, arg GetCharacte
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -470,7 +473,7 @@ func (q *Queries) GetCharacterDataByModule(ctx context.Context, arg GetCharacter
 }
 
 const getCharactersByGame = `-- name: GetCharactersByGame :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
@@ -491,6 +494,7 @@ type GetCharactersByGameRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	OwnerUsername       pgtype.Text        `json:"owner_username"`
 	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
 	AssignedUsername    pgtype.Text        `json:"assigned_username"`
@@ -517,6 +521,7 @@ func (q *Queries) GetCharactersByGame(ctx context.Context, gameID int32) ([]GetC
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.OwnerUsername,
 			&i.AssignedUserID,
 			&i.AssignedUsername,
@@ -532,7 +537,7 @@ func (q *Queries) GetCharactersByGame(ctx context.Context, gameID int32) ([]GetC
 }
 
 const getCharactersByUser = `-- name: GetCharactersByUser :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, g.title as game_title
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, g.title as game_title
 FROM characters c
 JOIN games g ON c.game_id = g.id
 WHERE c.user_id = $1
@@ -551,6 +556,7 @@ type GetCharactersByUserRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	GameTitle           string             `json:"game_title"`
 }
 
@@ -575,6 +581,7 @@ func (q *Queries) GetCharactersByUser(ctx context.Context, userID pgtype.Int4) (
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.GameTitle,
 		); err != nil {
 			return nil, err
@@ -636,7 +643,7 @@ func (q *Queries) GetNPCAssignment(ctx context.Context, characterID int32) (NpcA
 }
 
 const getNPCsByGame = `-- name: GetNPCsByGame :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
@@ -657,6 +664,7 @@ type GetNPCsByGameRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	OwnerUsername       pgtype.Text        `json:"owner_username"`
 	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
 	AssignedUsername    pgtype.Text        `json:"assigned_username"`
@@ -683,6 +691,7 @@ func (q *Queries) GetNPCsByGame(ctx context.Context, gameID int32) ([]GetNPCsByG
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.OwnerUsername,
 			&i.AssignedUserID,
 			&i.AssignedUsername,
@@ -698,7 +707,7 @@ func (q *Queries) GetNPCsByGame(ctx context.Context, gameID int32) ([]GetNPCsByG
 }
 
 const getPlayerCharactersByGame = `-- name: GetPlayerCharactersByGame :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, u.username as owner_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username
 FROM characters c
 JOIN users u ON c.user_id = u.id
 WHERE c.game_id = $1 AND c.character_type = 'player_character'
@@ -717,6 +726,7 @@ type GetPlayerCharactersByGameRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	OwnerUsername       string             `json:"owner_username"`
 }
 
@@ -741,6 +751,7 @@ func (q *Queries) GetPlayerCharactersByGame(ctx context.Context, gameID int32) (
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.OwnerUsername,
 		); err != nil {
 			return nil, err
@@ -1012,7 +1023,7 @@ func (q *Queries) GetUserControllableCharactersAcrossGames(ctx context.Context, 
 }
 
 const getUserNPCs = `-- name: GetUserNPCs :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, g.title as game_title
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, g.title as game_title
 FROM characters c
 JOIN games g ON c.game_id = g.id
 JOIN npc_assignments na ON c.id = na.character_id
@@ -1032,6 +1043,7 @@ type GetUserNPCsRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	GameTitle           string             `json:"game_title"`
 }
 
@@ -1056,6 +1068,7 @@ func (q *Queries) GetUserNPCs(ctx context.Context, assignedUserID int32) ([]GetU
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.GameTitle,
 		); err != nil {
 			return nil, err
@@ -1090,7 +1103,7 @@ func (q *Queries) HasApprovedCharacterInGame(ctx context.Context, arg HasApprove
 
 const listAudienceNPCs = `-- name: ListAudienceNPCs :many
 
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN npc_assignments na ON c.id = na.character_id
@@ -1111,6 +1124,7 @@ type ListAudienceNPCsRow struct {
 	AvatarUrl           pgtype.Text        `json:"avatar_url"`
 	IsActive            bool               `json:"is_active"`
 	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden            bool               `json:"is_hidden"`
 	OwnerUsername       pgtype.Text        `json:"owner_username"`
 	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
 	AssignedUsername    pgtype.Text        `json:"assigned_username"`
@@ -1138,6 +1152,7 @@ func (q *Queries) ListAudienceNPCs(ctx context.Context, gameID int32) ([]ListAud
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.OwnerUsername,
 			&i.AssignedUserID,
 			&i.AssignedUsername,
@@ -1153,7 +1168,7 @@ func (q *Queries) ListAudienceNPCs(ctx context.Context, gameID int32) ([]ListAud
 }
 
 const listInactiveCharacters = `-- name: ListInactiveCharacters :many
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, u.username as current_owner_username, ou.username as original_owner_username
+SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as current_owner_username, ou.username as original_owner_username
 FROM characters c
 LEFT JOIN users u ON c.user_id = u.id
 LEFT JOIN users ou ON c.original_owner_user_id = ou.id
@@ -1173,6 +1188,7 @@ type ListInactiveCharactersRow struct {
 	AvatarUrl             pgtype.Text        `json:"avatar_url"`
 	IsActive              bool               `json:"is_active"`
 	OriginalOwnerUserID   pgtype.Int4        `json:"original_owner_user_id"`
+	IsHidden              bool               `json:"is_hidden"`
 	CurrentOwnerUsername  pgtype.Text        `json:"current_owner_username"`
 	OriginalOwnerUsername pgtype.Text        `json:"original_owner_username"`
 }
@@ -1198,6 +1214,7 @@ func (q *Queries) ListInactiveCharacters(ctx context.Context, gameID int32) ([]L
 			&i.AvatarUrl,
 			&i.IsActive,
 			&i.OriginalOwnerUserID,
+			&i.IsHidden,
 			&i.CurrentOwnerUsername,
 			&i.OriginalOwnerUsername,
 		); err != nil {
@@ -1217,7 +1234,7 @@ SET user_id = $2,
     original_owner_user_id = COALESCE(original_owner_user_id, user_id),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
 `
 
 type ReassignCharacterParams struct {
@@ -1240,6 +1257,41 @@ func (q *Queries) ReassignCharacter(ctx context.Context, arg ReassignCharacterPa
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
+	)
+	return i, err
+}
+
+const setCharacterHidden = `-- name: SetCharacterHidden :one
+UPDATE characters
+SET is_hidden = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
+`
+
+type SetCharacterHiddenParams struct {
+	ID       int32 `json:"id"`
+	IsHidden bool  `json:"is_hidden"`
+}
+
+// Hidden NPCs. Whether the caller may SEE a hidden character is decided by
+// core.CanSeeHiddenCharacter, never here -- this query only writes the flag.
+func (q *Queries) SetCharacterHidden(ctx context.Context, arg SetCharacterHiddenParams) (Character, error) {
+	row := q.db.QueryRow(ctx, setCharacterHidden, arg.ID, arg.IsHidden)
+	var i Character
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.UserID,
+		&i.Name,
+		&i.CharacterType,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AvatarUrl,
+		&i.IsActive,
+		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -1257,7 +1309,7 @@ const updateCharacter = `-- name: UpdateCharacter :one
 UPDATE characters
 SET name = $2, status = $3, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
 `
 
 type UpdateCharacterParams struct {
@@ -1281,6 +1333,7 @@ func (q *Queries) UpdateCharacter(ctx context.Context, arg UpdateCharacterParams
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -1289,7 +1342,7 @@ const updateCharacterAvatar = `-- name: UpdateCharacterAvatar :one
 UPDATE characters
 SET avatar_url = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
 `
 
 type UpdateCharacterAvatarParams struct {
@@ -1312,6 +1365,7 @@ func (q *Queries) UpdateCharacterAvatar(ctx context.Context, arg UpdateCharacter
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }
@@ -1320,7 +1374,7 @@ const updateCharacterStatus = `-- name: UpdateCharacterStatus :one
 UPDATE characters
 SET status = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id
+RETURNING id, game_id, user_id, name, character_type, status, created_at, updated_at, avatar_url, is_active, original_owner_user_id, is_hidden
 `
 
 type UpdateCharacterStatusParams struct {
@@ -1343,6 +1397,7 @@ func (q *Queries) UpdateCharacterStatus(ctx context.Context, arg UpdateCharacter
 		&i.AvatarUrl,
 		&i.IsActive,
 		&i.OriginalOwnerUserID,
+		&i.IsHidden,
 	)
 	return i, err
 }

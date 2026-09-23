@@ -285,15 +285,6 @@ components:
                 - user_id
                 - role
             type: object
-        AddParticipantRequest:
-            additionalProperties: false
-            properties:
-                character_id:
-                    format: int32
-                    type: integer
-            required:
-                - character_id
-            type: object
         AppendStagedPartBody:
             additionalProperties: false
             properties:
@@ -819,6 +810,9 @@ components:
                     type: integer
                 is_active:
                     description: False once the character has been retired
+                    type: boolean
+                is_hidden:
+                    description: NPC concealed from regular players; absent when the caller may not see the distinction
                     type: boolean
                 name:
                     description: Character name
@@ -1348,6 +1342,9 @@ components:
                     type: integer
                 is_active:
                     description: False once the character has been retired
+                    type: boolean
+                is_hidden:
+                    description: NPC concealed from regular players; absent when the caller may not see the distinction
                     type: boolean
                 name:
                     description: Character name
@@ -3537,6 +3534,9 @@ components:
                 is_active:
                     description: False once the character has been retired
                     type: boolean
+                is_hidden:
+                    description: NPC concealed from regular players; absent when the caller may not see the distinction
+                    type: boolean
                 name:
                     description: Character name
                     type: string
@@ -4962,6 +4962,15 @@ components:
                 - created_at
                 - last_seen_at
                 - expires
+            type: object
+        SetCharacterHiddenRequest:
+            additionalProperties: false
+            properties:
+                is_hidden:
+                    description: Whether regular players may discover this NPC
+                    type: boolean
+            required:
+                - is_hidden
             type: object
         StagedPartBody:
             additionalProperties: false
@@ -7313,6 +7322,46 @@ paths:
             security:
                 - BearerAuth: []
             summary: Set a character sheet field
+            tags:
+                - Characters
+    /characters/{id}/hidden:
+        put:
+            description: Conceals an NPC from regular players, or reveals it. GM only, NPCs only. A hidden NPC is absent from the roster, its profile is reported as not found, it cannot be @-mentioned or added to a conversation by a player -- but content it has already authored stays visible to everyone. Hiding is lifted once the game becomes a public archive.
+            operationId: setCharacterHidden
+            parameters:
+                - description: Character ID
+                  in: path
+                  name: id
+                  required: true
+                  schema:
+                    description: Character ID
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetCharacterHiddenRequest'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CharacterResponse'
+                    description: OK
+                "400":
+                    description: Character is not an NPC
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can hide or reveal characters
+                "404":
+                    description: No such character
+                "422":
+                    description: Request failed validation
+            security:
+                - BearerAuth: []
+            summary: Hide or reveal an NPC
             tags:
                 - Characters
     /characters/{id}/reassign:
@@ -9835,47 +9884,6 @@ paths:
                                 $ref: '#/components/schemas/ErrorModel'
                     description: Error
             summary: Edit a message
-            tags:
-                - Conversations
-    /games/{gameID}/conversations/{conversationId}/participants:
-        post:
-            operationId: addConversationParticipant
-            parameters:
-                - description: Game ID
-                  in: path
-                  name: gameID
-                  required: true
-                  schema:
-                    description: Game ID
-                    format: int32
-                    type: integer
-                - description: Conversation ID
-                  in: path
-                  name: conversationId
-                  required: true
-                  schema:
-                    description: Conversation ID
-                    format: int32
-                    type: integer
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/AddParticipantRequest'
-            responses:
-                "200":
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/SuccessOutputBody'
-                    description: OK
-                default:
-                    content:
-                        application/problem+json:
-                            schema:
-                                $ref: '#/components/schemas/ErrorModel'
-                    description: Error
-            summary: Add a participant
             tags:
                 - Conversations
     /games/{gameID}/conversations/{conversationId}/read:
