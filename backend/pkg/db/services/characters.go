@@ -255,6 +255,34 @@ func (cs *CharacterService) ApproveCharacter(ctx context.Context, characterID in
 	return &character, nil
 }
 
+// SetCharacterHidden conceals an NPC from regular players, or reveals it.
+//
+// Authorization (GM only) and the NPC-only rule live in the handler, not here.
+// See core.CanSeeHiddenCharacter for what hiding actually conceals.
+func (cs *CharacterService) SetCharacterHidden(ctx context.Context, characterID int32, hidden bool) (*models.Character, error) {
+	defer cs.Logger.LogOperation(ctx, "set_character_hidden", "character_id", characterID, "hidden", hidden)()
+
+	queries := models.New(cs.DB)
+	character, err := queries.SetCharacterHidden(ctx, models.SetCharacterHiddenParams{
+		ID:       characterID,
+		IsHidden: hidden,
+	})
+
+	if err != nil {
+		cs.Logger.LogError(ctx, err, "Failed to set character hidden", "character_id", characterID, "hidden", hidden)
+		return nil, err
+	}
+
+	cs.Logger.Info(ctx, "Character hidden flag updated",
+		"character_id", character.ID,
+		"character_name", character.Name,
+		"game_id", character.GameID,
+		"is_hidden", character.IsHidden,
+	)
+
+	return &character, nil
+}
+
 func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) error {
 	defer cs.Logger.LogOperation(ctx, "assign_npc_to_user",
 		"character_id", characterID,

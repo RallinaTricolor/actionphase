@@ -56,6 +56,17 @@ export class CharactersApi extends BaseApiClient {
     return this.client.put<Character>(`/api/v1/characters/${id}/rename`, data);
   }
 
+  /**
+   * Hide an NPC from regular players, or reveal it. GM only, NPCs only.
+   *
+   * Hiding removes the NPC from players' rosters, profiles, mention resolution
+   * and conversation creation — but NOT from content it has already authored,
+   * which keeps rendering for everyone.
+   */
+  async setCharacterHidden(id: number, isHidden: boolean) {
+    return this.client.put<Character>(`/api/v1/characters/${id}/hidden`, { is_hidden: isHidden });
+  }
+
   async deleteCharacter(id: number) {
     return this.client.delete(`/api/v1/characters/${id}`);
   }

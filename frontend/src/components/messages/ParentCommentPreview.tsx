@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMarkdown';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import type { Character } from '@/types/characters';
 
@@ -81,11 +81,11 @@ export function ParentCommentPreview({
             />
           )}
           {characterName ? (
-            characterId ? (
-              <Link to={`/characters/${characterId}`} className="font-medium text-content-primary hover:underline">{characterName}</Link>
-            ) : (
-              <span className="font-medium text-content-primary">{characterName}</span>
-            )
+            <CharacterNameLink
+              characterId={characterId}
+              name={characterName}
+              className="font-medium text-content-primary"
+            />
           ) : authorUsername ? (
             <span className="text-content-secondary">@{authorUsername}</span>
           ) : null}

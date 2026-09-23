@@ -1,5 +1,4 @@
 import { useState, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import type { CommentWithParent } from '@/types/messages';
 import { ParentCommentPreview } from './ParentCommentPreview';
@@ -8,6 +7,7 @@ import { CommentEditor } from './CommentEditor';
 import { Card, CardBody, Badge, Button, Select } from '@/components/ui';
 import { FavoriteButton } from './FavoriteButton';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
 import { useGameContext } from '@/contexts/GameContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/hooks/useAdminMode';
@@ -266,9 +266,11 @@ export function CommentWithParentCard({
             />
             <div className="flex flex-col flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Link to={`/characters/${comment.character_id}`} className="font-medium text-content-primary hover:underline">
-                  {comment.character_name || 'Unknown'}
-                </Link>
+                <CharacterNameLink
+                  characterId={comment.character_id}
+                  name={comment.character_name || 'Unknown'}
+                  className="font-medium text-content-primary"
+                />
                 {!screenshotModeEnabled && (
                   <span className="text-sm text-content-tertiary">
                     @{comment.author_username}

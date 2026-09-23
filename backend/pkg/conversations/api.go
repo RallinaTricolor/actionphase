@@ -34,11 +34,6 @@ type SendMessageRequest struct {
 	Content     string `json:"content"`
 }
 
-// AddParticipantRequest represents the request body for adding a participant
-type AddParticipantRequest struct {
-	CharacterID int32 `json:"character_id"`
-}
-
 // UpdateMessageRequest represents the request body for editing a message
 type UpdateMessageRequest struct {
 	Content string `json:"content"`

@@ -40,6 +40,11 @@ type approveCharacterInput struct {
 	Body *ApproveCharacterRequest
 }
 
+type setCharacterHiddenInput struct {
+	ID   int32 `path:"id" doc:"Character ID"`
+	Body *SetCharacterHiddenRequest
+}
+
 type assignNPCInput struct {
 	ID   int32 `path:"id" doc:"Character ID"`
 	Body *AssignNPCRequest
@@ -165,6 +170,13 @@ func ptrOf(v string) *string {
 	return &v
 }
 
+// boolPtr wraps a NOT NULL bool column. Distinct from ptrBool, which unwraps a
+// NULLABLE pgtype.Bool: here the pointer signals "withheld from this caller",
+// not "NULL in the database", so it must never return nil for a real false.
+func boolPtr(v bool) *bool {
+	return &v
+}
+
 func ptrInt(v pgtype.Int4) *int32 {
 	if !v.Valid {
 		return nil
@@ -210,6 +222,79 @@ func (h *Handler) resolveUserRole(ctx context.Context, gameID, userID int32, isG
 		}
 	}
 	return "player"
+}
+
+// canSeeHiddenCharacterRow decides whether the caller may see one hidden
+// character, and is the only hidden-NPC gate in this package.
+//
+// It wraps core.CanSeeHiddenCharacter with the two things the pure rule leaves
+// to its callers: the public-archive exemption (a completed or epilogue game
+// discloses its hidden cast to everyone, like anonymous usernames) and the
+// caller's role.
+//
+// It gates VISIBILITY of a row, never the reporting of is_hidden on a row the
+// caller can already see -- hiding conceals which characters are hidden, not
+// that the mechanic exists.
+//
+// isOwnerOrAssigned is passed in rather than looked up: the roster gates
+// already join npc_assignments, and a lookup per row would reintroduce the N+1
+// that GetCharacterDataByGame exists to remove.
+func (h *Handler) canSeeHiddenCharacterRow(userRole, gameState string, isOwnerOrAssigned bool) bool {
+	if core.IsPublicArchive(gameState) {
+		return true
+	}
+	return core.CanSeeHiddenCharacter(userRole, isOwnerOrAssigned)
+}
+
+// rejectHiddenCharacter reports 404 when the caller may not see this hidden
+// character, and nil otherwise.
+//
+// This exists because the rule needs applying at FOUR single-character
+// endpoints -- the record, its sheet data, its stats, and anything added later
+// -- not just the one. Gating only the record leaves the siblings serving the
+// same concealed character's bio and message counts, which is exactly the bug
+// this consolidates away. The batch endpoints keep their own inline gates:
+// they already hold userRole and the assignment join, and a per-row call here
+// would reintroduce an N+1. humaGetCharacter likewise keeps its own: it needs
+// userRole, isOwner and isAssignedUser anyway for the unapproved-character
+// gate and for blanking identity, so calling this would repeat the
+// assignment lookup.
+//
+// A 404 rather than a 403, for the same reason as every other hidden gate: a
+// 403 confirms the character exists.
+//
+// authUser may be nil -- GetCharacterData serves unauthenticated callers the
+// public fields, and an anonymous caller is never entitled to a hidden
+// character.
+func (h *Handler) rejectHiddenCharacter(ctx context.Context, character *models.Character, game *models.Game, authUser *core.AuthenticatedUser) error {
+	if !character.IsHidden {
+		return nil
+	}
+
+	if authUser == nil {
+		h.App.ObsLogger.Warn(ctx, "Hidden character not found (unauthenticated)", "character_id", character.ID)
+		return huma.Error404NotFound("character not found")
+	}
+
+	isGM := core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
+	isOwner := character.UserID.Valid && character.UserID.Int32 == authUser.ID
+	userRole := h.resolveUserRole(ctx, character.GameID, authUser.ID, isGM)
+
+	// An audience member assigned an NPC controls it, so they may see it.
+	isAssignedUser := false
+	if character.CharacterType == "npc" {
+		queries := models.New(h.App.Pool)
+		if assignment, err := queries.GetNPCAssignment(ctx, character.ID); err == nil {
+			isAssignedUser = assignment.AssignedUserID == authUser.ID
+		}
+	}
+
+	if h.canSeeHiddenCharacterRow(userRole, game.State, isOwner || isAssignedUser) {
+		return nil
+	}
+
+	h.App.ObsLogger.Warn(ctx, "Hidden character not found", "character_id", character.ID)
+	return huma.Error404NotFound("character not found")
 }
 
 // Character CRUD
@@ -343,6 +428,15 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 		}
 	}
 
+	// A hidden NPC is reported as NOT FOUND, never forbidden: a 403 would
+	// confirm the character exists, which is exactly the disclosure hiding
+	// prevents. Same treatment, and same reasoning, as the unapproved-character
+	// gate above.
+	if character.IsHidden && !h.canSeeHiddenCharacterRow(userRole, game.State, isOwner || isAssignedUser) {
+		h.App.ObsLogger.Warn(ctx, "Get character not found (hidden)", "character_id", in.ID)
+		return nil, huma.Error404NotFound("character not found")
+	}
+
 	resp := &CharacterResponse{
 		ID:        character.ID,
 		GameID:    character.GameID,
@@ -378,6 +472,10 @@ func (h *Handler) humaGetCharacter(ctx context.Context, in *characterIDInput) (*
 		charType := character.CharacterType
 		resp.CharacterType = &charType
 	}
+
+	// Reaching here means the gate above allowed this character, so the flag
+	// adds nothing the caller does not already have.
+	resp.IsHidden = boolPtr(character.IsHidden)
 
 	return &characterOutput{Body: resp}, nil
 }
@@ -419,6 +517,16 @@ func (h *Handler) humaGetGameCharacters(ctx context.Context, in *gameIDInput) (*
 			}
 		}
 
+		// Hidden NPCs are omitted from a regular player's roster entirely.
+		// The row is skipped rather than blanked: a present entry with a
+		// redacted name would still disclose that the character exists, which
+		// is the whole of what hiding conceals.
+		isOwnerOrAssigned := (char.UserID.Valid && char.UserID.Int32 == authUser.ID) ||
+			(char.AssignedUserID.Valid && char.AssignedUserID.Int32 == authUser.ID)
+		if char.IsHidden && !h.canSeeHiddenCharacterRow(userRole, game.State, isOwnerOrAssigned) {
+			continue
+		}
+
 		item := &CharacterResponse{
 			ID:     char.ID,
 			GameID: char.GameID,
@@ -444,6 +552,12 @@ func (h *Handler) humaGetGameCharacters(ctx context.Context, in *gameIDInput) (*
 			item.AssignedUserID = ptrInt(char.AssignedUserID)
 			item.AssignedUsername = ptrText(char.AssignedUsername)
 		}
+
+		// Reported on every row the caller can see. Hiding conceals WHICH
+		// characters are hidden, not that the mechanic exists -- that is
+		// documented. Any row still in this list is one the gate above allowed,
+		// so its flag discloses nothing further.
+		item.IsHidden = boolPtr(char.IsHidden)
 
 		resp = append(resp, item)
 	}
@@ -629,6 +743,44 @@ func (h *Handler) humaApproveCharacter(ctx context.Context, in *approveCharacter
 				h.App.ObsLogger.Warn(notifCtx, "Failed to send character approved notification", "error", err, "character_id", updated.ID)
 			}
 		})
+	}
+
+	return &characterOutput{Body: characterFromModel(updated)}, nil
+}
+
+// humaSetCharacterHidden conceals an NPC from regular players, or reveals it.
+//
+// GM-only, and NPC-only. The NPC restriction is enforced here rather than as a
+// database CHECK so that extending hiding to player characters later stays a
+// one-line handler change rather than a migration.
+func (h *Handler) humaSetCharacterHidden(ctx context.Context, in *setCharacterHiddenInput) (*characterOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_set_character_hidden")()
+
+	authUser, err := h.authUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	character, game, err := h.loadCharacterGame(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
+		h.App.ObsLogger.Warn(ctx, "Set character hidden forbidden", "user_id", authUser.ID, "character_id", in.ID)
+		return nil, huma.Error403Forbidden("only the GM can hide or reveal characters")
+	}
+
+	if character.CharacterType != "npc" {
+		h.App.ObsLogger.Warn(ctx, "Set character hidden rejected for non-NPC",
+			"character_id", in.ID, "character_type", character.CharacterType)
+		return nil, huma.Error400BadRequest("only NPCs can be hidden")
+	}
+
+	updated, err := h.CharacterService.SetCharacterHidden(ctx, in.ID, in.Body.IsHidden)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to set character hidden", "error", err, "character_id", in.ID)
+		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
 	return &characterOutput{Body: characterFromModel(updated)}, nil
@@ -878,10 +1030,21 @@ func (h *Handler) humaGetCharacterData(ctx context.Context, in *characterIDInput
 		userID = &id
 	}
 
+	// A hidden character's sheet data is profile content, so it is gated even
+	// though the public fields are otherwise open to anyone. Loaded here rather
+	// than relying on canViewPrivateCharacterData: that decides WHICH fields a
+	// caller sees, not whether the character is visible at all.
+	character, game, err := h.loadCharacterGame(ctx, in.ID)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.rejectHiddenCharacter(ctx, character, game, core.GetAuthenticatedUser(ctx)); err != nil {
+		return nil, err
+	}
+
 	canViewPrivate := h.canViewPrivateCharacterData(ctx, in.ID, userID)
 
 	var characterData []models.CharacterDatum
-	var err error
 	if canViewPrivate {
 		characterData, err = h.CharacterService.GetCharacterData(ctx, in.ID)
 		if err != nil {
@@ -973,6 +1136,13 @@ func (h *Handler) humaGetCharacterStats(ctx context.Context, in *characterIDInpu
 	}
 
 	authUser := core.GetAuthenticatedUser(ctx)
+
+	// Message counts are profile content: a public count discloses that the
+	// character exists and is active, and the private count is worse still.
+	if err := h.rejectHiddenCharacter(ctx, character, game, authUser); err != nil {
+		return nil, err
+	}
+
 	gameLevelAccess := h.gameLevelPrivateStatsAccess(ctx, authUser, *game)
 	canSeePrivate := canSeeCharacterPrivateStats(gameLevelAccess, authUser, character.UserID)
 
@@ -1009,6 +1179,9 @@ func (h *Handler) humaGetGameCharacterStats(ctx context.Context, in *gameIDInput
 	// rather than re-running the DB lookups per roster member.
 	gameLevelAccess := h.gameLevelPrivateStatsAccess(ctx, authUser, *game)
 
+	isGM := core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
+	userRole := h.resolveUserRole(ctx, in.GameID, authUser.ID, isGM)
+
 	statsByCharacterID, err := h.CharacterService.GetCharacterActivityStatsByGame(ctx, in.GameID)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game character activity stats", "error", err, "game_id", in.GameID)
@@ -1017,6 +1190,14 @@ func (h *Handler) humaGetGameCharacterStats(ctx context.Context, in *gameIDInput
 
 	resp := make(map[string]*CharacterStatsResponse, len(characters))
 	for _, char := range characters {
+		// The key itself is the disclosure: an entry with zeroed counts still
+		// tells the caller this character ID exists. Omit it entirely.
+		isOwnerOrAssigned := (char.UserID.Valid && char.UserID.Int32 == authUser.ID) ||
+			(char.AssignedUserID.Valid && char.AssignedUserID.Int32 == authUser.ID)
+		if char.IsHidden && !h.canSeeHiddenCharacterRow(userRole, game.State, isOwnerOrAssigned) {
+			continue
+		}
+
 		stats, ok := statsByCharacterID[char.ID]
 		if !ok {
 			// No messages of either kind for this character.
@@ -1073,6 +1254,18 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
+	// The hidden-NPC gate needs the game's state (for the archive exemption)
+	// and the caller's role. Unlike the other roster endpoints this one has no
+	// game in context -- it gates on CanUserViewGame instead -- so it is loaded
+	// here.
+	game, err := h.GameService.GetGame(ctx, in.GameID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", in.GameID)
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+	isGM := core.IsUserGameMasterCtx(ctx, userID, authUser.IsAdmin, *game, h.App.Pool)
+	userRole := h.resolveUserRole(ctx, in.GameID, userID, isGM)
+
 	// One query for the whole cast's rows, then partitioned in memory. The
 	// alternative -- a query per character -- is the N+1 this endpoint exists to
 	// remove.
@@ -1089,6 +1282,14 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 
 	resp := make(map[string][]*CharacterDataResponse, len(characters))
 	for _, char := range characters {
+		// As with the stats batch, the key is itself the disclosure -- an empty
+		// sheet array would still confirm the character ID exists.
+		isOwnerOrAssigned := (char.UserID.Valid && char.UserID.Int32 == userID) ||
+			(char.AssignedUserID.Valid && char.AssignedUserID.Int32 == userID)
+		if char.IsHidden && !h.canSeeHiddenCharacterRow(userRole, game.State, isOwnerOrAssigned) {
+			continue
+		}
+
 		canViewPrivate := h.canViewPrivateCharacterData(ctx, char.ID, &userID)
 
 		// Always a non-nil slice: an empty JSON array reads as "nothing to show
@@ -1123,6 +1324,12 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 // It sets no username: a plain character row carries only user_id, and the
 // owner's name needs a join. Handlers that have it fill Username in afterwards,
 // gated by canSeePlayerNames.
+// characterFromModel builds the response for the endpoints that ACT on a
+// character: approve, reassign, rename, hide. All of them are already gated to
+// the GM or the character's owner, so IsHidden is reported unconditionally
+// here -- a caller who reached one of these has by definition earned the
+// distinction. The read endpoints build their responses inline precisely
+// because they must decide it per caller.
 func characterFromModel(c *models.Character) *CharacterResponse {
 	charType := c.CharacterType
 	return &CharacterResponse{
@@ -1133,6 +1340,7 @@ func characterFromModel(c *models.Character) *CharacterResponse {
 		Status:        c.Status,
 		AvatarURL:     ptrText(c.AvatarUrl),
 		IsActive:      c.IsActive,
+		IsHidden:      boolPtr(c.IsHidden),
 		CreatedAt:     c.CreatedAt.Time,
 		UpdatedAt:     c.UpdatedAt.Time,
 		UserID:        ptrInt(c.UserID),
@@ -1312,6 +1520,27 @@ func RegisterHumaCharacters(api huma.API, h *Handler) {
 			"404": {Description: "No such character"},
 		},
 	}, h.humaApproveCharacter)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "setCharacterHidden",
+		Method:      http.MethodPut,
+		Path:        "/{id}/hidden",
+		Summary:     "Hide or reveal an NPC",
+		Description: "Conceals an NPC from regular players, or reveals it. GM only, NPCs only. " +
+			"A hidden NPC is absent from the roster, its profile is reported as not found, it " +
+			"cannot be @-mentioned or added to a conversation by a player -- but content it has " +
+			"already authored stays visible to everyone. Hiding is lifted once the game becomes " +
+			"a public archive.",
+		Tags:     []string{"Characters"},
+		Security: bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
+			"400": {Description: "Character is not an NPC"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can hide or reveal characters"},
+			"404": {Description: "No such character"},
+		},
+	}, h.humaSetCharacterHidden)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "assignNPC",

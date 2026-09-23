@@ -49,7 +49,7 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	}
 
 	// Extract character mentions from content
-	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID)
+	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID, req.AuthorID)
 	if err != nil {
 		// Log error but don't fail the comment creation
 		// Mention extraction is a non-critical feature
@@ -567,7 +567,7 @@ func (s *MessageService) UpdateComment(ctx context.Context, commentID int32, con
 	}
 
 	// Extract character mentions from new content
-	mentionedIDs, err := s.extractCharacterMentions(ctx, content, existingComment.GameID)
+	mentionedIDs, err := s.extractCharacterMentions(ctx, content, existingComment.GameID, existingComment.AuthorID)
 	if err != nil {
 		// Log error but don't fail the update
 		// Mention extraction is a non-critical feature
