@@ -189,8 +189,11 @@ describe('CharacterPage', () => {
 
     renderCharacterPage();
 
-    // Should show skeleton loading (div with animate-pulse)
-    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
+    // A whole-page spinner, not the header skeleton this page used to show.
+    // The skeleton let the stats line and feed render beside it, which is the
+    // structure that leaked a hidden NPC's comments before the 404 landed --
+    // see 'renders no feed while the character is still loading'.
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('shows character name and avatar when loaded', () => {
@@ -298,6 +301,114 @@ describe('CharacterPage', () => {
 
     expect(screen.getByText(/failed to load activity/i)).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
+  });
+
+  describe('character not found', () => {
+    /**
+     * A hidden NPC answers 404, and so does a nonexistent ID. Both land here.
+     *
+     * Regression test: the page used to render an inline "Failed to load
+     * character" banner and keep going, so the stats line and the activity feed
+     * -- which fetch independently of the character record -- still rendered. A
+     * player who guessed a hidden NPC's ID got a partial profile with a red box
+     * on top.
+     */
+    function renderNotFound(messages: CharacterMessage[] = [mockMessage]) {
+      mockCharacterQuery({ data: undefined, isLoading: false, isError: true });
+
+      vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue(
+        makeQueryResult<CharacterActivityStats>({
+          data: { public_messages: 7, private_messages: 3 },
+          isLoading: false,
+          isError: false,
+        })
+      );
+
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+        makeInfiniteQueryResult<CharacterMessagesResponse>({
+          data: {
+            pages: [{ messages, pagination: { total: messages.length, limit: 20, offset: 0 } }],
+            pageParams: [0],
+          },
+          isLoading: false,
+          isError: false,
+          fetchNextPage: vi.fn(),
+          hasNextPage: false,
+          isFetchingNextPage: false,
+        })
+      );
+
+      return renderCharacterPage();
+    }
+
+    it('renders a not-found page instead of the profile', () => {
+      renderNotFound();
+
+      expect(screen.getByText('Character not found')).toBeInTheDocument();
+      // The old inline banner must be gone, not merely supplemented.
+      expect(screen.queryByText(/failed to load character/i)).not.toBeInTheDocument();
+    });
+
+    it('renders no activity feed', () => {
+      renderNotFound();
+
+      // The feed endpoint still answers 200 by design -- authored content stays
+      // visible -- so the page, not the API, is what must withhold it here.
+      expect(screen.queryByText('Hello world')).not.toBeInTheDocument();
+      expect(screen.queryByText(/activity/i)).not.toBeInTheDocument();
+    });
+
+    it('renders no message counts', () => {
+      renderNotFound();
+
+      // This was the live leak: "Messages: 1 public" rendered beside the error.
+      expect(screen.queryByText(/public/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/private/i)).not.toBeInTheDocument();
+    });
+
+    it('renders no feed while the character is still loading', () => {
+      // The race this guards: the comments endpoint answers 200 and resolves
+      // first, so a hidden NPC's feed painted for ~1s and was then replaced by
+      // the 404. Anything gated on isError alone reopens that window.
+      mockCharacterQuery({ data: undefined, isLoading: true, isError: false });
+
+      vi.mocked(useCharacterStatsModule.useCharacterStats).mockReturnValue(
+        makeQueryResult<CharacterActivityStats>({
+          data: { public_messages: 7, private_messages: 3 },
+          isLoading: false,
+          isError: false,
+        })
+      );
+
+      vi.mocked(useCharacterCommentsModule.useCharacterComments).mockReturnValue(
+        makeInfiniteQueryResult<CharacterMessagesResponse>({
+          data: {
+            pages: [{ messages: [mockMessage], pagination: { total: 1, limit: 20, offset: 0 } }],
+            pageParams: [0],
+          },
+          isLoading: false,
+          isError: false,
+          fetchNextPage: vi.fn(),
+          hasNextPage: false,
+          isFetchingNextPage: false,
+        })
+      );
+
+      renderCharacterPage();
+
+      expect(screen.queryByText('Hello world')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Messages:/)).not.toBeInTheDocument();
+    });
+
+    it('does not say whether the character exists', () => {
+      renderNotFound();
+
+      // A hidden NPC 404s precisely so it is indistinguishable from a bad ID.
+      // Wording that distinguished them would undo the gate.
+      expect(
+        screen.getByText('No character exists at this address, or you cannot view it.')
+      ).toBeInTheDocument();
+    });
   });
 
   describe('favorite star', () => {

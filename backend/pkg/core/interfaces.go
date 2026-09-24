@@ -2090,6 +2090,11 @@ type CharacterServiceInterface interface {
 	// the global Utility Drawer.
 	GetUserControllableCharactersAcrossGames(ctx context.Context, userID int32) ([]models.GetUserControllableCharactersAcrossGamesRow, error)
 	ApproveCharacter(ctx context.Context, characterID int32) (*models.Character, error)
+	// SetCharacterHidden conceals an NPC from regular players, or reveals it.
+	// Who MAY hide (GM only) and what may be hidden (NPCs only) are enforced by
+	// the handler: a service-layer rejection renders as a 500, where the
+	// handler's renders as the 403/400 it deserves.
+	SetCharacterHidden(ctx context.Context, characterID int32, hidden bool) (*models.Character, error)
 	AssignNPCToUser(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) error
 	SetCharacterData(ctx context.Context, req CharacterDataRequest) error
 	AddToCharacterData(ctx context.Context, req CharacterDataRequest) error
@@ -2135,7 +2140,6 @@ type ConversationServiceInterface interface {
 	// for previewing an unread message without reading the whole conversation.
 	GetMessageWithContext(ctx context.Context, conversationID int32, messageID int32, userID int32) ([]models.GetConversationMessagesRow, error)
 	MarkConversationAsRead(ctx context.Context, conversationID int32, userID int32) error
-	AddParticipant(ctx context.Context, conversationID int32, characterID int32) error
 	UpdatePrivateMessage(ctx context.Context, messageID int32, userID int32, content string) (*models.PrivateMessage, error)
 	DeletePrivateMessage(ctx context.Context, messageID int32, userID int32) error
 	CanUserAccessConversation(ctx context.Context, conversationID int32, userID int32, isAdmin bool) (bool, error)

@@ -107,7 +107,7 @@ func (s *MessageService) CreateDraftPost(ctx context.Context, req core.CreatePos
 	}
 
 	// Extract character mentions
-	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID)
+	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID, req.AuthorID)
 	if err != nil {
 		mentionedIDs = []int32{}
 	}
@@ -146,7 +146,7 @@ func (s *MessageService) UpdateDraftPost(ctx context.Context, postID int32, cont
 		return nil, fmt.Errorf("failed to get draft post: %w", err)
 	}
 
-	mentionedIDs, err := s.extractCharacterMentions(ctx, content, post.GameID)
+	mentionedIDs, err := s.extractCharacterMentions(ctx, content, post.GameID, post.AuthorID)
 	if err != nil {
 		mentionedIDs = []int32{}
 	}

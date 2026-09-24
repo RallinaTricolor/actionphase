@@ -39,7 +39,7 @@ func TestExtractCharacterMentions_SingleMention(t *testing.T) {
 	// Test content with single mention
 	content := "Hello @Aragorn, how are you?"
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs, 1)
@@ -90,7 +90,7 @@ func TestExtractCharacterMentions_MultipleMentions(t *testing.T) {
 	// Test content with multiple mentions
 	content := "Hey @Aragorn and @Gandalf, let's meet @Legolas at the tavern!"
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs, 3)
@@ -127,7 +127,7 @@ func TestExtractCharacterMentions_DuplicateMentions(t *testing.T) {
 	// Test content with duplicate mentions
 	content := "@Aragorn said hello. Later, @Aragorn said goodbye. @Aragorn is great!"
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs, 1, "Should deduplicate to single character ID")
@@ -162,7 +162,7 @@ func TestExtractCharacterMentions_NonExistentCharacter(t *testing.T) {
 	// Test content with one valid and one non-existent character
 	content := "@Aragorn meets @Aragron (typo should be ignored)"
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs, 1, "Should only include valid character")
@@ -186,7 +186,7 @@ func TestExtractCharacterMentions_EmptyContent(t *testing.T) {
 	// Test with empty content
 	content := ""
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Empty(t, mentionedIDs, "Should return empty slice for empty content")
@@ -209,7 +209,7 @@ func TestExtractCharacterMentions_NoMentions(t *testing.T) {
 	// Test content without mentions
 	content := "This is a normal message without any mentions. Just regular text."
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Empty(t, mentionedIDs, "Should return empty slice when no mentions present")
@@ -250,7 +250,7 @@ func TestExtractCharacterMentions_MultiWordNames(t *testing.T) {
 	// Test: Current regex will only match first word
 	content := "Hello @Bob, meet Bob Smith" // Only @Bob has @, "Bob Smith" is plain text
 
-	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID)
+	mentionedIDs, err := service.extractCharacterMentions(ctx, content, game.ID, int32(gm.ID))
 
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs, 1, "Regex only captures single word after @")
@@ -294,14 +294,14 @@ func TestExtractCharacterMentions_CrossGameIsolation(t *testing.T) {
 	content := "Hello @Aragorn!"
 
 	// Test: Mention in game1 should only return game1's Aragorn
-	mentionedIDs1, err := service.extractCharacterMentions(ctx, content, game1.ID)
+	mentionedIDs1, err := service.extractCharacterMentions(ctx, content, game1.ID, int32(gm.ID))
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs1, 1)
 	assert.Contains(t, mentionedIDs1, aragorn1.ID)
 	assert.NotContains(t, mentionedIDs1, aragorn2.ID)
 
 	// Test: Mention in game2 should only return game2's Aragorn
-	mentionedIDs2, err := service.extractCharacterMentions(ctx, content, game2.ID)
+	mentionedIDs2, err := service.extractCharacterMentions(ctx, content, game2.ID, int32(gm.ID))
 	require.NoError(t, err)
 	assert.Len(t, mentionedIDs2, 1)
 	assert.Contains(t, mentionedIDs2, aragorn2.ID)
@@ -378,7 +378,7 @@ func TestExtractCharacterMentions_EdgeCasePatterns(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mentionedIDs, err := service.extractCharacterMentions(ctx, tt.content, game.ID)
+			mentionedIDs, err := service.extractCharacterMentions(ctx, tt.content, game.ID, int32(gm.ID))
 			require.NoError(t, err)
 			assert.Len(t, mentionedIDs, tt.expectedCount, "Expected %d mentions", tt.expectedCount)
 			for _, id := range tt.shouldContain {
@@ -460,7 +460,7 @@ func TestExtractCharacterMentions_SkipCodeBlocks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mentionedIDs, err := service.extractCharacterMentions(ctx, tt.content, game.ID)
+			mentionedIDs, err := service.extractCharacterMentions(ctx, tt.content, game.ID, int32(gm.ID))
 			require.NoError(t, err)
 			assert.Len(t, mentionedIDs, tt.expectedCount, "Expected %d mentions for: %s", tt.expectedCount, tt.content)
 			for _, id := range tt.shouldContain {
