@@ -301,4 +301,32 @@ describe('ThreadedComment — manual read mode', () => {
       expect(screen.queryByTestId('toggle-read-button')).toBeNull();
     });
   });
+
+  describe('View source', () => {
+    const markdown = '| a | b |\n|---|---|\n| **1** | 2 |';
+
+    it('opens the raw markdown from a read-only (history) comment', async () => {
+      const user = userEvent.setup();
+      renderComment({ comment: { ...baseComment, content: markdown }, readOnly: true });
+
+      await user.click(screen.getByTestId('view-source-button'));
+
+      expect(screen.getByText('Comment source')).toBeInTheDocument();
+      expect((screen.getByTestId('markdown-source') as HTMLTextAreaElement).value).toBe(markdown);
+    });
+
+    it('is not offered on deleted comments', () => {
+      renderComment({ comment: { ...baseComment, is_deleted: true } });
+      expect(screen.queryByTestId('view-source-button')).toBeNull();
+    });
+
+    it('hides the button while the comment is being edited', async () => {
+      const user = userEvent.setup();
+      renderComment();
+
+      expect(screen.getByTestId('view-source-button')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Edit this comment' }));
+      expect(screen.queryByTestId('view-source-button')).toBeNull();
+    });
+  });
 });
