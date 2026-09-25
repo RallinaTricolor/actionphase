@@ -23,6 +23,7 @@ import { useOptionalGameContext } from '@/contexts/GameContext';
 import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { postCachingService } from '@/services/PostCachingService';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
+import { ViewSourceModal } from './ViewSourceModal';
 
 interface PostCardProps {
   post: Message;
@@ -136,6 +137,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
+  const [showSource, setShowSource] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
 
   // Get unread comment IDs for this post from the query
@@ -488,6 +490,24 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     />
   );
 
+  // Offered in readOnly (history) too: that's the case it exists for, since a
+  // post there can no longer be opened for editing to get at its markdown.
+  const viewSourceButton = !isEditing && (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => setShowSource(true)}
+      className="text-interactive-primary hover:text-interactive-primary-hover"
+      title="View markdown source"
+      data-testid="view-post-source-button"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+      View Source
+    </Button>
+  );
+
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
 
@@ -562,6 +582,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     )}
                     </Button>
                   )}
+                  {viewSourceButton}
                 </div>
 
                 {/* Post content flows around the floating portrait */}
@@ -633,6 +654,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   )}
                   </Button>
                 )}
+                {viewSourceButton}
               </div>
             </>
           )}
@@ -833,6 +855,13 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
           allowReadTracking={allowReadTracking}
         />
       )}
+
+      <ViewSourceModal
+        isOpen={showSource}
+        onClose={() => setShowSource(false)}
+        content={post.content}
+        kind="post"
+      />
 
       {/* Discard-draft confirmation for the comment form's Cancel button */}
       <ConfirmDiscardDraft

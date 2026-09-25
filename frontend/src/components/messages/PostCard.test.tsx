@@ -1971,4 +1971,50 @@ describe('PostCard', () => {
     });
   });
 
+  describe('View source', () => {
+    const tablePost = makeMessage({
+      ...mockPost,
+      id: 50,
+      content: '| Name | HP |\n|------|---:|\n| **Ogre** | 42 |',
+    });
+
+    it('shows the raw markdown of a read-only (history) post', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(
+        <PostCard
+          post={tablePost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+          readOnly={true}
+        />
+      );
+
+      await user.click(screen.getByTestId('view-post-source-button'));
+
+      expect(screen.getByText('Post source')).toBeInTheDocument();
+      expect((screen.getByTestId('markdown-source') as HTMLTextAreaElement).value).toBe(tablePost.content);
+    });
+
+    it('hides the button while the post is being edited', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(
+        <PostCard
+          post={tablePost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      expect(screen.getByTestId('view-post-source-button')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      expect(screen.queryByTestId('view-post-source-button')).not.toBeInTheDocument();
+    });
+  });
+
 });

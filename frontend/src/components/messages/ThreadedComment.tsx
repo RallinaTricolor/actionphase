@@ -11,6 +11,7 @@ import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
 import { Button, Select } from '@/components/ui';
 import { FavoriteButton } from './FavoriteButton';
+import { ViewSourceModal } from './ViewSourceModal';
 import { useAdminMode } from '@/hooks/useAdminMode';
 import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { useUpdateComment, useDeleteComment } from '@/hooks/useCommentMutations';
@@ -203,6 +204,7 @@ export const ThreadedComment = memo(function ThreadedComment({
     (variant !== 'desktop' && depth < mobileMaxDepth - 1);
   const skipChildLoad = !childrenRenderedSomewhere;
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showSource, setShowSource] = useState(false);
 
   // Track component mount status
   useEffect(() => {
@@ -775,6 +777,24 @@ export const ThreadedComment = memo(function ThreadedComment({
             )}
           </Button>
 
+          {/* Not gated on readOnly: the history view is where this matters
+              most, since a comment there can no longer be opened for editing. */}
+          {!comment.is_deleted && !isEditing && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowSource(true)}
+              className="p-2 md:p-0 min-h-[44px] md:min-h-0 h-auto text-xs"
+              title="View markdown source"
+              aria-label="View markdown source"
+              data-testid="view-source-button"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              <span className="hidden md:inline">Source</span>
+            </Button>
+          )}
+
           {/* Deliberately NOT gated on screenshotModeEnabled, unlike Edit/Delete
               below: a favorite is private to the viewer, so the star discloses
               nothing about who is behind the character.
@@ -1071,6 +1091,13 @@ export const ThreadedComment = memo(function ThreadedComment({
           </>
       )}
 
+
+      <ViewSourceModal
+        isOpen={showSource}
+        onClose={() => setShowSource(false)}
+        content={comment.content}
+        kind="comment"
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal
