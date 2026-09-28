@@ -979,12 +979,19 @@ func (h *Handler) humaSetCharacterData(ctx context.Context, in *setCharacterData
 	}
 
 	// Stats are the GM's to set even on a character the player otherwise owns:
-	// they are game balance, not self-description.
-	isStatField := (in.Body.ModuleType == "skills" && in.Body.FieldName == "skills") ||
-		(in.Body.ModuleType == "inventory" && in.Body.FieldName == "items") ||
-		(in.Body.ModuleType == "numbers" && in.Body.FieldName == "numbers")
+	// they are game balance, not self-description. Checked after edit
+	// permission so a caller who cannot edit the character learns nothing
+	// about which pairs exist.
+	access := core.ClassifySheetWrite(in.Body.ModuleType, in.Body.FieldName, core.DefaultSheetTabKeys)
+	if access == core.SheetWriteRejected {
+		h.App.ObsLogger.Warn(ctx, "Rejected write to unknown character sheet field",
+			"character_id", in.ID, "user_id", userID,
+			"module_type", in.Body.ModuleType, "field_name", in.Body.FieldName)
+		return nil, huma.Error422UnprocessableEntity(fmt.Sprintf(
+			"%s/%s is not a character sheet field", in.Body.ModuleType, in.Body.FieldName))
+	}
 
-	if isStatField {
+	if access == core.SheetWriteGMOnly {
 		queries := models.New(h.App.Pool)
 		character, err := queries.GetCharacter(ctx, in.ID)
 		if err != nil {

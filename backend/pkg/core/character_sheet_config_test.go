@@ -251,3 +251,61 @@ func TestCharacterSheetConfigRoundTrip(t *testing.T) {
 		}
 	})
 }
+
+func TestClassifySheetWrite(t *testing.T) {
+	tests := []struct {
+		name       string
+		moduleType string
+		fieldName  string
+		want       SheetWriteAccess
+	}{
+		// The two profile fields are the player's own description of their
+		// character, so anyone who can edit the character may write them.
+		{"public profile", "bio", "background", SheetWriteEditor},
+		{"private notes", "notes", "private_notes", SheetWriteEditor},
+
+		// Stat tabs are game balance: GM only.
+		{"skills tab", "skills", "skills", SheetWriteGMOnly},
+		{"inventory tab stores under items", "inventory", "items", SheetWriteGMOnly},
+		{"numbers tab", "numbers", "numbers", SheetWriteGMOnly},
+
+		// Everything else is rejected outright. Each of these was accepted from
+		// any editor before the allowlist, which is the gap it closes.
+		{"unknown field on a stat tab", "skills", "foo", SheetWriteRejected},
+		{"inventory under its own key", "inventory", "inventory", SheetWriteRejected},
+		{"unknown field on bio", "bio", "private_notes", SheetWriteRejected},
+		{"unknown module", "custom", "x", SheetWriteRejected},
+		{"custom tab not in the layout", "t_abc123", "t_abc123", SheetWriteRejected},
+		{"retired abilities tab", "abilities", "abilities", SheetWriteRejected},
+		{"renamed currency tab", "currency", "currency", SheetWriteRejected},
+		{"old test-only biography module", "biography", "backstory", SheetWriteRejected},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ClassifySheetWrite(tt.moduleType, tt.fieldName, DefaultSheetTabKeys)
+			if got != tt.want {
+				t.Errorf("ClassifySheetWrite(%q, %q) = %v, want %v", tt.moduleType, tt.fieldName, got, tt.want)
+			}
+		})
+	}
+
+	t.Run("a tab absent from the layout is rejected even if built in", func(t *testing.T) {
+		// Phase 3 lets a GM remove a built-in tab; its data must then stop
+		// being writable until the tab is restored.
+		got := ClassifySheetWrite("inventory", "items", []string{"skills", "numbers"})
+		if got != SheetWriteRejected {
+			t.Errorf("got %v, want SheetWriteRejected", got)
+		}
+	})
+
+	t.Run("a custom tab in the layout stores under its own key", func(t *testing.T) {
+		layout := []string{"skills", "t_abc123"}
+		if got := ClassifySheetWrite("t_abc123", "t_abc123", layout); got != SheetWriteGMOnly {
+			t.Errorf("got %v, want SheetWriteGMOnly", got)
+		}
+		if got := ClassifySheetWrite("t_abc123", "items", layout); got != SheetWriteRejected {
+			t.Errorf("wrong field name: got %v, want SheetWriteRejected", got)
+		}
+	})
+}

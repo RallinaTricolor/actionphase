@@ -14,6 +14,71 @@ import (
 // limit is a layout constraint rather than a storage one.
 const MaxCharacterSheetLabelLength = 24
 
+// DefaultSheetTabKeys are the configurable tabs a game has when its config
+// names none: the stat tabs every game had before tab composition. Only the
+// keys live here. Default labels and field schemas are frontend-only, so the
+// backend never has to agree with them.
+var DefaultSheetTabKeys = []string{"skills", "inventory", "numbers"}
+
+// SheetStorageFieldName returns the character_data field_name a configurable
+// tab's entries are stored under. Every tab stores under its own key except
+// inventory, which predates that invariant and stores under "items".
+func SheetStorageFieldName(tabKey string) string {
+	if tabKey == "inventory" {
+		return "items"
+	}
+	return tabKey
+}
+
+// SheetWriteAccess says who may write a character_data (module_type,
+// field_name) pair.
+type SheetWriteAccess int
+
+const (
+	// SheetWriteRejected: the pair is not part of the sheet. Nobody may write
+	// it, including the GM.
+	SheetWriteRejected SheetWriteAccess = iota
+	// SheetWriteEditor: anyone who can edit the character.
+	SheetWriteEditor
+	// SheetWriteGMOnly: the game's GM or a co-GM.
+	SheetWriteGMOnly
+)
+
+func (a SheetWriteAccess) String() string {
+	switch a {
+	case SheetWriteEditor:
+		return "editor"
+	case SheetWriteGMOnly:
+		return "gm_only"
+	default:
+		return "rejected"
+	}
+}
+
+// ClassifySheetWrite decides who may write a (module_type, field_name) pair,
+// given the game's configurable tab keys.
+//
+// An allowlist, not a denylist of stat fields: the denylist it replaced let
+// any editor write any pair it did not name, so a player could park arbitrary
+// data on their own sheet, including under a key a future custom tab would
+// later claim and render as GM-set.
+//
+// The profile fields are the player's own description of their character.
+// Every configurable tab is game balance and belongs to the GM, even on a
+// character the player otherwise owns.
+func ClassifySheetWrite(moduleType, fieldName string, tabKeys []string) SheetWriteAccess {
+	if (moduleType == "bio" && fieldName == "background") ||
+		(moduleType == "notes" && fieldName == "private_notes") {
+		return SheetWriteEditor
+	}
+	for _, key := range tabKeys {
+		if moduleType == key && fieldName == SheetStorageFieldName(key) {
+			return SheetWriteGMOnly
+		}
+	}
+	return SheetWriteRejected
+}
+
 // CharacterSheetConfig is a game's per-game character sheet configuration,
 // stored as JSONB on games.character_sheet.
 //
