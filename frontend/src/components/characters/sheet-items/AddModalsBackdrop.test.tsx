@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AddSkillModal } from './AddSkillModal';
+import { AddEntryModal } from './AddEntryModal';
 import { AddNumberModal } from './AddNumberModal';
 import { AddItemModal } from './AddItemModal';
 
@@ -40,9 +40,9 @@ describe('Add modals ignore backdrop clicks', () => {
     vi.clearAllMocks();
   });
 
-  it('AddSkillModal does not cancel on a backdrop click', () => {
+  it('AddEntryModal does not cancel on a backdrop click', () => {
     const onCancel = vi.fn();
-    render(<AddSkillModal onAdd={vi.fn()} onCancel={onCancel} />);
+    render(<AddEntryModal fields={[]} onAdd={vi.fn()} onCancel={onCancel} />);
 
     clickBackdrop();
 

@@ -58,16 +58,11 @@ test.describe('Character Sheet Management', () => {
 
     const expectSkillWithDescription = async (name: string, description: string) => {
       await expect(page.getByRole('heading', { name })).toBeVisible();
-      // Filtered on both the heading and the expand button rather than picking
-      // a div by position: `.locator('div')` matches nested wrappers, so
-      // .last() lands on the heading's own wrapper, which holds no button.
       const card = sheetPage.skillsSection
-        .locator('div')
-        .filter({ has: page.getByRole('heading', { name }) })
-        .filter({ has: page.getByRole('button', { name: /expand description/i }) })
-        .last();
-      // Descriptions render collapsed.
-      await card.getByRole('button', { name: /expand description/i }).first().click();
+        .getByTestId('sheet-entry')
+        .filter({ has: page.getByRole('heading', { name }) });
+      // Descriptions render collapsed, behind a toggle named after the field.
+      await card.getByRole('button', { name: 'Description' }).click();
       await expect(page.locator(`text=${description}`)).toBeVisible();
     };
 
@@ -78,7 +73,11 @@ test.describe('Character Sheet Management', () => {
 
     // Rank replaced the old `level` field. The fixture's skill-8 deliberately
     // still uses the legacy key, but these four are on the current shape.
-    await expect(sheetPage.skillsSection.getByText('Rank: Expert').first()).toBeVisible();
+    const archeryCard = sheetPage.skillsSection
+      .getByTestId('sheet-entry')
+      .filter({ has: page.getByRole('heading', { name: 'Archery' }) });
+    await expect(archeryCard.getByText('Rank:')).toBeVisible();
+    await expect(archeryCard.getByText('Expert', { exact: true })).toBeVisible();
 
     // ===== Test Inventory =====
     await sheetPage.goToInventoryTab();
@@ -158,11 +157,10 @@ test.describe('Character Sheet Management', () => {
     // the fixture: the rename is resolved on read, not migrated, so an
     // unmigrated row must still render its rank.
     const arcaneCard = sheetPage.skillsSection
-      .locator('div')
-      .filter({ has: page.getByRole('heading', { name: 'Arcane Knowledge' }) })
-      .filter({ has: page.getByText('Rank:') })
-      .last();
-    await expect(arcaneCard.getByText('Rank: Expert')).toBeVisible();
+      .getByTestId('sheet-entry')
+      .filter({ has: page.getByRole('heading', { name: 'Arcane Knowledge' }) });
+    await expect(arcaneCard.getByText('Rank:')).toBeVisible();
+    await expect(arcaneCard.getByText('Expert', { exact: true })).toBeVisible();
   });
 
   test('bio tab is public, stat tabs are private', async ({ page }) => {
@@ -216,12 +214,12 @@ test.describe('Character Sheet Management', () => {
 
     // ===== Skills - No Edit UI =====
     // Stat tabs are GM-edit-only by design: players cannot touch their own
-    // numbers. Enforced server-side too (api_data.go's isStatField).
+    // numbers. Enforced server-side too (core.ClassifySheetWrite).
     await sheetPage.goToSkillsTab();
 
     expect(await sheetPage.canAddSkill()).toBe(false);
-    await expect(page.getByRole('button', { name: 'Edit skill' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Remove skill' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit entry' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Remove entry' })).toHaveCount(0);
 
     // ===== Inventory - No Edit UI =====
     await sheetPage.goToInventoryTab();

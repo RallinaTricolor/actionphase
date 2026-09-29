@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { apiClient } from '../lib/api';
-import type { CharacterData, CharacterSkill, InventoryItem } from '../types/characters';
-import { skillRank } from '../types/characters';
+import type { CharacterData, InventoryItem } from '../types/characters';
+import { normalizeEntry, type RawSheetEntry } from '../lib/sheetEntries';
 
 export interface SheetItem {
   id: string;
@@ -23,18 +23,20 @@ function parseJsonField<T>(value: string | undefined): T[] {
   }
 }
 
-function skillToSheetItem(s: CharacterSkill): SheetItem {
-  // Via skillRank so mention metadata reads the same value the card shows,
+function skillToSheetItem(raw: RawSheetEntry & { id: string }): SheetItem {
+  // Via normalizeEntry so mention metadata reads the same value the card shows,
   // including for rows still holding the pre-rename `level` key.
-  const rank = skillRank(s);
-  const meta = [s.category, rank ? `Rank ${rank}` : undefined]
+  const s = normalizeEntry('skills', raw);
+  const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
+  const rank = text(s.rank);
+  const meta = [text(s.category), rank ? `Rank ${rank}` : undefined]
     .filter(Boolean)
     .join(' · ');
   return {
     id: s.id,
     name: s.name,
     type: 'skill',
-    description: s.description,
+    description: text(s.description),
     metadata: meta || undefined,
   };
 }
@@ -65,11 +67,13 @@ function toSheetItems(data: CharacterData[] | undefined): SheetItem[] {
   const getField = (moduleType: string, fieldName: string): string | undefined =>
     data.find((d) => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
 
-  const skills = parseJsonField<CharacterSkill>(getField('skills', 'skills'));
+  const skills = parseJsonField<RawSheetEntry>(getField('skills', 'skills'));
   const items = parseJsonField<InventoryItem>(getField('inventory', 'items'));
 
   return [
-    ...skills.filter((s) => s.id && s.name).map(skillToSheetItem),
+    ...skills
+      .filter((s): s is RawSheetEntry & { id: string } => typeof s.id === 'string' && !!s.id && !!s.name)
+      .map(skillToSheetItem),
     ...items.filter((i) => i.id && i.name).map(itemToSheetItem),
   ];
 }

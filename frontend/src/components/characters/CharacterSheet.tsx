@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { isPublicArchive } from '@/lib/gamePermissions';
-import type { CharacterData, CharacterDataRequest, CharacterSkill, InventoryItem, NumberEntry, CharacterSheetConfig } from '@/types/characters';
+import type { CharacterData, CharacterDataRequest, InventoryItem, NumberEntry, CharacterSheetConfig } from '@/types/characters';
 import { buildCharacterModules } from '@/types/characters';
-import { SkillsManager } from './sheet-items/SkillsManager';
+import { EntryManager } from './sheet-items/EntryManager';
+import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { ItemsManager } from './sheet-items/ItemsManager';
 import { NumbersManager } from './sheet-items/NumbersManager';
 import CharacterAvatar from './CharacterAvatar';
@@ -84,6 +85,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // data, and a fresh array each render would remount the active manager
   // underneath an open editor.
   const modules = useMemo(() => buildCharacterModules(sheetLayout), [sheetLayout]);
+  // Skills is the first tab on the generic entry renderer; the others follow.
+  const skillsTab = sheetLayout.tabs.find(tab => tab.key === 'skills');
 
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -545,13 +548,13 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
             {/* One manager per stat tab. Each reports its own dirty state under its
                 own key, so a clean manager cannot clear a dirty one's flag. */}
-            {module.type === 'skills' ? (
-              <SkillsManager
-                skills={parseJsonField('skills', 'skills') as CharacterSkill[]}
+            {module.type === 'skills' && skillsTab ? (
+              <EntryManager
+                tab={skillsTab}
+                entries={parseJsonField('skills', 'skills') as RawSheetEntry[]}
                 canEdit={canEditStats}
-                onSkillsChange={(skills) => saveJsonField('skills', 'skills', skills)}
+                onEntriesChange={(entries) => saveJsonField('skills', 'skills', entries)}
                 onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                label={module.name}
               />
             ) : module.type === 'inventory' ? (
               <ItemsManager

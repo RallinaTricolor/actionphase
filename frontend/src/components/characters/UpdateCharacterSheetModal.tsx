@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/common/modals/Modal';
 import { Button, Alert, Spinner } from '@/components/ui';
-import { SkillsManager } from './sheet-items/SkillsManager';
+import { EntryManager } from './sheet-items/EntryManager';
+import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { ItemsManager } from './sheet-items/ItemsManager';
 import { NumbersManager } from './sheet-items/NumbersManager';
 import { apiClient } from '@/lib/api';
-import type { CharacterSkill, InventoryItem, NumberEntry } from '@/types/characters';
+import type { InventoryItem, NumberEntry } from '@/types/characters';
 import type { CreateDraftCharacterUpdateRequest } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 import { useDiscardSheetDrafts } from '@/hooks/useDiscardSheetDrafts';
@@ -60,6 +61,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     (tab): tab is typeof tab & { key: ActiveSection } => tab.isBuiltIn
   );
   const sectionLabel = (key: ActiveSection) => sections.find(s => s.key === key)?.label ?? key;
+  const skillsTab = sections.find(s => s.key === 'skills');
   // The first section present, when the remembered one has been removed.
   const currentSection: ActiveSection | undefined =
     sections.some(s => s.key === activeSection) ? activeSection : sections[0]?.key;
@@ -78,7 +80,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   const [confirmingClose, setConfirmingClose] = useState(false);
 
   // Local state for the character sheet being edited
-  const [skills, setSkills] = useState<CharacterSkill[]>([]);
+  const [skills, setSkills] = useState<RawSheetEntry[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [numbers, setNumbers] = useState<NumberEntry[]>([]);
 
@@ -129,7 +131,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     const getField = (moduleType: string, fieldName: string) =>
       getDraftField(moduleType, fieldName) ?? getCharacterField(moduleType, fieldName);
 
-    setSkills(parseJsonArray<CharacterSkill>(getField('skills', 'skills')));
+    setSkills(parseJsonArray<RawSheetEntry>(getField('skills', 'skills')));
     setItems(parseJsonArray<InventoryItem>(getField('inventory', 'items')));
     setNumbers(parseJsonArray<NumberEntry>(getField('numbers', 'numbers')));
 
@@ -264,7 +266,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     };
   }, []);
 
-  const handleSkillsChange = (newSkills: CharacterSkill[]) => {
+  const handleSkillsChange = (newSkills: RawSheetEntry[]) => {
     setSkills(newSkills);
     scheduleSave('skills', 'skills', newSkills);
   };
@@ -316,7 +318,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     const fromCharacter = (moduleType: string, fieldName: string) =>
       characterData?.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
 
-    setSkills(parseJsonArray<CharacterSkill>(fromCharacter('skills', 'skills')));
+    setSkills(parseJsonArray<RawSheetEntry>(fromCharacter('skills', 'skills')));
     setItems(parseJsonArray<InventoryItem>(fromCharacter('inventory', 'items')));
     setNumbers(parseJsonArray<NumberEntry>(fromCharacter('numbers', 'numbers')));
 
@@ -440,13 +442,13 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
             </div>
           ) : (
             <>
-              {currentSection === 'skills' && (
-                <SkillsManager
-                  skills={skills}
+              {currentSection === 'skills' && skillsTab && (
+                <EntryManager
+                  tab={skillsTab}
+                  entries={skills}
                   canEdit={true}
-                  onSkillsChange={handleSkillsChange}
+                  onEntriesChange={handleSkillsChange}
                   onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                  label={sectionLabel('skills')}
                 />
               )}
 

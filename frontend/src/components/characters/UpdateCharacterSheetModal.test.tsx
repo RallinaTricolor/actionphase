@@ -15,7 +15,7 @@ const BASE_PROPS = {
   characterName: 'Aldric the Bold',
 };
 
-// Well-formed skill matching the CharacterSkill interface
+// Well-formed skills entry, as the write path stores it
 const SKILL = { id: 'str', name: 'Strength', level: 2, category: 'Physical' };
 const ITEM = { id: 'item-1', name: 'Healing Potion', quantity: 2 };
 const ITEM_DRAFT = { id: 'item-2', name: 'Magic Sword', quantity: 1 };
@@ -405,7 +405,7 @@ describe('UpdateCharacterSheetModal', () => {
       // Edit skills, then immediately switch tabs and edit inventory. No waiting
       // between them: both edits land inside the same debounce window, which is the
       // condition that used to drop the first one.
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove skill' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
@@ -469,7 +469,7 @@ describe('UpdateCharacterSheetModal', () => {
       renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} onClose={onClose} />);
       await waitForLoaded();
 
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove skill' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();

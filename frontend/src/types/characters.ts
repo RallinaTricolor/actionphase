@@ -119,54 +119,15 @@ export type AssignNPCRequest = components['schemas']['AssignNPCRequest'];
  */
 export type CharacterActivityStats = components['schemas']['CharacterStatsResponse'];
 
-// Individual skill item structure for JSON fields.
+// Skills entries have no type of their own: they are generic sheet entries
+// (SheetEntry in lib/sheetEntries), laid out by the tab's schema.
+// normalizeEntry absorbs the `level` → `rank` rename that `skillRank` used to.
 //
-// CharacterAbility used to sit here. Abilities were retired in the Phase 4
-// refactor: they duplicated skills, which is strictly more featured (level,
-// category, markdown description), so every stat feature had to be built twice.
-// Verified against production before deletion — no character held ability
-// content. The rows remain in character_data and are simply never read again.
-export interface CharacterSkill {
-  id: string;
-  name: string;
-  /**
-   * Free text, e.g. "Expert" or "5".
-   *
-   * Replaces the old `level?: number | string`. The union was a fiction: the
-   * editor stringified on every save, so a numeric level round-tripped into a
-   * string the moment anyone touched it, and nothing in the app ever did
-   * arithmetic on it. Free text is what the field already was in practice.
-   *
-   * Read old rows through `skillRank()` rather than this field directly —
-   * `level` is still on disk and is NOT migrated.
-   */
-  rank?: string;
-  /**
-   * @deprecated Legacy key, read-only. Present on rows written before the
-   * rank rename; never written again. Use `skillRank()` instead of reading it.
-   */
-  level?: number | string;
-  description?: string;
-  category?: string; // e.g., "Combat", "Social", "Academic"
-}
-
-/**
- * Resolves a skill's rank across both storage shapes.
- *
- * There is deliberately no migration for the `level` → `rank` rename: this key
- * lives inside a JSON blob, so a read-side fallback covers every old row,
- * archived payload, and rolled-back deploy at no coordination cost, where a
- * migration would need all three to line up. Old numeric values stringify here
- * rather than on write, so a row is only rewritten when a human edits it.
- *
- * Returns undefined when neither key is set, so callers can keep using the
- * `{rank && ...}` pattern to hide the field entirely.
- */
-export function skillRank(skill: Pick<CharacterSkill, 'rank' | 'level'>): string | undefined {
-  if (skill.rank !== undefined && skill.rank !== '') return skill.rank;
-  if (skill.level === undefined || skill.level === '') return undefined;
-  return String(skill.level);
-}
+// CharacterAbility used to sit here too. Abilities were retired in the Phase 4
+// refactor: they duplicated skills, which is strictly more featured, so every
+// stat feature had to be built twice. Verified against production before
+// deletion — no character held ability content. The rows remain in
+// character_data and are simply never read again.
 
 // Individual inventory item structures for JSON fields
 // `equipped` and `metadata` used to sit here and were dropped in the Phase 5
@@ -251,7 +212,7 @@ export function numberEntryName(entry: Pick<NumberEntry, 'name' | 'type'>): stri
  * 'boxes' entry with no maximum has no box count to draw. Guards against a
  * non-positive max for the same reason: zero boxes is not a track.
  */
-export function isBoundedTrack(entry: NumberEntry): boolean {
+export function isBoundedTrack(entry: Pick<NumberEntry, 'max' | 'display'>): boolean {
   // Requires an explicit track display rather than merely excluding 'number':
   // absent means 'number' (see the field's doc), and the write path stores
   // exactly that — NumberForm persists undefined for the Number option instead

@@ -293,7 +293,7 @@ export class CharacterSheetPage {
    * @param description - Skill description
    */
   async addSkill(name: string, description: string) {
-    await this.page.getByTestId('add-skill').click();
+    await this.page.getByTestId('add-skills').click();
     await this.page.waitForTimeout(500);
 
     await this.page.getByRole('textbox', { name: 'Name *' }).fill(name);
@@ -308,7 +308,7 @@ export class CharacterSheetPage {
    * Check if the Skills add trigger is visible (GM/owner permission check).
    */
   async canAddSkill(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-skill');
+    return await this.isAddTriggerVisible('add-skills');
   }
 
   /**

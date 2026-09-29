@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { NumberEntry } from '@/types/characters';
-import { numberEntryName, isBoundedTrack } from '@/types/characters';
+import { numberEntryName } from '@/types/characters';
 import { Button } from '@/components/ui';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { NumberForm, type NumberFormData } from './NumberForm';
+import { BoxTrack, BarTrack } from './TrackDisplay';
+import { trackVisual } from '@/lib/sheetEntries';
 
 interface NumberCardProps {
   entry: NumberEntry;
@@ -13,47 +15,6 @@ interface NumberCardProps {
   /** Reports whether this card's inline editor holds uncommitted edits. */
   onDirtyChange?: (isDirty: boolean) => void;
 }
-
-/** How many boxes to draw before falling back to a bar. */
-const MAX_RENDERED_BOXES = 20;
-
-/**
- * A bounded entry drawn as filled/empty boxes — the notation most narrative
- * systems use for stress, harm, and clocks.
- *
- * Falls back to a bar past MAX_RENDERED_BOXES: twenty is already a wide row on a
- * phone, and a hundred boxes is unreadable rather than merely long.
- */
-const BoxTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => (
-  <div className="flex items-center gap-1 flex-wrap" role="img" aria-label={`${label}: ${filled} of ${total}`}>
-    {Array.from({ length: total }, (_, i) => (
-      <span
-        key={i}
-        className={`inline-block w-4 h-4 rounded-sm border ${
-          i < filled ? 'bg-interactive-primary border-interactive-primary' : 'border-theme-default'
-        }`}
-      />
-    ))}
-  </div>
-);
-
-const BarTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => {
-  // Clamped because an entry can exceed its maximum — overfilled stress is a
-  // real state in several systems, and a 140%-wide bar would break the layout.
-  const percent = Math.min(100, Math.max(0, (filled / total) * 100));
-  return (
-    <div
-      // Bordered like BoxTrack's empty cells: without an outline the trough
-      // blends into the card and the bar's full extent — and so the value it
-      // encodes — is unreadable at anything under a full fill.
-      className="w-full h-2 rounded-full surface-secondary border border-theme-default overflow-hidden"
-      role="img"
-      aria-label={`${label}: ${filled} of ${total}`}
-    >
-      <div className="h-full bg-interactive-primary transition-all" style={{ width: `${percent}%` }} />
-    </div>
-  );
-};
 
 export const NumberCard: React.FC<NumberCardProps> = ({ entry, canEdit, onUpdate, onRemove, onDirtyChange }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -99,10 +60,10 @@ export const NumberCard: React.FC<NumberCardProps> = ({ entry, canEdit, onUpdate
     );
   }
 
-  const bounded = isBoundedTrack(entry);
+  const visual = trackVisual({ value: entry.amount, max: entry.max, display: entry.display });
   const max = entry.max ?? 0;
-  const showBoxes = bounded && entry.display === 'boxes' && Number.isInteger(max) && max <= MAX_RENDERED_BOXES;
-  const showBar = bounded && !showBoxes;
+  const showBoxes = visual === 'boxes';
+  const showBar = visual === 'bar';
 
   return (
     <div className="border border-theme-default rounded-lg p-4 surface-base">
