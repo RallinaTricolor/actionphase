@@ -166,8 +166,14 @@ func TestUpdateGameRequestCharacterSheetBinding(t *testing.T) {
 	})
 
 	t.Run("unknown key is rejected", func(t *testing.T) {
-		if _, err := bindUpdate(validBody(`{"labels":{},"tabs":[]}`)); err == nil {
-			t.Fatal("expected unknown key 'tabs' to be rejected")
+		if _, err := bindUpdate(validBody(`{"labels":{},"presets":[]}`)); err == nil {
+			t.Fatal("expected unknown key 'presets' to be rejected")
+		}
+	})
+
+	t.Run("unknown key inside a tab is rejected", func(t *testing.T) {
+		if _, err := bindUpdate(validBody(`{"tabs":[{"key":"skills","public":true}]}`)); err == nil {
+			t.Fatal("expected unknown tab key 'public' to be rejected")
 		}
 	})
 }

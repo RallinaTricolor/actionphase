@@ -360,6 +360,49 @@ func sheetConfigValue(sheet *core.CharacterSheetConfig) core.CharacterSheetConfi
 	return *sheet
 }
 
+type updateCharacterSheetInput struct {
+	GameID int32 `path:"gameID" doc:"Game ID"`
+	// The whole document, not a patch: the editor always sends the complete
+	// layout, and an empty object resets the game to the default sheet.
+	Body core.CharacterSheetConfig
+}
+
+// Resolve validates the layout before the handler runs, so a bad layout is a
+// 422 naming the problem. Left to the service it would surface as a 500.
+func (in *updateCharacterSheetInput) Resolve(huma.Context) []error {
+	validated, err := core.ValidateCharacterSheetConfig(in.Body)
+	if err != nil {
+		return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body"}}
+	}
+	in.Body = validated
+	return nil
+}
+
+func (h *Handler) humaUpdateCharacterSheet(ctx context.Context, in *updateCharacterSheetInput) (*gameOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_character_sheet")()
+
+	// is_gm, which admits co-GMs: sheet layout is ordinary game setup, not one
+	// of the primary-GM-only settings.
+	if err := h.requireGMFlag(ctx, "only the GM can customise the character sheet", "Update character sheet forbidden"); err != nil {
+		return nil, err
+	}
+	gameID, err := gameIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := h.GameService.UpdateGameCharacterSheet(ctx, gameID, in.Body)
+	if err != nil {
+		if errors.Is(err, core.ErrGameReadOnly) {
+			return nil, h.logAndErr(ctx, core.ErrConflict("an archived game's character sheet cannot be changed"),
+				"Update character sheet rejected: game archived", "game_id", gameID)
+		}
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update character sheet", "error", err, "game_id", gameID)
+	}
+
+	return &gameOutput{Body: gameResponseFrom(updated)}, nil
+}
+
 type updateGameStateBody struct {
 	State core.GameState `json:"state" doc:"Target game state"`
 }
@@ -2752,6 +2795,23 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 			"404": {Description: "Game not found"},
 		},
 	}, h.humaUpdateGame)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "updateGameCharacterSheet",
+		Method:      http.MethodPut,
+		Path:        "/character-sheet",
+		Summary:     "Customise the character sheet",
+		Description: "Replaces the game's character sheet layout: which configurable tabs it has, in what order, and each tab's entry fields. An empty object restores the default layout. GM or co-GM; not allowed once the game is archived.",
+		Tags:        []string{"Games"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "The layout failed validation"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM or a co-GM can customise the character sheet"},
+			"404": {Description: "Game not found"},
+			"409": {Description: "The game is archived"},
+		},
+	}, h.humaUpdateCharacterSheet)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteGame",

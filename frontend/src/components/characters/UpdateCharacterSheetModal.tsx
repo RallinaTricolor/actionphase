@@ -11,7 +11,7 @@ import type { CreateDraftCharacterUpdateRequest } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 import { useDiscardSheetDrafts } from '@/hooks/useDiscardSheetDrafts';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
-import { useSheetLabels } from '@/hooks/useSheetLabels';
+import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { EditorLockNotice } from './EditorLockNotice';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
@@ -53,7 +53,16 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   // future surface rendering it outside one falls back to defaults instead of
   // throwing.
   const gameContext = useOptionalGameContext();
-  const sheetLabels = useSheetLabels(gameContext?.game);
+  const sheetLayout = useSheetLayout(gameContext?.game);
+  // Only the built-in tabs have section editors so far. A GM-composed layout
+  // may have removed some of them, so the modal offers only those present.
+  const sections = sheetLayout.tabs.filter(
+    (tab): tab is typeof tab & { key: ActiveSection } => tab.isBuiltIn
+  );
+  const sectionLabel = (key: ActiveSection) => sections.find(s => s.key === key)?.label ?? key;
+  // The first section present, when the remembered one has been removed.
+  const currentSection: ActiveSection | undefined =
+    sections.some(s => s.key === activeSection) ? activeSection : sections[0]?.key;
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -398,7 +407,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
             switching unmounts that editor and destroys them. See EditorLockNotice. */}
         <div className="border-b border-theme-default">
           <nav className="flex items-center space-x-1" aria-label="Sections">
-            {(['skills', 'inventory', 'numbers'] as ActiveSection[]).map((section) => (
+            {sections.map(({ key: section }) => (
               <button
                 key={section}
                 disabled={hasUncommittedEdit}
@@ -406,7 +415,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
                 className={`
                   px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  ${activeSection === section
+                  ${currentSection === section
                     ? 'surface-base text-interactive-primary border-b-2 border-interactive-primary'
                     : 'text-content-secondary hover:text-content-primary hover:surface-raised'
                   }
@@ -415,7 +424,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
                 {/* The game's label, not the section key: `capitalize` on the key
                     was fine when the names were fixed, but a GM who renamed a tab
                     must see that name here too. */}
-                {sheetLabels[section]}
+                {sectionLabel(section)}
               </button>
             ))}
             {hasUncommittedEdit && <EditorLockNotice className="ml-2" />}
@@ -431,34 +440,34 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
             </div>
           ) : (
             <>
-              {activeSection === 'skills' && (
+              {currentSection === 'skills' && (
                 <SkillsManager
                   skills={skills}
                   canEdit={true}
                   onSkillsChange={handleSkillsChange}
                   onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                  label={sheetLabels.skills}
+                  label={sectionLabel('skills')}
                 />
               )}
 
-              {activeSection === 'inventory' && (
+              {currentSection === 'inventory' && (
                 <ItemsManager
                   characterId={characterId}
                   items={items}
                   canEdit={true}
                   onItemsChange={handleItemsChange}
                   onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
-                  label={sheetLabels.inventory}
+                  label={sectionLabel('inventory')}
                 />
               )}
 
-              {activeSection === 'numbers' && (
+              {currentSection === 'numbers' && (
                 <NumbersManager
                   numbers={numbers}
                   canEdit={true}
                   onNumbersChange={handleNumbersChange}
                   onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                  label={sheetLabels.numbers}
+                  label={sectionLabel('numbers')}
                 />
               )}
             </>

@@ -36,8 +36,17 @@ import type { components } from './api.gen';
  */
 export type Character = components['schemas']['CharacterResponse'];
 
-/** Per-game character sheet configuration, as sent by the backend — generated. */
+/**
+ * Per-game character sheet configuration, as sent by the backend — generated.
+ *
+ * Sparse: an absent `tabs` means the default layout, and an absent (or null)
+ * `fields` on a built-in tab means its default fields. Read it through
+ * `resolveSheetLayout`, never directly, so the defaults apply.
+ */
 export type CharacterSheetConfig = components['schemas']['CharacterSheetConfig'];
+
+/** One field of a tab's entries, as stored — generated. */
+export type CharacterSheetField = components['schemas']['CharacterSheetField'];
 
 /**
  * A controllable character from the cross-game endpoint, carrying the game
@@ -255,13 +264,28 @@ export function isBoundedTrack(entry: NumberEntry): boolean {
   );
 }
 
+/** The tabs every game had before tab composition, and still has by default. */
+export type BuiltInSheetTabKey = 'skills' | 'inventory' | 'numbers';
+
 /**
- * Resolved labels for the three renameable character sheet tabs.
+ * A configurable tab with its label and fields resolved against the defaults.
  *
- * Defined here rather than beside the hook that produces it so the type layer
- * has no dependency on the hook layer; `useSheetLabels` imports this.
+ * Client-side, not a wire shape: `resolveSheetLayout` builds it from the sparse
+ * stored config. Defined here rather than beside that function so the type
+ * layer has no dependency on the hook layer.
  */
-export type SheetLabels = Record<'skills' | 'inventory' | 'numbers', string>;
+export interface SheetTab {
+  /** Stable key: the storage `module_type`. Never changes, even on rename. */
+  key: string;
+  label: string;
+  fields: CharacterSheetField[];
+  isBuiltIn: boolean;
+}
+
+/** A game's configurable tabs, in display order. Public Profile and Private Notes are never in it. */
+export interface SheetLayout {
+  tabs: SheetTab[];
+}
 
 // Character module types for the modular character sheet system
 export interface CharacterModule {
@@ -281,22 +305,20 @@ interface CharacterModuleField {
 }
 
 /**
- * The character sheet's tabs, with the game's labels applied.
+ * The character sheet's tabs: the two fixed text tabs, then the game's layout.
  *
- * A function rather than a constant because two of the five tabs are
- * GM-renameable, so the list is a function of the game. `labels` comes from
- * `useSheetLabels`, which is the only place that knows the default names —
- * do not default them here.
+ * A function rather than a constant because everything after the first two tabs
+ * is per-game. `layout` comes from `useSheetLayout`, which is the only place
+ * that knows the default labels and fields — do not default them here.
  *
- * Bio and Private Notes are deliberately NOT renameable: they are platform
+ * Bio and Private Notes are deliberately NOT configurable: they are platform
  * concepts (a public description, private notes visible to GM and audience)
- * rather than game-system ones, so their names stay fixed.
+ * rather than game-system ones, so they are always present with fixed names.
  *
- * Per the refactor's invariant each renameable tab's `type` equals its storage
- * `module_type`, its field name, and its own default label. That is what keeps
- * this a straight substitution with no mapping table.
+ * Each configurable tab's `type` is its stable key, which is also its storage
+ * `module_type`. Its entries live under `storageFieldName(key)`.
  */
-export function buildCharacterModules(labels: SheetLabels): CharacterModule[] {
+export function buildCharacterModules(layout: SheetLayout): CharacterModule[] {
   return [
     {
       type: 'bio',
@@ -326,51 +348,29 @@ export function buildCharacterModules(labels: SheetLabels): CharacterModule[] {
         }
       ]
     },
-    {
-      type: 'skills',
-      name: labels.skills,
-      description: `Character ${labels.skills.toLowerCase()}`,
+    ...layout.tabs.map((tab): CharacterModule => ({
+      type: tab.key,
+      name: tab.label,
+      description: `Character ${tab.label.toLowerCase()}`,
       fields: [
         {
-          name: 'skills',
+          name: storageFieldName(tab.key),
           type: 'json',
-          label: labels.skills,
-          placeholder: `Manage your character ${labels.skills.toLowerCase()}...`,
-          isPublic: true
-        }
-      ]
-    },
-    {
-      type: 'inventory',
-      name: labels.inventory,
-      description: 'Character possessions and equipment',
-      fields: [
-        {
-          name: 'items',
-          type: 'json',
-          label: 'Items',
-          placeholder: 'Manage your character items...',
-          isPublic: true
-        }
-      ]
-    },
-    {
-      type: 'numbers',
-      name: labels.numbers,
-      description: 'Character resources and numeric tracks',
-      fields: [
-        {
-          // Storage key, not a label: renamed from `currency` in the Phase 4
-          // migration because this tab now holds arbitrary numeric tracks
-          // (stress, XP, clocks), not money. Unlike a label, an identifier
-          // cannot be overridden per game, so it had to stop saying "currency".
-          name: 'numbers',
-          type: 'json',
-          label: labels.numbers,
-          placeholder: `Track your character's ${labels.numbers.toLowerCase()}...`,
+          label: tab.label,
+          // Tab access is gated at the tab level by canViewPrivate, not by
+          // is_public; see CharacterSheet's saveJsonField.
           isPublic: false
         }
       ]
-    }
+    })),
   ];
+}
+
+/**
+ * The `field_name` a configurable tab's entries are stored under. Every tab
+ * uses its own key except Inventory, which predates that rule and stores under
+ * `items`. Mirrors `core.SheetStorageFieldName` on the backend.
+ */
+export function storageFieldName(tabKey: string): string {
+  return tabKey === 'inventory' ? 'items' : tabKey;
 }

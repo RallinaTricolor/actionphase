@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
 import { renderWithProviders } from '@/test-utils/render';
 import { server } from '@/mocks/server';
+import { makeGameWithDetails } from '@/test-utils/factories';
 
 const BASE_PROPS = {
   isOpen: true,
@@ -247,6 +248,39 @@ describe('UpdateCharacterSheetModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
 
       expect(screen.getByText(/no inventory yet/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Composed layout', () => {
+    // The modal only has editors for the built-in tabs, so it offers those the
+    // game's layout still has, under the game's labels.
+    it('offers only the built-in sections the layout keeps, and opens on the first', async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/details', () =>
+          HttpResponse.json(makeGameWithDetails({
+            id: 1,
+            character_sheet: {
+              tabs: [
+                { key: 'inventory', label: 'Gear' },
+                { key: 't_abc123', label: 'Contacts', fields: [] },
+                { key: 'numbers' },
+              ],
+            },
+          }))
+        ),
+      );
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      const sections = await screen.findByRole('navigation', { name: 'Sections' });
+      await waitFor(() => {
+        expect(within(sections).getAllByRole('button').map(b => b.textContent)).toEqual(['Gear', 'Numbers']);
+      });
+      // Skills was removed, so the modal cannot open on it.
+      expect(screen.queryByText('No skills yet.')).not.toBeInTheDocument();
+      expect(screen.getByText(/no gear yet/i)).toBeInTheDocument();
     });
   });
 

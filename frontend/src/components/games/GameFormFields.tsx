@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Input, Textarea, DateTimeInput, Checkbox, Radio, Select } from '@/components/ui';
 import { HelpTooltip } from '@/components/ui/HelpTooltip';
-import { DEFAULT_SHEET_LABELS } from '@/hooks/useSheetLabels';
+import { DEFAULT_SHEET_LABELS } from '@/hooks/useSheetLayout';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { GAME_FORM_TABS } from './gameFormTabs';
 import type { GameFormTabId } from './gameFormTabs';

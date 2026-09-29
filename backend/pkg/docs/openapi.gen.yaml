@@ -847,6 +847,45 @@ components:
             properties:
                 labels:
                     $ref: '#/components/schemas/CharacterSheetLabels'
+                    description: Legacy tab label overrides, used only when tabs is absent
+                tabs:
+                    description: Configurable tabs in display order. Absent means the default layout. Public Profile and Private Notes are always shown first and never listed.
+                    items:
+                        $ref: '#/components/schemas/CharacterSheetTab'
+                    type:
+                        - array
+                        - "null"
+            type: object
+        CharacterSheetField:
+            additionalProperties: false
+            properties:
+                key:
+                    description: Stable identifier; the entry JSON key the value is stored under
+                    type: string
+                label:
+                    description: Display name
+                    type: string
+                options:
+                    description: Choices for a select field; only allowed on select
+                    items:
+                        type: string
+                    type:
+                        - array
+                        - "null"
+                type:
+                    description: Cannot change after creation
+                    enum:
+                        - text
+                        - number
+                        - markdown
+                        - select
+                        - checkbox
+                        - track
+                    type: string
+            required:
+                - key
+                - label
+                - type
             type: object
         CharacterSheetLabels:
             additionalProperties: false
@@ -857,6 +896,25 @@ components:
                     type: string
                 skills:
                     type: string
+            type: object
+        CharacterSheetTab:
+            additionalProperties: false
+            properties:
+                fields:
+                    description: Entry fields in display order. Absent on a built-in tab means its default fields. Required on a custom tab.
+                    items:
+                        $ref: '#/components/schemas/CharacterSheetField'
+                    type:
+                        - array
+                        - "null"
+                key:
+                    description: 'Stable identifier: skills, inventory, numbers, or t_ plus six lower-case letters or digits for a custom tab'
+                    type: string
+                label:
+                    description: Display name. Absent on a built-in tab means its default label.
+                    type: string
+            required:
+                - key
             type: object
         CharacterStatsResponse:
             additionalProperties: false
@@ -1851,10 +1909,8 @@ components:
                     minLength: 1
                     type: string
                 module_type:
-                    enum:
-                        - skills
-                        - inventory
-                        - numbers
+                    description: 'Tab key: skills, inventory, numbers, or a custom t_ key in this game''s layout'
+                    pattern: ^(skills|inventory|numbers|t_[a-z0-9]{6})$
                     type: string
                 operation:
                     enum:
@@ -2514,10 +2570,7 @@ components:
                     format: int32
                     type: integer
                 module_type:
-                    enum:
-                        - skills
-                        - inventory
-                        - numbers
+                    description: 'Tab key: skills, inventory, numbers, or a custom t_ key'
                     type: string
                 operation:
                     enum:
@@ -9245,6 +9298,47 @@ paths:
             security:
                 - BearerAuth: []
             summary: Upload a game banner
+            tags:
+                - Games
+    /games/{gameID}/character-sheet:
+        put:
+            description: 'Replaces the game''s character sheet layout: which configurable tabs it has, in what order, and each tab''s entry fields. An empty object restores the default layout. GM or co-GM; not allowed once the game is archived.'
+            operationId: updateGameCharacterSheet
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CharacterSheetConfig'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GameResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM or a co-GM can customise the character sheet
+                "404":
+                    description: Game not found
+                "409":
+                    description: The game is archived
+                "422":
+                    description: The layout failed validation
+            security:
+                - BearerAuth: []
+            summary: Customise the character sheet
             tags:
                 - Games
     /games/{gameID}/characters:

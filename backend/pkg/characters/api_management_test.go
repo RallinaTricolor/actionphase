@@ -704,6 +704,32 @@ func TestCharacterAPI_SetCharacterData(t *testing.T) {
 		assert.Equal(t, 0, storedRows(t, "skills", "foo"))
 	})
 
+	// The allowed pairs follow the game's configured layout, not a fixed list.
+	t.Run("a composed layout decides which tabs are writable", func(t *testing.T) {
+		_, err := testDB.Pool.Exec(context.Background(),
+			`UPDATE games SET character_sheet = $2 WHERE id = $1`, game.ID,
+			`{"tabs":[{"key":"skills"},{"key":"t_abc123","label":"Contacts","fields":[]}]}`)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, err := testDB.Pool.Exec(context.Background(),
+				`UPDATE games SET character_sheet = '{}' WHERE id = $1`, game.ID)
+			require.NoError(t, err)
+		})
+
+		custom := CharacterDataRequest{ModuleType: "t_abc123", FieldName: "t_abc123", FieldValue: `[]`, FieldType: "json"}
+		assert.Equal(t, http.StatusNoContent, postData(t, gmToken, custom), "GM writes the custom tab")
+		assert.Equal(t, http.StatusForbidden, postData(t, playerToken, custom), "custom tabs are GM-only like any stat tab")
+
+		// Removing a tab hides its data and stops it being written until the
+		// tab is restored.
+		removed := CharacterDataRequest{ModuleType: "inventory", FieldName: "items", FieldValue: `[]`, FieldType: "json"}
+		assert.Equal(t, http.StatusUnprocessableEntity, postData(t, gmToken, removed), "GM cannot write a removed tab")
+
+		// The profile fields are never part of the layout and stay writable.
+		profile := CharacterDataRequest{ModuleType: "bio", FieldName: "background", FieldValue: "Still mine.", FieldType: "text"}
+		assert.Equal(t, http.StatusNoContent, postData(t, playerToken, profile))
+	})
+
 	t.Run("player cannot set stat fields (inventory)", func(t *testing.T) {
 		code := postData(t, playerToken, CharacterDataRequest{
 			ModuleType: "inventory",

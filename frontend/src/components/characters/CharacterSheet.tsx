@@ -20,7 +20,7 @@ import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
-import { useSheetLabels } from '@/hooks/useSheetLabels';
+import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { EditorLockNotice } from './EditorLockNotice';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 
@@ -47,7 +47,7 @@ interface CharacterSheetProps {
    */
   portraitAvatars?: boolean;
   /**
-   * That game's character sheet tab labels. Normally read from GameContext;
+   * That game's character sheet layout. Normally read from GameContext;
    * pass it explicitly when rendering outside a GameProvider (the global
    * Utility Drawer), where there is none to read.
    *
@@ -66,6 +66,9 @@ interface CharacterSheetProps {
  */
 const MANAGED_MODULE_TYPES = new Set(['skills', 'inventory', 'numbers']);
 
+/** The fixed text tabs, the only ones the generic field list renders. */
+const TEXT_MODULE_TYPES = new Set(['bio', 'notes']);
+
 export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose, isAnonymous = false, userRole, gameState, portraitAvatars, sheetConfig, onDirtyChange }: CharacterSheetProps) {
   const gameContext = useOptionalGameContext();
   const portraitMode = portraitAvatars ?? gameContext?.game?.portrait_avatars ?? false;
@@ -73,14 +76,14 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // Same precedence as portraitMode above: an explicit prop wins, then the game
   // in context, then the defaults the hook owns.
   //
-  const sheetLabels = useSheetLabels(
+  const sheetLayout = useSheetLayout(
     sheetConfig ? { character_sheet: sheetConfig } : gameContext?.game
   );
 
-  // Rebuilt only when a label actually changes: the tab list is derived data,
-  // and a fresh array each render would remount the active manager underneath
-  // an open editor.
-  const modules = useMemo(() => buildCharacterModules(sheetLabels), [sheetLabels]);
+  // Rebuilt only when the layout actually changes: the tab list is derived
+  // data, and a fresh array each render would remount the active manager
+  // underneath an open editor.
+  const modules = useMemo(() => buildCharacterModules(sheetLayout), [sheetLayout]);
 
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -548,7 +551,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 canEdit={canEditStats}
                 onSkillsChange={(skills) => saveJsonField('skills', 'skills', skills)}
                 onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                label={sheetLabels.skills}
+                label={module.name}
               />
             ) : module.type === 'inventory' ? (
               <ItemsManager
@@ -557,7 +560,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 canEdit={canEditStats}
                 onItemsChange={(items, reloadOnly) => { if (!reloadOnly) saveJsonField('inventory', 'items', items); else queryClient.invalidateQueries({ queryKey: ['characterData', characterId] }); }}
                 onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
-                label={sheetLabels.inventory}
+                label={module.name}
               />
             ) : module.type === 'numbers' ? (
               <NumbersManager
@@ -565,8 +568,13 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 canEdit={canEditStats}
                 onNumbersChange={(numbers) => saveJsonField('numbers', 'numbers', numbers)}
                 onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                label={sheetLabels.numbers}
+                label={module.name}
               />
+            ) : !TEXT_MODULE_TYPES.has(module.type) ? (
+              /* A GM-composed custom tab. Its entries render once the generic
+                 entry renderer lands; until then the tab shows only its header,
+                 rather than falling through to a raw text editor over its JSON. */
+              null
             ) : (
               /* Regular text-based fields for bio and notes modules */
               <div className="space-y-6">

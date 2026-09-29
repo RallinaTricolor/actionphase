@@ -216,6 +216,14 @@ RETURNING *;
 -- name: GetGameAutoAcceptAudience :one
 SELECT auto_accept_audience FROM games WHERE id = $1;
 
+-- name: UpdateGameCharacterSheet :one
+-- The Character Sheet editor's write. Replaces the whole document: the service
+-- validates it first, and the editor always sends the complete layout.
+UPDATE games
+SET character_sheet = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
 -- name: UpdateGameAutoAcceptAudience :exec
 UPDATE games
 SET auto_accept_audience = $2, updated_at = NOW()

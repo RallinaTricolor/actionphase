@@ -93,7 +93,7 @@ func TestPhaseAPI_CreateDraftCharacterUpdate(t *testing.T) {
 		body := map[string]interface{}{
 			"character_id": character.ID,
 			"module_type":  "skills",
-			"field_name":   "strength",
+			"field_name":   "skills",
 			"field_value":  "18",
 			"field_type":   "number",
 			"operation":    "upsert",
@@ -111,15 +111,55 @@ func TestPhaseAPI_CreateDraftCharacterUpdate(t *testing.T) {
 		var response map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		assert.Equal(t, "skills", response["module_type"])
-		assert.Equal(t, "strength", response["field_name"])
+		assert.Equal(t, "skills", response["field_name"])
 		assert.Equal(t, "18", response["field_value"])
+	})
+
+	postDraft := func(t *testing.T, moduleType, fieldName string) int {
+		t.Helper()
+		bodyJSON, _ := json.Marshal(map[string]interface{}{
+			"character_id": character.ID,
+			"module_type":  moduleType,
+			"field_name":   fieldName,
+			"field_value":  "[]",
+			"field_type":   "json",
+			"operation":    "upsert",
+		})
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/results/%d/character-updates", game.ID, result.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	// Publishing copies a draft into character_data verbatim, so a draft is a
+	// deferred sheet write and must pass the same layout check a direct write does.
+	t.Run("rejects a pair that is not a tab in the game's layout", func(t *testing.T) {
+		assert.Equal(t, http.StatusUnprocessableEntity, postDraft(t, "skills", "strength"), "wrong field name for the tab")
+		assert.Equal(t, http.StatusUnprocessableEntity, postDraft(t, "t_abc123", "t_abc123"), "custom tab the game does not have")
+		assert.Equal(t, http.StatusUnprocessableEntity, postDraft(t, "bio", "background"), "profile fields are not drafted")
+	})
+
+	t.Run("accepts a custom tab once the layout has it", func(t *testing.T) {
+		_, err := testDB.Pool.Exec(context.Background(),
+			`UPDATE games SET character_sheet = $2 WHERE id = $1`, game.ID,
+			`{"tabs":[{"key":"skills"},{"key":"t_abc123","label":"Contacts","fields":[]}]}`)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, err := testDB.Pool.Exec(context.Background(), `UPDATE games SET character_sheet = '{}' WHERE id = $1`, game.ID)
+			require.NoError(t, err)
+		})
+
+		assert.Equal(t, http.StatusCreated, postDraft(t, "t_abc123", "t_abc123"))
+		assert.Equal(t, http.StatusUnprocessableEntity, postDraft(t, "inventory", "items"), "tab removed from the layout")
 	})
 
 	t.Run("non-GM player cannot create draft update", func(t *testing.T) {
 		body := map[string]interface{}{
 			"character_id": character.ID,
 			"module_type":  "skills",
-			"field_name":   "strength",
+			"field_name":   "skills",
 			"field_value":  "18",
 			"field_type":   "number",
 			"operation":    "upsert",
@@ -140,7 +180,7 @@ func TestPhaseAPI_CreateDraftCharacterUpdate(t *testing.T) {
 		body := map[string]interface{}{
 			"character_id": int32(99999), // non-existent character
 			"module_type":  "skills",
-			"field_name":   "strength",
+			"field_name":   "skills",
 			"field_value":  "18",
 			"field_type":   "number",
 			"operation":    "upsert",

@@ -2,6 +2,9 @@ package db
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"reflect"
 	"testing"
 
 	"actionphase/pkg/core"
@@ -196,5 +199,140 @@ func TestGameService_UpdateGameReplacesCharacterSheetLabels(t *testing.T) {
 	}
 	if got.Labels.Numbers != "" {
 		t.Errorf("Numbers = %q, want it cleared -- the update replaces rather than merges", got.Labels.Numbers)
+	}
+}
+
+// TestGameService_UpdateGameCharacterSheet covers the dedicated sheet write the
+// Character Sheet editor uses.
+func TestGameService_UpdateGameCharacterSheet(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	ctx := context.Background()
+
+	newGame := func(t *testing.T) *models.Game {
+		t.Helper()
+		game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+			Title:       "Game With A Composed Sheet",
+			Description: "The GM customises the sheet after creation.",
+			GMUserID:    int32(fixtures.TestUser.ID),
+			CommunityID: int32(fixtures.TestCommunity.ID),
+			CharacterSheet: core.CharacterSheetConfig{
+				Labels: &core.CharacterSheetLabels{Inventory: "Gear"},
+			},
+		})
+		core.AssertNoError(t, err, "Failed to create game")
+		return game
+	}
+
+	t.Run("stores the normalized layout and drops legacy labels", func(t *testing.T) {
+		game := newGame(t)
+		updated, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+			Labels: &core.CharacterSheetLabels{Inventory: "Gear"},
+			Tabs: []core.CharacterSheetTab{
+				{Key: "inventory", Label: " Gear "},
+				{Key: "t_abc123", Label: "Contacts", Fields: []core.CharacterSheetField{}},
+			},
+		})
+		core.AssertNoError(t, err, "Failed to update character sheet")
+
+		assertSameJSON(t, updated.CharacterSheet,
+			`{"tabs":[{"key":"inventory","label":"Gear"},{"key":"t_abc123","label":"Contacts","fields":[]}]}`)
+	})
+
+	t.Run("an empty config resets to the default layout", func(t *testing.T) {
+		game := newGame(t)
+		updated, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{})
+		core.AssertNoError(t, err, "Failed to reset character sheet")
+		if string(updated.CharacterSheet) != "{}" {
+			t.Errorf("stored %s, want {}", updated.CharacterSheet)
+		}
+	})
+
+	t.Run("rejects an invalid layout without writing it", func(t *testing.T) {
+		game := newGame(t)
+		_, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+			Tabs: []core.CharacterSheetTab{{Key: "bio"}},
+		})
+		if err == nil {
+			t.Fatal("expected a validation error")
+		}
+		stored, err := models.New(testDB.Pool).GetGame(ctx, game.ID)
+		core.AssertNoError(t, err, "Failed to reload game")
+		assertSameJSON(t, stored.CharacterSheet, `{"labels":{"inventory":"Gear"}}`)
+	})
+
+	t.Run("rejects an archived game", func(t *testing.T) {
+		game := newGame(t)
+		_, err := testDB.Pool.Exec(ctx, `UPDATE games SET state = 'completed' WHERE id = $1`, game.ID)
+		core.AssertNoError(t, err, "Failed to complete game")
+
+		_, err = gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{})
+		if !errors.Is(err, core.ErrGameReadOnly) {
+			t.Errorf("err = %v, want ErrGameReadOnly", err)
+		}
+	})
+}
+
+// TestGameService_UpdateGameKeepsComposedTabs pins that the game settings form
+// cannot wipe a composed sheet.
+//
+// That form still sends only legacy labels (it knows nothing of tabs), and
+// UpdateGame is otherwise a full replace. Without carrying the stored tabs over,
+// every settings save would silently reset the GM's layout to the default.
+func TestGameService_UpdateGameKeepsComposedTabs(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	ctx := context.Background()
+
+	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Game With A Composed Sheet",
+		Description: "The GM customises the sheet after creation.",
+		GMUserID:    int32(fixtures.TestUser.ID),
+		CommunityID: int32(fixtures.TestCommunity.ID),
+	})
+	core.AssertNoError(t, err, "Failed to create game")
+
+	composed := `{"tabs":[{"key":"t_abc123","label":"Contacts","fields":[]}]}`
+	_, err = gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+		Tabs: []core.CharacterSheetTab{{Key: "t_abc123", Label: "Contacts", Fields: []core.CharacterSheetField{}}},
+	})
+	core.AssertNoError(t, err, "Failed to compose sheet")
+
+	updated, err := gameService.UpdateGame(ctx, core.UpdateGameRequest{
+		ID:          game.ID,
+		Title:       "Game With A Composed Sheet",
+		Description: "Renamed through the settings form.",
+		CharacterSheet: core.CharacterSheetConfig{
+			Labels: &core.CharacterSheetLabels{Skills: "Approaches"},
+		},
+	})
+	core.AssertNoError(t, err, "Failed to update game")
+
+	assertSameJSON(t, updated.CharacterSheet, composed)
+}
+
+// assertSameJSON compares semantically: JSONB re-renders whitespace on the way
+// out, so the stored bytes never match what was marshalled.
+func assertSameJSON(t *testing.T, got []byte, want string) {
+	t.Helper()
+	var g, w any
+	if err := json.Unmarshal(got, &g); err != nil {
+		t.Fatalf("stored value is not JSON: %v", err)
+	}
+	if err := json.Unmarshal([]byte(want), &w); err != nil {
+		t.Fatalf("want is not JSON: %v", err)
+	}
+	if !reflect.DeepEqual(g, w) {
+		t.Errorf("stored %s, want %s", got, want)
 	}
 }

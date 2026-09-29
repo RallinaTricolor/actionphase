@@ -183,8 +183,8 @@ export class CharacterSheetPage {
   // one method per tab is the whole API.
   //
   // Stat tab labels are GM-renameable per game, so every stat method takes an
-  // optional label. The defaults match DEFAULT_SHEET_LABELS in
-  // frontend/src/hooks/useSheetLabels.ts — the single source of those defaults.
+  // optional label. The defaults match DEFAULT_SHEET_LAYOUT in
+  // frontend/src/hooks/useSheetLayout.ts — the single source of those defaults.
 
   /**
    * Get the character sheet tab select dropdown (mobile).

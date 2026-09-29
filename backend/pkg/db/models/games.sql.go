@@ -1145,6 +1145,52 @@ func (q *Queries) UpdateGameBannerURL(ctx context.Context, arg UpdateGameBannerU
 	return i, err
 }
 
+const updateGameCharacterSheet = `-- name: UpdateGameCharacterSheet :one
+UPDATE games
+SET character_sheet = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+`
+
+type UpdateGameCharacterSheetParams struct {
+	ID             int32  `json:"id"`
+	CharacterSheet []byte `json:"character_sheet"`
+}
+
+// The Character Sheet editor's write. Replaces the whole document: the service
+// validates it first, and the editor always sends the complete layout.
+func (q *Queries) UpdateGameCharacterSheet(ctx context.Context, arg UpdateGameCharacterSheetParams) (Game, error) {
+	row := q.db.QueryRow(ctx, updateGameCharacterSheet, arg.ID, arg.CharacterSheet)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.GmUserID,
+		&i.State,
+		&i.Genre,
+		&i.StartDate,
+		&i.EndDate,
+		&i.RecruitmentDeadline,
+		&i.MaxPlayers,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
+		&i.PortraitAvatars,
+		&i.BannerUrl,
+		&i.CommonRoomOpenDay,
+		&i.CommonRoomOpenTime,
+		&i.CommonRoomCloseDay,
+		&i.CommonRoomCloseTime,
+		&i.ScheduleTimezone,
+		&i.CharacterSheet,
+		&i.CommunityID,
+	)
+	return i, err
+}
+
 const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()

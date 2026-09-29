@@ -547,7 +547,18 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		return nil, err
 	}
 
-	updateCharacterSheet, err := marshalValidatedCharacterSheet(req.CharacterSheet)
+	// The settings form only knows legacy labels, so a request without tabs
+	// keeps whatever layout the Character Sheet editor stored. Otherwise every
+	// settings save would reset a composed sheet to the default tabs. Labels
+	// stay a full replace; with tabs present they are dropped on validation
+	// anyway.
+	sheet := req.CharacterSheet
+	if sheet.Tabs == nil {
+		if stored := core.CharacterSheetConfigForResponse(game.CharacterSheet); stored != nil {
+			sheet.Tabs = stored.Tabs
+		}
+	}
+	updateCharacterSheet, err := marshalValidatedCharacterSheet(sheet)
 	if err != nil {
 		return nil, err
 	}
@@ -1100,6 +1111,39 @@ func (gs *GameService) GetActiveParticipants(ctx context.Context, gameID int32) 
 func (gs *GameService) GetGameAutoAcceptAudience(ctx context.Context, gameID int32) (bool, error) {
 	queries := models.New(gs.DB)
 	return queries.GetGameAutoAcceptAudience(ctx, gameID)
+}
+
+// UpdateGameCharacterSheet validates and stores a game's whole character sheet
+// layout. Archived games are refused: their exports and sheets are immutable.
+func (gs *GameService) UpdateGameCharacterSheet(ctx context.Context, gameID int32, config core.CharacterSheetConfig) (*models.Game, error) {
+	queries := models.New(gs.DB)
+
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
+	stored, err := marshalValidatedCharacterSheet(config)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := queries.UpdateGameCharacterSheet(ctx, models.UpdateGameCharacterSheetParams{
+		ID:             gameID,
+		CharacterSheet: stored,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update character sheet: %w", err)
+	}
+
+	gs.Logger.Info(ctx, "Game character sheet updated",
+		"game_id", gameID,
+		"composed", config.Tabs != nil,
+	)
+	return &updated, nil
 }
 
 // UpdateGameAutoAcceptAudience updates the auto-accept audience setting for a game

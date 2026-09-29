@@ -341,6 +341,10 @@ type GameServiceInterface interface {
 	// UpdateGame updates game details
 	UpdateGame(ctx context.Context, req UpdateGameRequest) (*models.Game, error)
 
+	// UpdateGameCharacterSheet validates and stores a game's whole character
+	// sheet layout. Returns an error wrapping ErrGameReadOnly for an archived game.
+	UpdateGameCharacterSheet(ctx context.Context, gameID int32, config CharacterSheetConfig) (*models.Game, error)
+
 	// DeleteGame removes a game from the system (only allowed for GMs on cancelled games)
 	DeleteGame(ctx context.Context, gameID, userID int32) error
 

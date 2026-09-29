@@ -192,6 +192,32 @@ describe('CharacterSheet', () => {
     expect(updateDepthError).toBeNull();
   });
 
+  // Tabs come from the game's layout, so a GM-composed sheet shows its own tab
+  // list. A custom tab has no renderer yet, and must not fall through to the
+  // bio/notes text editor, which would expose its raw JSON for editing.
+  it('renders the tab list from a composed layout', async () => {
+    setupSheet();
+
+    renderWithProviders(
+      <CharacterSheet
+        characterId={CHARACTER_ID}
+        canEdit
+        sheetConfig={{ tabs: [{ key: 't_abc123', label: 'Contacts', fields: [] }, { key: 'skills', label: 'Talents' }] }}
+      />,
+      { gameId: 1 }
+    );
+
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map(tab => tab.textContent)).toEqual(['Public Profile', 'Private Notes', 'Contacts', 'Talents']);
+
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+
+    expect(await screen.findByRole('heading', { name: 'Contacts' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('renders saved field values from the character data query', async () => {
     setupSheet();
 
