@@ -325,7 +325,7 @@ export class CharacterSheetPage {
    * a renamed tab needs no argument here.
    */
   async canAddNumber(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-number');
+    return await this.isAddTriggerVisible('add-numbers');
   }
 
   private async isAddTriggerVisible(testId: string): Promise<boolean> {

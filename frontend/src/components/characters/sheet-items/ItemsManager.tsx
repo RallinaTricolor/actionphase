@@ -30,7 +30,7 @@ interface ItemsManagerProps {
  * The Inventory tab of the character sheet.
  *
  * Extracted from the former InventoryManager, which held Items and Currency
- * behind sub-tabs. Currency was promoted to its own top-level tab (NumbersManager)
+ * behind sub-tabs. Currency was promoted to its own top-level tab (Numbers)
  * because nothing about a numeric track is an item, so this manages one
  * collection and needs no sub-tab bar.
  */

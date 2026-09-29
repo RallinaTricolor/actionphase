@@ -7,7 +7,7 @@ import { trackVisual, type TrackValue } from '@/lib/sheetEntries';
  * trackVisual falls back to a bar past MAX_RENDERED_BOXES: twenty is already a wide row on a
  * phone, and a hundred boxes is unreadable rather than merely long.
  */
-export const BoxTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => (
+const BoxTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => (
   <div className="flex items-center gap-1 flex-wrap" role="img" aria-label={`${label}: ${filled} of ${total}`}>
     {Array.from({ length: total }, (_, i) => (
       <span
@@ -20,7 +20,7 @@ export const BoxTrack: React.FC<{ filled: number; total: number; label: string }
   </div>
 );
 
-export const BarTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => {
+const BarTrack: React.FC<{ filled: number; total: number; label: string }> = ({ filled, total, label }) => {
   // Clamped because a value can exceed its maximum — overfilled stress is a
   // real state in several systems, and a 140%-wide bar would break the layout.
   const percent = Math.min(100, Math.max(0, (filled / total) * 100));
@@ -41,10 +41,19 @@ export const BarTrack: React.FC<{ filled: number; total: number; label: string }
 /**
  * A `track` field on an entry card: its label and "value / max", with a bar or
  * boxes underneath when the track is bounded and asks for one.
+ *
+ * The drawn track's accessible name leads with the entry's name: the field
+ * label alone repeats on every entry ("Amount: 4 of 9"), which says nothing
+ * about which entry it belongs to.
  */
-export const TrackDisplay: React.FC<{ label: string; track: TrackValue }> = ({ label, track }) => {
+export const TrackDisplay: React.FC<{ label: string; entryName?: string; track: TrackValue }> = ({
+  label,
+  entryName,
+  track,
+}) => {
   const visual = trackVisual(track);
   const max = track.max ?? 0;
+  const accessibleLabel = entryName ? `${entryName}, ${label}` : label;
 
   return (
     <div>
@@ -60,9 +69,9 @@ export const TrackDisplay: React.FC<{ label: string; track: TrackValue }> = ({ l
       {visual !== 'number' && (
         <div className="mt-1">
           {visual === 'boxes' ? (
-            <BoxTrack filled={track.value} total={max} label={label} />
+            <BoxTrack filled={track.value} total={max} label={accessibleLabel} />
           ) : (
-            <BarTrack filled={track.value} total={max} label={label} />
+            <BarTrack filled={track.value} total={max} label={accessibleLabel} />
           )}
         </div>
       )}

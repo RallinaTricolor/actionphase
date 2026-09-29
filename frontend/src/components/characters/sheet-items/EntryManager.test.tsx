@@ -144,6 +144,52 @@ describe('EntryManager', () => {
   });
 });
 
+describe('EntryManager on the Numbers tab', () => {
+  const NUMBERS: SheetTab = resolveSheetLayout(undefined).tabs.find(tab => tab.key === 'numbers')!;
+
+  it('reads legacy rows: type as the name, flat amount/max/display as a track', () => {
+    renderManager({
+      tab: NUMBERS,
+      entries: [
+        { id: 'n1', type: 'Gold', amount: 50 },
+        { id: 'n2', name: 'Stress', amount: 4, max: 9, display: 'track' },
+      ],
+    });
+    expect(screen.getByTestId('numbers-section')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Gold' })).toBeInTheDocument();
+    expect(cardFor('Gold').getByText('50')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Stress, Amount: 4 of 9' })).toBeInTheDocument();
+  });
+
+  it('adds an entry with its track as one value', async () => {
+    const { onEntriesChange, user } = renderManager({ tab: NUMBERS });
+    await user.click(screen.getByTestId('add-numbers'));
+    await user.type(screen.getByRole('textbox', { name: 'Name *' }), 'Stress');
+    await user.type(screen.getByRole('spinbutton', { name: 'Current' }), '2.5');
+    await user.type(screen.getByRole('spinbutton', { name: 'Maximum' }), '9');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Display as' }), 'boxes');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(onEntriesChange.mock.calls[0][0][0]).toEqual({
+      id: expect.any(String), name: 'Stress', amount: { value: 2.5, max: 9, display: 'boxes' },
+    });
+  });
+
+  it('writes an edited legacy row in the new shape, dropping every legacy key', async () => {
+    const { onEntriesChange, user } = renderManager({
+      tab: NUMBERS,
+      entries: [{ id: 'n1', type: 'Stress', amount: 4, max: 9, display: 'boxes', description: 'Mind' }],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Edit entry' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onEntriesChange.mock.calls[0][0][0]).toEqual({
+      id: 'n1', name: 'Stress', amount: { value: 4, max: 9, display: 'boxes' }, description: 'Mind',
+    });
+  });
+});
+
 /**
  * Stands in for CharacterSheet's tab strip: the real sheet needs a QueryClient, a
  * router and an API, none of which this regression is about. It reproduces the

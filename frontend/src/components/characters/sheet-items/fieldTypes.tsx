@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Badge, Checkbox, Input, Select } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
-import type { CharacterSheetField, NumberEntryDisplay } from '@/types/characters';
-import type { TrackValue } from '@/lib/sheetEntries';
+import type { CharacterSheetField } from '@/types/characters';
+import { TRACK_DISPLAY_MODES, type TrackDisplayMode, type TrackValue } from '@/lib/sheetEntries';
 import { TrackDisplay } from './TrackDisplay';
 
 /**
@@ -38,8 +38,10 @@ export interface FieldTypeSpec<D> {
   /**
    * Renders a stored value for the card, or null when there is nothing to
    * show. For the meta group this is the value text beside the label.
+   * `entryName` identifies the entry to assistive tech where a field's own
+   * label would not: every Numbers entry has an "Amount" track.
    */
-  render: (stored: unknown, field: CharacterSheetField) => ReactNode;
+  render: (stored: unknown, field: CharacterSheetField, entryName: string) => ReactNode;
 }
 
 const trimmedOrUndefined = (draft: string) => draft.trim() || undefined;
@@ -140,14 +142,12 @@ const checkbox: FieldTypeSpec<boolean> = {
 interface TrackDraft {
   value: string;
   max: string;
-  display: NumberEntryDisplay;
+  display: TrackDisplayMode;
 }
-
-const DISPLAYS: readonly NumberEntryDisplay[] = ['number', 'track', 'boxes'];
 
 const trackToDraft = (stored: unknown): TrackDraft => {
   const track = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<Record<keyof TrackValue, unknown>>;
-  const display = DISPLAYS.find((d) => d === track.display) ?? 'number';
+  const display = TRACK_DISPLAY_MODES.find((d) => d === track.display) ?? 'number';
   return { value: numberDraft(track.value), max: numberDraft(track.max), display };
 };
 
@@ -205,7 +205,7 @@ const track: FieldTypeSpec<TrackDraft> = {
             id={`${id}-display`}
             label="Display as"
             value={value.display}
-            onChange={(e) => onChange({ ...value, display: e.target.value as NumberEntryDisplay })}
+            onChange={(e) => onChange({ ...value, display: e.target.value as TrackDisplayMode })}
           >
             <option value="number">Number (4 / 9)</option>
             <option value="track">Bar</option>
@@ -215,9 +215,9 @@ const track: FieldTypeSpec<TrackDraft> = {
       </fieldset>
     );
   },
-  render: (stored, field) => {
+  render: (stored, field, entryName) => {
     const value = trackFromDraft(trackToDraft(stored));
-    return value ? <TrackDisplay label={field.label} track={value} /> : null;
+    return value ? <TrackDisplay label={field.label} entryName={entryName} track={value} /> : null;
   },
 };
 

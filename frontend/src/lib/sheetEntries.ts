@@ -1,5 +1,3 @@
-import { isBoundedTrack, type NumberEntryDisplay } from '@/types/characters';
-
 /**
  * An entry as stored: whatever JSON object the tab's blob holds. Old rows can
  * lack an id (see ensureIds), and every other key is opaque until
@@ -22,13 +20,19 @@ export interface SheetEntry {
   [key: string]: unknown;
 }
 
+/** How a bounded track draws. 'track' is the bar. */
+export type TrackDisplayMode = 'number' | 'track' | 'boxes';
+
 /** A `track` field's stored value: "Stress 4 / 9", drawn as a bar or boxes. */
 export interface TrackValue {
   value: number;
-  /** Upper bound. Absent means an unbounded count, which renders as a number. */
+  /**
+   * Upper bound. Absent means an unbounded count (money, XP), which renders as
+   * a number: there is no sensible maximum for a purse.
+   */
   max?: number;
   /** Only meaningful with `max`. Absent means 'number'. */
-  display?: NumberEntryDisplay;
+  display?: TrackDisplayMode;
 }
 
 /** What EntryForm hands back: the name, plus a value per edited field. */
@@ -41,7 +45,7 @@ export interface EntryEdit {
   values: Record<string, unknown>;
 }
 
-const TRACK_DISPLAYS: readonly string[] = ['number', 'track', 'boxes'] satisfies NumberEntryDisplay[];
+export const TRACK_DISPLAY_MODES: readonly TrackDisplayMode[] = ['number', 'track', 'boxes'];
 
 /**
  * Reads a stored entry into the current shape.
@@ -52,7 +56,7 @@ const TRACK_DISPLAYS: readonly string[] = ['number', 'track', 'boxes'] satisfies
  * shape, so a legacy row is rewritten only when someone edits it.
  *
  * - `skills`: `level` → `rank`, stringified. (Was `skillRank`.)
- * - `numbers`: `type` → `name` (was `numberEntryName`), and a bare numeric
+ * - `numbers`: `type` → `name`, and a bare numeric
  *   `amount` with flat `max`/`display` lifts into a `track` value.
  *
  * The legacy keys are removed from the result, so an edited row stops carrying
@@ -79,8 +83,9 @@ export function normalizeEntry(tabKey: string, raw: RawSheetEntry & { id: string
     if (typeof amount === 'number' || (amount === undefined && typeof max === 'number')) {
       const track: TrackValue = { value: typeof amount === 'number' ? amount : 0 };
       if (typeof max === 'number') track.max = max;
-      if (typeof display === 'string' && TRACK_DISPLAYS.includes(display)) {
-        track.display = display as NumberEntryDisplay;
+      const mode = TRACK_DISPLAY_MODES.find((m) => m === display);
+      if (mode) {
+        track.display = mode;
       }
       entry.amount = track;
       delete entry.max;
@@ -113,6 +118,19 @@ export function applyEntryEdit(entry: SheetEntry, edit: EntryEdit): SheetEntry {
 /** Builds a new entry from a form's edit, leaving out cleared fields. */
 export function createEntry(id: string, edit: EntryEdit): SheetEntry {
   return applyEntryEdit({ id, name: edit.name }, edit);
+}
+
+/**
+ * Whether a track draws as a bar or boxes rather than a bare number.
+ *
+ * `max` is what makes a track possible, so `display` alone is not enough: a
+ * 'boxes' track with no maximum has no box count to draw. A non-positive max
+ * is excluded for the same reason. Requires an explicit bar or boxes display
+ * rather than merely excluding 'number', because absent means 'number' and
+ * the write path never stores the literal.
+ */
+function isBoundedTrack(track: TrackValue): boolean {
+  return track.max !== undefined && track.max > 0 && (track.display === 'track' || track.display === 'boxes');
 }
 
 /** How many boxes to draw before falling back to a bar. */

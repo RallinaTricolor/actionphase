@@ -151,79 +151,9 @@ export interface InventoryItem {
   weight?: number;
 }
 
-/**
- * One entry on the Numbers tab: a named quantity, optionally bounded.
- *
- * Renamed from `CurrencyEntry` in the Phase 5 field pass, along with the tab
- * itself. The tab holds arbitrary numeric tracks — stress, XP, clocks, heat —
- * and "currency" described only the narrowest case.
- */
-export interface NumberEntry {
-  id: string;
-  /**
-   * The entry's label, e.g. "Gold", "Stress", "XP".
-   *
-   * Was `type`, which read like a discriminant. Old rows still use that key —
-   * read through `numberEntryName()`, never this field directly. As with the
-   * skills rename there is deliberately no migration: the key lives inside a
-   * JSON blob, so a read-side fallback covers every old row, archived payload,
-   * and rolled-back deploy at no coordination cost.
-   */
-  name?: string;
-  /**
-   * @deprecated Legacy key, read-only. Use `numberEntryName()`.
-   */
-  type?: string;
-  amount: number;
-  /**
-   * Upper bound, which turns a bare count into a track: "Stress 4/9".
-   *
-   * Absent means an unbounded quantity (money, XP), which is why this is
-   * optional rather than defaulted — there is no sensible maximum for a purse.
-   */
-  max?: number;
-  /**
-   * How the entry renders. Only meaningful with `max` set; a bare quantity has
-   * nothing to draw a bar or boxes against, so it always renders as a number.
-   * Absent means 'number'.
-   */
-  display?: NumberEntryDisplay;
-  description?: string;
-}
-
-export type NumberEntryDisplay = 'number' | 'track' | 'boxes';
-
-/**
- * Resolves an entry's label across both storage shapes.
- *
- * Returns '' rather than undefined when neither key is set: the name is
- * required by the form, so an entry without one is corrupt data rather than a
- * meaningful absence, and callers render it as an empty heading rather than
- * branching.
- */
-export function numberEntryName(entry: Pick<NumberEntry, 'name' | 'type'>): string {
-  return entry.name || entry.type || '';
-}
-
-/**
- * Whether an entry should render as a bounded track rather than a bare number.
- *
- * `max` is what makes a track possible, so `display` alone is not enough — a
- * 'boxes' entry with no maximum has no box count to draw. Guards against a
- * non-positive max for the same reason: zero boxes is not a track.
- */
-export function isBoundedTrack(entry: Pick<NumberEntry, 'max' | 'display'>): boolean {
-  // Requires an explicit track display rather than merely excluding 'number':
-  // absent means 'number' (see the field's doc), and the write path stores
-  // exactly that — NumberForm persists undefined for the Number option instead
-  // of the literal, so `display !== 'number'` admitted every saved Number entry
-  // that had a maximum and drew it as a bar.
-  return (
-    entry.max !== undefined &&
-    entry.max > 0 &&
-    (entry.display === 'track' || entry.display === 'boxes')
-  );
-}
+// Numbers entries are generic entries (see SheetEntry in lib/sheetEntries):
+// normalizeEntry absorbs the `type` → `name` rename and lifts the flat
+// `amount`/`max`/`display` into a track value.
 
 /** The tabs every game had before tab composition, and still has by default. */
 export type BuiltInSheetTabKey = 'skills' | 'inventory' | 'numbers';

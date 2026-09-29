@@ -2,12 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { isPublicArchive } from '@/lib/gamePermissions';
-import type { CharacterData, CharacterDataRequest, InventoryItem, NumberEntry, CharacterSheetConfig } from '@/types/characters';
+import type { CharacterData, CharacterDataRequest, InventoryItem, CharacterSheetConfig } from '@/types/characters';
 import { buildCharacterModules } from '@/types/characters';
 import { EntryManager } from './sheet-items/EntryManager';
 import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { ItemsManager } from './sheet-items/ItemsManager';
-import { NumbersManager } from './sheet-items/NumbersManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
 import { useOptionalGameContext } from '@/contexts/GameContext';
@@ -85,8 +84,9 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // data, and a fresh array each render would remount the active manager
   // underneath an open editor.
   const modules = useMemo(() => buildCharacterModules(sheetLayout), [sheetLayout]);
-  // Skills is the first tab on the generic entry renderer; the others follow.
+  // Skills and Numbers are on the generic entry renderer; Inventory follows.
   const skillsTab = sheetLayout.tabs.find(tab => tab.key === 'skills');
+  const numbersTab = sheetLayout.tabs.find(tab => tab.key === 'numbers');
 
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -565,13 +565,13 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
                 label={module.name}
               />
-            ) : module.type === 'numbers' ? (
-              <NumbersManager
-                numbers={parseJsonField('numbers', 'numbers') as NumberEntry[]}
+            ) : module.type === 'numbers' && numbersTab ? (
+              <EntryManager
+                tab={numbersTab}
+                entries={parseJsonField('numbers', 'numbers') as RawSheetEntry[]}
                 canEdit={canEditStats}
-                onNumbersChange={(numbers) => saveJsonField('numbers', 'numbers', numbers)}
+                onEntriesChange={(entries) => saveJsonField('numbers', 'numbers', entries)}
                 onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                label={module.name}
               />
             ) : !TEXT_MODULE_TYPES.has(module.type) ? (
               /* A GM-composed custom tab. Its entries render once the generic

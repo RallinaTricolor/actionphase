@@ -55,7 +55,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, fields, canEdit, on
   const groups: Record<FieldGroup, Rendered[]> = { meta: [], track: [], section: [], badge: [] };
   for (const field of fields) {
     const spec = fieldTypeOf(field);
-    const content = spec?.render(entry[field.key], field);
+    const content = spec?.render(entry[field.key], field, entry.name);
     if (spec && content !== null && content !== undefined) {
       groups[spec.group].push({ field, content });
     }

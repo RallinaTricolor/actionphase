@@ -115,7 +115,7 @@ test.describe('Character Sheet Management', () => {
     // Stress carries a maximum, which renders as a bounded track rather than a
     // bare count — the structure that justified giving Numbers its own tab.
     await expect(sheetPage.numbersSection.getByText('Stress')).toBeVisible();
-    await expect(sheetPage.numbersSection.getByRole('img', { name: 'Stress: 4 of 9' })).toBeVisible();
+    await expect(sheetPage.numbersSection.getByRole('img', { name: 'Stress, Amount: 4 of 9' })).toBeVisible();
   });
 
   test('GM can view all character sheets', async ({ page }) => {

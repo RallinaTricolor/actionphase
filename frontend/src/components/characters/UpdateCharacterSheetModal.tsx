@@ -5,9 +5,8 @@ import { Button, Alert, Spinner } from '@/components/ui';
 import { EntryManager } from './sheet-items/EntryManager';
 import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { ItemsManager } from './sheet-items/ItemsManager';
-import { NumbersManager } from './sheet-items/NumbersManager';
 import { apiClient } from '@/lib/api';
-import type { InventoryItem, NumberEntry } from '@/types/characters';
+import type { InventoryItem } from '@/types/characters';
 import type { CreateDraftCharacterUpdateRequest } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 import { useDiscardSheetDrafts } from '@/hooks/useDiscardSheetDrafts';
@@ -62,6 +61,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   );
   const sectionLabel = (key: ActiveSection) => sections.find(s => s.key === key)?.label ?? key;
   const skillsTab = sections.find(s => s.key === 'skills');
+  const numbersTab = sections.find(s => s.key === 'numbers');
   // The first section present, when the remembered one has been removed.
   const currentSection: ActiveSection | undefined =
     sections.some(s => s.key === activeSection) ? activeSection : sections[0]?.key;
@@ -82,7 +82,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   // Local state for the character sheet being edited
   const [skills, setSkills] = useState<RawSheetEntry[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [numbers, setNumbers] = useState<NumberEntry[]>([]);
+  const [numbers, setNumbers] = useState<RawSheetEntry[]>([]);
 
   // Track whether local state has been initialized from server data
   const initialized = useRef(false);
@@ -133,7 +133,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 
     setSkills(parseJsonArray<RawSheetEntry>(getField('skills', 'skills')));
     setItems(parseJsonArray<InventoryItem>(getField('inventory', 'items')));
-    setNumbers(parseJsonArray<NumberEntry>(getField('numbers', 'numbers')));
+    setNumbers(parseJsonArray<RawSheetEntry>(getField('numbers', 'numbers')));
 
     initialized.current = true;
   }, [isOpen, isLoading, characterData, existingDrafts]);
@@ -280,7 +280,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     }
   };
 
-  const handleNumbersChange = (newNumbers: NumberEntry[]) => {
+  const handleNumbersChange = (newNumbers: RawSheetEntry[]) => {
     setNumbers(newNumbers);
     scheduleSave('numbers', 'numbers', newNumbers);
   };
@@ -320,7 +320,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 
     setSkills(parseJsonArray<RawSheetEntry>(fromCharacter('skills', 'skills')));
     setItems(parseJsonArray<InventoryItem>(fromCharacter('inventory', 'items')));
-    setNumbers(parseJsonArray<NumberEntry>(fromCharacter('numbers', 'numbers')));
+    setNumbers(parseJsonArray<RawSheetEntry>(fromCharacter('numbers', 'numbers')));
 
     setConfirmingDiscard(false);
     setSaveStatus('idle');
@@ -463,13 +463,13 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
                 />
               )}
 
-              {currentSection === 'numbers' && (
-                <NumbersManager
-                  numbers={numbers}
+              {currentSection === 'numbers' && numbersTab && (
+                <EntryManager
+                  tab={numbersTab}
+                  entries={numbers}
                   canEdit={true}
-                  onNumbersChange={handleNumbersChange}
+                  onEntriesChange={handleNumbersChange}
                   onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                  label={sectionLabel('numbers')}
                 />
               )}
             </>

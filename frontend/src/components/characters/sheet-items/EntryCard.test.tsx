@@ -71,7 +71,7 @@ describe('EntryCard', () => {
     it('shows a bounded track with its label and a bar', () => {
       renderCard();
       expect(screen.getByText('Trust')).toBeInTheDocument();
-      expect(screen.getByRole('img', { name: 'Trust: 2 of 5' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Vex, Trust: 2 of 5' })).toBeInTheDocument();
     });
 
     it('leaves out every field with no value', () => {
