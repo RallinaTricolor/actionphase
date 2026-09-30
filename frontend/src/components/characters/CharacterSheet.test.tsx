@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils';
 import { CharacterSheet } from './CharacterSheet';
-import type { CharacterData } from '@/types/characters';
+import type { CharacterData, CharacterSheetConfig } from '@/types/characters';
 
 /**
  * The point of this file is that it exists at all.
@@ -193,29 +193,100 @@ describe('CharacterSheet', () => {
   });
 
   // Tabs come from the game's layout, so a GM-composed sheet shows its own tab
-  // list. A custom tab has no renderer yet, and must not fall through to the
-  // bio/notes text editor, which would expose its raw JSON for editing.
-  it('renders the tab list from a composed layout', async () => {
-    setupSheet();
+  // list, and a custom tab is a list of entries like any built-in one.
+  describe('composed layout', () => {
+    const CONTACTS_CONFIG: CharacterSheetConfig = {
+      tabs: [
+        {
+          key: 't_abc123',
+          label: 'Contacts',
+          fields: [
+            { key: 'f_rel001', label: 'Relationship', type: 'select', options: ['Ally', 'Rival'] },
+            { key: 'f_loc001', label: 'Location', type: 'text' },
+          ],
+        },
+        { key: 'skills', label: 'Talents' },
+      ],
+    };
+    const contactsRow = (entries: unknown[]) => characterDataRow({
+      id: 2,
+      module_type: 't_abc123',
+      field_name: 't_abc123',
+      field_type: 'json',
+      is_public: false,
+      field_value: JSON.stringify(entries),
+    });
 
-    renderWithProviders(
-      <CharacterSheet
-        characterId={CHARACTER_ID}
-        canEdit
-        sheetConfig={{ tabs: [{ key: 't_abc123', label: 'Contacts', fields: [] }, { key: 'skills', label: 'Talents' }] }}
-      />,
-      { gameId: 1 }
-    );
+    it('renders the tab list in layout order', async () => {
+      setupSheet();
+      renderWithProviders(
+        <CharacterSheet characterId={CHARACTER_ID} canEdit sheetConfig={CONTACTS_CONFIG} />,
+        { gameId: 1 }
+      );
 
-    const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map(tab => tab.textContent)).toEqual(['Public Profile', 'Private Notes', 'Contacts', 'Talents']);
+      const tabs = await screen.findAllByRole('tab');
+      expect(tabs.map(tab => tab.textContent)).toEqual(['Public Profile', 'Private Notes', 'Contacts', 'Talents']);
+    });
 
-    const user = userEvent.setup({ delay: null });
-    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    it("renders a custom tab's entries by its fields", async () => {
+      setupSheet([characterDataRow(), contactsRow([{ id: 'c1', name: 'Mira', f_rel001: 'Ally', f_loc001: 'Harbor' }])]);
+      renderWithProviders(
+        <CharacterSheet characterId={CHARACTER_ID} canEdit sheetConfig={CONTACTS_CONFIG} />,
+        { gameId: 1 }
+      );
 
-    expect(await screen.findByRole('heading', { name: 'Contacts' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      const user = userEvent.setup({ delay: null });
+      await user.click(await screen.findByRole('tab', { name: 'Contacts' }));
+
+      const section = await screen.findByTestId('t_abc123-section');
+      expect(within(section).getByRole('heading', { name: 'Contacts' })).toBeInTheDocument();
+      expect(within(section).getByText('Mira')).toBeInTheDocument();
+      expect(within(section).getByText('Harbor')).toBeInTheDocument();
+      expect(within(section).getByText('Ally')).toBeInTheDocument();
+      // Not the bio/notes text editor, which would expose the raw JSON.
+      expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    });
+
+    it('saves a new custom-tab entry under the tab key', async () => {
+      setupSheet([characterDataRow(), contactsRow([])]);
+      let savedBody: Record<string, unknown> | null = null;
+      server.use(
+        http.post(`/api/v1/characters/${CHARACTER_ID}/data`, async ({ request }) => {
+          savedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({ success: true });
+        })
+      );
+      renderWithProviders(
+        <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats sheetConfig={CONTACTS_CONFIG} />,
+        { gameId: 1 }
+      );
+
+      const user = userEvent.setup({ delay: null });
+      await user.click(await screen.findByRole('tab', { name: 'Contacts' }));
+      await user.click(await screen.findByTestId('add-t_abc123'));
+      await user.type(screen.getByRole('textbox', { name: 'Name *' }), 'Mira');
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Relationship' }), 'Rival');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => expect(savedBody).not.toBeNull());
+      expect(savedBody).toMatchObject({ module_type: 't_abc123', field_name: 't_abc123', field_type: 'json' });
+      expect(JSON.parse(savedBody!.field_value as string)).toEqual([
+        { id: expect.any(String), name: 'Mira', f_rel001: 'Rival' },
+      ]);
+    });
+
+    it('shows a malformed tab blob as an empty tab', async () => {
+      setupSheet([characterDataRow(), { ...contactsRow([]), field_value: '{"not":"a list"}' }]);
+      renderWithProviders(
+        <CharacterSheet characterId={CHARACTER_ID} canEdit sheetConfig={CONTACTS_CONFIG} />,
+        { gameId: 1 }
+      );
+
+      const user = userEvent.setup({ delay: null });
+      await user.click(await screen.findByRole('tab', { name: 'Contacts' }));
+      expect(await screen.findByText(/no contacts yet/i)).toBeInTheDocument();
+      expect(updateDepthError).toBeNull();
+    });
   });
 
   it('renders saved field values from the character data query', async () => {

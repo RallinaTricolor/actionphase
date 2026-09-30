@@ -114,13 +114,6 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		return nil, err
 	}
 
-	// Validated and re-marshalled here rather than trusting caller bytes, so the
-	// column can only ever hold what core.CharacterSheetConfig can express.
-	characterSheet, err := marshalValidatedCharacterSheet(req.CharacterSheet)
-	if err != nil {
-		return nil, err
-	}
-
 	// Every new game belongs to a community (req 5). Checked here rather than
 	// left to the foreign key so an unknown id is a 400 naming the problem
 	// instead of a 500, and so an INACTIVE community is refused at all -- the FK
@@ -163,7 +156,6 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		CommonRoomCloseTime:     closeTime,
 		ScheduleTimezone:        scheduleTimezone,
 		CommunityID:             pgtype.Int4{Int32: req.CommunityID, Valid: true},
-		CharacterSheet:          characterSheet,
 	})
 
 	if err != nil {
@@ -547,22 +539,6 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		return nil, err
 	}
 
-	// The settings form only knows legacy labels, so a request without tabs
-	// keeps whatever layout the Character Sheet editor stored. Otherwise every
-	// settings save would reset a composed sheet to the default tabs. Labels
-	// stay a full replace; with tabs present they are dropped on validation
-	// anyway.
-	sheet := req.CharacterSheet
-	if sheet.Tabs == nil {
-		if stored := core.CharacterSheetConfigForResponse(game.CharacterSheet); stored != nil {
-			sheet.Tabs = stored.Tabs
-		}
-	}
-	updateCharacterSheet, err := marshalValidatedCharacterSheet(sheet)
-	if err != nil {
-		return nil, err
-	}
-
 	gs.Logger.Info(ctx, "Updating game",
 		"game_id", req.ID,
 		"has_schedule", req.CommonRoomOpenDay != nil,
@@ -588,7 +564,6 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		CommonRoomCloseTime:     closeTime,
 		ScheduleTimezone:        scheduleTimezone,
 		CommunityID:             communityID,
-		CharacterSheet:          updateCharacterSheet,
 	})
 	if err != nil {
 		return nil, err

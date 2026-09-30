@@ -252,35 +252,92 @@ describe('UpdateCharacterSheetModal', () => {
   });
 
   describe('Composed layout', () => {
-    // The modal only has editors for the built-in tabs, so it offers those the
-    // game's layout still has, under the game's labels.
-    it('offers only the built-in sections the layout keeps, and opens on the first', async () => {
-      setupHandlers({ characterData: [], drafts: null });
+    const CONTACTS = {
+      key: 't_abc123',
+      label: 'Contacts',
+      fields: [{ key: 'f_loc001', label: 'Location', type: 'text' }],
+    };
+
+    /** Serves a game whose sheet has the given configurable tabs. */
+    function withLayout(tabs: unknown[]) {
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/details', () =>
-          HttpResponse.json(makeGameWithDetails({
-            id: 1,
-            character_sheet: {
-              tabs: [
-                { key: 'inventory', label: 'Gear' },
-                { key: 't_abc123', label: 'Contacts', fields: [] },
-                { key: 'numbers' },
-              ],
-            },
-          }))
+          HttpResponse.json(makeGameWithDetails({ id: 1, character_sheet: { tabs } as never }))
+        ),
+      );
+    }
+
+    const contactsRow = (source: 'published' | 'draft', entries: unknown[]) => ({
+      ...(source === 'published' ? CHAR_DATA_SKILLS[0] : DRAFT_ITEMS[0]),
+      module_type: 't_abc123',
+      field_name: 't_abc123',
+      field_value: JSON.stringify(entries),
+    });
+
+    const sectionNames = async () => {
+      const sections = await screen.findByRole('navigation', { name: 'Sections' });
+      return within(sections).getAllByRole('button').map(b => b.textContent);
+    };
+
+    it("offers every tab in the game's layout, custom ones included, and opens on the first", async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      withLayout([{ key: 'inventory', label: 'Gear' }, CONTACTS, { key: 'numbers' }]);
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      await waitFor(async () => {
+        expect(await sectionNames()).toEqual(['Gear', 'Contacts', 'Numbers']);
+      });
+      // Skills was removed, so the modal cannot open on it.
+      expect(screen.queryByText('No skills yet.')).not.toBeInTheDocument();
+      expect(screen.getByText(/no gear yet/i)).toBeInTheDocument();
+    });
+
+    it("shows a custom tab's staged draft over its published entries", async () => {
+      setupHandlers({
+        characterData: [contactsRow('published', [{ id: 'c1', name: 'Mira', f_loc001: 'Harbor' }])],
+        drafts: [contactsRow('draft', [{ id: 'c2', name: 'Oskar', f_loc001: 'Mill' }])],
+      });
+      withLayout([CONTACTS]);
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      expect(await screen.findByText('Oskar')).toBeInTheDocument();
+      expect(screen.getByText('Mill')).toBeInTheDocument();
+      expect(screen.queryByText('Mira')).not.toBeInTheDocument();
+    });
+
+    it('stages an edit to a custom tab under the tab key', async () => {
+      setupHandlers({
+        characterData: [contactsRow('published', [{ id: 'c1', name: 'Mira' }, { id: 'c2', name: 'Oskar' }])],
+        drafts: null,
+      });
+      withLayout([{ key: 'skills' }, CONTACTS]);
+      const writes: { module_type: string; field_name: string; field_value: string }[] = [];
+      server.use(
+        http.post(
+          'http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates',
+          async ({ request }) => {
+            const body = (await request.json()) as (typeof writes)[number];
+            writes.push(body);
+            return HttpResponse.json({ id: 101, ...body });
+          },
         ),
       );
 
       renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
       await waitForLoaded();
 
-      const sections = await screen.findByRole('navigation', { name: 'Sections' });
-      await waitFor(() => {
-        expect(within(sections).getAllByRole('button').map(b => b.textContent)).toEqual(['Gear', 'Numbers']);
-      });
-      // Skills was removed, so the modal cannot open on it.
-      expect(screen.queryByText('No skills yet.')).not.toBeInTheDocument();
-      expect(screen.getByText(/no gear yet/i)).toBeInTheDocument();
+      await waitFor(async () => expect(await sectionNames()).toEqual(['Skills', 'Contacts']));
+      fireEvent.click(screen.getByRole('button', { name: 'Contacts' }));
+      expect(await screen.findByText('Mira')).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+
+      await waitFor(() => expect(writes).toHaveLength(1), { timeout: 3000 });
+      expect(writes[0]).toMatchObject({ module_type: 't_abc123', field_name: 't_abc123' });
+      expect(JSON.parse(writes[0].field_value)).toEqual([{ id: 'c2', name: 'Oskar' }]);
     });
   });
 

@@ -206,7 +206,7 @@ export class CharacterSheetPage {
    * viewport pushes the last ones out of the strip, where getByRole('tab') can
    * still find them but a plain click would miss.
    */
-  private async goToTab(tabId: string, label: string) {
+  private async goToTab(tabId: string | { label: string }, label: string) {
     const isMobile = await this.waitForModuleTabsReady();
     if (isMobile) {
       await this.moduleSelect.scrollIntoViewIfNeeded();
@@ -264,6 +264,14 @@ export class CharacterSheetPage {
    */
   async goToNumbersTab(label = 'Numbers') {
     await this.goToTab('numbers', label);
+  }
+
+  /**
+   * Navigate to a GM-composed tab. Its key is generated when the GM adds it, so
+   * it is found by its label on mobile too.
+   */
+  async goToCustomTab(label: string) {
+    await this.goToTab({ label }, label);
   }
 
   /**

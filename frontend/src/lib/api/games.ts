@@ -27,6 +27,7 @@ import type {
 } from '../../types/conversations';
 import type { ActionWithDetails } from '../../types/phases';
 import type { GameStats } from '../../types/gameStats';
+import type { CharacterSheetConfig } from '../../types/characters';
 
 /**
  * Games API client
@@ -92,6 +93,14 @@ export class GamesApi extends BaseApiClient {
 
   async updateGame(id: number, data: UpdateGameRequest) {
     return this.client.put<GameWritten>(`/api/v1/games/${id}`, data);
+  }
+
+  /**
+   * Replaces the game's whole character sheet layout. `{}` restores the
+   * default. GM or co-GM; rejected once the game is archived.
+   */
+  async updateCharacterSheet(id: number, config: CharacterSheetConfig) {
+    return this.client.put<GameWritten>(`/api/v1/games/${id}/character-sheet`, config);
   }
 
   async deleteGame(id: number) {

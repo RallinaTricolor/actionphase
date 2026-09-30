@@ -38,6 +38,7 @@ const SiteGuidelinesPage = lazy(() => import('./pages/SiteGuidelinesPage').then(
 const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
 const CommunityManagePage = lazy(() => import('./pages/CommunityManagePage').then(m => ({ default: m.CommunityManagePage })));
+const CharacterSheetEditorPage = lazy(() => import('./pages/CharacterSheetEditorPage').then(m => ({ default: m.CharacterSheetEditorPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -216,6 +217,20 @@ function GameDetailsPageWrapper() {
   );
 }
 
+function CharacterSheetEditorPageWrapper() {
+  const { gameId } = useParams<{ gameId: string }>();
+
+  if (!gameId) {
+    return <Navigate to="/games" replace />;
+  }
+
+  return (
+    <GameProvider gameId={parseInt(gameId, 10)}>
+      <CharacterSheetEditorPage />
+    </GameProvider>
+  );
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -301,6 +316,10 @@ const router = createBrowserRouter([
             <PublicArchiveRoute><GameDetailsPageWrapper /></PublicArchiveRoute>
           </Suspense>
         ),
+      },
+      {
+        path: '/games/:gameId/character-sheet',
+        element: <ProtectedRoute><CharacterSheetEditorPageWrapper /></ProtectedRoute>,
       },
       {
         path: '/users/:username',

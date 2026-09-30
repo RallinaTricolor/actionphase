@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"actionphase/pkg/core"
 	"actionphase/pkg/humaconfig"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -57,125 +58,47 @@ func bindCreate(t *testing.T, body string) (*createGameBody, error) {
 	return bindThroughHuma[createGameBody](t, http.MethodPost, body)
 }
 
-// validBody wraps a character_sheet fragment in an otherwise-valid game body, so
-// a rejection can only be coming from the sheet config.
-//
-// Shared with the UPDATE binding tests, so it must carry no create-only field:
-// updateGameBody has no community_id and huma rejects unknown properties.
-func validBody(characterSheet string) string {
-	return `{"title":"A Test Game","description":"A description long enough to validate.","character_sheet":` + characterSheet + `}`
+// The layout is written only through PUT /games/{id}/character-sheet. The game
+// bodies used to carry it too, and a settings save that omitted it reset the
+// GM's tab names. Rejecting the key (rather than ignoring it) makes a client
+// still sending it fail loudly instead of believing it saved something.
+func TestGameBodiesRejectCharacterSheet(t *testing.T) {
+	const sheet = `"character_sheet":{"labels":{"skills":"Approaches"}}`
+
+	if _, err := bindCreate(t, `{"title":"A Test Game","description":"A description long enough to validate.","community_id":1,`+sheet+`}`); err == nil {
+		t.Error("create: expected character_sheet to be rejected")
+	}
+	if _, err := bindThroughHuma[updateGameBody](t, http.MethodPut, `{"title":"A Test Game","description":"A description long enough to validate.",`+sheet+`}`); err == nil {
+		t.Error("update: expected character_sheet to be rejected")
+	}
 }
 
-// validCreateBody is validBody plus community_id, which create requires (req 5)
-// but which is incidental to the sheet rules under test.
-func validCreateBody(characterSheet string) string {
-	return `{"title":"A Test Game","description":"A description long enough to validate.","community_id":1,"character_sheet":` + characterSheet + `}`
-}
-
-func TestCreateGameRequestCharacterSheetBinding(t *testing.T) {
-	t.Run("absent config binds as an empty config", func(t *testing.T) {
-		data, err := bindCreate(t, `{"title":"A Test Game","description":"A description long enough to validate.","community_id":1}`)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if data.CharacterSheet != nil {
-			t.Errorf("expected no sheet, got %+v", data.CharacterSheet)
-		}
-	})
-
-	t.Run("labels bind through", func(t *testing.T) {
-		data, err := bindCreate(t, validCreateBody(`{"labels":{"skills":"Approaches"}}`))
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if data.CharacterSheet == nil || data.CharacterSheet.Labels == nil ||
-			data.CharacterSheet.Labels.Skills != "Approaches" {
-			t.Fatalf("expected skills override, got %+v", data.CharacterSheet)
-		}
-	})
-
-	// Huma rejects unknown properties on nested objects, which is what replaced
-	// the json.RawMessage + DisallowUnknownFields workaround the chi version
-	// needed. If this test fails, the strict decode has been bypassed and the
-	// blob can accumulate junk again.
-	t.Run("unknown key is rejected, not silently dropped", func(t *testing.T) {
-		if _, err := bindCreate(t, validCreateBody(`{"labels":{},"tabs":["skills"]}`)); err == nil {
-			t.Fatal("expected unknown key 'tabs' to be rejected")
-		}
-	})
-
-	t.Run("unknown nested label key is rejected", func(t *testing.T) {
-		if _, err := bindCreate(t, validCreateBody(`{"labels":{"abilities":"Powers"}}`)); err == nil {
-			t.Fatal("expected unknown label 'abilities' to be rejected")
-		}
-	})
-
-	// Label validation runs in Resolve as well as in the service. The service is
-	// the real guard, but an error raised there renders as a 500 "unexpected
-	// error" -- so a GM typing an over-long tab label would be told the server
-	// broke. Failing during request binding makes it the 400 it actually is.
-	t.Run("over-long label is rejected at bind time, not left to the service", func(t *testing.T) {
-		long := strings.Repeat("a", 40)
-		if _, err := bindCreate(t, validCreateBody(`{"labels":{"skills":"`+long+`"}}`)); err == nil {
-			t.Fatal("expected an over-long label to be rejected during binding")
-		}
-	})
-
-	t.Run("control characters are rejected at bind time", func(t *testing.T) {
-		if _, err := bindCreate(t, validCreateBody(`{"labels":{"skills":"Ap\nproaches"}}`)); err == nil {
-			t.Fatal("expected a newline in a label to be rejected during binding")
-		}
-	})
-
-	t.Run("whitespace-only label binds as no override", func(t *testing.T) {
-		data, err := bindCreate(t, validCreateBody(`{"labels":{"skills":"   "}}`))
-		if err != nil {
-			t.Fatalf("whitespace-only is an unset label, not an error: %v", err)
-		}
-		if data.CharacterSheet != nil && data.CharacterSheet.Labels != nil {
-			t.Errorf("expected the label to collapse away, got %+v", data.CharacterSheet.Labels)
-		}
-	})
-
-	t.Run("labels are trimmed at bind time", func(t *testing.T) {
-		data, err := bindCreate(t, validCreateBody(`{"labels":{"skills":"  Approaches  "}}`))
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if data.CharacterSheet == nil || data.CharacterSheet.Labels == nil ||
-			data.CharacterSheet.Labels.Skills != "Approaches" {
-			t.Fatalf("expected a trimmed label, got %+v", data.CharacterSheet)
-		}
-	})
-}
-
-func TestUpdateGameRequestCharacterSheetBinding(t *testing.T) {
-	bindUpdate := func(body string) (*updateGameBody, error) {
-		return bindThroughHuma[updateGameBody](t, http.MethodPut, body)
+// Huma rejects unknown properties on nested objects, which is what replaced the
+// json.RawMessage + DisallowUnknownFields workaround the chi version needed. If
+// these fail, the strict decode has been bypassed and the stored layout can
+// accumulate junk.
+func TestCharacterSheetBodyRejectsUnknownKeys(t *testing.T) {
+	bind := func(body string) error {
+		_, err := bindThroughHuma[core.CharacterSheetConfig](t, http.MethodPut, body)
+		return err
 	}
 
-	t.Run("labels bind through", func(t *testing.T) {
-		data, err := bindUpdate(validBody(`{"labels":{"numbers":"Resources"}}`))
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if data.CharacterSheet == nil || data.CharacterSheet.Labels == nil ||
-			data.CharacterSheet.Labels.Numbers != "Resources" {
-			t.Fatalf("expected numbers override, got %+v", data.CharacterSheet)
-		}
-	})
+	if err := bind(`{"tabs":[{"key":"t_abc123","label":"Contacts","fields":[{"key":"f_loc001","label":"Location","type":"text"}]}]}`); err != nil {
+		t.Fatalf("a valid layout must bind: %v", err)
+	}
 
-	t.Run("unknown key is rejected", func(t *testing.T) {
-		if _, err := bindUpdate(validBody(`{"labels":{},"presets":[]}`)); err == nil {
-			t.Fatal("expected unknown key 'presets' to be rejected")
-		}
-	})
-
-	t.Run("unknown key inside a tab is rejected", func(t *testing.T) {
-		if _, err := bindUpdate(validBody(`{"tabs":[{"key":"skills","public":true}]}`)); err == nil {
-			t.Fatal("expected unknown tab key 'public' to be rejected")
-		}
-	})
+	for name, body := range map[string]string{
+		"top level":  `{"presets":[]}`,
+		"in labels":  `{"labels":{"abilities":"Powers"}}`,
+		"in a tab":   `{"tabs":[{"key":"skills","public":true}]}`,
+		"in a field": `{"tabs":[{"key":"skills","fields":[{"key":"rank","label":"Rank","type":"text","required":true}]}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := bind(body); err == nil {
+				t.Fatalf("expected %s to be rejected", body)
+			}
+		})
+	}
 }
 
 func TestCharacterSheetResponse(t *testing.T) {

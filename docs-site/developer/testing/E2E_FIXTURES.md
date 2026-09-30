@@ -59,6 +59,7 @@ ls backend/pkg/db/test_fixtures/e2e/
 | `27_draft_posts.sql` |
 | `28_infinite_scroll.sql` |
 | `29_epilogue_flow.sql` |
+| `32_custom_character_sheet.sql` |
 | `99_backfill_activated_at.sql` |
 
 </details>

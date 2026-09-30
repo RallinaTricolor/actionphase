@@ -55,14 +55,6 @@ export const DEFAULT_SHEET_LAYOUT: readonly {
   },
 ];
 
-/**
- * Default label per built-in tab, derived from DEFAULT_SHEET_LAYOUT rather than
- * restated. Used by the game form's legacy label inputs as placeholders.
- */
-export const DEFAULT_SHEET_LABELS = Object.fromEntries(
-  DEFAULT_SHEET_LAYOUT.map(tab => [tab.key, tab.label])
-) as Readonly<Record<BuiltInSheetTabKey, string>>;
-
 const DEFAULTS_BY_KEY = new Map(DEFAULT_SHEET_LAYOUT.map(tab => [tab.key as string, tab]));
 
 /** Source of the config: a game, a cross-game character payload, or nothing. */

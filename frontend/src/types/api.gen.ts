@@ -4580,7 +4580,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;
@@ -6258,7 +6257,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;

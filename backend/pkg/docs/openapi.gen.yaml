@@ -1952,8 +1952,6 @@ components:
                     type: boolean
                 banner_url:
                     type: string
-                character_sheet:
-                    $ref: '#/components/schemas/CharacterSheetConfig'
                 common_room_close_day:
                     format: int32
                     maximum: 6
@@ -5328,8 +5326,6 @@ components:
                     type: boolean
                 banner_url:
                     type: string
-                character_sheet:
-                    $ref: '#/components/schemas/CharacterSheetConfig'
                 common_room_close_day:
                     format: int32
                     maximum: 6

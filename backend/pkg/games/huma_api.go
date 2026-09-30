@@ -269,25 +269,17 @@ type createGameBody struct {
 	// Required: every new game belongs to a community (req 5). minimum:"1"
 	// rejects the zero value, which would otherwise pass as "present".
 	CommunityID int32 `json:"community_id" required:"true" minimum:"1"`
-	// Typed, not json.RawMessage.
-	//
-	// The chi version kept this raw so it could decode with
-	// DisallowUnknownFields, because render.Bind's decoder would otherwise
-	// silently drop a typo'd key. Huma needs no such workaround: it rejects
-	// unknown properties on nested objects too, verified at both levels of this
-	// structure. So the strictness survives and the schema now describes the
-	// shape instead of saying "object".
-	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty" required:"false"`
+	// No character_sheet: a new game gets the default layout, and the GM
+	// customises it afterwards through PUT /games/{id}/character-sheet.
 }
 
-// Resolve carries over the two checks Bind ran after the struct tags: the
-// character sheet's own validation (which normalizes whitespace-only labels to
-// absent) and the all-or-nothing schedule rule.
+// Resolve carries over the check Bind ran after the struct tags: the
+// all-or-nothing schedule rule.
 func (b *createGameBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
 	}
-	return resolveGameBody(&b.CharacterSheet,
+	return resolveGameBody(
 		b.CommonRoomOpenDay, b.CommonRoomCloseDay,
 		b.CommonRoomOpenTime, b.CommonRoomCloseTime, b.ScheduleTimezone)
 }
@@ -302,18 +294,19 @@ type updateGameBody struct {
 	MaxPlayers          int32      `json:"max_players,omitempty" required:"false"`
 	// A POINTER, unlike most of this body: absent means "leave the community
 	// alone", not "clear it". Only honoured while the game is in setup.
-	CommunityID             *int32                     `json:"community_id,omitempty" required:"false" minimum:"1"`
-	IsAnonymous             bool                       `json:"is_anonymous,omitempty" required:"false"`
-	AutoAcceptAudience      bool                       `json:"auto_accept_audience,omitempty" required:"false"`
-	AllowGroupConversations bool                       `json:"allow_group_conversations,omitempty" required:"false"`
-	PortraitAvatars         bool                       `json:"portrait_avatars,omitempty" required:"false"`
-	BannerURL               *string                    `json:"banner_url,omitempty" required:"false"`
-	CommonRoomOpenDay       *int16                     `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
-	CommonRoomOpenTime      *string                    `json:"common_room_open_time,omitempty" required:"false"`
-	CommonRoomCloseDay      *int16                     `json:"common_room_close_day,omitempty" required:"false" minimum:"0" maximum:"6"`
-	CommonRoomCloseTime     *string                    `json:"common_room_close_time,omitempty" required:"false"`
-	ScheduleTimezone        *string                    `json:"schedule_timezone,omitempty" required:"false"`
-	CharacterSheet          *core.CharacterSheetConfig `json:"character_sheet,omitempty" required:"false"`
+	CommunityID             *int32  `json:"community_id,omitempty" required:"false" minimum:"1"`
+	IsAnonymous             bool    `json:"is_anonymous,omitempty" required:"false"`
+	AutoAcceptAudience      bool    `json:"auto_accept_audience,omitempty" required:"false"`
+	AllowGroupConversations bool    `json:"allow_group_conversations,omitempty" required:"false"`
+	PortraitAvatars         bool    `json:"portrait_avatars,omitempty" required:"false"`
+	BannerURL               *string `json:"banner_url,omitempty" required:"false"`
+	CommonRoomOpenDay       *int16  `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
+	CommonRoomOpenTime      *string `json:"common_room_open_time,omitempty" required:"false"`
+	CommonRoomCloseDay      *int16  `json:"common_room_close_day,omitempty" required:"false" minimum:"0" maximum:"6"`
+	CommonRoomCloseTime     *string `json:"common_room_close_time,omitempty" required:"false"`
+	ScheduleTimezone        *string `json:"schedule_timezone,omitempty" required:"false"`
+	// No character_sheet: the layout has its own endpoint and editor, so a
+	// settings save can never reset it.
 
 	// StartDate and friends are plain *time.Time here, not core.LocalDateTime,
 	// because that is what the chi request struct used. Update therefore accepts
@@ -325,39 +318,19 @@ func (b *updateGameBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
 	}
-	return resolveGameBody(&b.CharacterSheet,
+	return resolveGameBody(
 		b.CommonRoomOpenDay, b.CommonRoomCloseDay,
 		b.CommonRoomOpenTime, b.CommonRoomCloseTime, b.ScheduleTimezone)
 }
 
-// resolveGameBody runs the two non-tag validations the create and update bodies
-// share, normalizing the character sheet in place.
-//
-// The sheet is validated here rather than left to the service for the reason the
-// chi Bind gave: a service-layer rejection renders as a 500 "unexpected error",
-// so a GM typing an over-long tab label would be told the server broke.
-func resolveGameBody(sheet **core.CharacterSheetConfig, openDay, closeDay *int16, openTime, closeTime, tz *string) []error {
-	if *sheet != nil {
-		validated, err := core.ValidateCharacterSheetConfig(**sheet)
-		if err != nil {
-			return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body.character_sheet"}}
-		}
-		*sheet = &validated
-	}
-
+// resolveGameBody runs the non-tag validation the create and update bodies
+// share. It runs here rather than in the service for the reason the chi Bind
+// gave: a service-layer rejection renders as a 500 "unexpected error".
+func resolveGameBody(openDay, closeDay *int16, openTime, closeTime, tz *string) []error {
 	if err := validateScheduleFields(openDay, closeDay, openTime, closeTime, tz); err != nil {
 		return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body"}}
 	}
 	return nil
-}
-
-// sheetConfigValue dereferences an optional sheet pointer for the service call,
-// which takes a value.
-func sheetConfigValue(sheet *core.CharacterSheetConfig) core.CharacterSheetConfig {
-	if sheet == nil {
-		return core.CharacterSheetConfig{}
-	}
-	return *sheet
 }
 
 type updateCharacterSheetInput struct {
@@ -678,7 +651,6 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 		CommonRoomCloseTime:     in.Body.CommonRoomCloseTime,
 		ScheduleTimezone:        in.Body.ScheduleTimezone,
 		CommunityID:             in.Body.CommunityID,
-		CharacterSheet:          sheetConfigValue(in.Body.CharacterSheet),
 	})
 	if err != nil {
 		h.App.Observability.OTELMetrics.RecordGameCreateError(ctx)
@@ -853,7 +825,6 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 		CommonRoomCloseDay:      in.Body.CommonRoomCloseDay,
 		CommonRoomCloseTime:     in.Body.CommonRoomCloseTime,
 		ScheduleTimezone:        in.Body.ScheduleTimezone,
-		CharacterSheet:          sheetConfigValue(in.Body.CharacterSheet),
 	})
 	if err != nil {
 		// Community problems are the caller's mistake, not a server fault.

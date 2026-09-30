@@ -4,7 +4,6 @@ import {
   useSheetLayout,
   resolveSheetLayout,
   DEFAULT_SHEET_LAYOUT,
-  DEFAULT_SHEET_LABELS,
 } from './useSheetLayout';
 import { buildCharacterModules, storageFieldName } from '@/types/characters';
 
@@ -100,13 +99,6 @@ describe('resolveSheetLayout', () => {
     // A caller mutating its layout must not rewrite the defaults for every game.
     const [tab] = resolveSheetLayout(undefined).tabs;
     expect(tab.fields).not.toBe(DEFAULT_SHEET_LAYOUT[0].fields);
-  });
-
-  it('derives DEFAULT_SHEET_LABELS from the layout, keyed by its own lower-cased label', () => {
-    expect(DEFAULT_SHEET_LABELS).toEqual({ skills: 'Skills', inventory: 'Inventory', numbers: 'Numbers' });
-    for (const [key, label] of Object.entries(DEFAULT_SHEET_LABELS)) {
-      expect(label.toLowerCase()).toBe(key);
-    }
   });
 });
 

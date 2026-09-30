@@ -586,45 +586,42 @@ test `=== true`: an absent key reads as "not hidden".
 
 ### Character Sheet Storage
 
-The sheet is **five flat tabs**, each one `module_type` in `character_data`.
-There is no second level — an earlier design nested sub-tabs under two parent
-modules, and code or docs still describing that is stale.
+*(Rewritten 2026-09-30 for GM-composed sheets. Plan and as-built notes:
+`.claude/planning/CHARACTER_SHEET_TAB_COMPOSITION.md`.)*
 
-`character_data.module_type` is **not** constrained in the database; the
-allowlist lives in application code (`api_data.go`). The `check_module_type`
-constraint is on `action_result_character_updates` and covers only the three
-stat modules, since a draft update never targets bio or notes.
+A sheet is **Public Profile and Private Notes, then the game's configurable
+tabs**. Every configurable tab is the same thing: a list of entries, each with a
+fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
 
-| `module_type` | Holds | Renameable |
-|---|---|---|
-| `bio` | Public description (one text row) | No — platform concept |
-| `notes` | Private notes (one text row) | No — platform concept |
-| `skills` | JSON array of skills | Yes |
-| `inventory` | JSON array of items | Yes |
-| `numbers` | JSON array of named quantities/tracks | Yes |
-
-Two invariants worth knowing before touching this:
-
-1. **Each stat tab is ONE row holding a JSON array**, not a row per entry. The
-   `field_name` equals the `module_type` for skills and numbers (`items` for
-   inventory).
-2. **`module_type` == React symbol == default label.** That equality is what
-   keeps the renaming feature a straight substitution with no mapping table.
-   Preserve it when adding a tab.
-
-GM-supplied labels live in `games.character_sheet` (JSONB), stored **sparse** —
-only genuine overrides, never defaults. An absent key means "use the frontend's
-default", so defaults have exactly one home (`useSheetLabels.ts`) and changing
-one later does not silently skip games that already stored it.
-
-Three renames shipped with the refactor and behave differently on purpose:
-
-- `currency` → `numbers` (module_type): a **real migration**, because reads are
-  keyed by `module_type` and a missed row renders an empty tab.
-- skill `level` → `rank`, number `type` → `name` (keys *inside* the JSON):
-  **no migration**, resolved on read via `skillRank()` / `numberEntryName()`. A
-  fallback covers every old row, archived payload, and rolled-back deploy at no
-  coordination cost, where a migration would need all three to line up.
+- **Layout**: `games.character_sheet` (JSONB, `core.CharacterSheetConfig`).
+  Stored **sparse**: absent `tabs` means the default layout (Skills, Inventory,
+  Numbers); a built-in tab without `label`/`fields` uses its defaults. Default
+  labels and fields live only in `DEFAULT_SHEET_LAYOUT`
+  (`frontend/src/hooks/useSheetLayout.ts`); read a layout through
+  `resolveSheetLayout`/`useSheetLayout`, never the raw config. Legacy `labels`
+  apply only when `tabs` is absent.
+- **Written only by** `PUT /games/{id}/character-sheet` (GM or co-GM; 409 once
+  archived), from the Character Sheet editor at `/games/:gameId/character-sheet`
+  (`components/characters/sheet-editor/`). The game create/update bodies have no
+  `character_sheet`, so a settings save can never reset the layout.
+- **Keys never change**: custom tabs are `t_` + 6 `[a-z0-9]`, new fields
+  `f_` + 6; built-in fields keep their historic JSON keys (`rank`, `quantity`,
+  `amount`, ...), so existing data lines up. Field types can't change.
+- **Entries**: one `character_data` row per tab holding a JSON array, at
+  `(tab key, storageFieldName(tab key))`. Every tab stores under its own key
+  except Inventory (`items`). Mirrored by `core.SheetStorageFieldName`.
+- **Removing a tab or field only edits the layout.** Stored values stay in the
+  blobs, hidden; restoring a built-in tab or default field shows them again.
+  Edits merge onto the stored entry, so unknown keys survive a save.
+- **Writes**: `core.ClassifySheetWrite` allowlists `bio/background` and
+  `notes/private_notes` for any editor; every layout tab is GM/co-GM only, and
+  any other pair is 422. Draft updates on action results get the same check;
+  publishing copies drafts verbatim, even for a tab removed since.
+- **Rendering**: `EntryManager` → `EntryCard`/`EntryForm`, driven by the
+  field-type registry in `sheet-items/fieldTypes.tsx`. `normalizeEntry`
+  (`lib/sheetEntries.ts`) absorbs legacy shapes on read (skill `level` → `rank`,
+  number `type` → `name`, flat `amount`/`max`/`display` → a track); writes
+  always use the new shape, and only the edited entry is rewritten.
 
 **See**: `/docs-site/developer/architecture/adrs/002-database-design-approach.md`
 

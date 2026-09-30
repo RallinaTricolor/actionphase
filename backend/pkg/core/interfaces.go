@@ -565,7 +565,6 @@ type CreateGameRequest struct {
 	CommonRoomCloseDay      *int16
 	CommonRoomCloseTime     *string // "HH:MM"
 	ScheduleTimezone        *string // IANA timezone name, e.g. "America/New_York"
-	CharacterSheet          CharacterSheetConfig
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game
@@ -593,7 +592,6 @@ type UpdateGameRequest struct {
 	CommonRoomCloseDay      *int16
 	CommonRoomCloseTime     *string // "HH:MM"
 	ScheduleTimezone        *string // IANA timezone name, e.g. "America/New_York"
-	CharacterSheet          CharacterSheetConfig
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.

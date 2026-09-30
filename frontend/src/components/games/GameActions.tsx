@@ -28,6 +28,8 @@ interface GameActionsProps {
   onWithdrawApplication: () => void;
   onLeaveGame: () => void;
   onDeleteGame?: () => void;
+  /** Opens the Character Sheet editor. GM or co-GM, while the game is writable. */
+  onCustomizeSheet?: () => void;
   // Controls which portion to render — allows splitting player CTAs from the GM kebab menu
   slot?: 'player-actions' | 'menu-actions' | 'all';
 }
@@ -56,6 +58,7 @@ export function GameActions({
   onWithdrawApplication,
   onLeaveGame: _onLeaveGame,
   onDeleteGame,
+  onCustomizeSheet,
   slot = 'all',
 }: GameActionsProps) {
   const [showMenu, setShowMenu] = useState(false);
@@ -79,7 +82,10 @@ export function GameActions({
   const hasEditAction = canEditGame && isGameWritable(game.state);
   const hasStateActions = isGM && stateActions.length > 0;
   const hasDeleteAction = isGM && game.state === 'cancelled' && onDeleteGame;
-  const hasMenuItems = hasEditAction || hasStateActions || hasDeleteAction;
+  // isGM here includes co-GMs, unlike Edit Game: sheet layout is ordinary game
+  // setup, and the endpoint admits them.
+  const hasCustomizeSheetAction = isGM && isGameWritable(game.state) && !!onCustomizeSheet;
+  const hasMenuItems = hasEditAction || hasStateActions || hasDeleteAction || hasCustomizeSheetAction;
 
   // A stale application is a leftover 'approved' record with no active membership behind it —
   // e.g. (for accounts affected before the backend fix that now deletes an audience application
@@ -201,10 +207,29 @@ export function GameActions({
                 </>
               )}
 
+              {hasCustomizeSheetAction && (
+                <>
+                  {hasStateActions && !hasEditAction && (
+                    <div className="border-t border-theme-default my-1" />
+                  )}
+                  <button
+                    onClick={() => {
+                      onCustomizeSheet?.();
+                      setShowMenu(false);
+                    }}
+                    disabled={actionLoading}
+                    className="w-full text-left px-4 py-2 text-sm text-content-primary hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="customize-character-sheet-button"
+                  >
+                    Customize Character Sheet
+                  </button>
+                </>
+              )}
+
               {/* Delete Game */}
               {hasDeleteAction && (
                 <>
-                  {(hasEditAction || hasStateActions) && (
+                  {(hasEditAction || hasStateActions || hasCustomizeSheetAction) && (
                     <div className="border-t border-theme-default my-1" />
                   )}
                   <button

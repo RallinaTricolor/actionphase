@@ -505,6 +505,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 onWithdrawApplication={handleWithdrawApplication}
                 onLeaveGame={handleLeaveGame}
                 onDeleteGame={handleDeleteGame}
+                onCustomizeSheet={() => navigate(`/games/${gameId}/character-sheet`)}
                 slot="menu-actions"
               />
             }
