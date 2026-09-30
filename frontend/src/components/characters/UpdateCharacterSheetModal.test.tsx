@@ -309,6 +309,59 @@ describe('UpdateCharacterSheetModal', () => {
       expect(screen.queryByText('Mira')).not.toBeInTheDocument();
     });
 
+    it('rolls on a loot table into the custom tab it targets and shows the entry there', async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      withLayout([{ key: 'inventory' }, CONTACTS]);
+      let rolledTable: string | undefined;
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
+          HttpResponse.json([
+            { id: 4, game_id: 1, name: 'Common Loot', target_tab: 'inventory', created_at: '', updated_at: '' },
+            { id: 5, game_id: 1, name: 'Townsfolk', target_tab: 't_abc123', created_at: '', updated_at: '' },
+          ])
+        ),
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', ({ params }) => {
+          rolledTable = params.tableId as string;
+          return HttpResponse.json({ id: 9, loot_table_id: 5, name: 'Old Zadok', data: '{"id":"srv-1","name":"Old Zadok","f_loc001":"Docks"}' });
+        }),
+      );
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      fireEvent.click(within(await screen.findByRole('navigation', { name: 'Sections' })).getByRole('button', { name: 'Contacts' }));
+      fireEvent.click(await screen.findByTestId('add-t_abc123'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'loot_table_random' } });
+      const tables = screen.getByRole('combobox', { name: 'Loot Table' });
+      // Only the table rolling into Contacts is offered here.
+      expect(within(tables).queryByRole('option', { name: 'Common Loot' })).not.toBeInTheDocument();
+      fireEvent.change(tables, { target: { value: '5' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      const section = await screen.findByTestId('t_abc123-section');
+      expect(await within(section).findByText('Old Zadok')).toBeInTheDocument();
+      expect(within(section).getByText('Docks')).toBeInTheDocument();
+      expect(rolledTable).toBe('5');
+
+      // Staging the tab afterwards keeps the id the server stored, so the
+      // draft doesn't fork the rolled entry into a copy with another id.
+      let staged: string | undefined;
+      server.use(
+        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
+          staged = ((await request.json()) as { field_value: string }).field_value;
+          return HttpResponse.json({ id: 101, action_result_id: 10, character_id: 42, module_type: 't_abc123', field_name: 't_abc123', field_value: staged, field_type: 'json', operation: 'upsert', created_at: '', updated_at: '' });
+        }),
+      );
+      fireEvent.click(screen.getByTestId('add-t_abc123'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'manual' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name *' }), { target: { value: 'Mira' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      await waitFor(() => expect(staged).toBeDefined(), { timeout: 3000 });
+      expect(JSON.parse(staged!).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
+        ['srv-1', 'Old Zadok'],
+        [expect.any(String), 'Mira'],
+      ]);
+    });
+
     it('stages an edit to a custom tab under the tab key', async () => {
       setupHandlers({
         characterData: [contactsRow('published', [{ id: 'c1', name: 'Mira' }, { id: 'c2', name: 'Oskar' }])],

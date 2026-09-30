@@ -7,10 +7,11 @@ import { CharacterSheetPage } from '../pages/CharacterSheetPage';
 /**
  * E2E Tests for the GM's Character Sheet editor
  *
- * The two journeys the feature exists for:
+ * The journeys the feature exists for:
  * - Reshape a built-in tab: drop Value and Weight from Inventory, add a
  *   Durability track, and have the player see an item carrying it.
  * - Add a custom tab (Contacts) and fill it in through an action result.
+ * - Roll a loot table into that tab; the editor then won't remove it.
  *
  * Uses the dedicated E2E_CUSTOM_SHEET fixture: a game on the default layout
  * whose one character holds an item with Value and Weight, plus an active
@@ -144,5 +145,39 @@ test.describe('Character Sheet editor', () => {
     const contact = page.getByTestId('sheet-entry').filter({ has: page.getByRole('heading', { name: 'Old Zadok' }) });
     await expect(contact).toBeVisible();
     await expect(contact.getByText('Ally', { exact: true })).toBeVisible();
+  });
+
+  test('GM rolls a loot table into Contacts, and the editor then keeps the tab', async ({ page }) => {
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_CUSTOM_SHEET');
+
+    // A table rolling into the Contacts tab the previous test added.
+    await page.goto(`/games/${gameId}?tab=loot_tables`);
+    await page.getByRole('button', { name: 'New Loot Table' }).click();
+    await page.getByLabel('Table Name').fill('Townsfolk');
+    await page.getByRole('combobox', { name: 'Rolls into' }).selectOption({ label: 'Contacts' });
+    await page.getByRole('button', { name: 'Add Loot Table Content' }).click();
+    await page.getByRole('textbox', { name: 'Name *' }).fill('Mira');
+    await page.getByRole('combobox', { name: 'Relationship' }).selectOption('Rival');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('button', { name: 'Create Loot Table' }).click();
+    await expect(page.getByText('Rolls into Contacts')).toBeVisible({ timeout: 10000 });
+
+    const sheet = await openOwnSheet(page, gameId);
+    await sheet.goToCustomTab('Contacts');
+    await page.locator('[data-testid^="add-t_"]').click();
+    await page.getByRole('combobox', { name: 'Mode' }).selectOption('loot_table_random');
+    await page.getByRole('combobox', { name: 'Loot Table' }).selectOption({ label: 'Townsfolk' });
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    const rolled = page.getByTestId('sheet-entry').filter({ has: page.getByRole('heading', { name: 'Mira' }) });
+    await expect(rolled).toBeVisible({ timeout: 10000 });
+    await expect(rolled.getByText('Rival', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Close character sheet' }).click();
+
+    // Removing Contacts would unlink the table, so the editor won't.
+    await openEditor(page, gameId);
+    const tabList = page.getByTestId('sheet-tab-list');
+    await expect(tabList.getByRole('button', { name: 'Remove Contacts' })).toBeDisabled();
+    await expect(tabList.getByText(/Used by/)).toContainText('Used by 1 loot table');
   });
 });

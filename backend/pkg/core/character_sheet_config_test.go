@@ -580,3 +580,37 @@ func TestIsSheetTabKey(t *testing.T) {
 		}
 	}
 }
+
+func TestSheetTabLabel(t *testing.T) {
+	composed := CharacterSheetConfig{Tabs: []CharacterSheetTab{
+		{Key: "t_abc123", Label: "Contacts"},
+		{Key: "inventory", Label: "Gear"},
+		{Key: "skills"},
+	}}
+	legacy := CharacterSheetConfig{Labels: &CharacterSheetLabels{Numbers: "Resources"}}
+
+	tests := []struct {
+		name   string
+		config CharacterSheetConfig
+		key    string
+		want   string
+	}{
+		{"custom tab takes its label", composed, "t_abc123", "Contacts"},
+		{"renamed built-in takes its label", composed, "inventory", "Gear"},
+		{"unrenamed built-in takes its default", composed, "skills", "Skills"},
+		{"legacy label override applies without tabs", legacy, "numbers", "Resources"},
+		{"legacy config falls back to the default", legacy, "inventory", "Inventory"},
+		{"legacy labels are ignored once tabs are set", CharacterSheetConfig{
+			Labels: &CharacterSheetLabels{Skills: "Talents"}, Tabs: []CharacterSheetTab{{Key: "skills"}},
+		}, "skills", "Skills"},
+		{"a custom tab the layout dropped has no label", composed, "t_zzz999", ""},
+		{"empty config uses the default", CharacterSheetConfig{}, "numbers", "Numbers"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := SheetTabLabel(tt.config, tt.key); got != tt.want {
+				t.Errorf("SheetTabLabel(%q) = %q, want %q", tt.key, got, tt.want)
+			}
+		})
+	}
+}

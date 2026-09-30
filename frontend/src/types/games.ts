@@ -150,12 +150,16 @@ export type GameLog = components['schemas']['GameLogEntryResponse'];
  */
 export interface CreateLootTableArgs {
   name: string;
+  /** Key of the sheet tab the table rolls into. */
+  target_tab: string;
   items: LootTableContent[] | undefined;
 }
 
 export interface UpdateLootTableArgs {
   id: number;
   name: string;
+  /** A new target tab. Omit to keep the current one; only an empty table can change it. */
+  target_tab?: string;
 }
 
 export interface UpdateLootTableContentsArgs {

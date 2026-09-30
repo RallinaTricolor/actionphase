@@ -3116,6 +3116,9 @@ components:
                     type: integer
                 name:
                     type: string
+                target_tab:
+                    description: Key of the character sheet tab this table rolls into
+                    type: string
                 updated_at:
                     format: date-time
                     type: string
@@ -3125,6 +3128,7 @@ components:
                 - name
                 - created_at
                 - updated_at
+                - target_tab
             type: object
         GameParticipantResponse:
             additionalProperties: false
@@ -5450,6 +5454,9 @@ components:
                         - "null"
                 name:
                     minLength: 1
+                    type: string
+                target_tab:
+                    description: Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty.
                     type: string
             required:
                 - name

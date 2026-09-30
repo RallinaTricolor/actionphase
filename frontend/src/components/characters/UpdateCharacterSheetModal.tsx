@@ -99,10 +99,12 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 
   // A roll is written to the character's sheet by the server, not staged as a
   // draft. Shown locally at once, and refetched so the published sheet agrees.
-  const lootRolling = useLootRoll(characterId, (rolled) => {
+  // The server gives the entry its id; the generated one only covers a server
+  // that predates that, and is overridden by the spread.
+  const lootRolling = useLootRoll(characterId, (rolled, tabKey) => {
     setEntriesByTab(prev => ({
       ...prev,
-      inventory: [...(prev.inventory ?? []), { id: generateId(), ...rolled }],
+      [tabKey]: [...(prev[tabKey] ?? []), { id: generateId(), ...rolled }],
     }));
     queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
   });
@@ -449,9 +451,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
               canEdit={true}
               onEntriesChange={(entries) => handleEntriesChange(currentTab.key, entries)}
               onDirtyChange={(isDirty) => reportDirty(currentTab.key, isDirty)}
-              // Loot tables write to Inventory only, until Phase 4 lets each
-              // table pick its target tab.
-              loot={currentTab.key === 'inventory' ? lootRolling : undefined}
+              loot={lootRolling}
             />
           )}
         </div>

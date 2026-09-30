@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -485,7 +486,7 @@ func TestRenderCharacter(t *testing.T) {
 		{CharacterID: 42, ModuleType: "skills", FieldName: "empty_field", FieldValue: nullText()},
 	}
 
-	out := RenderCharacter(ch, data)
+	out := RenderCharacter(ch, data, core.CharacterSheetConfig{})
 
 	assert.Contains(t, out, "# Ada Lovelace")
 	assert.Contains(t, out, "**Player:** ada_player")
@@ -500,6 +501,40 @@ func TestRenderCharacter(t *testing.T) {
 	assert.NotContains(t, strings.ToLower(out), "avatar")
 }
 
+// Tabs render in the sheet's order under the GM's names, not as humanized
+// keys ("T Abc123"); stored data the sheet no longer shows is still archived.
+func TestRenderCharacter_ComposedSheet(t *testing.T) {
+	ch := models.ListExportCharactersRow{
+		ID: 44, Name: "Mira", CharacterType: "player_character",
+		Status: "approved", IsActive: true, CreatedAt: tstz(0), PlayerUsername: txt("mira"),
+	}
+	data := []models.ListExportCharacterDataRow{
+		{CharacterID: 44, ModuleType: "bio", FieldName: "background", FieldValue: txt("A smuggler.")},
+		{CharacterID: 44, ModuleType: "inventory", FieldName: "items", FieldValue: txt(`[{"name":"Rope"}]`)},
+		{CharacterID: 44, ModuleType: "skills", FieldName: "skills", FieldValue: txt(`[{"name":"Haggle"}]`)},
+		{CharacterID: 44, ModuleType: "t_abc123", FieldName: "t_abc123", FieldValue: txt(`[{"name":"Old Zadok"}]`)},
+		{CharacterID: 44, ModuleType: "t_gone00", FieldName: "t_gone00", FieldValue: txt(`[{"name":"Forgotten"}]`)},
+	}
+	sheet := core.CharacterSheetConfig{Tabs: []core.CharacterSheetTab{
+		{Key: "t_abc123", Label: "Contacts", Fields: []core.CharacterSheetField{}},
+		{Key: "inventory", Label: "Gear"},
+	}}
+
+	out := RenderCharacter(ch, data, sheet)
+
+	var headings []string
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			headings = append(headings, strings.TrimPrefix(line, "## "))
+		}
+	}
+	assert.Equal(t, []string{"Bio", "Contacts", "Gear", "Skills", "Removed tab"}, headings)
+	assert.Contains(t, out, "Old Zadok")
+	assert.Contains(t, out, "Forgotten", "Data from a removed tab is still archived")
+	assert.NotContains(t, out, "**Items:**", "A tab's entries sit under the tab heading, not a field heading")
+	assert.NotContains(t, out, "T Abc123")
+}
+
 func TestRenderCharacter_InactiveAndUnassigned(t *testing.T) {
 	ch := models.ListExportCharactersRow{
 		ID: 43, Name: "Nameless NPC", CharacterType: "npc",
@@ -507,7 +542,7 @@ func TestRenderCharacter_InactiveAndUnassigned(t *testing.T) {
 		PlayerUsername: nullText(),
 	}
 
-	out := RenderCharacter(ch, nil)
+	out := RenderCharacter(ch, nil, core.CharacterSheetConfig{})
 
 	assert.Contains(t, out, "unassigned")
 	assert.Contains(t, out, "inactive")

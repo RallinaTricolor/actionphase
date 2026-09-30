@@ -289,11 +289,18 @@ export class GamesApi extends BaseApiClient {
   }
 
   async createLootTable(gameId: number, data: CreateLootTableArgs) {
-    return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, { name: data.name, items: this.toLootItemPayload(data.items) });
+    return this.client.post<LootTable>(`/api/v1/games/${gameId}/loot-tables`, {
+      name: data.name,
+      target_tab: data.target_tab,
+      items: this.toLootItemPayload(data.items),
+    });
   }
 
   async updateLootTable(gameId: number, lootTableId: number, data: UpdateLootTableArgs) {
-    return this.client.put(`/api/v1/games/${gameId}/loot-tables/${lootTableId}`, { name: data.name });
+    return this.client.put(`/api/v1/games/${gameId}/loot-tables/${lootTableId}`, {
+      name: data.name,
+      ...(data.target_tab !== undefined && { target_tab: data.target_tab }),
+    });
   }
 
   async deleteLootTable(gameId: number, lootTableId: number) {

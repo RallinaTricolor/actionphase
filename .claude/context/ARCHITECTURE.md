@@ -622,6 +622,23 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   (`lib/sheetEntries.ts`) absorbs legacy shapes on read (skill `level` → `rank`,
   number `type` → `name`, flat `amount`/`max`/`display` → a track); writes
   always use the new shape, and only the edited entry is rewritten.
+- **Loot tables** (added 2026-09-30): each table has a `target_tab` (default
+  `inventory`), validated against the game's layout; it can change only while
+  the table is empty (409 otherwise). A roll writes into
+  `(target_tab, storageFieldName(target_tab))`, giving the entry a fresh `id`
+  (`rolledEntry`) and returning it as written; item data that isn't a JSON
+  object is refused (422), not written. The sheet PUT refuses (422,
+  naming the tables) a layout that removes a targeted tab, and the editor
+  disables Remove on it. Loot entries use the target tab's schema, and CSV
+  import maps columns by field label or key, coercing by field type, because a
+  server-side roll writes the data verbatim.
+- **Mentions**: `useCharacterSheetItems` offers every entry on every layout tab.
+  The token is `[[Name|kind:id]]`, where kind is `skill`/`item` for
+  Skills/Inventory (historic) and the tab key otherwise; the pattern lives in
+  `MarkdownPreview.tsx` and `exports/markdown.go`, and both must agree.
+- **Exports**: `RenderCharacter` takes the game's config, so tabs appear in
+  layout order under their labels (`core.SheetTabLabel`); data on removed tabs
+  is still archived.
 
 **See**: `/docs-site/developer/architecture/adrs/002-database-design-approach.md`
 

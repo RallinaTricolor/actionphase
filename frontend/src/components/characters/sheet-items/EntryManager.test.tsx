@@ -24,7 +24,7 @@ vi.mock('@/contexts/GameContext', () => ({
 vi.mock('@/lib/api', () => ({
   apiClient: {
     games: {
-      getLootTables: vi.fn().mockResolvedValue({ data: [{ id: 11, game_id: 7, name: 'Common Loot' }] }),
+      getLootTables: vi.fn().mockResolvedValue({ data: [{ id: 11, game_id: 7, name: 'Common Loot', target_tab: 'inventory' }] }),
       getLootTableContents: vi.fn().mockResolvedValue({ data: [] }),
     },
   },
@@ -239,7 +239,7 @@ describe('EntryManager on the Inventory tab', () => {
       const { onEntriesChange, user } = renderWithLoot(roll);
       await rollFromModal(user);
 
-      expect(roll).toHaveBeenCalledWith(11);
+      expect(roll).toHaveBeenCalledWith(11, 'inventory');
       await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Mode' })).not.toBeInTheDocument());
       // The server wrote the entry; writing the list back would race it.
       expect(onEntriesChange).not.toHaveBeenCalled();

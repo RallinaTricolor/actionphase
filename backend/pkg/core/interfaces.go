@@ -437,11 +437,18 @@ type GameServiceInterface interface {
 	// update/delete queries are keyed on the table ID alone and are not game-scoped.
 	IsLootTableInGame(ctx context.Context, lootTableID, gameID int32) (bool, error)
 
-	// CreateLootTable creates a new named loot table for a game
-	CreateLootTable(ctx context.Context, gameID int32, name string) (*models.GameLootTable, error)
+	// GetGameLootTable retrieves one loot table, scoped to its game: a table
+	// from another game is pgx.ErrNoRows.
+	GetGameLootTable(ctx context.Context, gameID, lootTableID int32) (*models.GameLootTable, error)
 
-	// UpdateLootTable renames an existing loot table
-	UpdateLootTable(ctx context.Context, lootTableID int32, name string) (*models.GameLootTable, error)
+	// CreateLootTable creates a new named loot table for a game, rolling into
+	// the character sheet tab targetTab.
+	CreateLootTable(ctx context.Context, gameID int32, name, targetTab string) (*models.GameLootTable, error)
+
+	// UpdateLootTable renames a loot table and, when targetTab is non-nil,
+	// retargets it. Retargeting a table with contents returns
+	// ErrLootTableTargetLocked.
+	UpdateLootTable(ctx context.Context, lootTableID int32, name string, targetTab *string) (*models.GameLootTable, error)
 
 	// DeleteLootTable removes a loot table and (via cascade) its contents
 	DeleteLootTable(ctx context.Context, lootTableID int32) error

@@ -26,11 +26,16 @@ function dataRow(characterId: number, moduleType: string, fieldName: string, ent
  * Serves the cast's sheet data and records every save. A save echoes the body
  * back as the game's stored layout, as the backend does after normalizing.
  */
-function setup(cast: Record<string, CharacterData[]> = {}) {
+function setup(cast: Record<string, CharacterData[]> = {}, lootTargets: string[] = []) {
   const saved: CharacterSheetConfig[] = [];
   let reject: { status: number; body: Record<string, unknown> } | null = null;
   server.use(
     http.get(`/api/v1/games/${GAME_ID}/characters/data`, () => HttpResponse.json(cast)),
+    http.get(`/api/v1/games/${GAME_ID}/loot-tables`, () =>
+      HttpResponse.json(lootTargets.map((target_tab, i) => ({
+        id: i + 1, game_id: GAME_ID, name: `Table ${i + 1}`, target_tab, created_at: '', updated_at: '',
+      }))),
+    ),
     http.put(`/api/v1/games/${GAME_ID}/character-sheet`, async ({ request }) => {
       if (reject) return HttpResponse.json(reject.body, { status: reject.status });
       const body = (await request.json()) as CharacterSheetConfig;
@@ -199,6 +204,34 @@ describe('CharacterSheetEditor', () => {
       await user.click(within(tabList()).getByRole('button', { name: 'Inventory' }));
       expect(tabNames()).toEqual(['Skills', 'Numbers', 'Inventory']);
     });
+  });
+
+  it("won't remove a tab loot tables roll into, and points at them", async () => {
+    setup({}, ['inventory', 'inventory', 'skills']);
+    renderEditor();
+
+    const remove = within(tabList()).getByRole('button', { name: 'Remove Inventory' });
+    await waitFor(() => expect(remove).toBeDisabled());
+    // The note the disabled button points assistive tech at.
+    expect(document.getElementById(remove.getAttribute('aria-describedby')!))
+      .toHaveTextContent('Used by 2 loot tables. Retarget or delete them to remove this tab.');
+    expect(within(tabList()).getByRole('link', { name: '2 loot tables' })).toHaveAttribute('href', `/games/${GAME_ID}?tab=loot_tables`);
+    expect(within(tabList()).getByRole('button', { name: 'Remove Skills' })).toBeDisabled();
+    expect(within(tabList()).getByRole('link', { name: '1 loot table' })).toBeInTheDocument();
+    expect(within(tabList()).getByRole('button', { name: 'Remove Numbers' })).toBeEnabled();
+  });
+
+  it('shows the reason the server gives outside errors[], such as a loot table still using a tab', async () => {
+    const { rejectWith } = setup();
+    const reason = 'Inventory is used by loot table "Chest". Retarget or delete those tables before removing the tab.';
+    rejectWith(422, { title: 'Unprocessable Entity', status: 422, detail: reason });
+    const { user, castLoaded } = renderEditor();
+    await castLoaded();
+
+    await user.click(within(tabList()).getByRole('button', { name: 'Remove Numbers' }));
+    await user.click(saveButton());
+
+    expect(await screen.findByText(reason)).toBeInTheDocument();
   });
 
   it('asks before a removal while the counts are still loading', async () => {

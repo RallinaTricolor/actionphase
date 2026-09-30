@@ -254,7 +254,9 @@ describe('CharacterSheet', () => {
         http.post(`/api/v1/characters/${CHARACTER_ID}/data`, async ({ request }) => {
           savedBody = (await request.json()) as Record<string, unknown>;
           return HttpResponse.json({ success: true });
-        })
+        }),
+        // The add form looks for loot tables rolling into the tab: none here.
+        http.get('/api/v1/games/1/loot-tables', () => HttpResponse.json([]))
       );
       renderWithProviders(
         <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats sheetConfig={CONTACTS_CONFIG} />,
@@ -264,7 +266,8 @@ describe('CharacterSheet', () => {
       const user = userEvent.setup({ delay: null });
       await user.click(await screen.findByRole('tab', { name: 'Contacts' }));
       await user.click(await screen.findByTestId('add-t_abc123'));
-      await user.type(screen.getByRole('textbox', { name: 'Name *' }), 'Mira');
+      // Found, not got: the form first checks for loot tables rolling into the tab.
+      await user.type(await screen.findByRole('textbox', { name: 'Name *' }), 'Mira');
       await user.selectOptions(screen.getByRole('combobox', { name: 'Relationship' }), 'Rival');
       await user.click(screen.getByRole('button', { name: 'Add' }));
 

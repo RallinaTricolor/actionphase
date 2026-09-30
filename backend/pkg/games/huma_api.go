@@ -15,11 +15,14 @@ import (
 	"math/rand"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"actionphase/pkg/core"
@@ -114,6 +117,43 @@ func (h *Handler) requireCanViewGame(ctx context.Context, gameID int32, logMsg s
 		return nil, h.logAndErr(ctx, core.ErrForbidden("you do not have permission to view this game's content"), logMsg)
 	}
 	return authUser, nil
+}
+
+// requireSheetTab rejects a tab key the game's character sheet doesn't have,
+// so a loot table never targets, or writes into, a tab nobody can see.
+func (h *Handler) requireSheetTab(ctx context.Context, tabKey string) error {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return err
+	}
+	if slices.Contains(core.SheetTabKeysForStored(game.CharacterSheet), tabKey) {
+		return nil
+	}
+	return h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+		fmt.Sprintf("this game's character sheet has no tab %q", tabKey)),
+		"Loot table target is not a sheet tab", "game_id", game.ID, "target_tab", tabKey)
+}
+
+// sheetTabLabel names a tab for server-written text, falling back to its key
+// for a tab the layout no longer names.
+func (h *Handler) sheetTabLabel(ctx context.Context, tabKey string) string {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return tabKey
+	}
+	if label := core.SheetTabLabel(storedSheetConfig(game.CharacterSheet), tabKey); label != "" {
+		return label
+	}
+	return tabKey
+}
+
+// storedSheetConfig reads a games.character_sheet column the way responses do:
+// an empty or malformed value is the default layout.
+func storedSheetConfig(stored []byte) core.CharacterSheetConfig {
+	if config := core.CharacterSheetConfigForResponse(stored); config != nil {
+		return *config
+	}
+	return core.CharacterSheetConfig{}
 }
 
 // requireLootTableInGame binds the {tableId} to the {gameID}.
@@ -363,6 +403,9 @@ func (h *Handler) humaUpdateCharacterSheet(ctx context.Context, in *updateCharac
 	if err != nil {
 		return nil, err
 	}
+	if err := h.requireLootTargetsKept(ctx, in.Body); err != nil {
+		return nil, err
+	}
 
 	updated, err := h.GameService.UpdateGameCharacterSheet(ctx, gameID, in.Body)
 	if err != nil {
@@ -374,6 +417,60 @@ func (h *Handler) humaUpdateCharacterSheet(ctx context.Context, in *updateCharac
 	}
 
 	return &gameOutput{Body: gameResponseFrom(updated)}, nil
+}
+
+// requireLootTargetsKept rejects a layout that removes a tab a loot table
+// rolls into, naming the tables, so the GM retargets or deletes them first
+// instead of silently unlinking them. Checked here, not in
+// ValidateCharacterSheetConfig, because it needs the game's tables; and at save
+// time, so an editor opened before a table was created can't slip past it.
+//
+// Only tabs this save removes count. A table already pointing at a missing tab
+// (a layout saved before targets existed) doesn't block every later save.
+func (h *Handler) requireLootTargetsKept(ctx context.Context, next core.CharacterSheetConfig) error {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return err
+	}
+	current := core.SheetTabKeysForStored(game.CharacterSheet)
+	kept := core.ResolveSheetTabKeys(next)
+
+	tables, err := h.GameService.GetGameLootTables(ctx, game.ID, false)
+	if err != nil {
+		return h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot tables", "error", err, "game_id", game.ID)
+	}
+
+	var removed []string
+	tableNames := map[string][]string{}
+	for _, table := range tables {
+		if !slices.Contains(current, table.TargetTab) || slices.Contains(kept, table.TargetTab) {
+			continue
+		}
+		if _, seen := tableNames[table.TargetTab]; !seen {
+			removed = append(removed, table.TargetTab)
+		}
+		tableNames[table.TargetTab] = append(tableNames[table.TargetTab], strconv.Quote(table.Name))
+	}
+	if len(removed) == 0 {
+		return nil
+	}
+
+	currentConfig := storedSheetConfig(game.CharacterSheet)
+	problems := make([]string, 0, len(removed))
+	for _, key := range removed {
+		label := core.SheetTabLabel(currentConfig, key)
+		if label == "" {
+			label = key
+		}
+		noun := "loot tables"
+		if len(tableNames[key]) == 1 {
+			noun = "loot table"
+		}
+		problems = append(problems, fmt.Sprintf("%s is used by %s %s", label, noun, strings.Join(tableNames[key], ", ")))
+	}
+	return h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+		strings.Join(problems, "; ")+". Retarget or delete those tables before removing the tab."),
+		"Update character sheet rejected: removes a loot table target", "game_id", game.ID, "tabs", removed)
 }
 
 type updateGameStateBody struct {
@@ -408,11 +505,23 @@ type lootTableItemBody struct {
 type updateLootTableBody struct {
 	Name  string              `json:"name" minLength:"1"`
 	Items []lootTableItemBody `json:"items,omitempty" required:"false"`
+	// Optional on both endpoints: a create without it rolls into Inventory, as
+	// every table did before targets existed, and an update without it keeps
+	// the current target.
+	TargetTab string `json:"target_tab,omitempty" required:"false" doc:"Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty."`
 }
 
 func (b *updateLootTableBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
+	}
+	// Only the shape here; whether this game has the tab needs the game.
+	if b.TargetTab != "" && !core.IsSheetTabKey(b.TargetTab) {
+		return []error{&huma.ErrorDetail{
+			Message:  fmt.Sprintf("target_tab %q is not a character sheet tab key", b.TargetTab),
+			Location: "body.target_tab",
+			Value:    b.TargetTab,
+		}}
 	}
 	return validateLootItems(b.Items)
 }
@@ -2300,6 +2409,7 @@ func (h *Handler) humaGetGameLootTables(ctx context.Context, in *lootTablesInput
 			ID:        lootTable.ID,
 			GameID:    lootTable.GameID,
 			Name:      lootTable.Name,
+			TargetTab: lootTable.TargetTab,
 			CreatedAt: lootTable.CreatedAt.Time,
 			UpdatedAt: lootTable.UpdatedAt.Time,
 		})
@@ -2328,7 +2438,15 @@ func (h *Handler) humaAddGameLootTable(ctx context.Context, in *addLootTableInpu
 		return nil, err
 	}
 
-	newLootTable, err := h.GameService.CreateLootTable(ctx, gameID, in.Body.Name)
+	targetTab := in.Body.TargetTab
+	if targetTab == "" {
+		targetTab = "inventory"
+	}
+	if err := h.requireSheetTab(ctx, targetTab); err != nil {
+		return nil, err
+	}
+
+	newLootTable, err := h.GameService.CreateLootTable(ctx, gameID, in.Body.Name, targetTab)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to create loot table", "error", err, "game_id", gameID)
 	}
@@ -2364,7 +2482,19 @@ func (h *Handler) humaUpdateGameLootTable(ctx context.Context, in *updateLootTab
 
 	// Renames only: the Items in the body are validated but not applied, which
 	// is what the chi handler did. The contents endpoint is how items change.
-	lootTable, err := h.GameService.UpdateLootTable(ctx, in.TableID, in.Body.Name)
+	var targetTab *string
+	if in.Body.TargetTab != "" {
+		if err := h.requireSheetTab(ctx, in.Body.TargetTab); err != nil {
+			return nil, err
+		}
+		targetTab = &in.Body.TargetTab
+	}
+
+	lootTable, err := h.GameService.UpdateLootTable(ctx, in.TableID, in.Body.Name, targetTab)
+	if errors.Is(err, core.ErrLootTableTargetLocked) {
+		return nil, h.logAndErr(ctx, core.ErrConflict("this loot table has contents, so it can't roll into a different tab; make a new table for that tab instead"),
+			"Loot table retarget rejected: table has contents", "table_id", in.TableID, "target_tab", in.Body.TargetTab)
+	}
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update loot table", "error", err, "table_id", in.TableID)
 	}
@@ -2491,7 +2621,17 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 			"Character edit permission denied", "character_id", in.CharacterID, "user_id", user.ID)
 	}
 
-	if err := h.requireLootTableInGame(ctx, in.TableID, gameID); err != nil {
+	lootTable, err := h.GameService.GetGameLootTable(ctx, gameID, in.TableID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("loot table does not belong to this game"), "Loot table access forbidden")
+	}
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table", "error", err, "table_id", in.TableID)
+	}
+	// The sheet editor won't remove a tab a table targets, but a table left
+	// pointing at a missing tab (a layout saved before targets existed) must
+	// not write data the sheet can't show.
+	if err := h.requireSheetTab(ctx, lootTable.TargetTab); err != nil {
 		return nil, err
 	}
 
@@ -2516,11 +2656,18 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 	rnd := rand.Intn(len(contents))
 	content := contents[rnd]
 
+	entry, err := rolledEntry(content.Data.String)
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+			fmt.Sprintf("rolled %q, but its item data is not a JSON object; fix it in the loot table", content.Name)),
+			"Rolled loot item data is not an object", "table_id", in.TableID, "content_id", content.ID)
+	}
+
 	if err := h.CharacterService.AddToCharacterData(ctx, core.CharacterDataRequest{
 		CharacterID: in.CharacterID,
-		ModuleType:  "inventory",
-		FieldName:   "items",
-		FieldValue:  content.Data.String,
+		ModuleType:  lootTable.TargetTab,
+		FieldName:   core.SheetStorageFieldName(lootTable.TargetTab),
+		FieldValue:  entry,
 		FieldType:   "json",
 		IsPublic:    false,
 	}); err != nil {
@@ -2532,15 +2679,44 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 	// request — but it should not vanish silently either, since the game log is
 	// the GM's only record of what was rolled.
 	if _, err := h.GameService.AddGameLog(ctx, models.CreateLogParams{
-		GameID:  gameID,
-		Type:    "INVENTORY_ADD",
-		Message: pgtype.Text{String: fmt.Sprintf("Added %s to Character %s (Rolled: %d)", content.Name, character.Name, rnd+1), Valid: true},
+		GameID: gameID,
+		Type:   "SHEET_ENTRY_ADD",
+		Message: pgtype.Text{String: fmt.Sprintf("Added %s to Character %s's %s (Rolled: %d)",
+			content.Name, character.Name, h.sheetTabLabel(ctx, lootTable.TargetTab), rnd+1), Valid: true},
 	}); err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to write loot roll game log",
 			"game_id", gameID, "character_id", in.CharacterID, "loot_table_id", in.TableID)
 	}
 
+	// The entry as written, id included, so a client showing it locally uses
+	// the same id the sheet has.
+	content.Data = pgtype.Text{String: entry, Valid: true}
 	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
+}
+
+// rolledEntry gives a rolled loot item a fresh id, making it an entry like any
+// other: mentionable and editable, instead of an id-less row the sheet has to
+// patch on every read. Fresh even when the authored data carries one, since two
+// rolls of the same item must not share an id.
+//
+// Values are kept as raw JSON, so a number keeps its exact spelling. Anything
+// but a JSON object is refused: written to the sheet, it would be a row no tab
+// can show.
+func rolledEntry(data string) (string, error) {
+	var entry map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(data), &entry); err != nil || entry == nil {
+		return "", fmt.Errorf("loot item data is not a JSON object")
+	}
+	id, err := json.Marshal(uuid.NewString())
+	if err != nil {
+		return "", err
+	}
+	entry["id"] = id
+	out, err := json.Marshal(entry)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
 
 // Banner

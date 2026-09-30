@@ -21,10 +21,7 @@ interface EntryManagerProps {
    * with Save. Ancestors use it to warn before closing the sheet.
    */
   onDirtyChange?: (isDirty: boolean) => void;
-  /**
-   * Offers adding from a loot table. Only Inventory passes this until Phase 4
-   * lets a loot table target any tab.
-   */
+  /** Offers adding from the loot tables that roll into this tab. */
   loot?: LootRolling;
 }
 
@@ -61,7 +58,7 @@ export const EntryManager: React.FC<EntryManagerProps> = ({
   const rollLoot = async (lootTableId: number) => {
     // Only a successful roll closes the modal, so a failed one can be retried
     // without choosing the table again.
-    if (await loot?.roll(lootTableId)) setShowAdd(false);
+    if (await loot?.roll(lootTableId, tab.key)) setShowAdd(false);
   };
 
   const removeEntry = (id: string) => {
@@ -119,6 +116,7 @@ export const EntryManager: React.FC<EntryManagerProps> = ({
           onAdd={addEntry}
           onCancel={() => setShowAdd(false)}
           lootModes={loot?.modes}
+          lootTargetTab={tab.key}
           onAddRandom={loot ? rollLoot : undefined}
         />
       )}

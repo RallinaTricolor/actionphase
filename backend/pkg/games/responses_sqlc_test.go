@@ -90,6 +90,7 @@ func TestToGameLootTableResponse(t *testing.T) {
 		tbl := models.GameLootTable{
 			ID: 1, GameID: 2, Name: "Common",
 			CreatedAt: sqlcTS(sqlcTestTime), UpdatedAt: sqlcTS(sqlcTestTime),
+			TargetTab: "t_abc123",
 		}
 		want, err := json.Marshal(tbl)
 		require.NoError(t, err)

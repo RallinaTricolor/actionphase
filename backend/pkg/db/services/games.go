@@ -1504,24 +1504,49 @@ func (gs *GameService) IsLootTableInGame(ctx context.Context, lootTableID, gameI
 	return result, nil
 }
 
+// GetGameLootTable - Get one loot table, scoped to its game
+func (gs *GameService) GetGameLootTable(ctx context.Context, gameID, lootTableID int32) (*models.GameLootTable, error) {
+	queries := models.New(gs.DB)
+	lootTable, err := queries.GetGameLootTable(ctx, models.GetGameLootTableParams{
+		GameID: gameID,
+		ID:     lootTableID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &lootTable, nil
+}
+
 // CreateLootTable - Create a new loot table for a game
-func (gs *GameService) CreateLootTable(ctx context.Context, gameID int32, name string) (*models.GameLootTable, error) {
+func (gs *GameService) CreateLootTable(ctx context.Context, gameID int32, name, targetTab string) (*models.GameLootTable, error) {
 	queries := models.New(gs.DB)
 	lootTable, err := queries.CreateLootTable(ctx, models.CreateLootTableParams{
-		GameID: gameID,
-		Name:   name,
+		GameID:    gameID,
+		Name:      name,
+		TargetTab: targetTab,
 	})
 	return &lootTable, err
 }
 
-// UpdateLootTable - Update an existing loot table
-func (gs *GameService) UpdateLootTable(ctx context.Context, lootTableID int32, name string) (*models.GameLootTable, error) {
+// UpdateLootTable - Rename a loot table and, when targetTab is set, retarget it.
+//
+// The query applies a new target only to an empty table and otherwise matches
+// no row, so no-rows means the lock (the handler has already checked the table
+// exists in the game).
+func (gs *GameService) UpdateLootTable(ctx context.Context, lootTableID int32, name string, targetTab *string) (*models.GameLootTable, error) {
 	queries := models.New(gs.DB)
-	lootTable, err := queries.UpdateLootTable(ctx, models.UpdateLootTableParams{
-		ID:   lootTableID,
-		Name: name,
-	})
-	return &lootTable, err
+	params := models.UpdateLootTableParams{ID: lootTableID, Name: name}
+	if targetTab != nil {
+		params.TargetTab = pgtype.Text{String: *targetTab, Valid: true}
+	}
+	lootTable, err := queries.UpdateLootTable(ctx, params)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, core.ErrLootTableTargetLocked
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &lootTable, nil
 }
 
 // DeleteLootTable - Remove a loot table from a game

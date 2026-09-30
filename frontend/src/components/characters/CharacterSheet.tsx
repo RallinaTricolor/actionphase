@@ -552,9 +552,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 canEdit={canEditStats}
                 onEntriesChange={(entries) => saveJsonField(entryTab.key, storageFieldName(entryTab.key), entries)}
                 onDirtyChange={(isDirty) => reportDirty(entryTab.key, isDirty)}
-                // Loot tables write to Inventory only, until Phase 4 lets each
-                // table pick its target tab.
-                loot={entryTab.key === 'inventory' ? lootRolling : undefined}
+                loot={lootRolling}
               />
             ) : (
               /* Regular text-based fields for bio and notes modules */

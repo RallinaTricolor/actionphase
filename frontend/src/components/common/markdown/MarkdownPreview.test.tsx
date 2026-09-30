@@ -871,8 +871,8 @@ describe('MarkdownPreview', () => {
 
   describe('Sheet Item References ([[item]] syntax)', () => {
     const sheetItems = [
-      { id: 'abc-1', name: 'Fire Bolt', type: 'skill' as const, description: 'Deals fire damage', metadata: 'innate' },
-      { id: 'xyz-2', name: 'Longbow', type: 'item' as const, description: 'A fine bow' },
+      { id: 'abc-1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills', description: 'Deals fire damage', metadata: 'innate' },
+      { id: 'xyz-2', name: 'Longbow', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory', description: 'A fine bow' },
     ];
 
     it('renders [[item]] tokens as amber highlighted marks', () => {
@@ -920,6 +920,28 @@ describe('MarkdownPreview', () => {
       expect(container.querySelector('[data-sheet-ref-id="xyz-2"]')).toBeInTheDocument();
     });
 
+    it('resolves references to Numbers and custom-tab entries, badged with the tab name', () => {
+      const refs = [
+        { id: 'c1', name: 'Old Zadok', refKind: 't_abc123', tabKey: 't_abc123', tabLabel: 'Contacts', metadata: 'Ally' },
+        { id: 'n1', name: 'Stress', refKind: 'numbers', tabKey: 'numbers', tabLabel: 'Numbers' },
+      ];
+      const { container } = render(
+        <MarkdownPreview content="I ask [[Old Zadok|t_abc123:c1]] despite my [[Stress|numbers:n1]]" sheetItemRefs={refs} />
+      );
+      expect(container.querySelector('[data-sheet-ref-id="n1"]')).toBeInTheDocument();
+      fireEvent.mouseOver(container.querySelector('[data-sheet-ref-id="c1"]') as HTMLElement);
+
+      const tooltip = document.querySelector('[data-sheet-tooltip]') as HTMLElement;
+      expect(tooltip).toHaveTextContent('Old Zadok');
+      expect(tooltip).toHaveTextContent('Contacts');
+      expect(tooltip).toHaveTextContent('Ally');
+    });
+
+    it('leaves text that only looks like a reference alone', () => {
+      const { container } = render(<MarkdownPreview content="See [[Notes|chapter:4]]" sheetItemRefs={sheetItems} />);
+      expect(container.querySelector('[data-sheet-ref-id]')).not.toBeInTheDocument();
+    });
+
     it('shows hover tooltip for item when sheetItemRefs contains the item', () => {
       const { container } = render(
         <MarkdownPreview
@@ -941,7 +963,7 @@ describe('MarkdownPreview', () => {
         {
           id: 'md-1',
           name: 'Power Attack',
-          type: 'skill' as const,
+          refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills',
           description: 'Deals **massive** damage.\n\n| Roll | Effect |\n| --- | --- |\n| 6 | Critical |',
           metadata: 'innate',
         },
@@ -974,7 +996,7 @@ describe('MarkdownPreview', () => {
         {
           id: 'long-1',
           name: 'Epic Spell',
-          type: 'skill' as const,
+          refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills',
           description: longDescription,
         },
       ];

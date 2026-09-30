@@ -5136,6 +5136,8 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
+            /** @description Key of the character sheet tab this table rolls into */
+            target_tab: string;
             /** Format: date-time */
             updated_at: string;
         };
@@ -6310,6 +6312,8 @@ export interface components {
         UpdateLootTableBody: {
             items?: components["schemas"]["LootTableItemBody"][] | null;
             name: string;
+            /** @description Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty. */
+            target_tab?: string;
         };
         UpdateMessageRequest: {
             content: string;

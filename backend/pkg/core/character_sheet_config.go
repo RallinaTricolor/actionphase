@@ -64,6 +64,40 @@ var reservedSheetFieldKeys = map[string]bool{
 // backend never has to agree with them.
 var DefaultSheetTabKeys = []string{"skills", "inventory", "numbers"}
 
+// defaultSheetTabLabels name the built-in tabs in text the server writes
+// itself: the game log and archive exports. Everything the app renders takes
+// its defaults from DEFAULT_SHEET_LAYOUT in the frontend's useSheetLayout.ts;
+// keep these the same.
+var defaultSheetTabLabels = map[string]string{
+	"skills":    "Skills",
+	"inventory": "Inventory",
+	"numbers":   "Numbers",
+}
+
+// SheetTabLabel returns the name a game's sheet shows for a configurable tab:
+// the GM's label, else a legacy label override, else the built-in default.
+// Empty for a tab the config doesn't name and that has no default (a removed
+// custom tab), so the caller picks a fallback that suits its text.
+func SheetTabLabel(config CharacterSheetConfig, tabKey string) string {
+	if config.Tabs != nil {
+		for _, tab := range config.Tabs {
+			if tab.Key == tabKey && tab.Label != "" {
+				return tab.Label
+			}
+		}
+	} else if config.Labels != nil {
+		legacy := map[string]string{
+			"skills":    config.Labels.Skills,
+			"inventory": config.Labels.Inventory,
+			"numbers":   config.Labels.Numbers,
+		}
+		if label := legacy[tabKey]; label != "" {
+			return label
+		}
+	}
+	return defaultSheetTabLabels[tabKey]
+}
+
 // SheetStorageFieldName returns the character_data field_name a configurable
 // tab's entries are stored under. Every tab stores under its own key except
 // inventory, which predates that invariant and stores under "items".

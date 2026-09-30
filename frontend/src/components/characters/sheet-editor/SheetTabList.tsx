@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Input } from '@/components/ui';
 import type { SheetTab } from '@/types/characters';
 import { DEFAULT_SHEET_LAYOUT } from '@/hooks/useSheetLayout';
@@ -19,6 +20,10 @@ interface SheetTabListProps {
   /** Keys of tabs with a problem somewhere in them. */
   tabsWithProblems: ReadonlySet<string>;
   cast: CastSheetData | undefined;
+  /** Loot tables rolling into each tab, by tab key; undefined while loading. */
+  lootTableCounts: ReadonlyMap<string, number> | undefined;
+  /** Where the "loot tables" link in a guarded tab's note goes. */
+  lootTablesHref: string;
   onSelect: (key: string) => void;
   onMove: (index: number, direction: -1 | 1) => void;
   onRemove: (key: string) => void;
@@ -40,6 +45,8 @@ export function SheetTabList({
   selectedKey,
   tabsWithProblems,
   cast,
+  lootTableCounts,
+  lootTablesHref,
   onSelect,
   onMove,
   onRemove,
@@ -84,6 +91,7 @@ export function SheetTabList({
         {tabs.map((tab, index) => {
           const label = displayLabel(tab);
           const selected = tab.key === selectedKey;
+          const lootTables = lootTableCounts?.get(tab.key) ?? 0;
           return (
             <li key={tab.key} className="space-y-2" data-testid={`sheet-tab-row-${tab.key}`}>
               <div
@@ -117,10 +125,23 @@ export function SheetTabList({
                   className="text-semantic-danger"
                   onClick={() => requestRemove(tab)}
                   aria-label={`Remove ${label}`}
+                  // Loot tables roll into this tab: removing it would unlink
+                  // them, so they're retargeted or deleted first.
+                  disabled={lootTables > 0}
+                  aria-describedby={lootTables > 0 ? `${id}-loot-${tab.key}` : undefined}
                 >
                   Remove
                 </Button>
               </div>
+              {lootTables > 0 && (
+                <p id={`${id}-loot-${tab.key}`} className="px-1 text-xs text-content-secondary">
+                  Used by{' '}
+                  <Link to={lootTablesHref} className="text-interactive-primary hover:underline">
+                    {lootTables} loot {lootTables === 1 ? 'table' : 'tables'}
+                  </Link>
+                  . Retarget or delete {lootTables === 1 ? 'it' : 'them'} to remove this tab.
+                </p>
+              )}
               {confirmingKey === tab.key && (
                 <ConfirmRemoval
                   message={tabRemovalMessage(cast ? charactersWithTabData(cast, tab.key) : undefined, tab.isBuiltIn)}

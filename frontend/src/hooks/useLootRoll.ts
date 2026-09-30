@@ -16,27 +16,32 @@ export interface LootRolling {
   modes: LootMode[];
   /**
    * Rolls on a loot table. The server picks the entry and writes it to the
-   * sheet itself. Resolves true on success, so the caller knows whether to
-   * close its modal: a failed roll keeps it open for a retry.
+   * table's target tab itself; `tabKey` is that tab, for `onRolled`. Resolves
+   * true on success, so the caller knows whether to close its modal: a failed
+   * roll keeps it open for a retry.
    */
-  roll: (lootTableId: number) => Promise<boolean>;
+  roll: (lootTableId: number, tabKey: string) => Promise<boolean>;
 }
 
 /**
- * Loot table rolls for a character's Inventory tab.
+ * Loot table rolls for a character's sheet tabs. Each table rolls into one
+ * tab; the add form offers only the tables that target the tab it adds to.
  *
  * Tolerates rendering outside a GameProvider (the utility drawer's sheet has
  * none). Loot tables are game-scoped, so there the modes collapse to manual.
  *
- * `onRolled` receives the rolled entry once the server has written it, so the
- * caller can refetch or show it locally. It is never written back: the server
+ * `onRolled` receives the rolled entry and its tab once the server has written
+ * it, so the caller can refetch or show it locally. It is never written back: the server
  * already has it.
  */
-export function useLootRoll(characterId: number, onRolled: (entry: RawSheetEntry) => void): LootRolling {
+export function useLootRoll(
+  characterId: number,
+  onRolled: (entry: RawSheetEntry, tabKey: string) => void,
+): LootRolling {
   const gameContext = useOptionalGameContext();
   const { showSuccess, showError } = useToast();
 
-  const roll = async (lootTableId: number): Promise<boolean> => {
+  const roll = async (lootTableId: number, tabKey: string): Promise<boolean> => {
     if (!gameContext) {
       // Defensive: the loot modes are hidden without a game context, so this
       // is unreachable through the UI.
@@ -71,8 +76,8 @@ export function useLootRoll(characterId: number, onRolled: (entry: RawSheetEntry
       return false;
     }
 
-    onRolled(rolled as RawSheetEntry);
-    showSuccess(`Added item ${content.name} to character sheet`);
+    onRolled(rolled as RawSheetEntry, tabKey);
+    showSuccess(`Added ${content.name} to the character sheet`);
     return true;
   };
 

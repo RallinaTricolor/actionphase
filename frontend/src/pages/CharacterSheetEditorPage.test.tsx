@@ -17,6 +17,7 @@ function serveGame(overrides: Partial<GameWithDetails> = {}) {
       HttpResponse.json(makeGameWithDetails({ id: GAME_ID, title: 'Starfall', gm_user_id: 1, ...overrides })),
     ),
     http.get(`/api/v1/games/${GAME_ID}/characters/data`, () => HttpResponse.json({})),
+    http.get(`/api/v1/games/${GAME_ID}/loot-tables`, () => HttpResponse.json([])),
   );
 }
 

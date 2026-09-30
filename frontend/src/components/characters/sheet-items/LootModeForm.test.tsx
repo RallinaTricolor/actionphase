@@ -39,7 +39,7 @@ const renderForm = (
   const queryClient = client ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = (modes: LootMode[]) => (
     <QueryClientProvider client={queryClient}>
-      <LootModeForm fields={INVENTORY.fields} lootModes={modes} onAdd={onAdd} onAddRandom={onAddRandom} onCancel={vi.fn()} />
+      <LootModeForm fields={INVENTORY.fields} targetTab="inventory" lootModes={modes} onAdd={onAdd} onAddRandom={onAddRandom} onCancel={vi.fn()} />
     </QueryClientProvider>
   );
   const { rerender } = render(ui(lootModes));
@@ -57,7 +57,7 @@ describe('LootModeForm', () => {
     mockGetLootTables.mockReset();
     mockGetLootTableContents.mockReset();
     mockLoggerError.mockReset();
-    mockGetLootTables.mockResolvedValue({ data: [{ id: 11, game_id: 7, name: 'Common Loot' }] });
+    mockGetLootTables.mockResolvedValue({ data: [{ id: 11, game_id: 7, name: 'Common Loot', target_tab: 'inventory' }] });
   });
 
   describe('mode availability', () => {
@@ -76,6 +76,27 @@ describe('LootModeForm', () => {
 
     it('offers no mode picker inside a game with no loot tables', async () => {
       mockGetLootTables.mockResolvedValue({ data: [] });
+      renderForm();
+      await waitFor(() => expect(mockGetLootTables).toHaveBeenCalled());
+      await screen.findByRole('textbox', { name: 'Name *' });
+      expect(screen.queryByRole('combobox', { name: 'Mode' })).not.toBeInTheDocument();
+    });
+
+    it('offers only the tables that roll into this tab', async () => {
+      mockGetLootTables.mockResolvedValue({
+        data: [
+          { id: 11, game_id: 7, name: 'Common Loot', target_tab: 'inventory' },
+          { id: 12, game_id: 7, name: 'Townsfolk', target_tab: 't_abc123' },
+        ],
+      });
+      const { user } = renderForm();
+      await user.selectOptions(await screen.findByRole('combobox', { name: 'Mode' }), 'loot_table_random');
+      expect(screen.getByRole('option', { name: 'Common Loot' })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: 'Townsfolk' })).not.toBeInTheDocument();
+    });
+
+    it('offers no mode picker when every table rolls into another tab', async () => {
+      mockGetLootTables.mockResolvedValue({ data: [{ id: 12, game_id: 7, name: 'Townsfolk', target_tab: 't_abc123' }] });
       renderForm();
       await waitFor(() => expect(mockGetLootTables).toHaveBeenCalled());
       await screen.findByRole('textbox', { name: 'Name *' });
@@ -165,7 +186,7 @@ describe('LootModeForm', () => {
 
     it('clears the chosen entry when the table is changed', async () => {
       mockGetLootTables.mockResolvedValue({
-        data: [{ id: 11, game_id: 7, name: 'Common Loot' }, { id: 12, game_id: 7, name: 'Rare Loot' }],
+        data: [{ id: 11, game_id: 7, name: 'Common Loot', target_tab: 'inventory' }, { id: 12, game_id: 7, name: 'Rare Loot', target_tab: 'inventory' }],
       });
       mockGetLootTableContents.mockResolvedValue({
         data: [{ id: 21, name: 'Health Potion', data: JSON.stringify({ value: 50 }) }],

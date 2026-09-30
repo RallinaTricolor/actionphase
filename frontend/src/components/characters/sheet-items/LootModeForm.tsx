@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Select } from '@/components/ui';
 import { useOptionalGameContext } from '@/contexts/GameContext';
@@ -14,6 +14,8 @@ import { lootDataToEdit } from './fieldTypes';
 
 interface LootModeFormProps {
   fields: readonly CharacterSheetField[];
+  /** The tab being added to. Only loot tables that roll into it are offered. */
+  targetTab: string;
   /** The modes the caller can act on. The loot modes also need a game with loot tables. */
   lootModes: readonly LootMode[];
   onAdd: (edit: EntryEdit) => void;
@@ -30,7 +32,7 @@ interface LootModeFormProps {
  * never comes from a loot table. It also keeps the loot table queries (GM-only
  * endpoints, which need React Query) out of every plain add.
  */
-export function LootModeForm({ fields, lootModes, onAdd, onAddRandom, onCancel }: LootModeFormProps) {
+export function LootModeForm({ fields, targetTab, lootModes, onAdd, onAddRandom, onCancel }: LootModeFormProps) {
   const id = useId();
   const gameContext = useOptionalGameContext();
 
@@ -40,7 +42,7 @@ export function LootModeForm({ fields, lootModes, onAdd, onAddRandom, onCancel }
     loot_table_random: !!gameContext?.gameId && lootModes.includes('loot_table_random') && !!onAddRandom,
   };
 
-  const { data: lootTables, isLoading } = useQuery({
+  const { data: nonEmptyTables, isLoading } = useQuery({
     queryKey: ['lootTables', gameContext?.gameId, true],
     queryFn: () => apiClient.games.getLootTables(gameContext!.gameId, true).then((res) => res.data),
     enabled: !!gameContext?.gameId && (lootModesAllowed.loot_table || lootModesAllowed.loot_table_random),
@@ -54,9 +56,16 @@ export function LootModeForm({ fields, lootModes, onAdd, onAddRandom, onCancel }
     refetchOnMount: 'always',
   });
 
+  // Filtered here rather than by the server: a game has a handful of tables,
+  // and one cached list serves every tab.
+  const lootTables = useMemo(
+    () => nonEmptyTables?.filter((table) => table.target_tab === targetTab) ?? [],
+    [nonEmptyTables, targetTab],
+  );
+
   // Derived, not state: a mode that latched off when one fetch found no tables
   // could never come back on, and it also disabled the fetch that would have.
-  const hasLootTables = (lootTables?.length ?? 0) > 0;
+  const hasLootTables = lootTables.length > 0;
   const enabled: Record<LootMode, boolean> = {
     manual: true,
     loot_table: lootModesAllowed.loot_table && hasLootTables,
@@ -127,7 +136,7 @@ export function LootModeForm({ fields, lootModes, onAdd, onAddRandom, onCancel }
         <form onSubmit={submitLoot} className="space-y-4">
           <LootTableSelector
             gameId={gameContext!.gameId}
-            lootTables={lootTables!}
+            lootTables={lootTables}
             requireItem={effectiveMode === 'loot_table'}
             lootTableId={lootTableId}
             onLootTableChange={(tableId) => {

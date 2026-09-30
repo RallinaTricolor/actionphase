@@ -61,12 +61,24 @@ describe('useLootRoll', () => {
     const { result, onRolled } = setup();
 
     let ok: boolean | undefined;
-    await act(async () => { ok = await result.current.roll(7); });
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
 
     expect(apiClient.games.giveRandomLootTableContent).toHaveBeenCalledWith(42, 7, 5);
     // Verbatim: the server already wrote this, so nothing is coerced or re-saved.
-    expect(onRolled).toHaveBeenCalledWith({ name: 'Gold Ring', quantity: '2' });
+    expect(onRolled).toHaveBeenCalledWith({ name: 'Gold Ring', quantity: '2' }, 'inventory');
     expect(ok).toBe(true);
+  });
+
+  it('hands back the tab the roll was for, so a custom tab shows its entry', async () => {
+    vi.mocked(apiClient.games.giveRandomLootTableContent).mockResolvedValue({
+      data: { id: 2, name: 'Old Zadok', data: '{"name":"Old Zadok"}' },
+    } as RollResponse);
+    const { result, onRolled } = setup();
+
+    await act(async () => { await result.current.roll(9, 't_abc123'); });
+
+    expect(onRolled).toHaveBeenCalledWith({ name: 'Old Zadok' }, 't_abc123');
+    expect(await screen.findByText('Added Old Zadok to the character sheet')).toBeInTheDocument();
   });
 
   // Regression: the request had no .catch(), so a failed roll — e.g. the 400
@@ -78,7 +90,7 @@ describe('useLootRoll', () => {
     const { result, onRolled } = setup();
 
     let ok: boolean | undefined;
-    await act(async () => { ok = await result.current.roll(7); });
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
 
     expect(ok).toBe(false);
     expect(onRolled).not.toHaveBeenCalled();
@@ -89,7 +101,7 @@ describe('useLootRoll', () => {
     vi.mocked(apiClient.games.giveRandomLootTableContent).mockRejectedValue(new Error('Network down'));
     const { result } = setup();
 
-    await act(async () => { await result.current.roll(7); });
+    await act(async () => { await result.current.roll(7, 'inventory'); });
 
     expect(await screen.findByText(/failed to roll/i)).toBeInTheDocument();
   });
@@ -104,7 +116,7 @@ describe('useLootRoll', () => {
     const { result, onRolled } = setup();
 
     let ok: boolean | undefined;
-    await act(async () => { ok = await result.current.roll(7); });
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
 
     expect(ok).toBe(false);
     expect(onRolled).not.toHaveBeenCalled();
@@ -116,7 +128,7 @@ describe('useLootRoll', () => {
     const { result } = setup();
 
     let ok: boolean | undefined;
-    await act(async () => { ok = await result.current.roll(7); });
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
 
     expect(ok).toBe(false);
     expect(apiClient.games.giveRandomLootTableContent).not.toHaveBeenCalled();

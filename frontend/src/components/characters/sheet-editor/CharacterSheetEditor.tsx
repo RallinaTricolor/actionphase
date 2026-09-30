@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, CardBody, CardHeader } from '@/components/ui';
 import { resolveSheetLayout } from '@/hooks/useSheetLayout';
-import { useGameCharacterData, useUpdateCharacterSheet } from '@/hooks/useCharacterSheetLayout';
+import { useGameCharacterData, useLootTableTargetCounts, useUpdateCharacterSheet } from '@/hooks/useCharacterSheetLayout';
 import { useToast } from '@/contexts/ToastContext';
 import { extractApiErrorMessage } from '@/lib/errors';
 import { layoutProblems, newCustomTab, toSheetConfig } from '@/lib/sheetLayoutEditing';
@@ -50,6 +50,7 @@ export function CharacterSheetEditor({ gameId, config, onDirtyChange }: Characte
   const { showSuccess } = useToast();
   const saveMutation = useUpdateCharacterSheet(gameId);
   const { data: cast } = useGameCharacterData(gameId);
+  const lootTableCounts = useLootTableTargetCounts(gameId);
 
   const [tabs, setTabs] = useState<SheetTab[]>(() => resolveSheetLayout(config).tabs);
   const [baseline, setBaseline] = useState(() => savedForm(tabs));
@@ -123,6 +124,8 @@ export function CharacterSheetEditor({ gameId, config, onDirtyChange }: Characte
               selectedKey={selected?.key}
               tabsWithProblems={tabsWithProblems}
               cast={cast}
+              lootTableCounts={lootTableCounts}
+              lootTablesHref={`/games/${gameId}?tab=loot_tables`}
               onSelect={setSelectedKey}
               onMove={(index, direction) => setTabs((prev) => move(prev, index, direction))}
               onRemove={(key) => setTabs((prev) => prev.filter((tab) => tab.key !== key))}
