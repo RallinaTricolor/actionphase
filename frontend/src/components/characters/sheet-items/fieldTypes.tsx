@@ -3,7 +3,7 @@ import { Badge, Checkbox, Input, Select } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import type { CharacterSheetField } from '@/types/characters';
-import { TRACK_DISPLAY_MODES, type TrackDisplayMode, type TrackValue } from '@/lib/sheetEntries';
+import { TRACK_DISPLAY_MODES, type EntryEdit, type TrackDisplayMode, type TrackValue } from '@/lib/sheetEntries';
 import { TrackDisplay } from './TrackDisplay';
 
 /**
@@ -238,4 +238,32 @@ const FIELD_TYPES: Record<string, FieldTypeSpec<unknown>> = {
  */
 export function fieldTypeOf(field: CharacterSheetField): FieldTypeSpec<unknown> | undefined {
   return Object.hasOwn(FIELD_TYPES, field.type) ? FIELD_TYPES[field.type] : undefined;
+}
+
+/**
+ * Reads a loot table entry into an edit against a tab's schema.
+ *
+ * Loot data is GM-authored JSON, typed in the loot editor or imported from a
+ * CSV, where every value arrives as a string. Known fields go through their
+ * type's own draft conversion, so "3" in a number column is stored as 3, the
+ * same as if the GM had typed it into the form. Keys the schema does not know
+ * are carried over as they are, matching a server-side roll, which writes the
+ * data verbatim.
+ */
+export function lootDataToEdit(
+  fields: readonly CharacterSheetField[],
+  name: string,
+  data: Record<string, unknown>,
+): EntryEdit {
+  const values: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key !== 'id' && key !== 'name') values[key] = value;
+  }
+  for (const field of fields) {
+    const spec = fieldTypeOf(field);
+    if (spec && Object.hasOwn(values, field.key)) {
+      values[field.key] = spec.fromDraft(spec.toDraft(values[field.key]));
+    }
+  }
+  return { name, values };
 }

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AddEntryModal } from './AddEntryModal';
-import { AddItemModal } from './AddItemModal';
 
 vi.mock('@/contexts/GameContext', () => ({
   useOptionalGameContext: () => undefined,
@@ -48,11 +47,17 @@ describe('Add modals ignore backdrop clicks', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it('AddItemModal does not cancel on a backdrop click', () => {
+  it('AddEntryModal with loot modes does not cancel on a backdrop click', () => {
     const onCancel = vi.fn();
     render(
       withQuery(
-        <AddItemModal onAdd={vi.fn()} onAddRandom={vi.fn()} onCancel={onCancel} />,
+        <AddEntryModal
+          fields={[]}
+          onAdd={vi.fn()}
+          onAddRandom={vi.fn()}
+          onCancel={onCancel}
+          lootModes={['manual', 'loot_table', 'loot_table_random']}
+        />,
       ),
     );
 

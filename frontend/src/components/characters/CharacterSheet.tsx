@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { isPublicArchive } from '@/lib/gamePermissions';
-import type { CharacterData, CharacterDataRequest, InventoryItem, CharacterSheetConfig } from '@/types/characters';
-import { buildCharacterModules } from '@/types/characters';
+import type { CharacterData, CharacterDataRequest, CharacterSheetConfig } from '@/types/characters';
+import { buildCharacterModules, storageFieldName } from '@/types/characters';
 import { EntryManager } from './sheet-items/EntryManager';
 import type { RawSheetEntry } from '@/lib/sheetEntries';
-import { ItemsManager } from './sheet-items/ItemsManager';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
 import { useOptionalGameContext } from '@/contexts/GameContext';
@@ -21,6 +20,7 @@ import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
+import { useLootRoll } from '@/hooks/useLootRoll';
 import { EditorLockNotice } from './EditorLockNotice';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 
@@ -84,9 +84,6 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // data, and a fresh array each render would remount the active manager
   // underneath an open editor.
   const modules = useMemo(() => buildCharacterModules(sheetLayout), [sheetLayout]);
-  // Skills and Numbers are on the generic entry renderer; Inventory follows.
-  const skillsTab = sheetLayout.tabs.find(tab => tab.key === 'skills');
-  const numbersTab = sheetLayout.tabs.find(tab => tab.key === 'numbers');
 
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -136,6 +133,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
   const queryClient = useQueryClient();
   const renameMutation = useRenameCharacter();
+  // The server writes a rolled entry itself, so a roll only refetches.
+  const lootRolling = useLootRoll(characterId, () => {
+    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+  });
 
   // Participants can view all private data once the game is a public archive
   // (completed OR epilogue), or if they are audience. Epilogue must be included:
@@ -532,7 +533,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
           return canViewPrivate;
-        }).filter(module => module.type === activeModule).map((module) => (
+        }).filter(module => module.type === activeModule).map((module) => {
+          // The resolved layout tab, for the stat tabs rendered by EntryManager.
+          const entryTab = sheetLayout.tabs.find(tab => tab.key === module.type);
+          return (
           <div key={module.type} className="max-w-4xl mx-auto">
             {/* Only the text modules get a header here. The three stat managers
                 render their own heading (the modal embeds them without this
@@ -548,30 +552,16 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
             {/* One manager per stat tab. Each reports its own dirty state under its
                 own key, so a clean manager cannot clear a dirty one's flag. */}
-            {module.type === 'skills' && skillsTab ? (
+            {MANAGED_MODULE_TYPES.has(module.type) && entryTab ? (
               <EntryManager
-                tab={skillsTab}
-                entries={parseJsonField('skills', 'skills') as RawSheetEntry[]}
+                tab={entryTab}
+                entries={parseJsonField(entryTab.key, storageFieldName(entryTab.key)) as RawSheetEntry[]}
                 canEdit={canEditStats}
-                onEntriesChange={(entries) => saveJsonField('skills', 'skills', entries)}
-                onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-              />
-            ) : module.type === 'inventory' ? (
-              <ItemsManager
-                characterId={characterId}
-                items={parseJsonField('inventory', 'items') as InventoryItem[]}
-                canEdit={canEditStats}
-                onItemsChange={(items, reloadOnly) => { if (!reloadOnly) saveJsonField('inventory', 'items', items); else queryClient.invalidateQueries({ queryKey: ['characterData', characterId] }); }}
-                onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
-                label={module.name}
-              />
-            ) : module.type === 'numbers' && numbersTab ? (
-              <EntryManager
-                tab={numbersTab}
-                entries={parseJsonField('numbers', 'numbers') as RawSheetEntry[]}
-                canEdit={canEditStats}
-                onEntriesChange={(entries) => saveJsonField('numbers', 'numbers', entries)}
-                onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
+                onEntriesChange={(entries) => saveJsonField(entryTab.key, storageFieldName(entryTab.key), entries)}
+                onDirtyChange={(isDirty) => reportDirty(entryTab.key, isDirty)}
+                // Loot tables write to Inventory only, until Phase 4 lets each
+                // table pick its target tab.
+                loot={entryTab.key === 'inventory' ? lootRolling : undefined}
               />
             ) : !TEXT_MODULE_TYPES.has(module.type) ? (
               /* A GM-composed custom tab. Its entries render once the generic
@@ -683,7 +673,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {/* Error Display */}
         {saveCharacterDataMutation.error && (

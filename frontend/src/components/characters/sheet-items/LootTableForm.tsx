@@ -1,8 +1,9 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { Alert, Button, HelpTooltip, Input } from '@/components/ui';
 import type { LootTable, LootTableContent } from '@/types/games';
-import { AddItemModal } from './AddItemModal';
-import type { InventoryItem } from '@/types/characters';
+import { AddEntryModal } from './AddEntryModal';
+import { createEntry, type EntryEdit } from '@/lib/sheetEntries';
+import { useSheetLayout, DEFAULT_SHEET_LAYOUT } from '@/hooks/useSheetLayout';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useOptionalGameContext } from '@/contexts/GameContext';
@@ -21,12 +22,10 @@ const CSVSeparatorCharacter = ',';
 /**
  * Item fields the CSV deliberately does not round-trip.
  *
- * `equipped` is written as a hardcoded `false` by AddItemModal and rendered as a
- * badge by ItemCard, but nothing can set it — there is no control for it anywhere
- * in the inventory UI. Exposing it through CSV would make the importer the only
- * way to equip an item, and it round-trips wrongly besides: CSV values parse as
- * strings, so an exported `false` returns as the truthy string "false" and the
- * badge lights up. Drop it in both directions until the field has real UI.
+ * `equipped` is a retired key: old item rows still carry it, but nothing reads
+ * or sets it. Letting the importer write it would revive a field with no UI,
+ * and it round-trips wrongly besides: CSV values parse as strings, so an
+ * exported `false` returns as the truthy string "false".
  */
 const CSV_EXCLUDED_FIELDS = new Set(['equipped']);
 
@@ -38,11 +37,14 @@ const stripExcludedFields = (row: Record<string, unknown>): Record<string, unkno
  * impossible to guess and fails silently in most spreadsheet exports, which
  * default to commas. Export-then-edit is offered first as the reliable path: it
  * hands the GM a correctly shaped file instead of asking them to build one.
+ *
+ * The optional columns are the Inventory tab's field keys, so a GM who has
+ * reshaped that tab is told the columns it actually has.
  */
-const CSV_FORMAT_HELP =
+const csvFormatHelp = (columns: readonly string[]) =>
   `Comma-separated (${CSVSeparatorCharacter}) list. The first row must be ` +
   `column headers and must include "name"; each row after it is one item. ` +
-  `Optional columns: description, quantity, category, value, weight. ` +
+  (columns.length > 0 ? `Optional columns: ${columns.join(', ')}. ` : '') +
   `Descriptions support Markdown; wrap any value containing "${CSVSeparatorCharacter}", ` +
   `a line break, or a double quote in double quotes. ` +
   `Importing replaces all current items. Easiest route: add one item, Export, ` +
@@ -55,8 +57,15 @@ interface LootTableFormProps {
   lootTable?: LootTable;
 }
 
+/** Inventory's default fields, for a layout that has removed the tab. */
+const DEFAULT_INVENTORY_FIELDS = DEFAULT_SHEET_LAYOUT.find((tab) => tab.key === 'inventory')!.fields;
+
 export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: LootTableFormProps) {
   const gameContext = useOptionalGameContext();
+  // Loot tables roll into Inventory, so their entries use its schema. Phase 4
+  // makes the target tab a per-table choice.
+  const inventoryFields =
+    useSheetLayout(gameContext?.game).tabs.find((tab) => tab.key === 'inventory')?.fields ?? DEFAULT_INVENTORY_FIELDS;
 
   const { data: lootTableContents } = useQuery({
     queryKey: ['lootTableContents', lootTable?.id],
@@ -86,7 +95,7 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
   // Empty tables are allowed on purpose: GMs build a table before they have
   // decided its contents, and importing a CSV into a saved table is a normal
   // flow. Rolling on an empty table is already handled in depth — the API
-  // returns 400 and ItemsManager surfaces that as an error toast — so
+  // returns 400 and useLootRoll surfaces that as an error toast — so
   // blocking creation here only got in the way of authoring.
   const validationError = !formData.name.trim() ? 'Give the loot table a name.' : null;
 
@@ -97,11 +106,13 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
   };
 
   
-  const addItem = (itemData: Omit<InventoryItem, 'id'>) => {
+  const addItem = (edit: EntryEdit) => {
+    // An entry minus its id: every roll or pick gets a fresh one.
+    const { id: _id, ...data } = createEntry('', edit);
     const newContent : LootTableContent = {
       id: 0,
-      name: itemData.name,
-      data: JSON.stringify(itemData),
+      name: data.name,
+      data: JSON.stringify(data),
     }
     setFormData(p => ({...p, items: [...(p.items || []), newContent], itemsChanged: true}));
     setIsAddingContent(false);
@@ -243,7 +254,7 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
             Bulk edit with CSV
             {/* Right-anchored: the icon now sits near the modal's right edge, where
                 the default left anchoring overflows it. */}
-            <HelpTooltip text={CSV_FORMAT_HELP} align="right" />
+            <HelpTooltip text={csvFormatHelp(inventoryFields.map((field) => field.key))} align="right" />
           </span>
 
           {/* Labelled, not icon-only: a bare up-arrow gives no hint that this
@@ -364,14 +375,14 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
       {/*
         Add Loot Table Content Modal. loot_table_random is intentionally left off:
         this modal defines the contents of a loot table, so sourcing an item at random
-        *from* a loot table makes no sense here, and onAddRandom is unreachable.
+        *from* a loot table makes no sense here, and no onAddRandom is passed.
       */}
       {isAddingContent && (
-        <AddItemModal
+        <AddEntryModal
+          fields={inventoryFields}
           onAdd={addItem}
-          onAddRandom={() => {}}
           onCancel={() => {setIsAddingContent(false)}}
-          allowedLootModes={['manual', 'loot_table']}
+          lootModes={['manual', 'loot_table']}
         />
       )}
     </div>

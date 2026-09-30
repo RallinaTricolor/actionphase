@@ -140,7 +140,7 @@ describe('LootTableSelector', () => {
       await waitFor(() => expect(screen.getByRole('option', { name: 'Health Potion' })).toBeInTheDocument());
       await user.selectOptions(itemSelect(), '21');
 
-      // ItemForm needs `data` and `name` off this object to build the item, so
+      // LootModeForm needs `data` and `name` off this object to build the item, so
       // handing back a bare id would break the submit path.
       expect(onItemChange).toHaveBeenCalledWith(POTION);
     });

@@ -5,6 +5,7 @@ import { generateId } from '@/utils/generateId';
 import { ensureIds } from '@/utils/ensureIds';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { applyEntryEdit, createEntry, normalizeEntry, type EntryEdit, type RawSheetEntry } from '@/lib/sheetEntries';
+import type { LootRolling } from '@/hooks/useLootRoll';
 import { EntryCard } from './EntryCard';
 import { AddEntryModal } from './AddEntryModal';
 
@@ -20,6 +21,11 @@ interface EntryManagerProps {
    * with Save. Ancestors use it to warn before closing the sheet.
    */
   onDirtyChange?: (isDirty: boolean) => void;
+  /**
+   * Offers adding from a loot table. Only Inventory passes this until Phase 4
+   * lets a loot table target any tab.
+   */
+  loot?: LootRolling;
 }
 
 /**
@@ -38,6 +44,7 @@ export const EntryManager: React.FC<EntryManagerProps> = ({
   canEdit,
   onEntriesChange,
   onDirtyChange,
+  loot,
 }) => {
   const { report: reportDirty } = useDirtyChildren(onDirtyChange);
   // Defensive: ensure every row has an ID (protects against draft-merge corruption)
@@ -49,6 +56,12 @@ export const EntryManager: React.FC<EntryManagerProps> = ({
   const addEntry = (edit: EntryEdit) => {
     onEntriesChange([...rows, createEntry(generateId(), edit)]);
     setShowAdd(false);
+  };
+
+  const rollLoot = async (lootTableId: number) => {
+    // Only a successful roll closes the modal, so a failed one can be retried
+    // without choosing the table again.
+    if (await loot?.roll(lootTableId)) setShowAdd(false);
   };
 
   const removeEntry = (id: string) => {
@@ -101,7 +114,13 @@ export const EntryManager: React.FC<EntryManagerProps> = ({
       )}
 
       {showAdd && (
-        <AddEntryModal fields={tab.fields} onAdd={addEntry} onCancel={() => setShowAdd(false)} />
+        <AddEntryModal
+          fields={tab.fields}
+          onAdd={addEntry}
+          onCancel={() => setShowAdd(false)}
+          lootModes={loot?.modes}
+          onAddRandom={loot ? rollLoot : undefined}
+        />
       )}
     </div>
   );

@@ -338,7 +338,7 @@ describe('UpdateCharacterSheetModal', () => {
       expect(await screen.findByText('Magic Sword')).toBeInTheDocument();
 
       // Remove the staged item, returning the list to exactly the published contents.
-      const removeButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeButtons[removeButtons.length - 1]);
 
       await waitFor(() => {
@@ -359,7 +359,7 @@ describe('UpdateCharacterSheetModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
 
-      const removeButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeButtons[removeButtons.length - 1]);
 
       await waitFor(() => {
@@ -409,7 +409,7 @@ describe('UpdateCharacterSheetModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
-      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeItemButtons[removeItemButtons.length - 1]);
 
       await waitFor(() => {
@@ -446,9 +446,9 @@ describe('UpdateCharacterSheetModal', () => {
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
 
       // Remove all three in quick succession — one field, one row, one write.
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       await waitFor(() => {
         expect(rows).toEqual(['inventory:items']);
@@ -473,7 +473,7 @@ describe('UpdateCharacterSheetModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
-      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeItemButtons[removeItemButtons.length - 1]);
 
       // Close while both edits are still inside the debounce window.
@@ -654,7 +654,7 @@ describe('UpdateCharacterSheetModal', () => {
       await waitFor(() => {
         expect(screen.getByText('Healing Potion')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Edit item' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Edit entry' }));
       await waitFor(() => {
         expect(screen.getByLabelText(/^Name/)).toBeInTheDocument();
       });

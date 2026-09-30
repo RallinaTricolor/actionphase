@@ -131,6 +131,27 @@ describe('useCharacterSheetItems', () => {
     });
   });
 
+  // A roll on a CSV-imported loot table is written verbatim by the server, so
+  // its numbers arrive as strings.
+  it('reads an item quantity stored as a string', async () => {
+    vi.mocked(apiClient.characters.getCharacterData).mockResolvedValue({
+      data: [
+        makeDataRow({
+          module_type: 'inventory',
+          field_name: 'items',
+          field_value: JSON.stringify([{ id: 'it-1', name: 'Arrows', quantity: '20', category: 'Ammo' }]),
+        }),
+      ],
+    } as never);
+
+    const { result } = renderHook(() => useCharacterSheetItems(42), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current).toHaveLength(1));
+    expect(result.current[0].metadata).toBe('Ammo · ×20');
+  });
+
   it('filters out skills missing id or name', async () => {
     vi.mocked(apiClient.characters.getCharacterData).mockResolvedValue({
       data: [

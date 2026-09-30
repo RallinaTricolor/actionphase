@@ -14,12 +14,12 @@ import { CharacterSheetPage } from '../pages/CharacterSheetPage';
  * rendered.
  *
  * Deliberately NOT covered here (already covered cheaper and faster):
- * - loot mode gating, JSON unpacking, selection resets -> ItemForm /
+ * - loot mode gating, JSON unpacking, selection resets -> LootModeForm /
  *   LootTableSelector component tests
  * - authorization, cross-game access, empty-table 400 -> pkg/games handler tests
  * - failed-roll error surfacing (empty table, network, malformed data) ->
- *   InventoryManager.loot.test.tsx. There was an E2E test for the empty-table
- *   case, but ItemForm now requests loot tables with exclude-empty=true, so an
+ *   useLootRoll.test.tsx. There was an E2E test for the empty-table
+ *   case, but LootModeForm requests loot tables with exclude-empty=true, so an
  *   empty table can no longer be selected and the flow is unreachable from the
  *   UI. The 400 remains as a backstop, asserted by
  *   TestSetRandomLootForCharacterEmptyTable.
@@ -54,7 +54,7 @@ test.describe('Loot Tables', () => {
     // from the roll rather than from seeded data.
     await expect(page.getByRole('heading', { name: ROLLED_ITEM })).toHaveCount(0);
 
-    await page.getByTestId('add-item').click();
+    await page.getByTestId('add-inventory').click();
 
     // Loot modes only appear inside a game context; their absence here would
     // mean the sheet lost its GameProvider.

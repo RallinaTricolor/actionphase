@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { apiClient } from '../lib/api';
-import type { CharacterData, InventoryItem } from '../types/characters';
+import type { CharacterData } from '../types/characters';
 import { normalizeEntry, type RawSheetEntry } from '../lib/sheetEntries';
 
 export interface SheetItem {
@@ -23,11 +23,18 @@ function parseJsonField<T>(value: string | undefined): T[] {
   }
 }
 
-function skillToSheetItem(raw: RawSheetEntry & { id: string }): SheetItem {
+const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
+
+type IdentifiedEntry = RawSheetEntry & { id: string };
+
+/** Rows a mention can point at: an id to key by and a name to match. */
+const isMentionable = (entry: RawSheetEntry): entry is IdentifiedEntry =>
+  typeof entry.id === 'string' && !!entry.id && typeof entry.name === 'string' && !!entry.name;
+
+function skillToSheetItem(raw: IdentifiedEntry): SheetItem {
   // Via normalizeEntry so mention metadata reads the same value the card shows,
   // including for rows still holding the pre-rename `level` key.
   const s = normalizeEntry('skills', raw);
-  const text = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
   const rank = text(s.rank);
   const meta = [text(s.category), rank ? `Rank ${rank}` : undefined]
     .filter(Boolean)
@@ -41,15 +48,19 @@ function skillToSheetItem(raw: RawSheetEntry & { id: string }): SheetItem {
   };
 }
 
-function itemToSheetItem(i: InventoryItem): SheetItem {
-  const meta = [i.category, i.quantity > 1 ? `×${i.quantity}` : undefined]
+function itemToSheetItem(raw: IdentifiedEntry): SheetItem {
+  const i = normalizeEntry('inventory', raw);
+  // Number(), not a typeof check: an entry rolled from a CSV-imported loot
+  // table is written verbatim by the server, so its quantity can be "3".
+  const quantity = Number(i.quantity);
+  const meta = [text(i.category), quantity > 1 ? `×${quantity}` : undefined]
     .filter(Boolean)
     .join(' · ');
   return {
     id: i.id,
     name: i.name,
     type: 'item',
-    description: i.description,
+    description: text(i.description),
     metadata: meta || undefined,
   };
 }
@@ -68,13 +79,11 @@ function toSheetItems(data: CharacterData[] | undefined): SheetItem[] {
     data.find((d) => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
 
   const skills = parseJsonField<RawSheetEntry>(getField('skills', 'skills'));
-  const items = parseJsonField<InventoryItem>(getField('inventory', 'items'));
+  const items = parseJsonField<RawSheetEntry>(getField('inventory', 'items'));
 
   return [
-    ...skills
-      .filter((s): s is RawSheetEntry & { id: string } => typeof s.id === 'string' && !!s.id && !!s.name)
-      .map(skillToSheetItem),
-    ...items.filter((i) => i.id && i.name).map(itemToSheetItem),
+    ...skills.filter(isMentionable).map(skillToSheetItem),
+    ...items.filter(isMentionable).map(itemToSheetItem),
   ];
 }
 

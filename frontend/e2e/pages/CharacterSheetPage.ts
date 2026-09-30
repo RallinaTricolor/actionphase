@@ -37,9 +37,9 @@ export class CharacterSheetPage {
     this.cancelButton = page.locator('[data-testid="cancel-edit"]');
     this.deleteButton = page.locator('[data-testid="delete-character"]');
     this.avatarUploadButton = page.locator('input[type="file"]');
-    this.inventorySection = page.locator('[data-testid="items-section"]');
+    this.inventorySection = page.locator('[data-testid="inventory-section"]');
     this.skillsSection = page.locator('[data-testid="skills-section"]');
-    this.itemsSection = page.locator('[data-testid="items-section"]');
+    this.itemsSection = page.locator('[data-testid="inventory-section"]');
     this.numbersSection = page.locator('[data-testid="numbers-section"]');
   }
 
@@ -167,7 +167,7 @@ export class CharacterSheetPage {
    * Get all inventory items
    */
   async getInventoryItems(): Promise<string[]> {
-    const items = await this.inventorySection.locator('[data-testid="inventory-item"]').all();
+    const items = await this.inventorySection.locator('[data-testid="sheet-entry"]').all();
     return Promise.all(items.map(i => i.textContent())).then(texts =>
       texts.filter((t): t is string => t !== null)
     );
@@ -315,7 +315,7 @@ export class CharacterSheetPage {
    * Check if the Inventory add trigger is visible (GM/owner permission check).
    */
   async canAddItem(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-item');
+    return await this.isAddTriggerVisible('add-inventory');
   }
 
   /**

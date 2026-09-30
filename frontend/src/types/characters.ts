@@ -129,27 +129,10 @@ export type CharacterActivityStats = components['schemas']['CharacterStatsRespon
 // deletion — no character held ability content. The rows remain in
 // character_data and are simply never read again.
 
-// Individual inventory item structures for JSON fields
-// `equipped` and `metadata` used to sit here and were dropped in the Phase 5
-// field pass. `equipped` rendered a badge but nothing could ever set it true —
-// AddItemModal hardcoded false and no edit path touched it — so the badge was
-// unreachable. `metadata` had no reader anywhere. Both keys are still tolerated
-// on read (old rows carry `equipped`); they are simply never written again.
-export interface InventoryItem {
-  id: string;
-  name: string;
-  description?: string;
-  quantity: number;
-  category?: string; // e.g., "Weapon", "Armor", "Consumable", "Tool"
-  condition?: string; // e.g., "Excellent", "Good", "Damaged"
-  /**
-   * Unused by any game today, kept deliberately: both feed the optional
-   * weight/value summary in ItemsManager, which stays hidden until a game sets
-   * them. Available as defaults rather than dead weight.
-   */
-  value?: number;
-  weight?: number;
-}
+// Inventory entries are generic entries too (SheetEntry in lib/sheetEntries).
+// `equipped`, `metadata` and `condition` are retired keys: old rows may carry
+// them and they survive an edit, but nothing reads or writes them. `condition`
+// was checked against production before the switch: no row held one.
 
 // Numbers entries are generic entries (see SheetEntry in lib/sheetEntries):
 // normalizeEntry absorbs the `type` → `name` rename and lifts the flat

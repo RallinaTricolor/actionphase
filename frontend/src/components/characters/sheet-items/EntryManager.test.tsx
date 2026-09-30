@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { EntryManager } from './EntryManager';
@@ -10,9 +11,23 @@ import { resolveSheetLayout } from '@/hooks/useSheetLayout';
 import type { SheetTab } from '@/types/characters';
 import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { logger } from '@/services/LoggingService';
+import type { LootRolling } from '@/hooks/useLootRoll';
 
 vi.mock('@/services/LoggingService', () => ({
   logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() },
+}));
+
+// The loot modes need a game with a loot table.
+vi.mock('@/contexts/GameContext', () => ({
+  useOptionalGameContext: () => ({ gameId: 7 }),
+}));
+vi.mock('@/lib/api', () => ({
+  apiClient: {
+    games: {
+      getLootTables: vi.fn().mockResolvedValue({ data: [{ id: 11, game_id: 7, name: 'Common Loot' }] }),
+      getLootTableContents: vi.fn().mockResolvedValue({ data: [] }),
+    },
+  },
 }));
 
 const SKILLS: SheetTab = resolveSheetLayout(undefined).tabs[0];
@@ -187,6 +202,73 @@ describe('EntryManager on the Numbers tab', () => {
     expect(onEntriesChange.mock.calls[0][0][0]).toEqual({
       id: 'n1', name: 'Stress', amount: { value: 4, max: 9, display: 'boxes' }, description: 'Mind',
     });
+  });
+});
+
+describe('EntryManager on the Inventory tab', () => {
+  const INVENTORY: SheetTab = resolveSheetLayout(undefined).tabs.find(tab => tab.key === 'inventory')!;
+
+  it('shows an item\'s fields, with no weight/value totals', () => {
+    renderManager({
+      tab: INVENTORY,
+      entries: [{ id: 'i1', name: 'Rope', quantity: 3, weight: 2, value: 1, category: 'Tool', equipped: false }],
+    });
+    expect(screen.getByTestId('inventory-section')).toBeInTheDocument();
+    const card = cardFor('Rope');
+    expect(card.getByText('Quantity:')).toBeInTheDocument();
+    expect(card.getByText('Tool')).toBeInTheDocument();
+    // Dropped: no game used the totals (decided 2026-09-28).
+    expect(screen.queryByText(/total weight/i)).not.toBeInTheDocument();
+  });
+
+  it('reads a quantity stored as a string by a CSV-sourced roll', () => {
+    renderManager({ tab: INVENTORY, entries: [{ id: 'i1', name: 'Arrows', quantity: '20' }] });
+    expect(cardFor('Arrows').getByText('20')).toBeInTheDocument();
+  });
+
+  describe('loot rolls', () => {
+    const rollFromModal = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByTestId('add-inventory'));
+      await user.selectOptions(await screen.findByRole('combobox', { name: 'Mode' }), 'loot_table_random');
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Loot Table' }), '11');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+    };
+
+    it('closes the modal after a successful roll, writing nothing itself', async () => {
+      const roll = vi.fn().mockResolvedValue(true);
+      const { onEntriesChange, user } = renderWithLoot(roll);
+      await rollFromModal(user);
+
+      expect(roll).toHaveBeenCalledWith(11);
+      await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Mode' })).not.toBeInTheDocument());
+      // The server wrote the entry; writing the list back would race it.
+      expect(onEntriesChange).not.toHaveBeenCalled();
+    });
+
+    it('keeps the modal open when a roll fails, so the GM can retry', async () => {
+      const roll = vi.fn().mockResolvedValue(false);
+      const { user } = renderWithLoot(roll);
+      await rollFromModal(user);
+
+      await waitFor(() => expect(roll).toHaveBeenCalled());
+      expect(screen.getByRole('combobox', { name: 'Loot Table' })).toHaveValue('11');
+    });
+
+    const renderWithLoot = (roll: LootRolling['roll']) => {
+      const onEntriesChange = vi.fn();
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <EntryManager
+            tab={INVENTORY}
+            entries={[]}
+            canEdit={true}
+            onEntriesChange={onEntriesChange}
+            loot={{ modes: ['manual', 'loot_table', 'loot_table_random'], roll }}
+          />
+        </QueryClientProvider>,
+      );
+      return { onEntriesChange, user: userEvent.setup({ delay: null }) };
+    };
   });
 });
 

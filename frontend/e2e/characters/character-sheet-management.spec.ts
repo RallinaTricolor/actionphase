@@ -84,24 +84,19 @@ test.describe('Character Sheet Management', () => {
 
     await expect(page.getByRole('heading', { name: 'Longbow' })).toBeVisible();
     const longbowCard = sheetPage.itemsSection
-      .locator('div')
-      .filter({ has: page.getByRole('heading', { name: 'Longbow' }) })
-      .filter({ has: page.getByRole('button', { name: /expand description/i }) })
-      .last();
-    await longbowCard.getByRole('button', { name: /expand description/i }).first().click();
+      .getByTestId('sheet-entry')
+      .filter({ has: page.getByRole('heading', { name: 'Longbow' }) });
+    await longbowCard.getByRole('button', { name: 'Description' }).click();
     await expect(page.locator('text=Masterwork longbow')).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Arrows' })).toBeVisible();
     const arrowsCard = sheetPage.itemsSection
-      .locator('div')
-      .filter({ has: page.getByRole('heading', { name: 'Arrows' }) })
-      .filter({ has: page.getByRole('button', { name: /expand description/i }) })
-      .last();
-    await arrowsCard.getByRole('button', { name: /expand description/i }).first().click();
+      .getByTestId('sheet-entry')
+      .filter({ has: page.getByRole('heading', { name: 'Arrows' }) });
+    await arrowsCard.getByRole('button', { name: 'Description' }).click();
     await expect(page.locator('text=Steel-tipped arrows')).toBeVisible();
 
-    // No item sets weight or value, so the totals line stays hidden rather than
-    // reporting a fabricated "0.0".
+    // The weight/value totals were dropped with the move to generic entries.
     await expect(sheetPage.itemsSection.getByText(/Total Weight/)).not.toBeVisible();
 
     // ===== Test Numbers =====
@@ -225,8 +220,8 @@ test.describe('Character Sheet Management', () => {
     await sheetPage.goToInventoryTab();
 
     expect(await sheetPage.canAddItem()).toBe(false);
-    await expect(page.getByRole('button', { name: 'Edit item' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Remove item' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit entry' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Remove entry' })).toHaveCount(0);
 
     // ===== Numbers - No Edit UI =====
     await sheetPage.goToNumbersTab();

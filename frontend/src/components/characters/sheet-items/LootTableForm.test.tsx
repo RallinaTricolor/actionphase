@@ -183,10 +183,9 @@ describe('LootTableForm CSV import', () => {
     expect(screen.getByText(/row 2 has no name/i)).toBeInTheDocument();
   });
 
-  // `equipped` is written as a hardcoded false by AddItemModal and has no control
-  // anywhere in the inventory UI. It must not round-trip through CSV: values parse
-  // as strings, so an exported `false` would come back as the truthy string
-  // "false" and light up ItemCard's equipped badge.
+  // `equipped` is a retired key with no control anywhere in the inventory UI. It
+  // must not round-trip through CSV: values parse as strings, so an exported
+  // `false` would come back as the truthy string "false".
   it('drops the equipped field from imported items', async () => {
     const { onSubmit } = renderForm();
     nameTable();
@@ -273,9 +272,8 @@ describe('LootTableForm CSV export', () => {
     fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
     fireEvent.change(await screen.findByLabelText(/^Name/), { target: { value: item.name } });
     if (item.description !== undefined) {
-      // Target the textarea by id: /description/i also matches CommentEditor's
-      // preview toggle, so getByLabelText is ambiguous here.
-      const descriptionField = document.getElementById('item-description')!;
+      // By role: /description/i alone also matches CommentEditor's preview toggle.
+      const descriptionField = screen.getByRole('textbox', { name: /^Description/ });
       fireEvent.change(descriptionField, { target: { value: item.description } });
     }
     fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
@@ -284,9 +282,8 @@ describe('LootTableForm CSV export', () => {
     return () => captured;
   };
 
-  // AddItemModal stamps `equipped: false` onto every item it creates, so without
-  // filtering it surfaces as a column in the exported CSV — a field the GM has no
-  // way to set and should not be editing by hand.
+  // The add form writes only the schema's fields, so no `equipped` column can
+  // appear in an export of items it created.
   it('omits the equipped column when exporting items added through the form', async () => {
     const captured = await captureExport({ name: 'Iron Sword' });
 
@@ -314,6 +311,29 @@ describe('LootTableForm CSV export', () => {
     expect(captured()).not.toContain('"**Cursed** blade"');
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe('LootTableForm adding an item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // A roll writes this data to the sheet verbatim, so it must be exactly an
+  // Inventory entry in the stored shape: typed values, no empty fields, no id
+  // (each roll or pick gets its own).
+  it('stores the item as an Inventory entry, minus its id', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'Chest' } });
+    fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Name *' }), { target: { value: 'Rope' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Quantity' }), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create loot table/i }));
+
+    const [item] = onSubmit.mock.calls[0][0].items;
+    expect(item.name).toBe('Rope');
+    expect(JSON.parse(item.data)).toEqual({ name: 'Rope', quantity: 3 });
   });
 });
 
