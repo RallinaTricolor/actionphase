@@ -586,8 +586,8 @@ test `=== true`: an absent key reads as "not hidden".
 
 ### Character Sheet Storage
 
-*(Rewritten 2026-09-30 for GM-composed sheets. Plan and as-built notes:
-`.claude/planning/CHARACTER_SHEET_TAB_COMPOSITION.md`.)*
+*(Rewritten 2026-09-30 for GM-composed sheets. The decision and its
+alternatives: ADR-009.)*
 
 A sheet is **Public Profile and Private Notes, then the game's configurable
 tabs**. Every configurable tab is the same thing: a list of entries, each with a
@@ -597,7 +597,8 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   Stored **sparse**: absent `tabs` means the default layout (Skills, Inventory,
   Numbers); a built-in tab without `label`/`fields` uses its defaults. Default
   labels and fields live only in `DEFAULT_SHEET_LAYOUT`
-  (`frontend/src/hooks/useSheetLayout.ts`); read a layout through
+  (`frontend/src/hooks/useSheetLayout.ts`), except that server-written text
+  (game log, exports) takes default labels from `core.SheetTabLabel`; read a layout through
   `resolveSheetLayout`/`useSheetLayout`, never the raw config. Legacy `labels`
   apply only when `tabs` is absent.
 - **Written only by** `PUT /games/{id}/character-sheet` (GM or co-GM; 409 once
@@ -640,7 +641,8 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   layout order under their labels (`core.SheetTabLabel`); data on removed tabs
   is still archived.
 
-**See**: `/docs-site/developer/architecture/adrs/002-database-design-approach.md`
+**See**: `/docs-site/developer/architecture/adrs/009-character-sheet-tab-composition.md`,
+`/docs-site/developer/architecture/adrs/002-database-design-approach.md`
 
 ## Observability Pattern
 
@@ -777,6 +779,7 @@ committed, and `just verify` fails when either is stale. Never hand-edit a
 - ADR-006: Observability Approach
 - ADR-007: Testing Strategy
 - ADR-008: Community Scoping, Grandfathered Games, and Best-Effort Webhooks
+- ADR-009: Character Sheet Tabs as Generic Entries with GM-Defined Schemas
 
 ### System Design
 **Location**: `/docs-site/developer/architecture/`

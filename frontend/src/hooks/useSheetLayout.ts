@@ -10,11 +10,13 @@ import type {
 /**
  * The default layout: each built-in tab's label and entry fields.
  *
- * **This is the only place in the codebase that knows these.** The backend
+ * **This is the only place in the app that knows these.** The backend
  * stores only what a GM actually changed and never fills defaults in, so an
  * absent config means "use these", which only works if exactly one place has
  * them. Adding a second copy (a placeholder typed inline, a fallback in a
  * component) reintroduces the drift this centralisation exists to prevent.
+ * The one exception is server-written text (game log, exports), which names
+ * the built-in tabs through `core.SheetTabLabel`; keep its labels the same.
  *
  * Field keys are the JSON keys existing entries already use, so today's data
  * lines up with these schemas with no migration. Each tab key is also identical

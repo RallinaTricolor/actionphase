@@ -101,6 +101,7 @@ func SheetTabLabel(config CharacterSheetConfig, tabKey string) string {
 // SheetStorageFieldName returns the character_data field_name a configurable
 // tab's entries are stored under. Every tab stores under its own key except
 // inventory, which predates that invariant and stores under "items".
+// Mirrors storageFieldName in the frontend's types/characters.ts.
 func SheetStorageFieldName(tabKey string) string {
 	if tabKey == "inventory" {
 		return "items"
