@@ -189,6 +189,28 @@ describe('useCharacterSheetItems', () => {
 
     expect(result.current[0].name).toBe('Good Skill');
   });
+
+  // Unedited Numbers rows still name themselves under the legacy `type` key.
+  // The mention check must read the normalized entry, or those rows never
+  // reach the panel or a tooltip.
+  it('includes legacy Numbers rows named by `type`', async () => {
+    vi.mocked(apiClient.characters.getCharacterData).mockResolvedValue({
+      data: [
+        makeDataRow({
+          module_type: 'numbers',
+          field_name: 'numbers',
+          field_value: JSON.stringify([{ id: 'num-1', type: 'Gold', amount: 40 }]),
+        }),
+      ],
+    } as never);
+
+    const { result } = renderHook(() => useCharacterSheetItems(42), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current).toHaveLength(1));
+    expect(result.current[0]).toMatchObject({ id: 'num-1', name: 'Gold', refKind: 'numbers', tabKey: 'numbers' });
+  });
 });
 
 // Every tab in the game's layout is mentionable, read with that tab's schema.

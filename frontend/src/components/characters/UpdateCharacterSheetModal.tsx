@@ -97,18 +97,6 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
 
   const queryClient = useQueryClient();
 
-  // A roll is written to the character's sheet by the server, not staged as a
-  // draft. Shown locally at once, and refetched so the published sheet agrees.
-  // The server gives the entry its id; the generated one only covers a server
-  // that predates that, and is overridden by the spread.
-  const lootRolling = useLootRoll(characterId, (rolled, tabKey) => {
-    setEntriesByTab(prev => ({
-      ...prev,
-      [tabKey]: [...(prev[tabKey] ?? []), { id: generateId(), ...rolled }],
-    }));
-    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
-  });
-
   // Load the character's current sheet data
   const { data: characterData, isLoading: isLoadingCharacterData } = useQuery({
     queryKey: ['characterData', characterId],
@@ -283,6 +271,28 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
       timers.clear();
     };
   }, []);
+
+  // A roll is written to the character's sheet by the server, not staged as a
+  // draft. Shown locally at once, and refetched so the published sheet agrees.
+  // The server gives the entry its id; the generated one only covers a server
+  // that predates that, and is overridden by the spread.
+  //
+  // A tab that already has a staged (or pending) snapshot is re-staged with the
+  // roll included: publishing replaces the tab's row with the snapshot, so one
+  // taken before the roll would erase it. A tab with nothing staged is left
+  // alone, since the roll is already on the published sheet.
+  const lootRolling = useLootRoll(characterId, (rolled, tabKey) => {
+    const fieldName = storageFieldName(tabKey);
+    const entries = [...(entriesByTab[tabKey] ?? []), { id: generateId(), ...rolled }];
+    setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));
+
+    const hasStagedSnapshot =
+      pendingSaves.current.has(`${tabKey}:${fieldName}`) ||
+      (existingDrafts ?? []).some(d => d.module_type === tabKey && d.field_name === fieldName);
+    if (hasStagedSnapshot) scheduleSave(tabKey, fieldName, entries);
+
+    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+  });
 
   const handleEntriesChange = (tabKey: string, entries: RawSheetEntry[]) => {
     setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));

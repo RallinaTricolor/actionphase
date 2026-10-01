@@ -66,9 +66,8 @@ const numberText = (value: unknown) => {
 
 type IdentifiedEntry = RawSheetEntry & { id: string };
 
-/** Rows a mention can point at: an id to key by and a name to match. */
-const isMentionable = (entry: RawSheetEntry): entry is IdentifiedEntry =>
-  typeof entry.id === 'string' && !!entry.id && typeof entry.name === 'string' && !!entry.name;
+/** Rows a mention can key by. The name is checked after normalizeEntry. */
+const hasId = (entry: RawSheetEntry): entry is IdentifiedEntry => typeof entry.id === 'string' && !!entry.id;
 
 /**
  * The fields worth a glance in a tooltip, in schema order: a choice as its
@@ -99,21 +98,21 @@ function toSheetItems(data: CharacterData[] | undefined, tabs: readonly SheetTab
   return tabs.flatMap((tab) => {
     const row = data.find((d) => d.module_type === tab.key && d.field_name === storageFieldName(tab.key));
     return parseJsonField<RawSheetEntry>(row?.field_value)
-      .filter(isMentionable)
-      .map((raw) => {
-        // Via normalizeEntry so mention metadata reads the same value the card
-        // shows, including for rows still holding a legacy key.
-        const entry = normalizeEntry(tab.key, raw);
-        return {
-          id: entry.id,
-          name: entry.name,
-          refKind: sheetRefKind(tab.key),
-          tabKey: tab.key,
-          tabLabel: tab.label,
-          description: text(entry.description),
-          metadata: metadataOf(tab, entry),
-        };
-      });
+      .filter(hasId)
+      // Via normalizeEntry so the name and metadata read the same values the
+      // card shows, including for rows still holding a legacy key (a Numbers
+      // row named by `type`).
+      .map((raw) => normalizeEntry(tab.key, raw))
+      .filter((entry) => !!entry.name)
+      .map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        refKind: sheetRefKind(tab.key),
+        tabKey: tab.key,
+        tabLabel: tab.label,
+        description: text(entry.description),
+        metadata: metadataOf(tab, entry),
+      }));
   });
 }
 

@@ -394,6 +394,76 @@ describe('UpdateCharacterSheetModal', () => {
     });
   });
 
+  // A roll is written straight to the published sheet, but publishing replaces
+  // a tab's row with its staged snapshot. A snapshot staged before the roll
+  // would erase the rolled entry on publish.
+  describe('Loot rolls and staged drafts', () => {
+    function serveInventoryRoll() {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
+          HttpResponse.json([
+            { id: 4, game_id: 1, name: 'Common Loot', target_tab: 'inventory', created_at: '', updated_at: '' },
+          ])
+        ),
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', () =>
+          HttpResponse.json({ id: 9, loot_table_id: 4, name: 'Rope', data: '{"id":"srv-1","name":"Rope"}' })
+        ),
+      );
+    }
+
+    /** Records every staged snapshot's field_value. */
+    function captureStaged(): string[] {
+      const staged: string[] = [];
+      server.use(
+        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
+          const { field_value } = (await request.json()) as { field_value: string };
+          staged.push(field_value);
+          return HttpResponse.json({ ...DRAFT_ITEMS[0], field_value });
+        }),
+      );
+      return staged;
+    }
+
+    async function rollOnInventory() {
+      fireEvent.click(within(await screen.findByRole('navigation', { name: 'Sections' })).getByRole('button', { name: 'Inventory' }));
+      fireEvent.click(await screen.findByTestId('add-inventory'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'loot_table_random' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Loot Table' }), { target: { value: '4' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(await within(await screen.findByTestId('inventory-section')).findByText('Rope')).toBeInTheDocument();
+    }
+
+    it('re-stages a tab with a staged draft so publishing keeps the rolled entry', async () => {
+      setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: DRAFT_ITEMS });
+      serveInventoryRoll();
+      const staged = captureStaged();
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      await rollOnInventory();
+
+      await waitFor(() => expect(staged).toHaveLength(1), { timeout: 3000 });
+      expect(JSON.parse(staged[0]).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
+        ['item-2', 'Magic Sword'],
+        ['srv-1', 'Rope'],
+      ]);
+    });
+
+    it('stages nothing for a tab with no draft: the roll is already on the published sheet', async () => {
+      setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: null });
+      serveInventoryRoll();
+      const staged = captureStaged();
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      await rollOnInventory();
+
+      // Past the 800ms debounce, so a scheduled save would have fired.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      expect(staged).toEqual([]);
+    });
+  });
+
   describe('Header content', () => {
     it('shows character name and modal title', async () => {
       setupHandlers({ characterData: [], drafts: null });

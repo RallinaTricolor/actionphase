@@ -108,6 +108,17 @@ describe('lootTableToCsv', () => {
     expect(csv.split('\r\n')[0]).toBe('name,f_aaaaaa,f_bbbbbb,f_cccccc');
   });
 
+  // A GM who drops the default `value` field and adds their own "Value" leaves
+  // the old values under `value`. Exported by label, the two columns would both
+  // read back into the new field, the leftover overwriting it.
+  it('keeps a field apart from a leftover key that spells its label', () => {
+    const fields: CharacterSheetField[] = [{ key: 'f_val001', label: 'Value', type: 'text' }];
+    const entries = [{ name: 'Lantern', f_val001: 'Heirloom', value: '40' }];
+    const csv = lootTableToCsv(entries.map(content), fields);
+    expect(csv.split('\r\n')[0]).toBe('name,f_val001,value');
+    expect(dataOf(parseLootTableCsv(csv, fields))).toEqual(entries[0]);
+  });
+
   it('survives an item whose data is not JSON', () => {
     expect(lootTableToCsv([{ id: 1, name: 'Broken', data: 'not json' }], [])).toBe('name\r\nBroken');
   });

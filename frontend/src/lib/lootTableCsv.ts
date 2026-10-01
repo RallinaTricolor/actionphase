@@ -51,20 +51,23 @@ export function lootCsvHelp(fields: readonly CharacterSheetField[]): string {
 /**
  * The column header each field exports under: its label, which is what a GM
  * recognises, or its key when the label would read back as something else (a
- * label shared with another field, or one spelling "name").
+ * label shared with another field, one spelling "name", or one spelling a
+ * leftover key the items also carry, such as a removed default field's).
  */
-function exportHeaders(fields: readonly CharacterSheetField[]): Map<string, string> {
+function exportHeaders(fields: readonly CharacterSheetField[], otherKeys: readonly string[]): Map<string, string> {
   const labelCounts = new Map<string, number>();
   for (const field of fields) {
     const label = field.label.trim().toLowerCase();
     labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
   }
   const keys = new Set(fields.map((field) => field.key));
+  const others = new Set(otherKeys.map((key) => key.toLowerCase()));
   return new Map(
     fields.map((field) => {
       const label = field.label.trim();
       const lower = label.toLowerCase();
-      const ambiguous = labelCounts.get(lower) !== 1 || lower === 'name' || (keys.has(label) && label !== field.key);
+      const ambiguous =
+        labelCounts.get(lower) !== 1 || lower === 'name' || (keys.has(label) && label !== field.key) || others.has(lower);
       return [field.key, ambiguous ? field.key : label];
     }),
   );
@@ -74,13 +77,17 @@ function exportHeaders(fields: readonly CharacterSheetField[]): Map<string, stri
  * The entry key a column header names: `name`, a field key, or a field label
  * (case-insensitive). Anything else is kept under the header as written, the
  * same as data the schema doesn't know about anywhere else.
+ *
+ * A label only stands in for a field that has no column under its own key:
+ * when both are present (an export keeps a field apart from a leftover key
+ * spelling its label), the label-like header is that leftover key.
  */
-function columnKey(fields: readonly CharacterSheetField[], header: string): string {
+function columnKey(fields: readonly CharacterSheetField[], header: string, keyedColumns: ReadonlySet<string>): string {
   const trimmed = header.trim();
   if (trimmed.toLowerCase() === 'name') return 'name';
   if (fields.some((field) => field.key === trimmed)) return trimmed;
   const byLabel = fields.filter((field) => field.label.trim().toLowerCase() === trimmed.toLowerCase());
-  return byLabel.length === 1 ? byLabel[0].key : trimmed;
+  return byLabel.length === 1 && !keyedColumns.has(byLabel[0].key) ? byLabel[0].key : trimmed;
 }
 
 function parseTrack(raw: string): TrackValue | undefined {
@@ -166,7 +173,8 @@ export function parseLootTableCsv(
   });
 
   const headers = parsed.meta.fields ?? [];
-  const keys = headers.map((header) => columnKey(fields, header));
+  const keyedColumns = new Set(headers.map((header) => header.trim()).filter((header) => fields.some((field) => field.key === header)));
+  const keys = headers.map((header) => columnKey(fields, header, keyedColumns));
   if (!keys.includes('name')) {
     return {
       error: `The CSV needs a "name" column. Columns must be separated by "${LOOT_CSV_DELIMITER}".`,
@@ -253,7 +261,7 @@ export function lootTableToCsv(contents: readonly LootTableContent[], fields: re
   const otherKeys = [...present].filter((key) => key !== 'name' && key !== 'id' && !schemaKeys.includes(key));
   const keys = ['name', ...schemaKeys, ...otherKeys];
 
-  const headers = exportHeaders(fields);
+  const headers = exportHeaders(fields, otherKeys);
   const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
   const columns = keys.map((key) => headers.get(key) ?? key);
   // Rows as arrays, not objects: every row gets every column, so no ragged
