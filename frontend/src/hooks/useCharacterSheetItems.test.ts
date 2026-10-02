@@ -257,10 +257,33 @@ describe('useCharacterSheetItems with a composed layout', () => {
     expect(result.current).toEqual([
       {
         id: 'c1', name: 'Old Zadok', refKind: 't_abc123', tabKey: 't_abc123', tabLabel: 'Contacts',
-        description: 'Drinks.', metadata: 'Ally · Location: Docks',
+        description: 'Drinks.', metadata: 'Ally · Location: Docks · Trust: 2 / 5',
       },
       { id: 'i1', name: 'Rope', refKind: 'item', tabKey: 'inventory', tabLabel: 'Gear', description: undefined, metadata: undefined },
     ]);
+  });
+
+  // An unbounded track is a bare count (money, XP); one with no value at all
+  // has nothing to show.
+  it('shows an unbounded track as its count and skips a track with no value', async () => {
+    vi.mocked(apiClient.characters.getCharacterData).mockResolvedValue({
+      data: [
+        makeDataRow({
+          module_type: 't_abc123',
+          field_name: 't_abc123',
+          field_value: JSON.stringify([
+            { id: 'c1', name: 'Old Zadok', f_trust1: { value: 1200 } },
+            { id: 'c2', name: 'Barnabas', f_trust1: {} },
+          ]),
+        }),
+      ],
+    } as never);
+
+    const { result } = renderHook(() => useCharacterSheetItems(42), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current).toHaveLength(2));
+
+    expect(result.current[0].metadata).toBe(`Trust: ${(1200).toLocaleString()}`);
+    expect(result.current[1].metadata).toBeUndefined();
   });
 });
 

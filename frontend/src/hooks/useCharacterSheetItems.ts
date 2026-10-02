@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { apiClient } from '../lib/api';
-import { storageFieldName, type CharacterData, type SheetTab } from '../types/characters';
+import { storageFieldName, type CharacterData, type CharacterSheetField, type SheetTab } from '../types/characters';
 import { normalizeEntry, type RawSheetEntry, type SheetEntry } from '../lib/sheetEntries';
 import { useOptionalGameContext } from '../contexts/GameContext';
 import { useSheetLayout } from './useSheetLayout';
@@ -64,6 +64,19 @@ const numberText = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed.toLocaleString() : undefined;
 };
 
+/**
+ * A track field's value as text, "value / max" the way the card reads, or the
+ * bare count for an unbounded track. A track with no value shows nothing.
+ */
+const trackText = (stored: unknown) => {
+  if (typeof stored !== 'object' || stored === null) return undefined;
+  const { value, max } = stored as Record<string, unknown>;
+  const shown = numberText(value);
+  if (!shown) return undefined;
+  const bound = Number(max) > 0 ? numberText(max) : undefined;
+  return bound ? `${shown} / ${bound}` : shown;
+};
+
 type IdentifiedEntry = RawSheetEntry & { id: string };
 
 /** Rows a mention can key by. The name is checked after normalizeEntry. */
@@ -71,15 +84,21 @@ const hasId = (entry: RawSheetEntry): entry is IdentifiedEntry => typeof entry.i
 
 /**
  * The fields worth a glance in a tooltip, in schema order: a choice as its
- * value (it's a badge on the card), and a text or number field as
+ * value (it's a badge on the card), and a text, number or track field as
  * "Label: value", the way the card's meta line reads. Descriptions have their
- * own slot; tracks and checkboxes are left to the sheet.
+ * own slot; checkboxes are left to the sheet.
  */
+const metaText: Partial<Record<CharacterSheetField['type'], (value: unknown) => string | undefined>> = {
+  text,
+  number: numberText,
+  track: trackText,
+};
+
 function metadataOf(tab: SheetTab, entry: SheetEntry): string | undefined {
   const parts = tab.fields.flatMap((field) => {
     const value = entry[field.key];
     if (field.type === 'select') return text(value) ?? [];
-    const shown = field.type === 'number' ? numberText(value) : field.type === 'text' ? text(value) : undefined;
+    const shown = metaText[field.type]?.(value);
     return shown ? `${field.label}: ${shown}` : [];
   });
   return parts.length > 0 ? parts.join(' · ') : undefined;

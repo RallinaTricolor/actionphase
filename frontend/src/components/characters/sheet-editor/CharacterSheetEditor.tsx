@@ -154,7 +154,7 @@ export function CharacterSheetEditor({ gameId, config, onDirtyChange }: Characte
         </Card>
       </div>
 
-      <div className="sticky bottom-0 z-10 py-3 surface-base border-t border-theme-default space-y-3">
+      <div className="sticky bottom-0 z-10 px-4 py-3 surface-base border-t border-theme-default space-y-3">
         {confirmingReset && (
           <ConfirmRemoval
             message="Replace this draft with the default tabs and fields? Custom tabs and fields, and any renames, go once you save. Stored entries are kept, hidden."
