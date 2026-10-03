@@ -1,4 +1,6 @@
-import { Button, Modal } from '@/components/ui';
+import { Badge, Button, Modal } from '@/components/ui';
+import { useOptionalGameContext } from '@/contexts/GameContext';
+import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { useLootTableManagement } from '@/hooks/useLootTablemanagement';
 import { LootTableForm, type EditLootTable } from './LootTableForm';
 import { useUrlParam } from '@/hooks/useUrlParam';
@@ -61,6 +63,9 @@ export function LootTablesView({ gameId, className = '' }: LootTablesProps) {
 
   const [checkDeleteLootTable, setCheckDeleteLootTable] = useState(false);
 
+  const { tabs } = useSheetLayout(useOptionalGameContext()?.game);
+  const tabLabel = (key: string) => tabs.find((tab) => tab.key === key)?.label ?? 'Removed tab';
+
   const selectedTable = lootTables.find(t => t.id === selectedLootTableId);
 
   const [lootTableToDelete, setLootTableToDelete] = useState<number | undefined>();
@@ -122,22 +127,29 @@ export function LootTablesView({ gameId, className = '' }: LootTablesProps) {
           if (!data.id){
             await createLootTableMutation.mutateAsync({
               name: data.name,
+              target_tab: data.targetTab,
               items: data.items
             });
           }
           else {
-            if (selectedTable?.name !== data.name){
+            const retargeted = selectedTable?.target_tab !== data.targetTab;
+            const items = data.items || [];
+            // The server retargets only an empty table. The form offers a new
+            // target only once every item is removed, but the stored items are
+            // still there until saved, so clear them before retargeting and
+            // write any new ones after.
+            if (data.itemsChanged && (retargeted || items.length === 0)) {
+              await updateLootTableContentsMutation.mutateAsync({ id: data.id, items: [] });
+            }
+            if (selectedTable?.name !== data.name || retargeted){
               await updateLootTableMutation.mutateAsync({
                 id: data.id,
-                name: data.name
+                name: data.name,
+                target_tab: retargeted ? data.targetTab : undefined,
               });
             }
-            if (data.itemsChanged) {
-              await updateLootTableContentsMutation.mutateAsync({
-                id: data.id,
-                items: data.items || []
-              });
-              
+            if (data.itemsChanged && items.length > 0) {
+              await updateLootTableContentsMutation.mutateAsync({ id: data.id, items });
             }
           }
           if (selectedLootTableId !== null) {
@@ -195,9 +207,12 @@ export function LootTablesView({ gameId, className = '' }: LootTablesProps) {
                 <div className="flex flex-col gap-1 flex-grow min-w-0">
                   {/* min-w-0 + break-words so a long name wraps instead of pushing
                       the action buttons off the card. */}
-                  <h3 className="text-lg font-semibold text-content-primary min-w-0 break-words">
-                    {lootTable.name}
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <h3 className="text-lg font-semibold text-content-primary min-w-0 break-words">
+                      {lootTable.name}
+                    </h3>
+                    <Badge variant="neutral" size="sm">Rolls into {tabLabel(lootTable.target_tab)}</Badge>
+                  </div>
                   <p className="text-xs text-content-tertiary">
                     Created {formatUTCForDisplay(lootTable.created_at, 'MMM d, yyyy')}
                     {/* updated_at is set to created_at on insert and only moves when

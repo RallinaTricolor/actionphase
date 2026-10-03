@@ -121,6 +121,22 @@ func TestActionSubmissionService_CreateDraftCharacterUpdate(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid module_type")
 	})
 
+	t.Run("accepts a well-formed custom tab key", func(t *testing.T) {
+		// Whether the game has the tab is the handler's check; the service only
+		// mirrors the check_module_type constraint, which must admit t_ keys.
+		draft, err := actionService.CreateDraftCharacterUpdate(context.Background(), core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: result.ID,
+			CharacterID:    character.ID,
+			ModuleType:     "t_abc123",
+			FieldName:      "t_abc123",
+			FieldValue:     "[]",
+			FieldType:      "json",
+			Operation:      "upsert",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "t_abc123", draft.ModuleType)
+	})
+
 	t.Run("validates field_type", func(t *testing.T) {
 		req := core.CreateDraftCharacterUpdateRequest{
 			ActionResultID: result.ID,

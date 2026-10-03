@@ -2,11 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { isPublicArchive } from '@/lib/gamePermissions';
-import type { CharacterData, CharacterDataRequest, CharacterSkill, InventoryItem, NumberEntry, CharacterSheetConfig } from '@/types/characters';
-import { buildCharacterModules } from '@/types/characters';
-import { SkillsManager } from './sheet-items/SkillsManager';
-import { ItemsManager } from './sheet-items/ItemsManager';
-import { NumbersManager } from './sheet-items/NumbersManager';
+import type { CharacterData, CharacterDataRequest, CharacterSheetConfig } from '@/types/characters';
+import { buildCharacterModules, storageFieldName } from '@/types/characters';
+import { EntryManager } from './sheet-items/EntryManager';
+import type { RawSheetEntry } from '@/lib/sheetEntries';
 import CharacterAvatar from './CharacterAvatar';
 import AvatarUploadModal from './AvatarUploadModal';
 import { useOptionalGameContext } from '@/contexts/GameContext';
@@ -20,7 +19,8 @@ import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MessageCharacterButton } from '@/components/conversations/MessageCharacterButton';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
-import { useSheetLabels } from '@/hooks/useSheetLabels';
+import { useSheetLayout } from '@/hooks/useSheetLayout';
+import { useLootRoll } from '@/hooks/useLootRoll';
 import { EditorLockNotice } from './EditorLockNotice';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 
@@ -47,7 +47,7 @@ interface CharacterSheetProps {
    */
   portraitAvatars?: boolean;
   /**
-   * That game's character sheet tab labels. Normally read from GameContext;
+   * That game's character sheet layout. Normally read from GameContext;
    * pass it explicitly when rendering outside a GameProvider (the global
    * Utility Drawer), where there is none to read.
    *
@@ -59,13 +59,6 @@ interface CharacterSheetProps {
   sheetConfig?: CharacterSheetConfig;
 }
 
-/**
- * Module tabs rendered by a manager component rather than the generic field
- * list. Each manager heads itself, so the sheet skips its own module header for
- * these — keep this in step with the manager branch in the render body.
- */
-const MANAGED_MODULE_TYPES = new Set(['skills', 'inventory', 'numbers']);
-
 export function CharacterSheet({ characterId, canEdit = false, canEditStats = false, onClose, isAnonymous = false, userRole, gameState, portraitAvatars, sheetConfig, onDirtyChange }: CharacterSheetProps) {
   const gameContext = useOptionalGameContext();
   const portraitMode = portraitAvatars ?? gameContext?.game?.portrait_avatars ?? false;
@@ -73,14 +66,14 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // Same precedence as portraitMode above: an explicit prop wins, then the game
   // in context, then the defaults the hook owns.
   //
-  const sheetLabels = useSheetLabels(
+  const sheetLayout = useSheetLayout(
     sheetConfig ? { character_sheet: sheetConfig } : gameContext?.game
   );
 
-  // Rebuilt only when a label actually changes: the tab list is derived data,
-  // and a fresh array each render would remount the active manager underneath
-  // an open editor.
-  const modules = useMemo(() => buildCharacterModules(sheetLabels), [sheetLabels]);
+  // Rebuilt only when the layout actually changes: the tab list is derived
+  // data, and a fresh array each render would remount the active manager
+  // underneath an open editor.
+  const modules = useMemo(() => buildCharacterModules(sheetLayout), [sheetLayout]);
 
   const [activeModule, setActiveModule] = useState('bio');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -130,6 +123,10 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
 
   const queryClient = useQueryClient();
   const renameMutation = useRenameCharacter();
+  // The server writes a rolled entry itself, so a roll only refetches.
+  const lootRolling = useLootRoll(characterId, () => {
+    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+  });
 
   // Participants can view all private data once the game is a public archive
   // (completed OR epilogue), or if they are audience. Epilogue must be included:
@@ -238,12 +235,14 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
     return fieldValues[key] || '';
   };
 
-  // Parse JSON field values for abilities and inventory
-  const parseJsonField = (moduleType: string, fieldName: string): unknown => {
+  // A tab's stored entries. Anything but a JSON array reads as no entries, so a
+  // malformed blob shows an empty tab instead of crashing the sheet.
+  const parseEntries = (moduleType: string, fieldName: string): RawSheetEntry[] => {
     const value = getFieldValue(moduleType, fieldName);
     if (!value) return [];
     try {
-      return JSON.parse(value);
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -485,6 +484,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                 size="sm"
                 onClick={requestClose}
                 className="text-content-tertiary hover:text-content-secondary h-auto p-2 flex-shrink-0"
+                aria-label="Close character sheet"
               >
                 <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -526,46 +526,33 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
           // Only render modules the user has permission to view
           if (module.type === 'bio') return true;
           return canViewPrivate;
-        }).filter(module => module.type === activeModule).map((module) => (
+        }).filter(module => module.type === activeModule).map((module) => {
+          // Every configurable tab, built-in or GM-composed, is a list of
+          // entries in the layout. Only Public Profile and Private Notes are not.
+          const entryTab = sheetLayout.tabs.find(tab => tab.key === module.type);
+          return (
           <div key={module.type} className="max-w-4xl mx-auto">
-            {/* Only the text modules get a header here. The three stat managers
-                render their own heading (the modal embeds them without this
-                block and relies on it), so repeating the module name above them
-                printed it twice — plus a description that only restated it
-                ("Skills" / "Character skills"). */}
-            {!MANAGED_MODULE_TYPES.has(module.type) && (
+            {/* Only the text modules get a header here. EntryManager renders its
+                own heading (the modal embeds it without this block and relies on
+                it), so repeating the module name above it printed it twice, plus
+                a description that only restated it ("Skills" / "Character skills"). */}
+            {!entryTab && (
               <div className="mb-4 md:mb-6">
                 <h3 className="text-lg md:text-xl font-semibold text-content-primary mb-2">{module.name}</h3>
                 <p className="text-sm md:text-base text-content-secondary">{module.description}</p>
               </div>
             )}
 
-            {/* One manager per stat tab. Each reports its own dirty state under its
+            {/* One manager per entry tab. Each reports its own dirty state under its
                 own key, so a clean manager cannot clear a dirty one's flag. */}
-            {module.type === 'skills' ? (
-              <SkillsManager
-                skills={parseJsonField('skills', 'skills') as CharacterSkill[]}
+            {entryTab ? (
+              <EntryManager
+                tab={entryTab}
+                entries={parseEntries(entryTab.key, storageFieldName(entryTab.key))}
                 canEdit={canEditStats}
-                onSkillsChange={(skills) => saveJsonField('skills', 'skills', skills)}
-                onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                label={sheetLabels.skills}
-              />
-            ) : module.type === 'inventory' ? (
-              <ItemsManager
-                characterId={characterId}
-                items={parseJsonField('inventory', 'items') as InventoryItem[]}
-                canEdit={canEditStats}
-                onItemsChange={(items, reloadOnly) => { if (!reloadOnly) saveJsonField('inventory', 'items', items); else queryClient.invalidateQueries({ queryKey: ['characterData', characterId] }); }}
-                onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
-                label={sheetLabels.inventory}
-              />
-            ) : module.type === 'numbers' ? (
-              <NumbersManager
-                numbers={parseJsonField('numbers', 'numbers') as NumberEntry[]}
-                canEdit={canEditStats}
-                onNumbersChange={(numbers) => saveJsonField('numbers', 'numbers', numbers)}
-                onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                label={sheetLabels.numbers}
+                onEntriesChange={(entries) => saveJsonField(entryTab.key, storageFieldName(entryTab.key), entries)}
+                onDirtyChange={(isDirty) => reportDirty(entryTab.key, isDirty)}
+                loot={lootRolling}
               />
             ) : (
               /* Regular text-based fields for bio and notes modules */
@@ -672,7 +659,8 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {/* Error Display */}
         {saveCharacterDataMutation.error && (

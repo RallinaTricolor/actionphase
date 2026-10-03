@@ -15,13 +15,12 @@ import (
 func (s *ActionSubmissionService) CreateDraftCharacterUpdate(ctx context.Context, req core.CreateDraftCharacterUpdateRequest) (*models.ActionResultCharacterUpdate, error) {
 	queries := models.New(s.DB)
 
-	// Validate module type
-	// Mirrors the check_module_type constraint on action_result_character_updates.
-	// "abilities" was retired and "currency" renamed to "numbers" in the character
-	// sheet refactor; keep this in step with the constraint or inserts fail at the
-	// database instead of here, where the error is actionable.
-	validModules := map[string]bool{"skills": true, "inventory": true, "numbers": true}
-	if !validModules[req.ModuleType] {
+	// Mirrors the check_module_type constraint on action_result_character_updates:
+	// a built-in tab key or a well-formed custom one. Keep the two in step or
+	// inserts fail at the database instead of here, where the error is
+	// actionable. Whether this game actually has the tab is the handler's check,
+	// since it needs the game's layout.
+	if !core.IsSheetTabKey(req.ModuleType) {
 		return nil, fmt.Errorf("invalid module_type: %s", req.ModuleType)
 	}
 

@@ -978,30 +978,38 @@ func (h *Handler) humaSetCharacterData(ctx context.Context, in *setCharacterData
 		return nil, huma.Error403Forbidden("you cannot edit this character")
 	}
 
+	queries := models.New(h.App.Pool)
+	character, err := queries.GetCharacter(ctx, in.ID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get character for sheet write", "error", err, "character_id", in.ID)
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+	game, err := queries.GetGame(ctx, character.GameID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to get game for sheet write", "error", err, "game_id", character.GameID)
+		return nil, huma.Error500InternalServerError(err.Error())
+	}
+
+	// Checked after edit permission so a caller who cannot edit the character
+	// learns nothing about which pairs exist. The allowed pairs follow the
+	// game's layout, so a removed tab stops being writable until it is
+	// restored; its data is kept either way.
+	tabKeys := core.SheetTabKeysForStored(game.CharacterSheet)
+	access := core.ClassifySheetWrite(in.Body.ModuleType, in.Body.FieldName, tabKeys)
+	if access == core.SheetWriteRejected {
+		h.App.ObsLogger.Warn(ctx, "Rejected write to unknown character sheet field",
+			"character_id", in.ID, "user_id", userID,
+			"module_type", in.Body.ModuleType, "field_name", in.Body.FieldName)
+		return nil, huma.Error422UnprocessableEntity(fmt.Sprintf(
+			"%s/%s is not a character sheet field in this game", in.Body.ModuleType, in.Body.FieldName))
+	}
+
 	// Stats are the GM's to set even on a character the player otherwise owns:
 	// they are game balance, not self-description.
-	isStatField := (in.Body.ModuleType == "skills" && in.Body.FieldName == "skills") ||
-		(in.Body.ModuleType == "inventory" && in.Body.FieldName == "items") ||
-		(in.Body.ModuleType == "numbers" && in.Body.FieldName == "numbers")
-
-	if isStatField {
-		queries := models.New(h.App.Pool)
-		character, err := queries.GetCharacter(ctx, in.ID)
-		if err != nil {
-			h.App.ObsLogger.Error(ctx, "Failed to get character for GM check", "error", err, "character_id", in.ID)
-			return nil, huma.Error500InternalServerError(err.Error())
-		}
-
-		game, err := queries.GetGame(ctx, character.GameID)
-		if err != nil {
-			h.App.ObsLogger.Error(ctx, "Failed to get game for GM check", "error", err, "game_id", character.GameID)
-			return nil, huma.Error500InternalServerError(err.Error())
-		}
-
-		if game.GmUserID != userID && !core.IsUserCoGM(ctx, h.App.Pool, character.GameID, userID) {
-			h.App.ObsLogger.Warn(ctx, "Character stats edit permission denied", "character_id", in.ID, "user_id", userID, "game_id", character.GameID)
-			return nil, huma.Error403Forbidden("only GMs and Co-GMs can edit character stats (skills, items, numbers)")
-		}
+	if access == core.SheetWriteGMOnly &&
+		game.GmUserID != userID && !core.IsUserCoGM(ctx, h.App.Pool, character.GameID, userID) {
+		h.App.ObsLogger.Warn(ctx, "Character stats edit permission denied", "character_id", in.ID, "user_id", userID, "game_id", character.GameID)
+		return nil, huma.Error403Forbidden("only GMs and Co-GMs can edit character sheet tabs other than the profile and notes")
 	}
 
 	err = h.CharacterService.SetCharacterData(ctx, core.CharacterDataRequest{

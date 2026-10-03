@@ -35,6 +35,7 @@ type GameLootTableResponse struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	TargetTab string    `json:"target_tab" doc:"Key of the character sheet tab this table rolls into"`
 }
 
 // GameLootTableContentResponse is one entry in a loot table.
@@ -78,6 +79,7 @@ func toGameLootTableResponse(t *models.GameLootTable) *GameLootTableResponse {
 		ID:        t.ID,
 		GameID:    t.GameID,
 		Name:      t.Name,
+		TargetTab: t.TargetTab,
 		CreatedAt: t.CreatedAt.Time,
 		UpdatedAt: t.UpdatedAt.Time,
 	}

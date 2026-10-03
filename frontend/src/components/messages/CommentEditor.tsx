@@ -296,7 +296,7 @@ export const CommentEditor = memo(function CommentEditor({
       ? value.substring(0, insertAtIndex)
       : value.substring(0, cursorPos);
     const after = value.substring(cursorPos);
-    const token = `[[${item.name}|${item.type}:${item.id}]] `;
+    const token = `[[${item.name}|${item.refKind}:${item.id}]] `;
     onChange(before + token + after);
     setShowSheetAutocomplete(false);
 

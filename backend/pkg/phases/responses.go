@@ -124,12 +124,13 @@ type DraftCharacterUpdateResponse struct {
 	ID             int32 `json:"id"`
 	ActionResultID int32 `json:"action_result_id"`
 	CharacterID    int32 `json:"character_id"`
-	// The three enums mirror createDraftUpdateBody, which has carried them since
-	// the huma conversion. Only the request half was tagged, so the response
+	// The enums mirror createDraftUpdateBody, which has carried them since the
+	// huma conversion. Only the request half was tagged, so the response
 	// rendered as a bare string and the frontend hand-wrote the same unions to
 	// compensate. The values match the check constraints on
-	// action_result_character_updates.
-	ModuleType string    `json:"module_type" enum:"skills,inventory,numbers"`
+	// action_result_character_updates. module_type is open-ended because GMs
+	// can add custom tabs.
+	ModuleType string    `json:"module_type" doc:"Tab key: skills, inventory, numbers, or a custom t_ key"`
 	FieldName  string    `json:"field_name"`
 	FieldValue string    `json:"field_value"`
 	FieldType  string    `json:"field_type" enum:"text,number,boolean,json"`

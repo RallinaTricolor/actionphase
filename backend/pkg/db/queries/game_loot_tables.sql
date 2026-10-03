@@ -1,13 +1,13 @@
 -- name: CreateLootTable :one
 INSERT INTO game_loot_tables (
-    game_id, name
+    game_id, name, target_tab
 ) VALUES (
-    $1, $2
-) RETURNING id, game_id, name, created_at, updated_at;
+    $1, $2, $3
+) RETURNING id, game_id, name, created_at, updated_at, target_tab;
 
 -- name: GetLootTables :many
 SELECT
-    id, game_id, name, created_at, updated_at
+    id, game_id, name, created_at, updated_at, target_tab
 FROM game_loot_tables
 WHERE game_id = $1
 ORDER BY created_at ASC;
@@ -15,7 +15,7 @@ ORDER BY created_at ASC;
 -- Non-empty Loot Tables query to filter out invalid tables while assigning items
 -- name: GetNonEmptyLootTables :many
 SELECT
-    id, game_id, name, created_at, updated_at
+    id, game_id, name, created_at, updated_at, target_tab
 FROM game_loot_tables t
 WHERE game_id = $1 AND EXISTS(SELECT id FROM game_loot_table_contents WHERE loot_table_id = t.id LIMIT 1)
 ORDER BY created_at ASC;
@@ -28,11 +28,28 @@ SELECT
     EXISTS(SELECT 1 FROM game_loot_tables WHERE game_id = $1 AND id = $2)
     AS is_game_loot_table;
 
+-- A NULL target_tab keeps the current one. A different target applies only
+-- while the table is empty, since its contents were authored against the old
+-- tab's fields: otherwise no row matches and the caller reports the lock. Kept
+-- in the WHERE so the emptiness check and the write can't race.
 -- name: UpdateLootTable :one
-UPDATE game_loot_tables
-SET name = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, game_id, name, created_at, updated_at;
+UPDATE game_loot_tables t
+SET name = sqlc.arg(name),
+    target_tab = COALESCE(sqlc.narg(target_tab), t.target_tab),
+    updated_at = NOW()
+WHERE t.id = sqlc.arg(id)
+  AND (
+    sqlc.narg(target_tab)::text IS NULL
+    OR t.target_tab = sqlc.narg(target_tab)
+    OR NOT EXISTS (SELECT 1 FROM game_loot_table_contents c WHERE c.loot_table_id = t.id)
+  )
+RETURNING id, game_id, name, created_at, updated_at, target_tab;
+
+-- name: GetGameLootTable :one
+SELECT
+    id, game_id, name, created_at, updated_at, target_tab
+FROM game_loot_tables
+WHERE game_id = $1 AND id = $2;
 
 -- Contents live in a child table, so rewriting them leaves the parent row
 -- untouched and updated_at stale. Handlers that change contents MUST call this

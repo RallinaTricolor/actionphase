@@ -70,6 +70,16 @@ var ErrCommunityDocumentNotFound = errors.New("community document not found")
 // "draft" nor "published". Handlers translate it to 400.
 var ErrInvalidDocumentStatus = errors.New("document status must be draft or published")
 
+// ErrGameReadOnly is wrapped by ValidateGameNotCompleted for a completed or
+// cancelled game, so a handler can map it to a 4xx with errors.Is instead of
+// matching the message.
+var ErrGameReadOnly = errors.New("game is archived and read-only")
+
+// ErrLootTableTargetLocked is returned when a GM retargets a loot table that
+// has contents. The contents were authored against the old tab's fields, so
+// the GM makes a new table instead. Handlers translate it to 409.
+var ErrLootTableTargetLocked = errors.New("a loot table's target tab can only change while it is empty")
+
 // ErrGameCommunityLocked is returned when a GM tries to move a game between
 // communities after it has left `setup` (decision 4).
 //

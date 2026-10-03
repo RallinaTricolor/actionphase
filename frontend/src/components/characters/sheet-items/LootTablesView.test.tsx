@@ -40,6 +40,7 @@ vi.mock('./LootTableForm', () => ({
     onSubmit: (data: {
       id?: number;
       name: string;
+      targetTab: string;
       items?: { id: number; name: string; data: string }[];
       itemsChanged?: boolean;
     }) => void;
@@ -50,13 +51,13 @@ vi.mock('./LootTableForm', () => ({
       <span data-testid="form-mode">{lootTable ? `edit:${lootTable.id}` : 'create'}</span>
       <button
         data-testid="submit-create"
-        onClick={() => onSubmit({ name: 'Brand New Table', items: [] })}
+        onClick={() => onSubmit({ name: 'Brand New Table', targetTab: 't_abc123', items: [] })}
       >
         create
       </button>
       <button
         data-testid="submit-rename"
-        onClick={() => onSubmit({ id: lootTable?.id, name: 'Renamed Table' })}
+        onClick={() => onSubmit({ id: lootTable?.id, name: 'Renamed Table', targetTab: lootTable?.target_tab ?? 'inventory' })}
       >
         rename
       </button>
@@ -66,12 +67,27 @@ vi.mock('./LootTableForm', () => ({
           onSubmit({
             id: lootTable?.id,
             name: lootTable?.name ?? '',
+            targetTab: lootTable?.target_tab ?? 'inventory',
             items: [{ id: 0, name: 'Potion', data: '{}' }],
             itemsChanged: true,
           })
         }
       >
         save items
+      </button>
+      <button
+        data-testid="submit-retarget-with-items"
+        onClick={() =>
+          onSubmit({
+            id: lootTable?.id,
+            name: lootTable?.name ?? '',
+            targetTab: 't_abc123',
+            items: [{ id: 0, name: 'Old Zadok', data: '{}' }],
+            itemsChanged: true,
+          })
+        }
+      >
+        retarget
       </button>
       <button data-testid="form-close" onClick={onClose}>
         close
@@ -93,6 +109,7 @@ const table = (overrides: Partial<LootTable> = {}): LootTable => ({
   id: 1,
   game_id: 1,
   name: 'Normal Items',
+  target_tab: 'inventory',
   created_at: '2026-08-01T10:00:00Z',
   updated_at: '2026-08-01T10:00:00Z',
   ...overrides,
@@ -111,7 +128,7 @@ describe('LootTablesView cards', () => {
     mockLootTables.mockReturnValue([table(), table({ id: 2, name: 'Rare Items' })]);
     renderView();
 
-    const card = screen.getByRole('heading', { name: 'Normal Items' }).closest('div')!.parentElement!;
+    const card = screen.getByRole('heading', { name: 'Normal Items' }).closest('div')!.parentElement!.parentElement!;
     expect(card.className).toContain('surface-raised');
     expect(card.className).toContain('border-theme-default');
     expect(card.className).not.toContain('surface-base');
@@ -322,7 +339,7 @@ describe('LootTablesView create and edit routing', () => {
     await user.click(screen.getByTestId('submit-create'));
 
     await waitFor(() =>
-      expect(createMutate).toHaveBeenCalledWith({ name: 'Brand New Table', items: [] })
+      expect(createMutate).toHaveBeenCalledWith({ name: 'Brand New Table', target_tab: 't_abc123', items: [] })
     );
     expect(updateMutate).not.toHaveBeenCalled();
   });
@@ -346,7 +363,7 @@ describe('LootTablesView create and edit routing', () => {
     await user.click(screen.getByRole('button', { name: 'Edit Normal Items' }));
     await user.click(screen.getByTestId('submit-rename'));
 
-    await waitFor(() => expect(updateMutate).toHaveBeenCalledWith({ id: 1, name: 'Renamed Table' }));
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledWith({ id: 1, name: 'Renamed Table', target_tab: undefined }));
     // itemsChanged was false, so the contents rewrite — which deletes every
     // existing row — must not run.
     expect(updateContentsMutate).not.toHaveBeenCalled();
@@ -368,5 +385,32 @@ describe('LootTablesView create and edit routing', () => {
     );
     // The name was unchanged, so no pointless rename request.
     expect(updateMutate).not.toHaveBeenCalled();
+  });
+  // The server retargets only an empty table, so the stored items go first,
+  // then the target, then the items written for the new tab.
+  it('clears the stored items before retargeting, then writes the new ones', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderView();
+
+    await user.click(screen.getByRole('button', { name: 'Edit Normal Items' }));
+    await user.click(screen.getByTestId('submit-retarget-with-items'));
+
+    await waitFor(() => expect(updateContentsMutate).toHaveBeenCalledTimes(2));
+    expect(updateContentsMutate).toHaveBeenNthCalledWith(1, { id: 1, items: [] });
+    expect(updateMutate).toHaveBeenCalledWith({ id: 1, name: 'Normal Items', target_tab: 't_abc123' });
+    expect(updateContentsMutate).toHaveBeenNthCalledWith(2, { id: 1, items: [{ id: 0, name: 'Old Zadok', data: '{}' }] });
+    const [clear, write] = updateContentsMutate.mock.invocationCallOrder;
+    const [retarget] = updateMutate.mock.invocationCallOrder;
+    expect(clear).toBeLessThan(retarget);
+    expect(retarget).toBeLessThan(write);
+  });
+
+  it('labels each table with the tab it rolls into', () => {
+    mockLootTables.mockReturnValue([table(), table({ id: 2, name: 'Townsfolk', target_tab: 't_gone00' })]);
+    renderView();
+
+    expect(screen.getByText('Rolls into Inventory')).toBeInTheDocument();
+    // A target the sheet no longer has still reads as something.
+    expect(screen.getByText('Rolls into Removed tab')).toBeInTheDocument();
   });
 });

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { UpdateCharacterSheetModal } from './UpdateCharacterSheetModal';
 import { renderWithProviders } from '@/test-utils/render';
 import { server } from '@/mocks/server';
+import { makeGameWithDetails } from '@/test-utils/factories';
 
 const BASE_PROPS = {
   isOpen: true,
@@ -14,7 +15,7 @@ const BASE_PROPS = {
   characterName: 'Aldric the Bold',
 };
 
-// Well-formed skill matching the CharacterSkill interface
+// Well-formed skills entry, as the write path stores it
 const SKILL = { id: 'str', name: 'Strength', level: 2, category: 'Physical' };
 const ITEM = { id: 'item-1', name: 'Healing Potion', quantity: 2 };
 const ITEM_DRAFT = { id: 'item-2', name: 'Magic Sword', quantity: 1 };
@@ -250,6 +251,219 @@ describe('UpdateCharacterSheetModal', () => {
     });
   });
 
+  describe('Composed layout', () => {
+    const CONTACTS = {
+      key: 't_abc123',
+      label: 'Contacts',
+      fields: [{ key: 'f_loc001', label: 'Location', type: 'text' }],
+    };
+
+    /** Serves a game whose sheet has the given configurable tabs. */
+    function withLayout(tabs: unknown[]) {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/details', () =>
+          HttpResponse.json(makeGameWithDetails({ id: 1, character_sheet: { tabs } as never }))
+        ),
+      );
+    }
+
+    const contactsRow = (source: 'published' | 'draft', entries: unknown[]) => ({
+      ...(source === 'published' ? CHAR_DATA_SKILLS[0] : DRAFT_ITEMS[0]),
+      module_type: 't_abc123',
+      field_name: 't_abc123',
+      field_value: JSON.stringify(entries),
+    });
+
+    const sectionNames = async () => {
+      const sections = await screen.findByRole('navigation', { name: 'Sections' });
+      return within(sections).getAllByRole('button').map(b => b.textContent);
+    };
+
+    it("offers every tab in the game's layout, custom ones included, and opens on the first", async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      withLayout([{ key: 'inventory', label: 'Gear' }, CONTACTS, { key: 'numbers' }]);
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      await waitFor(async () => {
+        expect(await sectionNames()).toEqual(['Gear', 'Contacts', 'Numbers']);
+      });
+      // Skills was removed, so the modal cannot open on it.
+      expect(screen.queryByText('No skills yet.')).not.toBeInTheDocument();
+      expect(screen.getByText(/no gear yet/i)).toBeInTheDocument();
+    });
+
+    it("shows a custom tab's staged draft over its published entries", async () => {
+      setupHandlers({
+        characterData: [contactsRow('published', [{ id: 'c1', name: 'Mira', f_loc001: 'Harbor' }])],
+        drafts: [contactsRow('draft', [{ id: 'c2', name: 'Oskar', f_loc001: 'Mill' }])],
+      });
+      withLayout([CONTACTS]);
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      expect(await screen.findByText('Oskar')).toBeInTheDocument();
+      expect(screen.getByText('Mill')).toBeInTheDocument();
+      expect(screen.queryByText('Mira')).not.toBeInTheDocument();
+    });
+
+    it('rolls on a loot table into the custom tab it targets and shows the entry there', async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      withLayout([{ key: 'inventory' }, CONTACTS]);
+      let rolledTable: string | undefined;
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
+          HttpResponse.json([
+            { id: 4, game_id: 1, name: 'Common Loot', target_tab: 'inventory', created_at: '', updated_at: '' },
+            { id: 5, game_id: 1, name: 'Townsfolk', target_tab: 't_abc123', created_at: '', updated_at: '' },
+          ])
+        ),
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', ({ params }) => {
+          rolledTable = params.tableId as string;
+          return HttpResponse.json({ id: 9, loot_table_id: 5, name: 'Old Zadok', data: '{"id":"srv-1","name":"Old Zadok","f_loc001":"Docks"}' });
+        }),
+      );
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      fireEvent.click(within(await screen.findByRole('navigation', { name: 'Sections' })).getByRole('button', { name: 'Contacts' }));
+      fireEvent.click(await screen.findByTestId('add-t_abc123'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'loot_table_random' } });
+      const tables = screen.getByRole('combobox', { name: 'Loot Table' });
+      // Only the table rolling into Contacts is offered here.
+      expect(within(tables).queryByRole('option', { name: 'Common Loot' })).not.toBeInTheDocument();
+      fireEvent.change(tables, { target: { value: '5' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+      const section = await screen.findByTestId('t_abc123-section');
+      expect(await within(section).findByText('Old Zadok')).toBeInTheDocument();
+      expect(within(section).getByText('Docks')).toBeInTheDocument();
+      expect(rolledTable).toBe('5');
+
+      // Staging the tab afterwards keeps the id the server stored, so the
+      // draft doesn't fork the rolled entry into a copy with another id.
+      let staged: string | undefined;
+      server.use(
+        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
+          staged = ((await request.json()) as { field_value: string }).field_value;
+          return HttpResponse.json({ id: 101, action_result_id: 10, character_id: 42, module_type: 't_abc123', field_name: 't_abc123', field_value: staged, field_type: 'json', operation: 'upsert', created_at: '', updated_at: '' });
+        }),
+      );
+      fireEvent.click(screen.getByTestId('add-t_abc123'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'manual' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name *' }), { target: { value: 'Mira' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      await waitFor(() => expect(staged).toBeDefined(), { timeout: 3000 });
+      expect(JSON.parse(staged!).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
+        ['srv-1', 'Old Zadok'],
+        [expect.any(String), 'Mira'],
+      ]);
+    });
+
+    it('stages an edit to a custom tab under the tab key', async () => {
+      setupHandlers({
+        characterData: [contactsRow('published', [{ id: 'c1', name: 'Mira' }, { id: 'c2', name: 'Oskar' }])],
+        drafts: null,
+      });
+      withLayout([{ key: 'skills' }, CONTACTS]);
+      const writes: { module_type: string; field_name: string; field_value: string }[] = [];
+      server.use(
+        http.post(
+          'http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates',
+          async ({ request }) => {
+            const body = (await request.json()) as (typeof writes)[number];
+            writes.push(body);
+            return HttpResponse.json({ id: 101, ...body });
+          },
+        ),
+      );
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+
+      await waitFor(async () => expect(await sectionNames()).toEqual(['Skills', 'Contacts']));
+      fireEvent.click(screen.getByRole('button', { name: 'Contacts' }));
+      expect(await screen.findByText('Mira')).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+
+      await waitFor(() => expect(writes).toHaveLength(1), { timeout: 3000 });
+      expect(writes[0]).toMatchObject({ module_type: 't_abc123', field_name: 't_abc123' });
+      expect(JSON.parse(writes[0].field_value)).toEqual([{ id: 'c2', name: 'Oskar' }]);
+    });
+  });
+
+  // A roll is written straight to the published sheet, but publishing replaces
+  // a tab's row with its staged snapshot. A snapshot staged before the roll
+  // would erase the rolled entry on publish.
+  describe('Loot rolls and staged drafts', () => {
+    function serveInventoryRoll() {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
+          HttpResponse.json([
+            { id: 4, game_id: 1, name: 'Common Loot', target_tab: 'inventory', created_at: '', updated_at: '' },
+          ])
+        ),
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', () =>
+          HttpResponse.json({ id: 9, loot_table_id: 4, name: 'Rope', data: '{"id":"srv-1","name":"Rope"}' })
+        ),
+      );
+    }
+
+    /** Records every staged snapshot's field_value. */
+    function captureStaged(): string[] {
+      const staged: string[] = [];
+      server.use(
+        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
+          const { field_value } = (await request.json()) as { field_value: string };
+          staged.push(field_value);
+          return HttpResponse.json({ ...DRAFT_ITEMS[0], field_value });
+        }),
+      );
+      return staged;
+    }
+
+    async function rollOnInventory() {
+      fireEvent.click(within(await screen.findByRole('navigation', { name: 'Sections' })).getByRole('button', { name: 'Inventory' }));
+      fireEvent.click(await screen.findByTestId('add-inventory'));
+      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'loot_table_random' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Loot Table' }), { target: { value: '4' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(await within(await screen.findByTestId('inventory-section')).findByText('Rope')).toBeInTheDocument();
+    }
+
+    it('re-stages a tab with a staged draft so publishing keeps the rolled entry', async () => {
+      setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: DRAFT_ITEMS });
+      serveInventoryRoll();
+      const staged = captureStaged();
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      await rollOnInventory();
+
+      await waitFor(() => expect(staged).toHaveLength(1), { timeout: 3000 });
+      expect(JSON.parse(staged[0]).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
+        ['item-2', 'Magic Sword'],
+        ['srv-1', 'Rope'],
+      ]);
+    });
+
+    it('stages nothing for a tab with no draft: the roll is already on the published sheet', async () => {
+      setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: null });
+      serveInventoryRoll();
+      const staged = captureStaged();
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      await rollOnInventory();
+
+      // Past the 800ms debounce, so a scheduled save would have fired.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      expect(staged).toEqual([]);
+    });
+  });
+
   describe('Header content', () => {
     it('shows character name and modal title', async () => {
       setupHandlers({ characterData: [], drafts: null });
@@ -304,7 +518,7 @@ describe('UpdateCharacterSheetModal', () => {
       expect(await screen.findByText('Magic Sword')).toBeInTheDocument();
 
       // Remove the staged item, returning the list to exactly the published contents.
-      const removeButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeButtons[removeButtons.length - 1]);
 
       await waitFor(() => {
@@ -325,7 +539,7 @@ describe('UpdateCharacterSheetModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
 
-      const removeButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeButtons[removeButtons.length - 1]);
 
       await waitFor(() => {
@@ -371,11 +585,11 @@ describe('UpdateCharacterSheetModal', () => {
       // Edit skills, then immediately switch tabs and edit inventory. No waiting
       // between them: both edits land inside the same debounce window, which is the
       // condition that used to drop the first one.
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove skill' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
-      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeItemButtons[removeItemButtons.length - 1]);
 
       await waitFor(() => {
@@ -412,9 +626,9 @@ describe('UpdateCharacterSheetModal', () => {
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
 
       // Remove all three in quick succession — one field, one row, one write.
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove item' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       await waitFor(() => {
         expect(rows).toEqual(['inventory:items']);
@@ -435,11 +649,11 @@ describe('UpdateCharacterSheetModal', () => {
       renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} onClose={onClose} />);
       await waitForLoaded();
 
-      fireEvent.click(screen.getAllByRole('button', { name: 'Remove skill' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove entry' })[0]);
 
       fireEvent.click(screen.getByRole('button', { name: /inventory/i }));
       expect(await screen.findByText('Healing Potion')).toBeInTheDocument();
-      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove item' });
+      const removeItemButtons = screen.getAllByRole('button', { name: 'Remove entry' });
       fireEvent.click(removeItemButtons[removeItemButtons.length - 1]);
 
       // Close while both edits are still inside the debounce window.
@@ -620,7 +834,7 @@ describe('UpdateCharacterSheetModal', () => {
       await waitFor(() => {
         expect(screen.getByText('Healing Potion')).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByRole('button', { name: 'Edit item' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Edit entry' }));
       await waitFor(() => {
         expect(screen.getByLabelText(/^Name/)).toBeInTheDocument();
       });

@@ -126,7 +126,12 @@ func (a *Assembler) Assemble(ctx context.Context, gameID int32, w io.Writer, pro
 		phaseDir[p.ID] = path.Join("phases", PhaseDirName(p.PhaseNumber, p.PhaseType, p.Title))
 	}
 
-	if err := a.writeCharacters(ctx, ar, gameID); err != nil {
+	// A malformed stored layout reads as the default, as it does in the app.
+	sheet := core.CharacterSheetConfig{}
+	if stored := core.CharacterSheetConfigForResponse(game.CharacterSheet); stored != nil {
+		sheet = *stored
+	}
+	if err := a.writeCharacters(ctx, ar, gameID, sheet); err != nil {
 		return nil, err
 	}
 	report("writing common room posts")
@@ -195,7 +200,7 @@ func (a *Assembler) FingerprintFor(ctx context.Context, gameID int32) (string, e
 
 // --- section writers -------------------------------------------------------
 
-func (a *Assembler) writeCharacters(ctx context.Context, ar *archive, gameID int32) error {
+func (a *Assembler) writeCharacters(ctx context.Context, ar *archive, gameID int32, sheet core.CharacterSheetConfig) error {
 	chars, err := a.Queries.ListExportCharacters(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("list characters: %w", err)
@@ -219,7 +224,7 @@ func (a *Assembler) writeCharacters(ctx context.Context, ar *archive, gameID int
 	for _, ch := range chars {
 		name := uniqueName(used, Slug(ch.Name, fmt.Sprintf("character-%d", ch.ID)))
 		p := path.Join("characters", name+".md")
-		if err := ar.writeFile(p, RenderCharacter(ch, byChar[ch.ID]), manifestEntry{
+		if err := ar.writeFile(p, RenderCharacter(ch, byChar[ch.ID], sheet), manifestEntry{
 			Type: "character", ID: ch.ID, Title: ch.Name,
 		}); err != nil {
 			return err

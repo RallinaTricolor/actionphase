@@ -19,6 +19,7 @@ const TABLES = [
     id: 11,
     game_id: 7,
     name: 'Common Loot',
+    target_tab: 'inventory',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   },
@@ -26,6 +27,7 @@ const TABLES = [
     id: 12,
     game_id: 7,
     name: 'Rare Loot',
+    target_tab: 'inventory',
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   },
@@ -140,7 +142,7 @@ describe('LootTableSelector', () => {
       await waitFor(() => expect(screen.getByRole('option', { name: 'Health Potion' })).toBeInTheDocument());
       await user.selectOptions(itemSelect(), '21');
 
-      // ItemForm needs `data` and `name` off this object to build the item, so
+      // LootModeForm needs `data` and `name` off this object to build the item, so
       // handing back a bare id would break the submit path.
       expect(onItemChange).toHaveBeenCalledWith(POTION);
     });

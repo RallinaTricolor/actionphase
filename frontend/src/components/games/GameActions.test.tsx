@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { GameActions } from './GameActions';
 import type { Game, GameApplication } from '@/types/games';
 
@@ -187,5 +188,45 @@ describe('GameActions - rejected application is terminal, not stale', () => {
     );
     expect(screen.queryByTestId('apply-button-1')).not.toBeInTheDocument();
     expect(screen.queryByTestId('withdraw-application-button')).not.toBeInTheDocument();
+  });
+});
+
+describe('GameActions - Customize Character Sheet', () => {
+  const openMenu = async () => {
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByTestId('game-actions-menu'));
+    return user;
+  };
+
+  // A co-GM has GM powers (isGM) but cannot Edit Game (canEditGame); the sheet
+  // endpoint admits them, so the menu must not hide behind canEditGame.
+  it('offers it to a co-GM, and opens the editor', async () => {
+    const onCustomizeSheet = vi.fn();
+    render(<GameActions {...defaultProps} isGM onCustomizeSheet={onCustomizeSheet} slot="menu-actions" />);
+
+    const user = await openMenu();
+    await user.click(screen.getByRole('button', { name: 'Customize Character Sheet' }));
+    expect(onCustomizeSheet).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['completed', 'cancelled'] as const)('does not offer it once the game is %s', async (state) => {
+    render(
+      <GameActions
+        {...defaultProps}
+        game={{ ...baseGame, state }}
+        isGM
+        onDeleteGame={vi.fn()}
+        onCustomizeSheet={vi.fn()}
+        slot="menu-actions"
+      />,
+    );
+    // A cancelled game still has Delete, so the menu itself may be there.
+    if (screen.queryByTestId('game-actions-menu')) await openMenu();
+    expect(screen.queryByRole('button', { name: 'Customize Character Sheet' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer it to a player', () => {
+    render(<GameActions {...defaultProps} onCustomizeSheet={vi.fn()} slot="menu-actions" />);
+    expect(screen.queryByTestId('game-actions-menu')).not.toBeInTheDocument();
   });
 });
