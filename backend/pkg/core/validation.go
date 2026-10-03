@@ -47,7 +47,7 @@ func ValidateGameNotCompleted(ctx context.Context, game *db.Game) error {
 	// meta-discussion threads there. Adding it here would silently disable
 	// posting in epilogue games and collapse the state back into completed.
 	if game.State == GameStateCompleted || game.State == GameStateCancelled {
-		return fmt.Errorf("game %d is archived (state: %s) and read-only", game.ID, game.State)
+		return fmt.Errorf("game %d (state: %s): %w", game.ID, game.State, ErrGameReadOnly)
 	}
 
 	return nil

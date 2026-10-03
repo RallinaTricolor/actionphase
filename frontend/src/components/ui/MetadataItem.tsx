@@ -1,7 +1,8 @@
 import React from 'react';
 
 export interface MetadataItemProps {
-  icon: React.ReactNode;
+  /** Optional: a label/value pair on its own reads fine without one. */
+  icon?: React.ReactNode;
   label: string;
   value?: string | React.ReactNode;
   className?: string;
@@ -23,9 +24,11 @@ export interface MetadataItemProps {
 export function MetadataItem({ icon, label, value, className = '' }: MetadataItemProps) {
   return (
     <div className={`flex items-center gap-1.5 text-sm text-content-secondary ${className}`}>
-      <span className="flex-shrink-0 w-4 h-4 text-content-tertiary">
-        {icon}
-      </span>
+      {icon && (
+        <span className="flex-shrink-0 w-4 h-4 text-content-tertiary">
+          {icon}
+        </span>
+      )}
       <span className="font-medium">{label}:</span>
       {value && <span>{value}</span>}
     </div>

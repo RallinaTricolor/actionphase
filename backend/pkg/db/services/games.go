@@ -114,13 +114,6 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		return nil, err
 	}
 
-	// Validated and re-marshalled here rather than trusting caller bytes, so the
-	// column can only ever hold what core.CharacterSheetConfig can express.
-	characterSheet, err := marshalValidatedCharacterSheet(req.CharacterSheet)
-	if err != nil {
-		return nil, err
-	}
-
 	// Every new game belongs to a community (req 5). Checked here rather than
 	// left to the foreign key so an unknown id is a 400 naming the problem
 	// instead of a 500, and so an INACTIVE community is refused at all -- the FK
@@ -163,7 +156,6 @@ func (gs *GameService) CreateGame(ctx context.Context, req core.CreateGameReques
 		CommonRoomCloseTime:     closeTime,
 		ScheduleTimezone:        scheduleTimezone,
 		CommunityID:             pgtype.Int4{Int32: req.CommunityID, Valid: true},
-		CharacterSheet:          characterSheet,
 	})
 
 	if err != nil {
@@ -547,11 +539,6 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		return nil, err
 	}
 
-	updateCharacterSheet, err := marshalValidatedCharacterSheet(req.CharacterSheet)
-	if err != nil {
-		return nil, err
-	}
-
 	gs.Logger.Info(ctx, "Updating game",
 		"game_id", req.ID,
 		"has_schedule", req.CommonRoomOpenDay != nil,
@@ -577,7 +564,6 @@ func (gs *GameService) UpdateGame(ctx context.Context, req core.UpdateGameReques
 		CommonRoomCloseTime:     closeTime,
 		ScheduleTimezone:        scheduleTimezone,
 		CommunityID:             communityID,
-		CharacterSheet:          updateCharacterSheet,
 	})
 	if err != nil {
 		return nil, err
@@ -1102,6 +1088,39 @@ func (gs *GameService) GetGameAutoAcceptAudience(ctx context.Context, gameID int
 	return queries.GetGameAutoAcceptAudience(ctx, gameID)
 }
 
+// UpdateGameCharacterSheet validates and stores a game's whole character sheet
+// layout. Archived games are refused: their exports and sheets are immutable.
+func (gs *GameService) UpdateGameCharacterSheet(ctx context.Context, gameID int32, config core.CharacterSheetConfig) (*models.Game, error) {
+	queries := models.New(gs.DB)
+
+	game, err := queries.GetGame(ctx, gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
+		return nil, err
+	}
+
+	stored, err := marshalValidatedCharacterSheet(config)
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := queries.UpdateGameCharacterSheet(ctx, models.UpdateGameCharacterSheetParams{
+		ID:             gameID,
+		CharacterSheet: stored,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update character sheet: %w", err)
+	}
+
+	gs.Logger.Info(ctx, "Game character sheet updated",
+		"game_id", gameID,
+		"composed", config.Tabs != nil,
+	)
+	return &updated, nil
+}
+
 // UpdateGameAutoAcceptAudience updates the auto-accept audience setting for a game
 func (gs *GameService) UpdateGameAutoAcceptAudience(ctx context.Context, gameID int32, autoAccept bool) error {
 	queries := models.New(gs.DB)
@@ -1485,24 +1504,49 @@ func (gs *GameService) IsLootTableInGame(ctx context.Context, lootTableID, gameI
 	return result, nil
 }
 
+// GetGameLootTable - Get one loot table, scoped to its game
+func (gs *GameService) GetGameLootTable(ctx context.Context, gameID, lootTableID int32) (*models.GameLootTable, error) {
+	queries := models.New(gs.DB)
+	lootTable, err := queries.GetGameLootTable(ctx, models.GetGameLootTableParams{
+		GameID: gameID,
+		ID:     lootTableID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &lootTable, nil
+}
+
 // CreateLootTable - Create a new loot table for a game
-func (gs *GameService) CreateLootTable(ctx context.Context, gameID int32, name string) (*models.GameLootTable, error) {
+func (gs *GameService) CreateLootTable(ctx context.Context, gameID int32, name, targetTab string) (*models.GameLootTable, error) {
 	queries := models.New(gs.DB)
 	lootTable, err := queries.CreateLootTable(ctx, models.CreateLootTableParams{
-		GameID: gameID,
-		Name:   name,
+		GameID:    gameID,
+		Name:      name,
+		TargetTab: targetTab,
 	})
 	return &lootTable, err
 }
 
-// UpdateLootTable - Update an existing loot table
-func (gs *GameService) UpdateLootTable(ctx context.Context, lootTableID int32, name string) (*models.GameLootTable, error) {
+// UpdateLootTable - Rename a loot table and, when targetTab is set, retarget it.
+//
+// The query applies a new target only to an empty table and otherwise matches
+// no row, so no-rows means the lock (the handler has already checked the table
+// exists in the game).
+func (gs *GameService) UpdateLootTable(ctx context.Context, lootTableID int32, name string, targetTab *string) (*models.GameLootTable, error) {
 	queries := models.New(gs.DB)
-	lootTable, err := queries.UpdateLootTable(ctx, models.UpdateLootTableParams{
-		ID:   lootTableID,
-		Name: name,
-	})
-	return &lootTable, err
+	params := models.UpdateLootTableParams{ID: lootTableID, Name: name}
+	if targetTab != nil {
+		params.TargetTab = pgtype.Text{String: *targetTab, Valid: true}
+	}
+	lootTable, err := queries.UpdateLootTable(ctx, params)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, core.ErrLootTableTargetLocked
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &lootTable, nil
 }
 
 // DeleteLootTable - Remove a loot table from a game

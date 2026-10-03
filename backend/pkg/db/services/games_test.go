@@ -10,6 +10,7 @@ import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 )
@@ -1807,14 +1808,14 @@ func TestGameService_LootTableCRUD(t *testing.T) {
 	gameID := int32(fixtures.TestGame.ID)
 
 	t.Run("lists the tables belonging to a game", func(t *testing.T) {
-		first, err := gameService.CreateLootTable(ctx, gameID, "Common Drops")
+		first, err := gameService.CreateLootTable(ctx, gameID, "Common Drops", "inventory")
 		core.AssertNoError(t, err, "Should create the first loot table")
 		err = gameService.ReplaceLootTableContents(ctx, first.ID, []core.LootTableItem{
 			{Name: "Original Potion", Data: `{"effect":"heal"}`},
 			{Name: "Original Scroll", Data: `{"spell":"fireball"}`},
 		})
 		core.AssertNoError(t, err, "Should insert first table contents")
-		_, err = gameService.CreateLootTable(ctx, gameID, "Rare Drops")
+		_, err = gameService.CreateLootTable(ctx, gameID, "Rare Drops", "inventory")
 		core.AssertNoError(t, err, "Should create the second loot table")
 
 		tables, err := gameService.GetGameLootTables(ctx, gameID, false)
@@ -1832,7 +1833,7 @@ func TestGameService_LootTableCRUD(t *testing.T) {
 	})
 
 	t.Run("reports whether a table belongs to a game", func(t *testing.T) {
-		table, err := gameService.CreateLootTable(ctx, gameID, "Ownership Table")
+		table, err := gameService.CreateLootTable(ctx, gameID, "Ownership Table", "inventory")
 		core.AssertNoError(t, err, "Should create loot table")
 
 		// This is the check that gates every loot table mutation — the update and
@@ -1849,10 +1850,10 @@ func TestGameService_LootTableCRUD(t *testing.T) {
 	})
 
 	t.Run("renames a table and bumps its updated_at", func(t *testing.T) {
-		table, err := gameService.CreateLootTable(ctx, gameID, "Original Name")
+		table, err := gameService.CreateLootTable(ctx, gameID, "Original Name", "inventory")
 		core.AssertNoError(t, err, "Should create loot table")
 
-		renamed, err := gameService.UpdateLootTable(ctx, table.ID, "Renamed Table")
+		renamed, err := gameService.UpdateLootTable(ctx, table.ID, "Renamed Table", nil)
 		core.AssertNoError(t, err, "Should rename loot table")
 		core.AssertEqual(t, "Renamed Table", renamed.Name, "The new name should be returned")
 		core.AssertEqual(t, table.ID, renamed.ID, "Renaming must not change the ID")
@@ -1861,8 +1862,56 @@ func TestGameService_LootTableCRUD(t *testing.T) {
 			"A rename should move updated_at forward")
 	})
 
+	t.Run("stores the target tab and reads it back", func(t *testing.T) {
+		table, err := gameService.CreateLootTable(ctx, gameID, "Skill Draws", "t_abc123")
+		core.AssertNoError(t, err, "Should create loot table")
+		core.AssertEqual(t, "t_abc123", table.TargetTab, "Create should return the target")
+
+		got, err := gameService.GetGameLootTable(ctx, gameID, table.ID)
+		core.AssertNoError(t, err, "Should read the table back")
+		core.AssertEqual(t, "t_abc123", got.TargetTab, "The target should persist")
+
+		otherGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Other Loot Game")
+		_, err = gameService.GetGameLootTable(ctx, int32(otherGame.ID), table.ID)
+		core.AssertTrue(t, errors.Is(err, pgx.ErrNoRows), "A table must not be readable through another game")
+	})
+
+	t.Run("retargets an empty table", func(t *testing.T) {
+		table, err := gameService.CreateLootTable(ctx, gameID, "Empty Table", "inventory")
+		core.AssertNoError(t, err, "Should create loot table")
+
+		skills := "skills"
+		updated, err := gameService.UpdateLootTable(ctx, table.ID, "Empty Table", &skills)
+		core.AssertNoError(t, err, "Should retarget an empty table")
+		core.AssertEqual(t, "skills", updated.TargetTab, "The new target should be returned")
+
+		renamed, err := gameService.UpdateLootTable(ctx, table.ID, "Still Skills", nil)
+		core.AssertNoError(t, err, "Should rename without a target")
+		core.AssertEqual(t, "skills", renamed.TargetTab, "Renaming without a target keeps the current one")
+	})
+
+	t.Run("refuses to retarget a table with contents", func(t *testing.T) {
+		table, err := gameService.CreateLootTable(ctx, gameID, "Full Table", "inventory")
+		core.AssertNoError(t, err, "Should create loot table")
+		_, err = gameService.AddLootTableContent(ctx, table.ID, "Rope", `{"name":"Rope"}`)
+		core.AssertNoError(t, err, "Should add content")
+
+		skills := "skills"
+		_, err = gameService.UpdateLootTable(ctx, table.ID, "Renamed Full Table", &skills)
+		core.AssertTrue(t, errors.Is(err, core.ErrLootTableTargetLocked), "Retargeting a non-empty table must be refused")
+
+		got, err := gameService.GetGameLootTable(ctx, gameID, table.ID)
+		core.AssertNoError(t, err, "Should read the table back")
+		core.AssertEqual(t, "inventory", got.TargetTab, "A refused retarget must leave the target alone")
+		core.AssertEqual(t, "Full Table", got.Name, "A refused retarget must not apply the rename either")
+
+		inventory := "inventory"
+		_, err = gameService.UpdateLootTable(ctx, table.ID, "Renamed Full Table", &inventory)
+		core.AssertNoError(t, err, "Resending the current target is not a retarget")
+	})
+
 	t.Run("adds an item and reads it back", func(t *testing.T) {
-		table, err := gameService.CreateLootTable(ctx, gameID, "Contents Table")
+		table, err := gameService.CreateLootTable(ctx, gameID, "Contents Table", "inventory")
 		core.AssertNoError(t, err, "Should create loot table")
 
 		added, err := gameService.AddLootTableContent(ctx, table.ID, "Health Potion", `{"value":50}`)
@@ -1876,7 +1925,7 @@ func TestGameService_LootTableCRUD(t *testing.T) {
 	})
 
 	t.Run("deletes a table and its contents", func(t *testing.T) {
-		table, err := gameService.CreateLootTable(ctx, gameID, "Doomed Table")
+		table, err := gameService.CreateLootTable(ctx, gameID, "Doomed Table", "inventory")
 		core.AssertNoError(t, err, "Should create loot table")
 		_, err = gameService.AddLootTableContent(ctx, table.ID, "Doomed Item", `{}`)
 		core.AssertNoError(t, err, "Should add content")
@@ -1907,7 +1956,7 @@ func TestGameService_ReplaceLootTableContents(t *testing.T) {
 
 	seed := func(t *testing.T, name string) int32 {
 		t.Helper()
-		table, err := gameService.CreateLootTable(ctx, int32(fixtures.TestGame.ID), name)
+		table, err := gameService.CreateLootTable(ctx, int32(fixtures.TestGame.ID), name, "inventory")
 		core.AssertNoError(t, err, "Should create loot table")
 		err = gameService.ReplaceLootTableContents(ctx, table.ID, []core.LootTableItem{
 			{Name: "Original Potion", Data: `{"effect":"heal"}`},

@@ -231,6 +231,13 @@ function splitByCodeBlocks(text: string): Array<{ text: string; isCode: boolean 
   return segments;
 }
 
+/**
+ * A sheet entry reference: `[[Display|kind:id]]`. The kind is `skill`, `item`,
+ * `numbers` or a custom tab key (see sheetRefKind); only the id resolves the
+ * tooltip. Mirrored by sheetRefPattern in the backend's exports/markdown.go.
+ */
+const SHEET_REF_PATTERN = /\[\[([^\]|]+)\|(?:skill|item|numbers|t_[a-z0-9]{6}):([^\]]+)\]\]/;
+
 function processContent(content: string, mentionedCharacters: MentionedCharacter[], sheetItemRefs: SheetItem[]): string {
   // Step 1: Process character mentions
   let mentionsResult = content;
@@ -258,13 +265,13 @@ function processContent(content: string, mentionedCharacters: MentionedCharacter
     }).join('');
   }
 
-  // Step 1b: Process [[DisplayName|type:uuid]] sheet item references, skipping code blocks
-  if (sheetItemRefs.length > 0 || /\[\[([^\]|]+)\|(?:skill|item):([^\]]+)\]\]/.test(mentionsResult)) {
+  // Step 1b: Process [[DisplayName|kind:uuid]] sheet item references, skipping code blocks
+  if (sheetItemRefs.length > 0 || SHEET_REF_PATTERN.test(mentionsResult)) {
     const sheetSegments = splitByCodeBlocks(mentionsResult);
     mentionsResult = sheetSegments.map((segment) => {
       if (segment.isCode) return segment.text;
       return segment.text.replace(
-        /\[\[([^\]|]+)\|(?:skill|item):([^\]]+)\]\]/g,
+        new RegExp(SHEET_REF_PATTERN.source, 'g'),
         (_match, displayName: string, refId: string) => {
           const safeDisplay = escapeHtml(displayName);
           return `<mark data-sheet-ref-id="${escapeHtml(refId)}" class="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-1 rounded font-medium cursor-help">[[${safeDisplay}]]</mark>`;
@@ -594,7 +601,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-content-primary">{hoveredSheetItem.name}</span>
-                  <Badge variant="warning" size="sm" className="capitalize">{hoveredSheetItem.type}</Badge>
+                  <Badge variant="warning" size="sm">{hoveredSheetItem.tabLabel}</Badge>
                 </div>
                 {hoveredSheetItem.metadata && (
                   <div className="text-xs text-content-tertiary mt-0.5">{hoveredSheetItem.metadata}</div>

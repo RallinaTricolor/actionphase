@@ -326,17 +326,17 @@ type updateStagedDelayBody struct {
 	DelayMinutes int32 `json:"delay_minutes" doc:"New delay in minutes"`
 }
 
-// createDraftUpdateBody's three enums are closed sets the service already
-// rejected outside of -- but it did so with a plain fmt.Errorf, which the
-// handler mapped to 500. A bad module_type is the caller's mistake, so huma
-// answering 400 before the handler runs is both the right status and the first
-// time the accepted values appear in the spec.
+// createDraftUpdateBody's enums are closed sets the service already rejected
+// outside of -- but it did so with a plain fmt.Errorf, which the handler mapped
+// to 500. A bad value is the caller's mistake, so huma answering 422 before the
+// handler runs is both the right status and documents the accepted values.
 //
-// The values match the check constraints on action_result_character_updates,
-// not just the service's maps; the two were verified to agree.
+// module_type is a pattern rather than an enum since GMs can add custom tabs.
+// It matches the check_module_type constraint on action_result_character_updates;
+// the handler then checks the tab is in this game's layout.
 type createDraftUpdateBody struct {
 	CharacterID int32  `json:"character_id" doc:"Character to update"`
-	ModuleType  string `json:"module_type" enum:"skills,inventory,numbers"`
+	ModuleType  string `json:"module_type" pattern:"^(skills|inventory|numbers|t_[a-z0-9]{6})$" doc:"Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout"`
 	FieldName   string `json:"field_name" minLength:"1"`
 	FieldValue  string `json:"field_value" minLength:"1"`
 	FieldType   string `json:"field_type" enum:"text,number,boolean,json"`
@@ -1413,6 +1413,22 @@ func (h *Handler) humaCreateDraftCharacterUpdate(ctx context.Context, in *create
 	if err := h.App.Pool.QueryRow(ctx, query, in.Body.CharacterID, result.UserID, gameID).Scan(&validatedCharacterID); err != nil {
 		return nil, h.logAndErr(ctx, core.ErrBadRequest(fmt.Errorf("character not found or does not belong to this user/game")),
 			"Character validation failed", "error", err, "character_id", in.Body.CharacterID, "user_id", result.UserID, "game_id", gameID)
+	}
+
+	// Publishing copies the draft into character_data as-is, so a draft is a
+	// deferred sheet write and gets the same layout check a direct one does.
+	// Only GM-only pairs qualify: the profile fields are the player's, not
+	// something an action result stages.
+	game, ok := ctx.Value("game").(*models.Game)
+	if !ok {
+		return nil, huma.Error500InternalServerError("game context missing")
+	}
+	tabKeys := core.SheetTabKeysForStored(game.CharacterSheet)
+	if core.ClassifySheetWrite(in.Body.ModuleType, in.Body.FieldName, tabKeys) != core.SheetWriteGMOnly {
+		h.App.ObsLogger.Warn(ctx, "Rejected draft for a pair outside the sheet layout",
+			"game_id", gameID, "module_type", in.Body.ModuleType, "field_name", in.Body.FieldName)
+		return nil, huma.Error422UnprocessableEntity(fmt.Sprintf(
+			"%s/%s is not a character sheet tab in this game", in.Body.ModuleType, in.Body.FieldName))
 	}
 
 	draft, err := h.ActionSubmissionService.CreateDraftCharacterUpdate(ctx, core.CreateDraftCharacterUpdateRequest{

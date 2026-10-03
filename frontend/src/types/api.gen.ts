@@ -1658,6 +1658,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/character-sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Customise the character sheet
+         * @description Replaces the game's character sheet layout: which configurable tabs it has, in what order, and each tab's entry fields. An empty object restores the default layout. GM or co-GM; not allowed once the game is archived.
+         */
+        put: operations["updateGameCharacterSheet"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/characters": {
         parameters: {
             query?: never;
@@ -4007,12 +4027,36 @@ export interface components {
             username?: string;
         };
         CharacterSheetConfig: {
+            /** @description Legacy tab label overrides, used only when tabs is absent */
             labels?: components["schemas"]["CharacterSheetLabels"];
+            /** @description Configurable tabs in display order. Absent means the default layout. Public Profile and Private Notes are always shown first and never listed. */
+            tabs?: components["schemas"]["CharacterSheetTab"][] | null;
+        };
+        CharacterSheetField: {
+            /** @description Stable identifier; the entry JSON key the value is stored under */
+            key: string;
+            /** @description Display name */
+            label: string;
+            /** @description Choices for a select field; only allowed on select */
+            options?: string[] | null;
+            /**
+             * @description Cannot change after creation
+             * @enum {string}
+             */
+            type: "text" | "number" | "markdown" | "select" | "checkbox" | "track";
         };
         CharacterSheetLabels: {
             inventory?: string;
             numbers?: string;
             skills?: string;
+        };
+        CharacterSheetTab: {
+            /** @description Entry fields in display order. Absent on a built-in tab means its default fields. Required on a custom tab. */
+            fields?: components["schemas"]["CharacterSheetField"][] | null;
+            /** @description Stable identifier: skills, inventory, numbers, or t_ plus six lower-case letters or digits for a custom tab */
+            key: string;
+            /** @description Display name. Absent on a built-in tab means its default label. */
+            label?: string;
         };
         CharacterStatsResponse: {
             /**
@@ -4516,8 +4560,8 @@ export interface components {
             /** @enum {string} */
             field_type: "text" | "number" | "boolean" | "json";
             field_value: string;
-            /** @enum {string} */
-            module_type: "skills" | "inventory" | "numbers";
+            /** @description Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout */
+            module_type: string;
             /** @enum {string} */
             operation: "upsert" | "delete";
         };
@@ -4536,7 +4580,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;
@@ -4837,8 +4880,8 @@ export interface components {
             field_value: string;
             /** Format: int32 */
             id: number;
-            /** @enum {string} */
-            module_type: "skills" | "inventory" | "numbers";
+            /** @description Tab key: skills, inventory, numbers, or a custom t_ key */
+            module_type: string;
             /** @enum {string} */
             operation: "upsert" | "delete";
             /** Format: date-time */
@@ -5093,6 +5136,8 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
+            /** @description Key of the character sheet tab this table rolls into */
+            target_tab: string;
             /** Format: date-time */
             updated_at: string;
         };
@@ -6214,7 +6259,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;
@@ -6268,6 +6312,8 @@ export interface components {
         UpdateLootTableBody: {
             items?: components["schemas"]["LootTableItemBody"][] | null;
             name: string;
+            /** @description Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty. */
+            target_tab?: string;
         };
         UpdateMessageRequest: {
             content: string;
@@ -11162,6 +11208,68 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateGameCharacterSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CharacterSheetConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM or a co-GM can customise the character sheet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The game is archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The layout failed validation */
             422: {
                 headers: {
                     [name: string]: unknown;

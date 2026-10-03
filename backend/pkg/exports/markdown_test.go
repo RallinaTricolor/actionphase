@@ -61,6 +61,16 @@ func TestStripCustomMarkdown(t *testing.T) {
 			want:    "[[Second Sight]] and [[Rope]]",
 		},
 		{
+			name:    "rewrites numbers and custom-tab refs to display name",
+			content: "[[Stress|numbers:n1]] rose when [[Old Zadok|t_abc123:c1]] talked",
+			want:    "[[Stress]] rose when [[Old Zadok]] talked",
+		},
+		{
+			name:    "leaves a malformed custom-tab kind alone",
+			content: "[[Old Zadok|t_abc:c1]]",
+			want:    "[[Old Zadok|t_abc:c1]]",
+		},
+		{
 			// `ability` was retired in the Phase 4 refactor and is no longer a
 			// sheet item type, so its token is left alone like any other
 			// unknown ref type. Production was verified empty of ability

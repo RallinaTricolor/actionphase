@@ -184,7 +184,7 @@ describe('GameFormFields', () => {
 
       renderFields({ activeTab: 'game-form-appearance' });
       expect(screen.getByTestId('game-form-panel-appearance')).toBeVisible();
-      expect(screen.getByTestId('game-sheet-label-skills')).toBeVisible();
+      expect(screen.getByRole('radio', { name: 'Portrait' })).toBeVisible();
     });
 
     it('hides the panels for tabs that are not selected', () => {

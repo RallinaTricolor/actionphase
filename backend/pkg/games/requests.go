@@ -41,32 +41,27 @@ type CreateGameRequest struct {
 	CommonRoomCloseDay      *int16  `json:"common_room_close_day,omitempty"`
 	CommonRoomCloseTime     *string `json:"common_room_close_time,omitempty"`
 	ScheduleTimezone        *string `json:"schedule_timezone,omitempty"`
-	// Typed here, unlike the chi version's json.RawMessage: that was a
-	// workaround for render.Bind's permissive decoder silently dropping unknown
-	// keys, and huma rejects them natively.
-	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty"`
 }
 
 // UpdateGameRequest represents the request to update game details
 type UpdateGameRequest struct {
-	Title                   string                     `json:"title"`
-	Description             string                     `json:"description"`
-	Genre                   string                     `json:"genre,omitempty"`
-	StartDate               *time.Time                 `json:"start_date,omitempty"`
-	EndDate                 *time.Time                 `json:"end_date,omitempty"`
-	RecruitmentDeadline     *time.Time                 `json:"recruitment_deadline,omitempty"`
-	MaxPlayers              int32                      `json:"max_players,omitempty"`
-	IsAnonymous             bool                       `json:"is_anonymous"`
-	AutoAcceptAudience      bool                       `json:"auto_accept_audience"`
-	AllowGroupConversations bool                       `json:"allow_group_conversations"`
-	PortraitAvatars         bool                       `json:"portrait_avatars"`
-	BannerURL               *string                    `json:"banner_url,omitempty"`
-	CommonRoomOpenDay       *int16                     `json:"common_room_open_day,omitempty"`
-	CommonRoomOpenTime      *string                    `json:"common_room_open_time,omitempty"`
-	CommonRoomCloseDay      *int16                     `json:"common_room_close_day,omitempty"`
-	CommonRoomCloseTime     *string                    `json:"common_room_close_time,omitempty"`
-	ScheduleTimezone        *string                    `json:"schedule_timezone,omitempty"`
-	CharacterSheet          *core.CharacterSheetConfig `json:"character_sheet,omitempty"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	Genre                   string     `json:"genre,omitempty"`
+	StartDate               *time.Time `json:"start_date,omitempty"`
+	EndDate                 *time.Time `json:"end_date,omitempty"`
+	RecruitmentDeadline     *time.Time `json:"recruitment_deadline,omitempty"`
+	MaxPlayers              int32      `json:"max_players,omitempty"`
+	IsAnonymous             bool       `json:"is_anonymous"`
+	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
+	AllowGroupConversations bool       `json:"allow_group_conversations"`
+	PortraitAvatars         bool       `json:"portrait_avatars"`
+	BannerURL               *string    `json:"banner_url,omitempty"`
+	CommonRoomOpenDay       *int16     `json:"common_room_open_day,omitempty"`
+	CommonRoomOpenTime      *string    `json:"common_room_open_time,omitempty"`
+	CommonRoomCloseDay      *int16     `json:"common_room_close_day,omitempty"`
+	CommonRoomCloseTime     *string    `json:"common_room_close_time,omitempty"`
+	ScheduleTimezone        *string    `json:"schedule_timezone,omitempty"`
 	// EndTime has no counterpart here — see the huma updateGameBody for why
 	// this one takes RFC3339 where create also accepts datetime-local.
 }

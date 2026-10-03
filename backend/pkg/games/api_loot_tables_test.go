@@ -11,6 +11,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type lootTableResponse struct {
@@ -105,7 +108,7 @@ func TestUpdateDeleteLootTable(t *testing.T) {
 	core.AssertNoError(t, err, "Test token creation should succeed")
 
 	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	lootTable, err := gameService.CreateLootTable(context.Background(), int32(fixtures.TestGame.ID), "Initial Table")
+	lootTable, err := gameService.CreateLootTable(context.Background(), int32(fixtures.TestGame.ID), "Initial Table", "inventory")
 	core.AssertNoError(t, err, "Should create loot table with service")
 
 	reqBody := map[string]any{"name": "Renamed Table"}
@@ -880,4 +883,89 @@ func TestUpdateLootTableContentsBumpsUpdatedAt(t *testing.T) {
 		"The list endpoint must return updated_at, not omit it from its hand-built response map")
 	core.AssertTrue(t, listed[0].UpdatedAt > listed[0].CreatedAt,
 		"Editing contents should bump updated_at past created_at, got created="+listed[0].CreatedAt+" updated="+listed[0].UpdatedAt)
+}
+
+// A roll writes a complete entry: its own fresh id, so it can be mentioned and
+// edited like any other, and the response carries that same id.
+func TestSetRandomLootForCharacterGivesEachRollAnID(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	tables := []string{"game_logs", "character_data", "characters", "game_loot_table_contents", "game_loot_tables", "games", "sessions", "users"}
+	testDB.CleanupTables(t, tables...)
+	defer testDB.CleanupTables(t, tables...)
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+	ctx := context.Background()
+	gameID := int32(fixtures.TestGame.ID)
+	token, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	require.NoError(t, err)
+
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	npc, err := characterService.CreateCharacter(ctx, core.CreateCharacterRequest{
+		GameID: gameID, CharacterType: "npc", Name: "Loot Recipient",
+	})
+	require.NoError(t, err)
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	table, err := gameService.CreateLootTable(ctx, gameID, "Ropes", "inventory")
+	require.NoError(t, err)
+	// Authored with an id and an exact number, both of which a roll must handle.
+	_, err = gameService.AddLootTableContent(ctx, table.ID, "Rope", `{"id":"authored","name":"Rope","quantity":10.50}`)
+	require.NoError(t, err)
+
+	roll := func(t *testing.T, tableID int32) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/games/%d/loot-tables/%d/random/%d", gameID, tableID, npc.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	var responseIDs []string
+	for range 2 {
+		rec := roll(t, table.ID)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var assigned lootTableContentResponse
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&assigned))
+		var entry map[string]any
+		require.NoError(t, json.Unmarshal([]byte(assigned.Data), &entry))
+		responseIDs = append(responseIDs, entry["id"].(string))
+	}
+
+	data, err := characterService.GetCharacterData(ctx, npc.ID)
+	require.NoError(t, err)
+	require.Len(t, data, 1)
+	var stored []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(data[0].FieldValue.String), &stored))
+	require.Len(t, stored, 2)
+
+	var storedIDs []string
+	for _, entry := range stored {
+		var id string
+		require.NoError(t, json.Unmarshal(entry["id"], &id))
+		storedIDs = append(storedIDs, id)
+		assert.Equal(t, "10.50", string(entry["quantity"]), "Values are written exactly as authored")
+	}
+	assert.Equal(t, responseIDs, storedIDs, "The response carries the id the sheet stored")
+	assert.NotEqual(t, storedIDs[0], storedIDs[1], "Two rolls of one item are two entries")
+	assert.NotContains(t, storedIDs, "authored", "An authored id is never reused")
+
+	t.Run("item data that isn't an object is refused, writing nothing", func(t *testing.T) {
+		broken, err := gameService.CreateLootTable(ctx, gameID, "Broken", "inventory")
+		require.NoError(t, err)
+		_, err = gameService.AddLootTableContent(ctx, broken.ID, "Rumour", `"just a string"`)
+		require.NoError(t, err)
+
+		rec := roll(t, broken.ID)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `rolled \"Rumour\"`)
+
+		data, err := characterService.GetCharacterData(ctx, npc.ID)
+		require.NoError(t, err)
+		assert.Contains(t, data[0].FieldValue.String, "Rope")
+		assert.NotContains(t, data[0].FieldValue.String, "just a string")
+	})
 }

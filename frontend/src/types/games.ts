@@ -10,9 +10,9 @@ import type { components } from './api.gen';
  * read endpoints had identical auth. `GET /games/{id}` now answers with the
  * joined shape too, so there is one thing to describe.
  *
- * `character_sheet` is sparse per-game overrides — absent for almost every
- * game, meaning "use the defaults" (which live in `useSheetLabels` and nowhere
- * else), never "this game has no tab labels".
+ * `character_sheet` is the sparse per-game sheet layout — absent for almost
+ * every game, meaning "use the default layout" (which lives in `useSheetLayout`
+ * and nowhere else), never "this game has no tabs".
  *
  * `community_id`/`community_name`/`community_slug` are absent for games
  * predating communities (req 5). Absent means "legacy game", never
@@ -150,12 +150,16 @@ export type GameLog = components['schemas']['GameLogEntryResponse'];
  */
 export interface CreateLootTableArgs {
   name: string;
+  /** Key of the sheet tab the table rolls into. */
+  target_tab: string;
   items: LootTableContent[] | undefined;
 }
 
 export interface UpdateLootTableArgs {
   id: number;
   name: string;
+  /** A new target tab. Omit to keep the current one; only an empty table can change it. */
+  target_tab?: string;
 }
 
 export interface UpdateLootTableContentsArgs {

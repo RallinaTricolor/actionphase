@@ -2,9 +2,11 @@ package exports
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
+	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -542,9 +544,14 @@ func RenderPoll(
 
 // RenderCharacter renders a character sheet from its modular character_data
 // rows. Avatars are intentionally omitted: archives are text-only.
+//
+// Sections follow the game's sheet: the profile and notes, then the layout's
+// tabs in order under the names the GM gave them, then anything else stored
+// (a tab the GM removed, legacy modules) so the archive still holds it.
 func RenderCharacter(
 	ch models.ListExportCharactersRow,
 	data []models.ListExportCharacterDataRow,
+	sheet core.CharacterSheetConfig,
 ) string {
 	var b strings.Builder
 
@@ -571,20 +578,38 @@ func RenderCharacter(
 	b.WriteString(fmt.Sprintf("- **Status:** %s (%s)\n\n", status, state))
 
 	// Group sheet fields by module, preserving the query's ordering.
-	var moduleOrder []string
+	var stored []string
 	byModule := map[string][]models.ListExportCharacterDataRow{}
 	for _, d := range data {
 		if _, seen := byModule[d.ModuleType]; !seen {
-			moduleOrder = append(moduleOrder, d.ModuleType)
+			stored = append(stored, d.ModuleType)
 		}
 		byModule[d.ModuleType] = append(byModule[d.ModuleType], d)
 	}
 
+	layout := core.ResolveSheetTabKeys(sheet)
+	moduleOrder := append([]string{"bio", "notes"}, layout...)
+	for _, module := range stored {
+		if !slices.Contains(moduleOrder, module) {
+			moduleOrder = append(moduleOrder, module)
+		}
+	}
+
 	for _, module := range moduleOrder {
-		b.WriteString("## " + humanize(module) + "\n\n")
-		for _, f := range byModule[module] {
+		fields := byModule[module]
+		if len(fields) == 0 {
+			continue
+		}
+		onSheet := slices.Contains(layout, module)
+		b.WriteString("## " + sectionTitle(sheet, module, onSheet) + "\n\n")
+		for _, f := range fields {
 			value := text(f.FieldValue, "")
 			if value == "" {
+				continue
+			}
+			// A tab's entries are its one field; the section heading names it.
+			if onSheet && f.FieldName == core.SheetStorageFieldName(module) {
+				b.WriteString(body(value) + "\n\n")
 				continue
 			}
 			b.WriteString(fmt.Sprintf("**%s:**\n\n%s\n\n", humanize(f.FieldName), body(value)))
@@ -608,6 +633,24 @@ func RenderHandout(h models.ListExportHandoutsRow) string {
 	b.WriteString(body(h.Content))
 	b.WriteString("\n")
 	return b.String()
+}
+
+// sectionTitle names a character's sheet section: a tab on the sheet by its
+// label, a custom tab the GM has since removed as such (its key means nothing
+// to a reader), and anything else by its humanized module name.
+func sectionTitle(sheet core.CharacterSheetConfig, module string, onSheet bool) string {
+	if onSheet {
+		if label := core.SheetTabLabel(sheet, module); label != "" {
+			return label
+		}
+	}
+	if core.IsSheetTabKey(module) {
+		if label := core.SheetTabLabel(core.CharacterSheetConfig{}, module); label != "" {
+			return label
+		}
+		return "Removed tab"
+	}
+	return humanize(module)
 }
 
 // humanize turns a snake_case identifier into a display label.

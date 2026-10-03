@@ -1089,7 +1089,7 @@ describe('HistoryView', () => {
       // The resolved item, not just the raw reference text.
       expect(await screen.findByText(DESCRIPTION)).toBeInTheDocument();
       expect(screen.getByText('Compel')).toBeInTheDocument();
-      expect(screen.getByText('Arcane · Rank 2')).toBeInTheDocument();
+      expect(screen.getByText('Rank: 2 · Category: Arcane')).toBeInTheDocument();
     });
 
     it('shows the item detail for an action result reference', async () => {

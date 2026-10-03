@@ -2,17 +2,18 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/common/modals/Modal';
 import { Button, Alert, Spinner } from '@/components/ui';
-import { SkillsManager } from './sheet-items/SkillsManager';
-import { ItemsManager } from './sheet-items/ItemsManager';
-import { NumbersManager } from './sheet-items/NumbersManager';
+import { EntryManager } from './sheet-items/EntryManager';
+import type { RawSheetEntry } from '@/lib/sheetEntries';
 import { apiClient } from '@/lib/api';
-import type { CharacterSkill, InventoryItem, NumberEntry } from '@/types/characters';
 import type { CreateDraftCharacterUpdateRequest } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 import { useDiscardSheetDrafts } from '@/hooks/useDiscardSheetDrafts';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
-import { useSheetLabels } from '@/hooks/useSheetLabels';
+import { useSheetLayout } from '@/hooks/useSheetLayout';
+import { useLootRoll } from '@/hooks/useLootRoll';
+import { generateId } from '@/utils/generateId';
 import { useOptionalGameContext } from '@/contexts/GameContext';
+import { storageFieldName } from '@/types/characters';
 import { EditorLockNotice } from './EditorLockNotice';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 
@@ -25,7 +26,12 @@ interface UpdateCharacterSheetModalProps {
   characterName: string;
 }
 
-type ActiveSection = 'skills' | 'inventory' | 'numbers';
+/** A tab's entries in the editor, keyed by tab key. */
+type EntriesByTab = Record<string, RawSheetEntry[]>;
+
+// Stable, so a tab with no entries yet does not hand EntryManager a fresh array
+// (and a fresh memo) every render.
+const NO_ENTRIES: RawSheetEntry[] = [];
 
 // Parse a JSON field value from character data, returning empty array on failure
 function parseJsonArray<T>(value: string | undefined): T[] {
@@ -46,14 +52,18 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   characterId,
   characterName,
 }) => {
-  const [activeSection, setActiveSection] = useState<ActiveSection>('skills');
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   // Same source the character sheet uses, so the GM sees the tab names this
   // game actually uses rather than the platform defaults. This modal always
   // opens inside a game, but the context lookup stays optional so a test or a
   // future surface rendering it outside one falls back to defaults instead of
   // throwing.
   const gameContext = useOptionalGameContext();
-  const sheetLabels = useSheetLabels(gameContext?.game);
+  const sheetLayout = useSheetLayout(gameContext?.game);
+  // One section per configurable tab, built-in or GM-composed, in layout order.
+  const sections = sheetLayout.tabs;
+  // The first tab, until one is picked or when the picked one has been removed.
+  const currentTab = sections.find(s => s.key === activeSection) ?? sections[0];
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -68,10 +78,19 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
   const { isAnyDirty: hasUncommittedEdit, report: reportDirty } = useDirtyChildren();
   const [confirmingClose, setConfirmingClose] = useState(false);
 
-  // Local state for the character sheet being edited
-  const [skills, setSkills] = useState<CharacterSkill[]>([]);
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [numbers, setNumbers] = useState<NumberEntry[]>([]);
+  // Local state for the character sheet being edited: every tab's entries.
+  const [entriesByTab, setEntriesByTab] = useState<EntriesByTab>({});
+
+  // Reads every tab in the layout out of the given source. A tab the source
+  // has no row for starts empty.
+  const readTabs = useCallback(
+    (getField: (moduleType: string, fieldName: string) => string | undefined): EntriesByTab =>
+      Object.fromEntries(sheetLayout.tabs.map(tab => [
+        tab.key,
+        parseJsonArray<RawSheetEntry>(getField(tab.key, storageFieldName(tab.key))),
+      ])),
+    [sheetLayout],
+  );
 
   // Track whether local state has been initialized from server data
   const initialized = useRef(false);
@@ -120,12 +139,10 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     const getField = (moduleType: string, fieldName: string) =>
       getDraftField(moduleType, fieldName) ?? getCharacterField(moduleType, fieldName);
 
-    setSkills(parseJsonArray<CharacterSkill>(getField('skills', 'skills')));
-    setItems(parseJsonArray<InventoryItem>(getField('inventory', 'items')));
-    setNumbers(parseJsonArray<NumberEntry>(getField('numbers', 'numbers')));
+    setEntriesByTab(readTabs(getField));
 
     initialized.current = true;
-  }, [isOpen, isLoading, characterData, existingDrafts]);
+  }, [isOpen, isLoading, characterData, existingDrafts, readTabs]);
 
   // Mutation to upsert a single draft row (whole-array snapshot)
   const saveDraftMutation = useMutation({
@@ -206,7 +223,7 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     const fieldKey = `${moduleType}:${fieldName}`;
     const args: CreateDraftCharacterUpdateRequest = {
       character_id: characterId,
-      module_type: moduleType as CreateDraftCharacterUpdateRequest['module_type'],
+      module_type: moduleType,
       field_name: fieldName,
       field_value: JSON.stringify(value),
       field_type: 'json',
@@ -255,23 +272,31 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     };
   }, []);
 
-  const handleSkillsChange = (newSkills: CharacterSkill[]) => {
-    setSkills(newSkills);
-    scheduleSave('skills', 'skills', newSkills);
-  };
+  // A roll is written to the character's sheet by the server, not staged as a
+  // draft. Shown locally at once, and refetched so the published sheet agrees.
+  // The server gives the entry its id; the generated one only covers a server
+  // that predates that, and is overridden by the spread.
+  //
+  // A tab that already has a staged (or pending) snapshot is re-staged with the
+  // roll included: publishing replaces the tab's row with the snapshot, so one
+  // taken before the roll would erase it. A tab with nothing staged is left
+  // alone, since the roll is already on the published sheet.
+  const lootRolling = useLootRoll(characterId, (rolled, tabKey) => {
+    const fieldName = storageFieldName(tabKey);
+    const entries = [...(entriesByTab[tabKey] ?? []), { id: generateId(), ...rolled }];
+    setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));
 
-  const handleItemsChange = (newItems: InventoryItem[], reloadOnly: boolean) => {
-    setItems(newItems);
-    if (!reloadOnly) {
-      scheduleSave('inventory', 'items', newItems);
-    } else {
-      queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
-    }
-  };
+    const hasStagedSnapshot =
+      pendingSaves.current.has(`${tabKey}:${fieldName}`) ||
+      (existingDrafts ?? []).some(d => d.module_type === tabKey && d.field_name === fieldName);
+    if (hasStagedSnapshot) scheduleSave(tabKey, fieldName, entries);
 
-  const handleNumbersChange = (newNumbers: NumberEntry[]) => {
-    setNumbers(newNumbers);
-    scheduleSave('numbers', 'numbers', newNumbers);
+    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+  });
+
+  const handleEntriesChange = (tabKey: string, entries: RawSheetEntry[]) => {
+    setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));
+    scheduleSave(tabKey, storageFieldName(tabKey), entries);
   };
 
   const hasStagedUpdates = (existingDrafts?.length ?? 0) > 0;
@@ -304,12 +329,8 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     }
 
     // Re-seed from published character data now that the drafts are gone.
-    const fromCharacter = (moduleType: string, fieldName: string) =>
-      characterData?.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
-
-    setSkills(parseJsonArray<CharacterSkill>(fromCharacter('skills', 'skills')));
-    setItems(parseJsonArray<InventoryItem>(fromCharacter('inventory', 'items')));
-    setNumbers(parseJsonArray<NumberEntry>(fromCharacter('numbers', 'numbers')));
+    setEntriesByTab(readTabs((moduleType, fieldName) =>
+      characterData?.find(d => d.module_type === moduleType && d.field_name === fieldName)?.field_value));
 
     setConfirmingDiscard(false);
     setSaveStatus('idle');
@@ -397,28 +418,29 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
         {/* Section Navigation — locked while an editor holds uncommitted edits, since
             switching unmounts that editor and destroys them. See EditorLockNotice. */}
         <div className="border-b border-theme-default">
-          <nav className="flex items-center space-x-1" aria-label="Sections">
-            {(['skills', 'inventory', 'numbers'] as ActiveSection[]).map((section) => (
+          {/* Scrolls sideways rather than wrapping: a composed layout can have
+              more tabs than fit a phone. */}
+          <nav className="flex items-center space-x-1 overflow-x-auto" aria-label="Sections">
+            {sections.map(({ key: section, label }) => (
               <button
                 key={section}
                 disabled={hasUncommittedEdit}
                 onClick={() => setActiveSection(section)}
                 className={`
-                  px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
+                  shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  ${activeSection === section
+                  ${currentTab?.key === section
                     ? 'surface-base text-interactive-primary border-b-2 border-interactive-primary'
                     : 'text-content-secondary hover:text-content-primary hover:surface-raised'
                   }
                 `}
               >
-                {/* The game's label, not the section key: `capitalize` on the key
-                    was fine when the names were fixed, but a GM who renamed a tab
-                    must see that name here too. */}
-                {sheetLabels[section]}
+                {/* The game's label, not the section key: a GM who renamed a
+                    tab must see that name here too. */}
+                {label}
               </button>
             ))}
-            {hasUncommittedEdit && <EditorLockNotice className="ml-2" />}
+            {hasUncommittedEdit && <EditorLockNotice className="ml-2 shrink-0" />}
           </nav>
         </div>
         </div>
@@ -429,39 +451,18 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
             <div className="flex justify-center items-center py-16">
               <Spinner size="lg" />
             </div>
-          ) : (
-            <>
-              {activeSection === 'skills' && (
-                <SkillsManager
-                  skills={skills}
-                  canEdit={true}
-                  onSkillsChange={handleSkillsChange}
-                  onDirtyChange={(isDirty) => reportDirty('skills', isDirty)}
-                  label={sheetLabels.skills}
-                />
-              )}
-
-              {activeSection === 'inventory' && (
-                <ItemsManager
-                  characterId={characterId}
-                  items={items}
-                  canEdit={true}
-                  onItemsChange={handleItemsChange}
-                  onDirtyChange={(isDirty) => reportDirty('inventory', isDirty)}
-                  label={sheetLabels.inventory}
-                />
-              )}
-
-              {activeSection === 'numbers' && (
-                <NumbersManager
-                  numbers={numbers}
-                  canEdit={true}
-                  onNumbersChange={handleNumbersChange}
-                  onDirtyChange={(isDirty) => reportDirty('numbers', isDirty)}
-                  label={sheetLabels.numbers}
-                />
-              )}
-            </>
+          ) : currentTab && (
+            <EntryManager
+              // Keyed by tab, so switching tabs mounts a fresh manager rather
+              // than carrying one tab's open add modal over to the next.
+              key={currentTab.key}
+              tab={currentTab}
+              entries={entriesByTab[currentTab.key] ?? NO_ENTRIES}
+              canEdit={true}
+              onEntriesChange={(entries) => handleEntriesChange(currentTab.key, entries)}
+              onDirtyChange={(isDirty) => reportDirty(currentTab.key, isDirty)}
+              loot={lootRolling}
+            />
           )}
         </div>
 

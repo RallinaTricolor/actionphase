@@ -15,11 +15,14 @@ import (
 	"math/rand"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"actionphase/pkg/core"
@@ -114,6 +117,43 @@ func (h *Handler) requireCanViewGame(ctx context.Context, gameID int32, logMsg s
 		return nil, h.logAndErr(ctx, core.ErrForbidden("you do not have permission to view this game's content"), logMsg)
 	}
 	return authUser, nil
+}
+
+// requireSheetTab rejects a tab key the game's character sheet doesn't have,
+// so a loot table never targets, or writes into, a tab nobody can see.
+func (h *Handler) requireSheetTab(ctx context.Context, tabKey string) error {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return err
+	}
+	if slices.Contains(core.SheetTabKeysForStored(game.CharacterSheet), tabKey) {
+		return nil
+	}
+	return h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+		fmt.Sprintf("this game's character sheet has no tab %q", tabKey)),
+		"Loot table target is not a sheet tab", "game_id", game.ID, "target_tab", tabKey)
+}
+
+// sheetTabLabel names a tab for server-written text, falling back to its key
+// for a tab the layout no longer names.
+func (h *Handler) sheetTabLabel(ctx context.Context, tabKey string) string {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return tabKey
+	}
+	if label := core.SheetTabLabel(storedSheetConfig(game.CharacterSheet), tabKey); label != "" {
+		return label
+	}
+	return tabKey
+}
+
+// storedSheetConfig reads a games.character_sheet column the way responses do:
+// an empty or malformed value is the default layout.
+func storedSheetConfig(stored []byte) core.CharacterSheetConfig {
+	if config := core.CharacterSheetConfigForResponse(stored); config != nil {
+		return *config
+	}
+	return core.CharacterSheetConfig{}
 }
 
 // requireLootTableInGame binds the {tableId} to the {gameID}.
@@ -269,25 +309,17 @@ type createGameBody struct {
 	// Required: every new game belongs to a community (req 5). minimum:"1"
 	// rejects the zero value, which would otherwise pass as "present".
 	CommunityID int32 `json:"community_id" required:"true" minimum:"1"`
-	// Typed, not json.RawMessage.
-	//
-	// The chi version kept this raw so it could decode with
-	// DisallowUnknownFields, because render.Bind's decoder would otherwise
-	// silently drop a typo'd key. Huma needs no such workaround: it rejects
-	// unknown properties on nested objects too, verified at both levels of this
-	// structure. So the strictness survives and the schema now describes the
-	// shape instead of saying "object".
-	CharacterSheet *core.CharacterSheetConfig `json:"character_sheet,omitempty" required:"false"`
+	// No character_sheet: a new game gets the default layout, and the GM
+	// customises it afterwards through PUT /games/{id}/character-sheet.
 }
 
-// Resolve carries over the two checks Bind ran after the struct tags: the
-// character sheet's own validation (which normalizes whitespace-only labels to
-// absent) and the all-or-nothing schedule rule.
+// Resolve carries over the check Bind ran after the struct tags: the
+// all-or-nothing schedule rule.
 func (b *createGameBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
 	}
-	return resolveGameBody(&b.CharacterSheet,
+	return resolveGameBody(
 		b.CommonRoomOpenDay, b.CommonRoomCloseDay,
 		b.CommonRoomOpenTime, b.CommonRoomCloseTime, b.ScheduleTimezone)
 }
@@ -302,18 +334,19 @@ type updateGameBody struct {
 	MaxPlayers          int32      `json:"max_players,omitempty" required:"false"`
 	// A POINTER, unlike most of this body: absent means "leave the community
 	// alone", not "clear it". Only honoured while the game is in setup.
-	CommunityID             *int32                     `json:"community_id,omitempty" required:"false" minimum:"1"`
-	IsAnonymous             bool                       `json:"is_anonymous,omitempty" required:"false"`
-	AutoAcceptAudience      bool                       `json:"auto_accept_audience,omitempty" required:"false"`
-	AllowGroupConversations bool                       `json:"allow_group_conversations,omitempty" required:"false"`
-	PortraitAvatars         bool                       `json:"portrait_avatars,omitempty" required:"false"`
-	BannerURL               *string                    `json:"banner_url,omitempty" required:"false"`
-	CommonRoomOpenDay       *int16                     `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
-	CommonRoomOpenTime      *string                    `json:"common_room_open_time,omitempty" required:"false"`
-	CommonRoomCloseDay      *int16                     `json:"common_room_close_day,omitempty" required:"false" minimum:"0" maximum:"6"`
-	CommonRoomCloseTime     *string                    `json:"common_room_close_time,omitempty" required:"false"`
-	ScheduleTimezone        *string                    `json:"schedule_timezone,omitempty" required:"false"`
-	CharacterSheet          *core.CharacterSheetConfig `json:"character_sheet,omitempty" required:"false"`
+	CommunityID             *int32  `json:"community_id,omitempty" required:"false" minimum:"1"`
+	IsAnonymous             bool    `json:"is_anonymous,omitempty" required:"false"`
+	AutoAcceptAudience      bool    `json:"auto_accept_audience,omitempty" required:"false"`
+	AllowGroupConversations bool    `json:"allow_group_conversations,omitempty" required:"false"`
+	PortraitAvatars         bool    `json:"portrait_avatars,omitempty" required:"false"`
+	BannerURL               *string `json:"banner_url,omitempty" required:"false"`
+	CommonRoomOpenDay       *int16  `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
+	CommonRoomOpenTime      *string `json:"common_room_open_time,omitempty" required:"false"`
+	CommonRoomCloseDay      *int16  `json:"common_room_close_day,omitempty" required:"false" minimum:"0" maximum:"6"`
+	CommonRoomCloseTime     *string `json:"common_room_close_time,omitempty" required:"false"`
+	ScheduleTimezone        *string `json:"schedule_timezone,omitempty" required:"false"`
+	// No character_sheet: the layout has its own endpoint and editor, so a
+	// settings save can never reset it.
 
 	// StartDate and friends are plain *time.Time here, not core.LocalDateTime,
 	// because that is what the chi request struct used. Update therefore accepts
@@ -325,39 +358,119 @@ func (b *updateGameBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
 	}
-	return resolveGameBody(&b.CharacterSheet,
+	return resolveGameBody(
 		b.CommonRoomOpenDay, b.CommonRoomCloseDay,
 		b.CommonRoomOpenTime, b.CommonRoomCloseTime, b.ScheduleTimezone)
 }
 
-// resolveGameBody runs the two non-tag validations the create and update bodies
-// share, normalizing the character sheet in place.
-//
-// The sheet is validated here rather than left to the service for the reason the
-// chi Bind gave: a service-layer rejection renders as a 500 "unexpected error",
-// so a GM typing an over-long tab label would be told the server broke.
-func resolveGameBody(sheet **core.CharacterSheetConfig, openDay, closeDay *int16, openTime, closeTime, tz *string) []error {
-	if *sheet != nil {
-		validated, err := core.ValidateCharacterSheetConfig(**sheet)
-		if err != nil {
-			return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body.character_sheet"}}
-		}
-		*sheet = &validated
-	}
-
+// resolveGameBody runs the non-tag validation the create and update bodies
+// share. It runs here rather than in the service for the reason the chi Bind
+// gave: a service-layer rejection renders as a 500 "unexpected error".
+func resolveGameBody(openDay, closeDay *int16, openTime, closeTime, tz *string) []error {
 	if err := validateScheduleFields(openDay, closeDay, openTime, closeTime, tz); err != nil {
 		return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body"}}
 	}
 	return nil
 }
 
-// sheetConfigValue dereferences an optional sheet pointer for the service call,
-// which takes a value.
-func sheetConfigValue(sheet *core.CharacterSheetConfig) core.CharacterSheetConfig {
-	if sheet == nil {
-		return core.CharacterSheetConfig{}
+type updateCharacterSheetInput struct {
+	GameID int32 `path:"gameID" doc:"Game ID"`
+	// The whole document, not a patch: the editor always sends the complete
+	// layout, and an empty object resets the game to the default sheet.
+	Body core.CharacterSheetConfig
+}
+
+// Resolve validates the layout before the handler runs, so a bad layout is a
+// 422 naming the problem. Left to the service it would surface as a 500.
+func (in *updateCharacterSheetInput) Resolve(huma.Context) []error {
+	validated, err := core.ValidateCharacterSheetConfig(in.Body)
+	if err != nil {
+		return []error{&huma.ErrorDetail{Message: err.Error(), Location: "body"}}
 	}
-	return *sheet
+	in.Body = validated
+	return nil
+}
+
+func (h *Handler) humaUpdateCharacterSheet(ctx context.Context, in *updateCharacterSheetInput) (*gameOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_update_character_sheet")()
+
+	// is_gm, which admits co-GMs: sheet layout is ordinary game setup, not one
+	// of the primary-GM-only settings.
+	if err := h.requireGMFlag(ctx, "only the GM can customise the character sheet", "Update character sheet forbidden"); err != nil {
+		return nil, err
+	}
+	gameID, err := gameIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.requireLootTargetsKept(ctx, in.Body); err != nil {
+		return nil, err
+	}
+
+	updated, err := h.GameService.UpdateGameCharacterSheet(ctx, gameID, in.Body)
+	if err != nil {
+		if errors.Is(err, core.ErrGameReadOnly) {
+			return nil, h.logAndErr(ctx, core.ErrConflict("an archived game's character sheet cannot be changed"),
+				"Update character sheet rejected: game archived", "game_id", gameID)
+		}
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update character sheet", "error", err, "game_id", gameID)
+	}
+
+	return &gameOutput{Body: gameResponseFrom(updated)}, nil
+}
+
+// requireLootTargetsKept rejects a layout that removes a tab a loot table
+// rolls into, naming the tables, so the GM retargets or deletes them first
+// instead of silently unlinking them. Checked here, not in
+// ValidateCharacterSheetConfig, because it needs the game's tables; and at save
+// time, so an editor opened before a table was created can't slip past it.
+//
+// Only tabs this save removes count. A table already pointing at a missing tab
+// (a layout saved before targets existed) doesn't block every later save.
+func (h *Handler) requireLootTargetsKept(ctx context.Context, next core.CharacterSheetConfig) error {
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return err
+	}
+	current := core.SheetTabKeysForStored(game.CharacterSheet)
+	kept := core.ResolveSheetTabKeys(next)
+
+	tables, err := h.GameService.GetGameLootTables(ctx, game.ID, false)
+	if err != nil {
+		return h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot tables", "error", err, "game_id", game.ID)
+	}
+
+	var removed []string
+	tableNames := map[string][]string{}
+	for _, table := range tables {
+		if !slices.Contains(current, table.TargetTab) || slices.Contains(kept, table.TargetTab) {
+			continue
+		}
+		if _, seen := tableNames[table.TargetTab]; !seen {
+			removed = append(removed, table.TargetTab)
+		}
+		tableNames[table.TargetTab] = append(tableNames[table.TargetTab], strconv.Quote(table.Name))
+	}
+	if len(removed) == 0 {
+		return nil
+	}
+
+	currentConfig := storedSheetConfig(game.CharacterSheet)
+	problems := make([]string, 0, len(removed))
+	for _, key := range removed {
+		label := core.SheetTabLabel(currentConfig, key)
+		if label == "" {
+			label = key
+		}
+		noun := "loot tables"
+		if len(tableNames[key]) == 1 {
+			noun = "loot table"
+		}
+		problems = append(problems, fmt.Sprintf("%s is used by %s %s", label, noun, strings.Join(tableNames[key], ", ")))
+	}
+	return h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+		strings.Join(problems, "; ")+". Retarget or delete those tables before removing the tab."),
+		"Update character sheet rejected: removes a loot table target", "game_id", game.ID, "tabs", removed)
 }
 
 type updateGameStateBody struct {
@@ -392,11 +505,23 @@ type lootTableItemBody struct {
 type updateLootTableBody struct {
 	Name  string              `json:"name" minLength:"1"`
 	Items []lootTableItemBody `json:"items,omitempty" required:"false"`
+	// Optional on both endpoints: a create without it rolls into Inventory, as
+	// every table did before targets existed, and an update without it keeps
+	// the current target.
+	TargetTab string `json:"target_tab,omitempty" required:"false" doc:"Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty."`
 }
 
 func (b *updateLootTableBody) Resolve(huma.Context) []error {
 	if errs := humaconfig.TrimStrings(b); len(errs) > 0 {
 		return errs
+	}
+	// Only the shape here; whether this game has the tab needs the game.
+	if b.TargetTab != "" && !core.IsSheetTabKey(b.TargetTab) {
+		return []error{&huma.ErrorDetail{
+			Message:  fmt.Sprintf("target_tab %q is not a character sheet tab key", b.TargetTab),
+			Location: "body.target_tab",
+			Value:    b.TargetTab,
+		}}
 	}
 	return validateLootItems(b.Items)
 }
@@ -635,7 +760,6 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 		CommonRoomCloseTime:     in.Body.CommonRoomCloseTime,
 		ScheduleTimezone:        in.Body.ScheduleTimezone,
 		CommunityID:             in.Body.CommunityID,
-		CharacterSheet:          sheetConfigValue(in.Body.CharacterSheet),
 	})
 	if err != nil {
 		h.App.Observability.OTELMetrics.RecordGameCreateError(ctx)
@@ -810,7 +934,6 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 		CommonRoomCloseDay:      in.Body.CommonRoomCloseDay,
 		CommonRoomCloseTime:     in.Body.CommonRoomCloseTime,
 		ScheduleTimezone:        in.Body.ScheduleTimezone,
-		CharacterSheet:          sheetConfigValue(in.Body.CharacterSheet),
 	})
 	if err != nil {
 		// Community problems are the caller's mistake, not a server fault.
@@ -2286,6 +2409,7 @@ func (h *Handler) humaGetGameLootTables(ctx context.Context, in *lootTablesInput
 			ID:        lootTable.ID,
 			GameID:    lootTable.GameID,
 			Name:      lootTable.Name,
+			TargetTab: lootTable.TargetTab,
 			CreatedAt: lootTable.CreatedAt.Time,
 			UpdatedAt: lootTable.UpdatedAt.Time,
 		})
@@ -2314,7 +2438,15 @@ func (h *Handler) humaAddGameLootTable(ctx context.Context, in *addLootTableInpu
 		return nil, err
 	}
 
-	newLootTable, err := h.GameService.CreateLootTable(ctx, gameID, in.Body.Name)
+	targetTab := in.Body.TargetTab
+	if targetTab == "" {
+		targetTab = "inventory"
+	}
+	if err := h.requireSheetTab(ctx, targetTab); err != nil {
+		return nil, err
+	}
+
+	newLootTable, err := h.GameService.CreateLootTable(ctx, gameID, in.Body.Name, targetTab)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to create loot table", "error", err, "game_id", gameID)
 	}
@@ -2350,7 +2482,19 @@ func (h *Handler) humaUpdateGameLootTable(ctx context.Context, in *updateLootTab
 
 	// Renames only: the Items in the body are validated but not applied, which
 	// is what the chi handler did. The contents endpoint is how items change.
-	lootTable, err := h.GameService.UpdateLootTable(ctx, in.TableID, in.Body.Name)
+	var targetTab *string
+	if in.Body.TargetTab != "" {
+		if err := h.requireSheetTab(ctx, in.Body.TargetTab); err != nil {
+			return nil, err
+		}
+		targetTab = &in.Body.TargetTab
+	}
+
+	lootTable, err := h.GameService.UpdateLootTable(ctx, in.TableID, in.Body.Name, targetTab)
+	if errors.Is(err, core.ErrLootTableTargetLocked) {
+		return nil, h.logAndErr(ctx, core.ErrConflict("this loot table has contents, so it can't roll into a different tab; make a new table for that tab instead"),
+			"Loot table retarget rejected: table has contents", "table_id", in.TableID, "target_tab", in.Body.TargetTab)
+	}
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update loot table", "error", err, "table_id", in.TableID)
 	}
@@ -2477,7 +2621,17 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 			"Character edit permission denied", "character_id", in.CharacterID, "user_id", user.ID)
 	}
 
-	if err := h.requireLootTableInGame(ctx, in.TableID, gameID); err != nil {
+	lootTable, err := h.GameService.GetGameLootTable(ctx, gameID, in.TableID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("loot table does not belong to this game"), "Loot table access forbidden")
+	}
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table", "error", err, "table_id", in.TableID)
+	}
+	// The sheet editor won't remove a tab a table targets, but a table left
+	// pointing at a missing tab (a layout saved before targets existed) must
+	// not write data the sheet can't show.
+	if err := h.requireSheetTab(ctx, lootTable.TargetTab); err != nil {
 		return nil, err
 	}
 
@@ -2502,11 +2656,18 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 	rnd := rand.Intn(len(contents))
 	content := contents[rnd]
 
+	entry, err := rolledEntry(content.Data.String)
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+			fmt.Sprintf("rolled %q, but its item data is not a JSON object; fix it in the loot table", content.Name)),
+			"Rolled loot item data is not an object", "table_id", in.TableID, "content_id", content.ID)
+	}
+
 	if err := h.CharacterService.AddToCharacterData(ctx, core.CharacterDataRequest{
 		CharacterID: in.CharacterID,
-		ModuleType:  "inventory",
-		FieldName:   "items",
-		FieldValue:  content.Data.String,
+		ModuleType:  lootTable.TargetTab,
+		FieldName:   core.SheetStorageFieldName(lootTable.TargetTab),
+		FieldValue:  entry,
 		FieldType:   "json",
 		IsPublic:    false,
 	}); err != nil {
@@ -2518,15 +2679,44 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 	// request — but it should not vanish silently either, since the game log is
 	// the GM's only record of what was rolled.
 	if _, err := h.GameService.AddGameLog(ctx, models.CreateLogParams{
-		GameID:  gameID,
-		Type:    "INVENTORY_ADD",
-		Message: pgtype.Text{String: fmt.Sprintf("Added %s to Character %s (Rolled: %d)", content.Name, character.Name, rnd+1), Valid: true},
+		GameID: gameID,
+		Type:   "SHEET_ENTRY_ADD",
+		Message: pgtype.Text{String: fmt.Sprintf("Added %s to Character %s's %s (Rolled: %d)",
+			content.Name, character.Name, h.sheetTabLabel(ctx, lootTable.TargetTab), rnd+1), Valid: true},
 	}); err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to write loot roll game log",
 			"game_id", gameID, "character_id", in.CharacterID, "loot_table_id", in.TableID)
 	}
 
+	// The entry as written, id included, so a client showing it locally uses
+	// the same id the sheet has.
+	content.Data = pgtype.Text{String: entry, Valid: true}
 	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
+}
+
+// rolledEntry gives a rolled loot item a fresh id, making it an entry like any
+// other: mentionable and editable, instead of an id-less row the sheet has to
+// patch on every read. Fresh even when the authored data carries one, since two
+// rolls of the same item must not share an id.
+//
+// Values are kept as raw JSON, so a number keeps its exact spelling. Anything
+// but a JSON object is refused: written to the sheet, it would be a row no tab
+// can show.
+func rolledEntry(data string) (string, error) {
+	var entry map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(data), &entry); err != nil || entry == nil {
+		return "", fmt.Errorf("loot item data is not a JSON object")
+	}
+	id, err := json.Marshal(uuid.NewString())
+	if err != nil {
+		return "", err
+	}
+	entry["id"] = id
+	out, err := json.Marshal(entry)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
 
 // Banner
@@ -2752,6 +2942,23 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 			"404": {Description: "Game not found"},
 		},
 	}, h.humaUpdateGame)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "updateGameCharacterSheet",
+		Method:      http.MethodPut,
+		Path:        "/character-sheet",
+		Summary:     "Customise the character sheet",
+		Description: "Replaces the game's character sheet layout: which configurable tabs it has, in what order, and each tab's entry fields. An empty object restores the default layout. GM or co-GM; not allowed once the game is archived.",
+		Tags:        []string{"Games"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "The layout failed validation"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM or a co-GM can customise the character sheet"},
+			"404": {Description: "Game not found"},
+			"409": {Description: "The game is archived"},
+		},
+	}, h.humaUpdateCharacterSheet)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteGame",

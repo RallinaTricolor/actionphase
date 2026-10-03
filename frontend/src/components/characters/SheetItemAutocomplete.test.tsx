@@ -5,9 +5,9 @@ import { SheetItemAutocomplete } from './SheetItemAutocomplete';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 
 const items: SheetItem[] = [
-  { id: 'a1', name: 'Fire Bolt', type: 'skill', description: 'Deals fire damage' },
-  { id: 's1', name: 'Stealth', type: 'skill' },
-  { id: 'i1', name: 'Longbow', type: 'item' },
+  { id: 'a1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills', description: 'Deals fire damage' },
+  { id: 's1', name: 'Stealth', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
+  { id: 'i1', name: 'Longbow', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory' },
 ];
 
 const pos = { top: 100, left: 200 };
@@ -56,11 +56,13 @@ describe('SheetItemAutocomplete', () => {
     expect(options[0]).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('shows type badges', () => {
+  it("badges each item with its tab's name on this sheet", () => {
+    const contacts = { id: 'c1', name: 'Old Zadok', refKind: 't_abc123', tabKey: 't_abc123', tabLabel: 'Contacts' };
     render(
-      <SheetItemAutocomplete items={items} query="" position={pos} onSelect={vi.fn()} selectedIndex={0} />
+      <SheetItemAutocomplete items={[...items, contacts]} query="" position={pos} onSelect={vi.fn()} selectedIndex={0} />
     );
-    expect(screen.getAllByText('skill')).toHaveLength(2);
-    expect(screen.getByText('item')).toBeInTheDocument();
+    expect(screen.getAllByText('Skills')).toHaveLength(2);
+    expect(screen.getByText('Inventory')).toBeInTheDocument();
+    expect(screen.getByText('Contacts')).toBeInTheDocument();
   });
 });

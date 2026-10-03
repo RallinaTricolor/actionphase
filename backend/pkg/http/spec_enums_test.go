@@ -224,9 +224,10 @@ func TestLoginRequiresPassword(t *testing.T) {
 // Each case below has a canonical definition already in the codebase, so these
 // assert against that definition rather than against a repeated literal:
 //
-//   - DraftCharacterUpdateResponse: createDraftUpdateBody already tags all
-//     three, and the values match the check constraints on
-//     action_result_character_updates.
+//   - DraftCharacterUpdateResponse: createDraftUpdateBody already tags these,
+//     and the values match the check constraints on
+//     action_result_character_updates. module_type is deliberately absent: it
+//     became open-ended when GMs could add custom tabs.
 //   - CommunityBanEvent.action / CommunityDocument.status: core owns the
 //     canonical slices, and the frontend hand-wrote the same unions to
 //     compensate -- BanHistoryTab keys two Record lookups off its copy.
@@ -240,7 +241,6 @@ func TestResponseEnumsMatchRequestEnums(t *testing.T) {
 		prop   string
 		want   []string
 	}{
-		{"DraftCharacterUpdateResponse", "module_type", []string{"skills", "inventory", "numbers"}},
 		{"DraftCharacterUpdateResponse", "field_type", []string{"text", "number", "boolean", "json"}},
 		{"DraftCharacterUpdateResponse", "operation", []string{"upsert", "delete"}},
 		{"CommunityBanEvent", "action", core.ValidBanEventActions},

@@ -5,16 +5,12 @@ INSERT INTO games (
     common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone,
     -- Required by the application on every new game (req 5), though the column
     -- stays nullable so pre-community games remain valid. See the migration.
-    community_id,
-    character_sheet
+    -- character_sheet is left to its column DEFAULT ('{}', the default
+    -- layout). A GM customises it afterwards via UpdateGameCharacterSheet.
+    community_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18, $19,
-    -- COALESCE so a caller that builds CreateGameParams directly and leaves
-    -- CharacterSheet nil gets '{}' rather than a NOT NULL violation. Naming the
-    -- column in the INSERT disables the column DEFAULT, so the default has to be
-    -- restated here.
-    COALESCE(sqlc.narg('character_sheet')::jsonb, '{}'::jsonb)
+    $14, $15, $16, $17, $18, $19
 ) RETURNING *;
 
 -- name: GetGame :one
@@ -52,22 +48,8 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     common_room_open_day = $14, common_room_open_time = $15,
     common_room_close_day = $16, common_room_close_time = $17,
     schedule_timezone = $18,
-    -- The COALESCE is belt-and-braces only: it fires just for a caller that builds
-    -- UpdateGameParams by hand and leaves CharacterSheet nil. It is NOT a
-    -- preserve-on-absent contract, and must not be read as one.
-    --
-    -- UpdateGame is a full replace, not a patch. core.UpdateGameRequest.CharacterSheet
-    -- is a value, not a pointer, and the service marshals an empty config to '{}'
-    -- rather than nil, so a request that omits `character_sheet` RESETS the labels to
-    -- defaults. That is deliberate and is how the GM unsets them: the edit form clears
-    -- all three boxes and sends no key at all.
-    --
-    -- It also matches every other field here -- omitting `portrait_avatars` writes
-    -- false, omitting `title` fails validation. `banner_url` above is the one genuine
-    -- preserve-on-absent field, and it earns that by being a *string the caller can
-    -- leave nil. If character_sheet ever needs the same, it has to become a pointer
-    -- too; the COALESCE alone cannot express it.
-    character_sheet = COALESCE(sqlc.narg('character_sheet')::jsonb, games.character_sheet),
+    -- character_sheet is deliberately not here: the layout is written only by
+    -- UpdateGameCharacterSheet, so a settings save can never reset it.
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -215,6 +197,14 @@ RETURNING *;
 
 -- name: GetGameAutoAcceptAudience :one
 SELECT auto_accept_audience FROM games WHERE id = $1;
+
+-- name: UpdateGameCharacterSheet :one
+-- The Character Sheet editor's write. Replaces the whole document: the service
+-- validates it first, and the editor always sends the complete layout.
+UPDATE games
+SET character_sheet = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 -- name: UpdateGameAutoAcceptAudience :exec
 UPDATE games

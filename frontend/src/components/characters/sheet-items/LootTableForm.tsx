@@ -1,52 +1,23 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { Alert, Button, HelpTooltip, Input } from '@/components/ui';
+import { Alert, Button, HelpTooltip, Input, Select } from '@/components/ui';
 import type { LootTable, LootTableContent } from '@/types/games';
-import { AddItemModal } from './AddItemModal';
-import type { InventoryItem } from '@/types/characters';
+import { AddEntryModal } from './AddEntryModal';
+import { createEntry, type EntryEdit } from '@/lib/sheetEntries';
+import { lootCsvHelp, lootTableToCsv, parseLootTableCsv } from '@/lib/lootTableCsv';
+import { useSheetLayout, DEFAULT_SHEET_LAYOUT } from '@/hooks/useSheetLayout';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { DownloadIcon, TrashIcon, UploadIcon } from 'lucide-react';
-import Papa from 'papaparse'
 
 export interface EditLootTable {
   id?: number;
   name: string;
+  /** Key of the sheet tab the table rolls into. */
+  targetTab: string;
   items?: LootTableContent[];
   itemsChanged: boolean;
 }
-
-const CSVSeparatorCharacter = ',';
-
-/**
- * Item fields the CSV deliberately does not round-trip.
- *
- * `equipped` is written as a hardcoded `false` by AddItemModal and rendered as a
- * badge by ItemCard, but nothing can set it — there is no control for it anywhere
- * in the inventory UI. Exposing it through CSV would make the importer the only
- * way to equip an item, and it round-trips wrongly besides: CSV values parse as
- * strings, so an exported `false` returns as the truthy string "false" and the
- * badge lights up. Drop it in both directions until the field has real UI.
- */
-const CSV_EXCLUDED_FIELDS = new Set(['equipped']);
-
-const stripExcludedFields = (row: Record<string, unknown>): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(row).filter(([key]) => !CSV_EXCLUDED_FIELDS.has(key)));
-
-/**
- * Import/export help. Leads with the delimiter because it is the one rule that is
- * impossible to guess and fails silently in most spreadsheet exports, which
- * default to commas. Export-then-edit is offered first as the reliable path: it
- * hands the GM a correctly shaped file instead of asking them to build one.
- */
-const CSV_FORMAT_HELP =
-  `Comma-separated (${CSVSeparatorCharacter}) list. The first row must be ` +
-  `column headers and must include "name"; each row after it is one item. ` +
-  `Optional columns: description, quantity, category, value, weight. ` +
-  `Descriptions support Markdown; wrap any value containing "${CSVSeparatorCharacter}", ` +
-  `a line break, or a double quote in double quotes. ` +
-  `Importing replaces all current items. Easiest route: add one item, Export, ` +
-  `then edit that file and re-import it.`;
 
 interface LootTableFormProps {
   onClose: () => void;
@@ -57,6 +28,7 @@ interface LootTableFormProps {
 
 export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: LootTableFormProps) {
   const gameContext = useOptionalGameContext();
+  const { tabs } = useSheetLayout(gameContext?.game);
 
   const { data: lootTableContents } = useQuery({
     queryKey: ['lootTableContents', lootTable?.id],
@@ -75,9 +47,19 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
   const [formData, setFormData] = useState<EditLootTable>({
     id: lootTable?.id,
     name: lootTable?.name || '',
+    // A new table defaults to Inventory, where every table rolled before
+    // targets existed, or else the sheet's first tab.
+    targetTab: lootTable?.target_tab ?? (tabs.some((tab) => tab.key === 'inventory') ? 'inventory' : tabs[0]?.key ?? ''),
     items:  undefined,
     itemsChanged: false
   });
+
+  // The table's entries use its target tab's schema. A target the sheet no
+  // longer has (a layout saved before targets existed) falls back to the
+  // built-in's default fields, or to name only.
+  const targetTab = tabs.find((tab) => tab.key === formData.targetTab);
+  const targetFields =
+    targetTab?.fields ?? DEFAULT_SHEET_LAYOUT.find((tab) => tab.key === formData.targetTab)?.fields ?? [];
   const [isAddingContent, setIsAddingContent] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -86,9 +68,13 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
   // Empty tables are allowed on purpose: GMs build a table before they have
   // decided its contents, and importing a CSV into a saved table is a normal
   // flow. Rolling on an empty table is already handled in depth — the API
-  // returns 400 and ItemsManager surfaces that as an error toast — so
+  // returns 400 and useLootRoll surfaces that as an error toast — so
   // blocking creation here only got in the way of authoring.
-  const validationError = !formData.name.trim() ? 'Give the loot table a name.' : null;
+  const validationError = !formData.name.trim()
+    ? 'Give the loot table a name.'
+    : !formData.targetTab
+      ? 'Add a tab to the character sheet for this table to roll into.'
+      : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,91 +83,17 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
   };
 
   
-  const addItem = (itemData: Omit<InventoryItem, 'id'>) => {
+  const addItem = (edit: EntryEdit) => {
+    // An entry minus its id: every roll or pick gets a fresh one.
+    const { id: _id, ...data } = createEntry('', edit);
     const newContent : LootTableContent = {
       id: 0,
-      name: itemData.name,
-      data: JSON.stringify(itemData),
+      name: data.name,
+      data: JSON.stringify(data),
     }
     setFormData(p => ({...p, items: [...(p.items || []), newContent], itemsChanged: true}));
     setIsAddingContent(false);
   };
-
-  /**
-   * Parse an uploaded CSV into loot table contents.
-   *
-   * Returns either the parsed items or a human-readable error. Both failure modes
-   * here are silent without this: papaparse does not error on a wrong delimiter
-   * (the whole line becomes one column) or a missing `name` header, so the import
-   * would replace the table with rows whose name is undefined.
-   */
-  const processCSVFile = (csvText: string): { items: LootTableContent[] } | { error: string } => {
-    const parsed = Papa.parse<Record<string, string>>(csvText, {
-      delimiter: CSVSeparatorCharacter,
-      header: true,
-      // A trailing newline is normal in any editor-saved file, and without this it
-      // parses as a final row of empty strings — a phantom nameless item that the
-      // server then rejects, failing the whole import.
-      skipEmptyLines: true,
-    });
-
-    if (!parsed.meta.fields?.includes('name')) {
-      return {
-        error: `The CSV needs a "name" column. Columns must be separated by "${CSVSeparatorCharacter}".`,
-      };
-    }
-
-    // A row with more fields than headers means an unquoted value contained the
-    // delimiter — overwhelmingly a description like "Sharp, very sharp". Papaparse
-    // keeps the first part and stashes the rest in __parsed_extra, so accepting
-    // this row would silently truncate the GM's text. Name the row and the fix.
-    const raggedRow = parsed.errors.find((e) => e.code === 'TooManyFields');
-    if (raggedRow) {
-      const rowLabel = typeof raggedRow.row === 'number' ? `Row ${raggedRow.row + 1}` : 'A row';
-      return {
-        error:
-          `${rowLabel} has more values than there are columns. A value containing "${CSVSeparatorCharacter}" ` +
-          `must be wrapped in double quotes — for example: "Sharp${CSVSeparatorCharacter} very sharp".`,
-      };
-    }
-
-    // Guard rows that are blank or name-less rather than sending them to a server
-    // that will reject the batch and name a row number the GM cannot see.
-    const items = parsed.data
-      .filter((row) => Object.values(row).some((v) => v?.trim()))
-      // Strip on the way in too: a hand-authored CSV could otherwise set a field
-      // the UI has no control for.
-      .map((row) => ({ id: 0, name: (row['name'] ?? '').trim(), data: JSON.stringify(stripExcludedFields(row)) }));
-
-    const nameless = items.findIndex((i) => !i.name);
-    if (nameless !== -1) {
-      return { error: `Row ${nameless + 1} has no name. Every item needs a value in the "name" column.` };
-    }
-    if (items.length === 0) {
-      return { error: 'That file has no item rows.' };
-    }
-    return { items };
-  }
-
-  const createCSVString = (contents: LootTableContent[]): string => {
-    // Items are GM-authored JSON and can be malformed or have differing keys, so
-    // parse defensively and union the columns. Passing ragged objects straight to
-    // unparse emits a trailing all-empty row, which reimporting then reads back as
-    // a junk item — the export/import round trip has to be lossless.
-    const rows = contents.flatMap((i) => {
-      try {
-        const parsed = JSON.parse(i.data);
-        return parsed && typeof parsed === 'object'
-          ? [stripExcludedFields(parsed as Record<string, unknown>)]
-          : [{ name: i.name }];
-      } catch {
-        return [{ name: i.name }];
-      }
-    });
-    const columns = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
-    if (columns.length === 0) return '';
-    return Papa.unparse(rows, { delimiter: CSVSeparatorCharacter, columns });
-  }
 
   const importLootTable = (event: ChangeEvent<HTMLInputElement>): void => {
     if (!event.target.files?.length) {
@@ -193,7 +105,7 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
         setImportError('That file could not be read.');
         return;
       }
-      const result = processCSVFile(e.target.result as string);
+      const result = parseLootTableCsv(e.target.result as string, targetFields);
       if ('error' in result) {
         setImportError(result.error);
         return;
@@ -217,7 +129,7 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
     // descriptions routinely contain (accents, em dashes, curly quotes). A Blob
     // URL carries UTF-8 directly and needs no base64 step.
     const url = URL.createObjectURL(
-      new Blob([createCSVString(formData.items || [])], { type: 'text/csv;charset=utf-8;' })
+      new Blob([lootTableToCsv(formData.items || [], targetFields)], { type: 'text/csv;charset=utf-8;' })
     );
     const el = document.createElement('a');
     el.setAttribute('href', url);
@@ -243,7 +155,7 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
             Bulk edit with CSV
             {/* Right-anchored: the icon now sits near the modal's right edge, where
                 the default left anchoring overflows it. */}
-            <HelpTooltip text={CSV_FORMAT_HELP} align="right" />
+            <HelpTooltip text={lootCsvHelp(targetFields)} align="right" />
           </span>
 
           {/* Labelled, not icon-only: a bare up-arrow gives no hint that this
@@ -294,6 +206,34 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
                 placeholder="e.g., 'Normal Items'"
                 helperText="Give this loot table a custom name"
               />
+            </div>
+            <div>
+              {/* Locked while the table has items: they were written for this
+                  tab's fields, and the server refuses to reinterpret them. */}
+              <Select
+                id="loot-table-target-tab"
+                label="Rolls into"
+                value={formData.targetTab}
+                disabled={isSubmitting || hasItems}
+                onChange={(e) => setFormData((prev) => ({ ...prev, targetTab: e.target.value }))}
+                helperText={
+                  hasItems
+                    ? "Remove this table's items to choose a different tab: they were written for this tab's fields."
+                    : 'The character sheet tab a pick or roll from this table adds to.'
+                }
+              >
+                {!targetTab && formData.targetTab && (
+                  <option value={formData.targetTab}>Removed tab</option>
+                )}
+                {tabs.map((tab) => (
+                  <option key={tab.key} value={tab.key}>{tab.label}</option>
+                ))}
+              </Select>
+              {tabs.length === 0 && (
+                <Alert variant="warning" className="mt-2">
+                  This game's character sheet has no tabs for a loot table to roll into.
+                </Alert>
+              )}
             </div>
             <div >
               {formData.items && formData.items.length > 0 
@@ -364,14 +304,17 @@ export function LootTableForm({ onClose, onSubmit, isSubmitting, lootTable }: Lo
       {/*
         Add Loot Table Content Modal. loot_table_random is intentionally left off:
         this modal defines the contents of a loot table, so sourcing an item at random
-        *from* a loot table makes no sense here, and onAddRandom is unreachable.
+        *from* a loot table makes no sense here, and no onAddRandom is passed.
       */}
       {isAddingContent && (
-        <AddItemModal
+        <AddEntryModal
+          fields={targetFields}
           onAdd={addItem}
-          onAddRandom={() => {}}
           onCancel={() => {setIsAddingContent(false)}}
-          allowedLootModes={['manual', 'loot_table']}
+          lootModes={['manual', 'loot_table']}
+          // "Pick from a table" offers only tables rolling into the same tab,
+          // whose entries share this schema.
+          lootTargetTab={formData.targetTab}
         />
       )}
     </div>

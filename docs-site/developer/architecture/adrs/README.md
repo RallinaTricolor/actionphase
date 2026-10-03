@@ -14,6 +14,7 @@ This directory contains Architecture Decision Records for ActionPhase. Each ADR 
 | [006](006-observability-approach.md) | Observability Approach | **Superseded** | 2025-08-07 (superseded 2026-06-04) |
 | [007](007-testing-strategy.md) | Testing Strategy | Accepted | 2025-08-07 |
 | [008](008-community-scoping.md) | Community Scoping, Grandfathered Games, and Best-Effort Webhooks | Accepted | 2026-09-02 |
+| [009](009-character-sheet-tab-composition.md) | Character Sheet Tabs as Generic Entries with GM-Defined Schemas | Accepted | 2026-09-30 |
 
 ⚠️ = the decision still holds, but specifics in the ADR diverge from the shipped
 code. Each such ADR carries an **Implementation Divergence** section recording

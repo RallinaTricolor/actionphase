@@ -123,7 +123,7 @@ func TestCharacterRequestValidation(t *testing.T) {
 		// field_value carries no `required` tag on purpose: clearing a sheet
 		// field is a normal edit, and the frontend sends "" to do it.
 		rec := send(t, http.MethodPost, dataPath,
-			`{"module_type": "basic", "field_name": "notes", "field_value": "", "field_type": "text", "is_public": false}`)
+			`{"module_type": "notes", "field_name": "private_notes", "field_value": "", "field_type": "text", "is_public": false}`)
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 	})

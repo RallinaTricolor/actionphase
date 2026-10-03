@@ -7,23 +7,26 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createLootTable = `-- name: CreateLootTable :one
 INSERT INTO game_loot_tables (
-    game_id, name
+    game_id, name, target_tab
 ) VALUES (
-    $1, $2
-) RETURNING id, game_id, name, created_at, updated_at
+    $1, $2, $3
+) RETURNING id, game_id, name, created_at, updated_at, target_tab
 `
 
 type CreateLootTableParams struct {
-	GameID int32  `json:"game_id"`
-	Name   string `json:"name"`
+	GameID    int32  `json:"game_id"`
+	Name      string `json:"name"`
+	TargetTab string `json:"target_tab"`
 }
 
 func (q *Queries) CreateLootTable(ctx context.Context, arg CreateLootTableParams) (GameLootTable, error) {
-	row := q.db.QueryRow(ctx, createLootTable, arg.GameID, arg.Name)
+	row := q.db.QueryRow(ctx, createLootTable, arg.GameID, arg.Name, arg.TargetTab)
 	var i GameLootTable
 	err := row.Scan(
 		&i.ID,
@@ -31,6 +34,7 @@ func (q *Queries) CreateLootTable(ctx context.Context, arg CreateLootTableParams
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TargetTab,
 	)
 	return i, err
 }
@@ -44,9 +48,35 @@ func (q *Queries) DeleteLootTable(ctx context.Context, id int32) error {
 	return err
 }
 
+const getGameLootTable = `-- name: GetGameLootTable :one
+SELECT
+    id, game_id, name, created_at, updated_at, target_tab
+FROM game_loot_tables
+WHERE game_id = $1 AND id = $2
+`
+
+type GetGameLootTableParams struct {
+	GameID int32 `json:"game_id"`
+	ID     int32 `json:"id"`
+}
+
+func (q *Queries) GetGameLootTable(ctx context.Context, arg GetGameLootTableParams) (GameLootTable, error) {
+	row := q.db.QueryRow(ctx, getGameLootTable, arg.GameID, arg.ID)
+	var i GameLootTable
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TargetTab,
+	)
+	return i, err
+}
+
 const getLootTables = `-- name: GetLootTables :many
 SELECT
-    id, game_id, name, created_at, updated_at
+    id, game_id, name, created_at, updated_at, target_tab
 FROM game_loot_tables
 WHERE game_id = $1
 ORDER BY created_at ASC
@@ -67,6 +97,7 @@ func (q *Queries) GetLootTables(ctx context.Context, gameID int32) ([]GameLootTa
 			&i.Name,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TargetTab,
 		); err != nil {
 			return nil, err
 		}
@@ -80,7 +111,7 @@ func (q *Queries) GetLootTables(ctx context.Context, gameID int32) ([]GameLootTa
 
 const getNonEmptyLootTables = `-- name: GetNonEmptyLootTables :many
 SELECT
-    id, game_id, name, created_at, updated_at
+    id, game_id, name, created_at, updated_at, target_tab
 FROM game_loot_tables t
 WHERE game_id = $1 AND EXISTS(SELECT id FROM game_loot_table_contents WHERE loot_table_id = t.id LIMIT 1)
 ORDER BY created_at ASC
@@ -102,6 +133,7 @@ func (q *Queries) GetNonEmptyLootTables(ctx context.Context, gameID int32) ([]Ga
 			&i.Name,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TargetTab,
 		); err != nil {
 			return nil, err
 		}
@@ -150,19 +182,31 @@ func (q *Queries) TouchLootTable(ctx context.Context, id int32) error {
 }
 
 const updateLootTable = `-- name: UpdateLootTable :one
-UPDATE game_loot_tables
-SET name = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, game_id, name, created_at, updated_at
+UPDATE game_loot_tables t
+SET name = $1,
+    target_tab = COALESCE($2, t.target_tab),
+    updated_at = NOW()
+WHERE t.id = $3
+  AND (
+    $2::text IS NULL
+    OR t.target_tab = $2
+    OR NOT EXISTS (SELECT 1 FROM game_loot_table_contents c WHERE c.loot_table_id = t.id)
+  )
+RETURNING id, game_id, name, created_at, updated_at, target_tab
 `
 
 type UpdateLootTableParams struct {
-	ID   int32  `json:"id"`
-	Name string `json:"name"`
+	Name      string      `json:"name"`
+	TargetTab pgtype.Text `json:"target_tab"`
+	ID        int32       `json:"id"`
 }
 
+// A NULL target_tab keeps the current one. A different target applies only
+// while the table is empty, since its contents were authored against the old
+// tab's fields: otherwise no row matches and the caller reports the lock. Kept
+// in the WHERE so the emptiness check and the write can't race.
 func (q *Queries) UpdateLootTable(ctx context.Context, arg UpdateLootTableParams) (GameLootTable, error) {
-	row := q.db.QueryRow(ctx, updateLootTable, arg.ID, arg.Name)
+	row := q.db.QueryRow(ctx, updateLootTable, arg.Name, arg.TargetTab, arg.ID)
 	var i GameLootTable
 	err := row.Scan(
 		&i.ID,
@@ -170,6 +214,7 @@ func (q *Queries) UpdateLootTable(ctx context.Context, arg UpdateLootTableParams
 		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TargetTab,
 	)
 	return i, err
 }

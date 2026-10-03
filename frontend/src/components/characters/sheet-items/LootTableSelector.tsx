@@ -15,12 +15,10 @@ interface LootTableSelectorProps {
 }
 
 /**
- * Loot table (and optionally item) pickers for ItemForm.
+ * Loot table (and optionally item) pickers for LootModeForm.
  *
- * Split out of ItemForm deliberately: both endpoints are GM-only and this is the
- * only part of the form that needs React Query. Keeping the hooks here means
- * ItemForm renders without a QueryClientProvider and issues no GM-only requests
- * for the common case of adding a plain item.
+ * Split out deliberately: the contents endpoint is GM-only, so it is fetched
+ * only once a loot mode is actually chosen.
  */
 export function LootTableSelector({
   gameId,

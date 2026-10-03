@@ -211,16 +211,12 @@ INSERT INTO games (
     common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone,
     -- Required by the application on every new game (req 5), though the column
     -- stays nullable so pre-community games remain valid. See the migration.
-    community_id,
-    character_sheet
+    -- character_sheet is left to its column DEFAULT ('{}', the default
+    -- layout). A GM customises it afterwards via UpdateGameCharacterSheet.
+    community_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18, $19,
-    -- COALESCE so a caller that builds CreateGameParams directly and leaves
-    -- CharacterSheet nil gets '{}' rather than a NOT NULL violation. Naming the
-    -- column in the INSERT disables the column DEFAULT, so the default has to be
-    -- restated here.
-    COALESCE($20::jsonb, '{}'::jsonb)
+    $14, $15, $16, $17, $18, $19
 ) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
 `
 
@@ -244,7 +240,6 @@ type CreateGameParams struct {
 	CommonRoomCloseTime     pgtype.Time        `json:"common_room_close_time"`
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
-	CharacterSheet          []byte             `json:"character_sheet"`
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
@@ -268,7 +263,6 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.CommonRoomCloseTime,
 		arg.ScheduleTimezone,
 		arg.CommunityID,
-		arg.CharacterSheet,
 	)
 	var i Game
 	err := row.Scan(
@@ -988,22 +982,8 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     common_room_open_day = $14, common_room_open_time = $15,
     common_room_close_day = $16, common_room_close_time = $17,
     schedule_timezone = $18,
-    -- The COALESCE is belt-and-braces only: it fires just for a caller that builds
-    -- UpdateGameParams by hand and leaves CharacterSheet nil. It is NOT a
-    -- preserve-on-absent contract, and must not be read as one.
-    --
-    -- UpdateGame is a full replace, not a patch. core.UpdateGameRequest.CharacterSheet
-    -- is a value, not a pointer, and the service marshals an empty config to '{}'
-    -- rather than nil, so a request that omits ` + "`" + `character_sheet` + "`" + ` RESETS the labels to
-    -- defaults. That is deliberate and is how the GM unsets them: the edit form clears
-    -- all three boxes and sends no key at all.
-    --
-    -- It also matches every other field here -- omitting ` + "`" + `portrait_avatars` + "`" + ` writes
-    -- false, omitting ` + "`" + `title` + "`" + ` fails validation. ` + "`" + `banner_url` + "`" + ` above is the one genuine
-    -- preserve-on-absent field, and it earns that by being a *string the caller can
-    -- leave nil. If character_sheet ever needs the same, it has to become a pointer
-    -- too; the COALESCE alone cannot express it.
-    character_sheet = COALESCE($20::jsonb, games.character_sheet),
+    -- character_sheet is deliberately not here: the layout is written only by
+    -- UpdateGameCharacterSheet, so a settings save can never reset it.
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
@@ -1029,7 +1009,6 @@ type UpdateGameParams struct {
 	CommonRoomCloseTime     pgtype.Time        `json:"common_room_close_time"`
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
-	CharacterSheet          []byte             `json:"character_sheet"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error) {
@@ -1053,7 +1032,6 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.CommonRoomCloseTime,
 		arg.ScheduleTimezone,
 		arg.CommunityID,
-		arg.CharacterSheet,
 	)
 	var i Game
 	err := row.Scan(
@@ -1115,6 +1093,52 @@ type UpdateGameBannerURLParams struct {
 
 func (q *Queries) UpdateGameBannerURL(ctx context.Context, arg UpdateGameBannerURLParams) (Game, error) {
 	row := q.db.QueryRow(ctx, updateGameBannerURL, arg.ID, arg.BannerUrl)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.GmUserID,
+		&i.State,
+		&i.Genre,
+		&i.StartDate,
+		&i.EndDate,
+		&i.RecruitmentDeadline,
+		&i.MaxPlayers,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
+		&i.PortraitAvatars,
+		&i.BannerUrl,
+		&i.CommonRoomOpenDay,
+		&i.CommonRoomOpenTime,
+		&i.CommonRoomCloseDay,
+		&i.CommonRoomCloseTime,
+		&i.ScheduleTimezone,
+		&i.CharacterSheet,
+		&i.CommunityID,
+	)
+	return i, err
+}
+
+const updateGameCharacterSheet = `-- name: UpdateGameCharacterSheet :one
+UPDATE games
+SET character_sheet = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+`
+
+type UpdateGameCharacterSheetParams struct {
+	ID             int32  `json:"id"`
+	CharacterSheet []byte `json:"character_sheet"`
+}
+
+// The Character Sheet editor's write. Replaces the whole document: the service
+// validates it first, and the editor always sends the complete layout.
+func (q *Queries) UpdateGameCharacterSheet(ctx context.Context, arg UpdateGameCharacterSheetParams) (Game, error) {
+	row := q.db.QueryRow(ctx, updateGameCharacterSheet, arg.ID, arg.CharacterSheet)
 	var i Game
 	err := row.Scan(
 		&i.ID,

@@ -1,16 +1,45 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { apiClient } from '../lib/api';
-import type { CharacterData, CharacterSkill, InventoryItem } from '../types/characters';
-import { skillRank } from '../types/characters';
+import { storageFieldName, type CharacterData, type CharacterSheetField, type SheetTab } from '../types/characters';
+import { normalizeEntry, type RawSheetEntry, type SheetEntry } from '../lib/sheetEntries';
+import { useOptionalGameContext } from '../contexts/GameContext';
+import { useSheetLayout } from './useSheetLayout';
 
 export interface SheetItem {
   id: string;
   name: string;
-  type: 'skill' | 'item';
+  /**
+   * The kind written into a reference token, `[[Name|kind:id]]`. Stored in
+   * posts, so it never changes: `skill` and `item` for the two tabs that were
+   * mentionable first, the tab key for every other. See sheetRefKind.
+   */
+  refKind: string;
+  /** The tab the entry lives on. */
+  tabKey: string;
+  /** The tab's name on this game's sheet, for badges and group headings. */
+  tabLabel: string;
   description?: string;
-  /** Human-readable metadata: skill rank/category, item category/quantity */
+  /** Human-readable metadata from the tab's choice and meta-line fields. */
   metadata?: string;
+}
+
+/**
+ * The kind a reference token names an entry's tab by. Skills and Inventory
+ * keep the `skill`/`item` their tokens have always carried, so existing posts
+ * still resolve; any other tab uses its key, which never changes either.
+ */
+function sheetRefKind(tabKey: string): string {
+  if (tabKey === 'skills') return 'skill';
+  if (tabKey === 'inventory') return 'item';
+  return tabKey;
+}
+
+/** A tab's badge colour: the two first-mentionable tabs keep theirs, every other tab shares one. */
+export function sheetItemBadgeVariant(tabKey: string): 'success' | 'warning' | 'primary' {
+  if (tabKey === 'skills') return 'success';
+  if (tabKey === 'inventory') return 'warning';
+  return 'primary';
 }
 
 function parseJsonField<T>(value: string | undefined): T[] {
@@ -23,55 +52,95 @@ function parseJsonField<T>(value: string | undefined): T[] {
   }
 }
 
-function skillToSheetItem(s: CharacterSkill): SheetItem {
-  // Via skillRank so mention metadata reads the same value the card shows,
-  // including for rows still holding the pre-rename `level` key.
-  const rank = skillRank(s);
-  const meta = [s.category, rank ? `Rank ${rank}` : undefined]
-    .filter(Boolean)
-    .join(' · ');
-  return {
-    id: s.id,
-    name: s.name,
-    type: 'skill',
-    description: s.description,
-    metadata: meta || undefined,
-  };
-}
+const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 
-function itemToSheetItem(i: InventoryItem): SheetItem {
-  const meta = [i.category, i.quantity > 1 ? `×${i.quantity}` : undefined]
-    .filter(Boolean)
-    .join(' · ');
-  return {
-    id: i.id,
-    name: i.name,
-    type: 'item',
-    description: i.description,
-    metadata: meta || undefined,
-  };
+/**
+ * A number field's value as text. Number(), not a typeof check: an entry
+ * rolled from a CSV-imported loot table can hold "3".
+ */
+const numberText = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toLocaleString() : undefined;
+};
+
+/**
+ * A track field's value as text, "value / max" the way the card reads, or the
+ * bare count for an unbounded track. A track with no value shows nothing.
+ */
+const trackText = (stored: unknown) => {
+  if (typeof stored !== 'object' || stored === null) return undefined;
+  const { value, max } = stored as Record<string, unknown>;
+  const shown = numberText(value);
+  if (!shown) return undefined;
+  const bound = Number(max) > 0 ? numberText(max) : undefined;
+  return bound ? `${shown} / ${bound}` : shown;
+};
+
+type IdentifiedEntry = RawSheetEntry & { id: string };
+
+/** Rows a mention can key by. The name is checked after normalizeEntry. */
+const hasId = (entry: RawSheetEntry): entry is IdentifiedEntry => typeof entry.id === 'string' && !!entry.id;
+
+/**
+ * The fields worth a glance in a tooltip, in schema order: a choice as its
+ * value (it's a badge on the card), and a text, number or track field as
+ * "Label: value", the way the card's meta line reads. Descriptions have their
+ * own slot; checkboxes are left to the sheet.
+ */
+const metaText: Partial<Record<CharacterSheetField['type'], (value: unknown) => string | undefined>> = {
+  text,
+  number: numberText,
+  track: trackText,
+};
+
+function metadataOf(tab: SheetTab, entry: SheetEntry): string | undefined {
+  const parts = tab.fields.flatMap((field) => {
+    const value = entry[field.key];
+    if (field.type === 'select') return text(value) ?? [];
+    const shown = metaText[field.type]?.(value);
+    return shown ? `${field.label}: ${shown}` : [];
+  });
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 /**
  * Turn one character's raw sheet rows into the flat item list the [[ref]]
- * tooltips resolve against.
+ * tooltips resolve against: every entry on every tab of the game's layout.
  *
  * Rows the caller may not see are absent from the payload -- the backend has
  * already filtered them -- so anything reaching this function is showable.
  */
-function toSheetItems(data: CharacterData[] | undefined): SheetItem[] {
+function toSheetItems(data: CharacterData[] | undefined, tabs: readonly SheetTab[]): SheetItem[] {
   if (!data) return [];
 
-  const getField = (moduleType: string, fieldName: string): string | undefined =>
-    data.find((d) => d.module_type === moduleType && d.field_name === fieldName)?.field_value;
+  return tabs.flatMap((tab) => {
+    const row = data.find((d) => d.module_type === tab.key && d.field_name === storageFieldName(tab.key));
+    return parseJsonField<RawSheetEntry>(row?.field_value)
+      .filter(hasId)
+      // Via normalizeEntry so the name and metadata read the same values the
+      // card shows, including for rows still holding a legacy key (a Numbers
+      // row named by `type`).
+      .map((raw) => normalizeEntry(tab.key, raw))
+      .filter((entry) => !!entry.name)
+      .map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        refKind: sheetRefKind(tab.key),
+        tabKey: tab.key,
+        tabLabel: tab.label,
+        description: text(entry.description),
+        metadata: metadataOf(tab, entry),
+      }));
+  });
+}
 
-  const skills = parseJsonField<CharacterSkill>(getField('skills', 'skills'));
-  const items = parseJsonField<InventoryItem>(getField('inventory', 'items'));
-
-  return [
-    ...skills.filter((s) => s.id && s.name).map(skillToSheetItem),
-    ...items.filter((i) => i.id && i.name).map(itemToSheetItem),
-  ];
+/**
+ * The game's sheet tabs, from GameContext. Outside a game (none of today's
+ * callers) this is the default layout.
+ */
+function useLayoutTabs(): readonly SheetTab[] {
+  return useSheetLayout(useOptionalGameContext()?.game).tabs;
 }
 
 export function useCharacterSheetItems(characterId: number | null): SheetItem[] {
@@ -83,7 +152,8 @@ export function useCharacterSheetItems(characterId: number | null): SheetItem[] 
     staleTime: 60_000,
   });
 
-  return useMemo(() => toSheetItems(data), [data]);
+  const tabs = useLayoutTabs();
+  return useMemo(() => toSheetItems(data, tabs), [data, tabs]);
 }
 
 /**
@@ -109,6 +179,7 @@ export function useGameCharacterSheetItems(gameId: number | null): Map<number, S
     staleTime: 60_000,
   });
 
+  const tabs = useLayoutTabs();
   return useMemo(() => {
     const byCharacter = new Map<number, SheetItem[]>();
     if (!data) return byCharacter;
@@ -116,8 +187,8 @@ export function useGameCharacterSheetItems(gameId: number | null): Map<number, S
     for (const [characterId, rows] of Object.entries(data)) {
       const id = Number(characterId);
       if (Number.isNaN(id)) continue;
-      byCharacter.set(id, toSheetItems(rows));
+      byCharacter.set(id, toSheetItems(rows, tabs));
     }
     return byCharacter;
-  }, [data]);
+  }, [data, tabs]);
 }
