@@ -699,7 +699,7 @@ committed, and `just verify` fails when either is stale. Never hand-edit a
   - `phases/` - Phase service (service, crud, transitions, validation, history, scheduler)
   - `actions/` - Action submission service (service, submissions, results, validation, queries,
     draft_updates, staged, staged_worker)
-  - `messages/` - Message service (service, posts, draft_posts, comments, reactions, validation,
+  - `messages/` - Message service (service, posts, draft_posts, comments, validation,
     read_tracking, audience, character_messages)
   - `*.go` - Other services (games, characters, users, sessions, notifications, conversations, handouts, dashboard, deadlines, polls, user_preferences)
 - `backend/pkg/db/queries/*.sql` - SQL queries (generates models/)

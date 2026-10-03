@@ -925,18 +925,6 @@ type MessageServiceInterface interface {
 	// GetUserPostsInGame retrieves all posts by a user in a game
 	GetUserPostsInGame(ctx context.Context, gameID, userID int32) ([]MessageWithDetails, error)
 
-	// AddReaction adds a reaction to a message
-	AddReaction(ctx context.Context, messageID, userID int32, reactionType string) (*models.MessageReaction, error)
-
-	// RemoveReaction removes a reaction from a message
-	RemoveReaction(ctx context.Context, messageID, userID int32, reactionType string) error
-
-	// GetMessageReactions retrieves all reactions for a message
-	GetMessageReactions(ctx context.Context, messageID int32) ([]models.GetMessageReactionsRow, error)
-
-	// GetReactionCounts retrieves reaction counts grouped by type
-	GetReactionCounts(ctx context.Context, messageID int32) ([]models.GetReactionCountsRow, error)
-
 	// ValidateCharacterOwnership verifies character belongs to author and game
 	ValidateCharacterOwnership(ctx context.Context, characterID, authorID, gameID int32) error
 
