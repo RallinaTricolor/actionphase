@@ -43,13 +43,15 @@ export function HelpTooltip({ text, align = 'left' }: HelpTooltipProps) {
       />
 
       {/* Tooltip panel — anchored to the side given by `align` so it stays within
-          its container's bounds */}
+          its container's bounds. `hidden`, not `invisible`: an invisible panel still
+          takes up layout space, and a 16rem panel near the right of a phone screen
+          widens the page so it scrolls sideways even though nothing looks wrong. */}
       <span
         role="tooltip"
         className={`
-          invisible group-hover:visible
+          hidden group-hover:block
           absolute ${alignClasses} bottom-full mb-2
-          w-64 p-3 rounded-lg
+          w-64 max-w-[calc(100vw-2rem)] p-3 rounded-lg
           bg-surface-raised border border-theme-default shadow-lg
           text-xs text-content-primary font-normal
           z-50 pointer-events-none

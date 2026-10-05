@@ -489,23 +489,6 @@ type Message struct {
 	CharacterAvatarUrlAtPost pgtype.Text `json:"character_avatar_url_at_post"`
 }
 
-type MessageReaction struct {
-	ID           int32              `json:"id"`
-	MessageID    int32              `json:"message_id"`
-	UserID       int32              `json:"user_id"`
-	ReactionType string             `json:"reaction_type"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-}
-
-type MessageRecipient struct {
-	ID          int32              `json:"id"`
-	MessageID   int32              `json:"message_id"`
-	RecipientID int32              `json:"recipient_id"`
-	IsRead      bool               `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-}
-
 type Notification struct {
 	ID          int32              `json:"id"`
 	UserID      int32              `json:"user_id"`

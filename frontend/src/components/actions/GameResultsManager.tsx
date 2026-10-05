@@ -66,14 +66,14 @@ export function GameResultsManager({ gameId, currentPhase, className = '' }: Gam
   return (
     <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-xl font-semibold text-content-primary">Action Results</h2>
             <p className="text-sm text-content-secondary mt-1">
               Manage results sent to players
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="warning">
               {unpublishedResults.length} Unpublished
             </Badge>

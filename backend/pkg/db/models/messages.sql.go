@@ -36,36 +36,6 @@ func (q *Queries) AddCommentFavorite(ctx context.Context, arg AddCommentFavorite
 	return err
 }
 
-const addReaction = `-- name: AddReaction :one
-
-INSERT INTO message_reactions (message_id, user_id, reaction_type)
-VALUES ($1, $2, $3)
-ON CONFLICT (message_id, user_id, reaction_type) DO NOTHING
-RETURNING id, message_id, user_id, reaction_type, created_at
-`
-
-type AddReactionParams struct {
-	MessageID    int32  `json:"message_id"`
-	UserID       int32  `json:"user_id"`
-	ReactionType string `json:"reaction_type"`
-}
-
-// ============================================================================
-// REACTIONS (Optional - for future use)
-// ============================================================================
-func (q *Queries) AddReaction(ctx context.Context, arg AddReactionParams) (MessageReaction, error) {
-	row := q.db.QueryRow(ctx, addReaction, arg.MessageID, arg.UserID, arg.ReactionType)
-	var i MessageReaction
-	err := row.Scan(
-		&i.ID,
-		&i.MessageID,
-		&i.UserID,
-		&i.ReactionType,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const checkCommentOwnership = `-- name: CheckCommentOwnership :one
 SELECT author_id, deleted_at
 FROM messages
@@ -1243,50 +1213,6 @@ func (q *Queries) GetMessagePhaseID(ctx context.Context, id int32) (pgtype.Int4,
 	return phase_id, err
 }
 
-const getMessageReactions = `-- name: GetMessageReactions :many
-SELECT mr.id, mr.message_id, mr.user_id, mr.reaction_type, mr.created_at, u.username
-FROM message_reactions mr
-JOIN users u ON mr.user_id = u.id
-WHERE mr.message_id = $1
-ORDER BY mr.created_at
-`
-
-type GetMessageReactionsRow struct {
-	ID           int32              `json:"id"`
-	MessageID    int32              `json:"message_id"`
-	UserID       int32              `json:"user_id"`
-	ReactionType string             `json:"reaction_type"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	Username     string             `json:"username"`
-}
-
-func (q *Queries) GetMessageReactions(ctx context.Context, messageID int32) ([]GetMessageReactionsRow, error) {
-	rows, err := q.db.Query(ctx, getMessageReactions, messageID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetMessageReactionsRow
-	for rows.Next() {
-		var i GetMessageReactionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.MessageID,
-			&i.UserID,
-			&i.ReactionType,
-			&i.CreatedAt,
-			&i.Username,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getMessageWithParentContext = `-- name: GetMessageWithParentContext :many
 WITH RECURSIVE parent_chain AS (
     -- Base case: Start with the target message.
@@ -1800,38 +1726,6 @@ func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, gameID int32) ([]
 			&i.TotalComments,
 			&i.LatestCommentAt,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getReactionCounts = `-- name: GetReactionCounts :many
-SELECT reaction_type, COUNT(*) as count
-FROM message_reactions
-WHERE message_id = $1
-GROUP BY reaction_type
-`
-
-type GetReactionCountsRow struct {
-	ReactionType string `json:"reaction_type"`
-	Count        int64  `json:"count"`
-}
-
-func (q *Queries) GetReactionCounts(ctx context.Context, messageID int32) ([]GetReactionCountsRow, error) {
-	rows, err := q.db.Query(ctx, getReactionCounts, messageID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetReactionCountsRow
-	for rows.Next() {
-		var i GetReactionCountsRow
-		if err := rows.Scan(&i.ReactionType, &i.Count); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -2606,22 +2500,6 @@ type RemoveCommentFavoriteParams struct {
 // Remove a favorite record
 func (q *Queries) RemoveCommentFavorite(ctx context.Context, arg RemoveCommentFavoriteParams) error {
 	_, err := q.db.Exec(ctx, removeCommentFavorite, arg.UserID, arg.CommentID)
-	return err
-}
-
-const removeReaction = `-- name: RemoveReaction :exec
-DELETE FROM message_reactions
-WHERE message_id = $1 AND user_id = $2 AND reaction_type = $3
-`
-
-type RemoveReactionParams struct {
-	MessageID    int32  `json:"message_id"`
-	UserID       int32  `json:"user_id"`
-	ReactionType string `json:"reaction_type"`
-}
-
-func (q *Queries) RemoveReaction(ctx context.Context, arg RemoveReactionParams) error {
-	_, err := q.db.Exec(ctx, removeReaction, arg.MessageID, arg.UserID, arg.ReactionType)
 	return err
 }
 
