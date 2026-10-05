@@ -540,25 +540,40 @@ WHERE user_id = $1 AND post_id = $2;
 
 -- name: GetUserReadMarkersForGame :many
 -- Get all read markers for a user in a specific game
--- Used to batch-check which posts have unread content
-SELECT * FROM user_common_room_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY last_read_at DESC;
+-- Used to batch-check which posts have unread content.
+-- Markers left over from before the viewer lost access to a restricted post
+-- are dropped, so the post's ID doesn't surface here.
+SELECT ucr.* FROM user_common_room_reads ucr
+JOIN messages root ON root.id = ucr.post_id
+WHERE ucr.user_id = sqlc.arg(viewer_user_id)::int
+  AND ucr.game_id = sqlc.arg(game_id)
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+ORDER BY ucr.last_read_at DESC;
 
 -- name: GetPostsWithUnreadCount :many
 -- Get posts with their total comment count and last comment timestamp
--- Frontend will compare these with read markers to determine unread status
+-- Frontend will compare these with read markers to determine unread status.
+-- Restricted posts the viewer can't see are left out. For a post,
+-- root_post_id is its own ID, so root is the post itself.
 SELECT
     m.id as post_id,
     m.created_at as post_created_at,
     COUNT(c.id) as total_comments,
     MAX(c.created_at) as latest_comment_at
 FROM messages m
+JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
-WHERE m.game_id = $1
+WHERE m.game_id = sqlc.arg(game_id)
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 GROUP BY m.id, m.created_at
 ORDER BY m.created_at DESC;
 
@@ -585,6 +600,9 @@ WHERE user_id = $1;
 --   2. It was NOT authored by the current user (users don't see their own comments as NEW)
 -- NOTE: If user has never visited (ucr.last_read_at IS NULL), returns empty array
 -- This prevents overwhelming users with "NEW" badges on their first visit
+--
+-- The outer query decides which post IDs come back, so it carries the draft
+-- check and the restricted-post predicate; comment_threads only feeds it.
 WITH RECURSIVE comment_threads AS (
     -- Base case: all top-level comments (direct children of posts)
     SELECT
@@ -595,7 +613,7 @@ WITH RECURSIVE comment_threads AS (
     FROM messages c
     WHERE c.parent_id IN (
         SELECT id FROM messages
-        WHERE game_id = $2 AND message_type = 'post' AND is_deleted = false AND is_draft = false
+        WHERE game_id = sqlc.arg(game_id) AND message_type = 'post' AND is_deleted = false AND is_draft = false
     )
     AND c.is_deleted = false
 
@@ -621,11 +639,17 @@ SELECT
         '{}'::integer[]
     ) as unread_comment_ids
 FROM messages posts
-LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1
-LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1
-WHERE posts.game_id = $2
+JOIN messages root ON root.id = posts.root_post_id
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = sqlc.arg(viewer_user_id)::int
+LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != sqlc.arg(viewer_user_id)::int
+WHERE posts.game_id = sqlc.arg(game_id)
   AND posts.message_type = 'post'
   AND posts.is_deleted = false
+  AND posts.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 GROUP BY posts.id
 ORDER BY posts.created_at DESC;
 
@@ -652,11 +676,21 @@ WHERE user_id = $1 AND post_id = $2;
 
 -- name: GetManualReadCommentIDsForGame :many
 -- Returns (post_id, comment_id) pairs for all manually read comments in a game
--- Used to batch-load read state for the entire common room view
-SELECT post_id, comment_id
-FROM user_comment_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY post_id, comment_id;
+-- Used to batch-load read state for the entire common room view.
+-- Rows in a restricted thread the viewer can no longer see are dropped. The
+-- check uses the comment's own root, not the stored post_id, which came from
+-- the request URL.
+SELECT r.post_id, r.comment_id
+FROM user_comment_reads r
+JOIN messages c ON c.id = r.comment_id
+JOIN messages root ON root.id = c.root_post_id
+WHERE r.user_id = sqlc.arg(viewer_user_id)::int
+  AND r.game_id = sqlc.arg(game_id)
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+ORDER BY r.post_id, r.comment_id;
 
 -- name: DeleteManualCommentReadsForGame :exec
 -- Delete all manual read records for a game (called when game is completed/archived)
@@ -669,14 +703,21 @@ WHERE game_id = $1;
 -- comment's root post_id is resolved by walking up parent_id, mirroring the
 -- comment_threads CTE used by GetUnreadCommentIDsForPosts.
 -- Idempotent: existing records are left untouched.
+-- Restricted posts the viewer can't see are skipped. Otherwise their comments
+-- would already read as read if the viewer were added to the list later.
 WITH RECURSIVE comment_threads AS (
     SELECT
         c.id as comment_id,
         c.parent_id as post_id
     FROM messages c
     WHERE c.parent_id IN (
-        SELECT p.id FROM messages p
-        WHERE p.game_id = $2 AND p.phase_id = $3 AND p.message_type = 'post' AND p.is_deleted = false
+        SELECT root.id FROM messages root
+        WHERE root.game_id = sqlc.arg(game_id) AND root.phase_id = sqlc.arg(phase_id)
+          AND root.message_type = 'post' AND root.is_deleted = false
+          AND (sqlc.arg(viewer_sees_all)::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
     )
     AND c.is_deleted = false
 
@@ -690,7 +731,7 @@ WITH RECURSIVE comment_threads AS (
     WHERE m.is_deleted = false
 )
 INSERT INTO user_comment_reads (user_id, comment_id, post_id, game_id)
-SELECT $1, ct.comment_id, ct.post_id, $2
+SELECT sqlc.arg(viewer_user_id)::int, ct.comment_id, ct.post_id, sqlc.arg(game_id)
 FROM comment_threads ct
 ON CONFLICT (user_id, comment_id) DO NOTHING;
 
@@ -884,6 +925,13 @@ ORDER BY ch.name;
 -- Favorites are private to the favoriting user and span every game. Unlike
 -- manual read tracking, the listing is NOT game-scoped -- do not add a game
 -- filter to ListFavoriteCommentsWithParents.
+--
+-- A favorite in a restricted thread the user can no longer see is left out of
+-- every read below. The cross-game queries can't take one precomputed
+-- viewer_sees_all, so they restate core.CanSeeAllRestrictedPosts against
+-- games and game_participants (admin mode aside: admins see their own
+-- favorites as a normal user would). TestRestrictedRuleAgreement keeps the
+-- copies in step with the Go rule.
 
 -- name: AddCommentFavorite :exec
 -- Insert a favorite record; ignore if already exists (idempotent)
@@ -907,10 +955,15 @@ WHERE user_id = $1 AND comment_id = $2;
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
-  AND f.game_id = $2
+JOIN messages root ON root.id = m.root_post_id
+WHERE f.user_id = sqlc.arg(viewer_user_id)::int
+  AND f.game_id = sqlc.arg(game_id)
   AND m.is_deleted = false
-  AND m.deleted_at IS NULL;
+  AND m.deleted_at IS NULL
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int));
 
 -- name: GetFavoriteCommentIDsForUser :many
 -- Returns every favorited comment ID for a user, across all games.
@@ -919,9 +972,19 @@ WHERE f.user_id = $1
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
+JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = m.game_id
+WHERE f.user_id = sqlc.arg(viewer_user_id)::int
   AND m.is_deleted = false
-  AND m.deleted_at IS NULL;
+  AND m.deleted_at IS NULL
+  AND (root.is_restricted = false
+       OR g.state IN ('completed', 'epilogue')
+       OR g.gm_user_id = sqlc.arg(viewer_user_id)::int
+       OR EXISTS (SELECT 1 FROM game_participants gp
+                  WHERE gp.game_id = g.id AND gp.user_id = sqlc.arg(viewer_user_id)::int
+                    AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int));
 
 -- name: ListFavoriteCommentsWithParents :many
 -- Favorited comments with parent context and root post, ordered by when they
@@ -944,10 +1007,13 @@ WHERE f.user_id = $1
 -- rows up to the planner and lets a row repeat on one page and vanish from the
 -- next. The tie-break is also what makes the cursor comparison total.
 --
--- $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
--- the row comparison is skipped in that case rather than compared against
--- NULL (which would match nothing).
-WITH RECURSIVE favorite_comments AS (
+-- The cursor args are nullable. Passing NULL for both starts at the newest
+-- favorite; the row comparison is skipped in that case rather than compared
+-- against NULL (which would match nothing).
+--
+-- The restricted-post predicate sits inside favorite_comments, before the
+-- LIMIT, so a hidden favorite can't leave a page short.
+WITH favorite_comments AS (
     SELECT
         m.id,
         m.game_id,
@@ -963,41 +1029,32 @@ WITH RECURSIVE favorite_comments AS (
         u.username as author_username,
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
+        m.root_post_id,
         f.created_at as favorited_at,
         g.title as game_title
     FROM user_comment_favorites f
     JOIN messages m ON m.id = f.comment_id
+    JOIN messages root ON root.id = m.root_post_id
     JOIN games g ON g.id = m.game_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
-    WHERE f.user_id = $1
+    WHERE f.user_id = sqlc.arg(viewer_user_id)::int
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
+      AND (root.is_restricted = false
+           OR g.state IN ('completed', 'epilogue')
+           OR g.gm_user_id = sqlc.arg(viewer_user_id)::int
+           OR EXISTS (SELECT 1 FROM game_participants gp
+                      WHERE gp.game_id = g.id AND gp.user_id = sqlc.arg(viewer_user_id)::int
+                        AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
       AND (
           sqlc.narg(cursor_favorited_at)::timestamptz IS NULL
           OR (f.created_at, f.comment_id) < (sqlc.narg(cursor_favorited_at)::timestamptz, sqlc.narg(cursor_comment_id)::integer)
       )
     ORDER BY f.created_at DESC, f.comment_id DESC
     LIMIT sqlc.arg(page_limit)
-),
--- Walk up the message tree recursively to find the root post for each comment
-root_posts AS (
-    -- Base: walk up from each favorited comment, tracking the original comment's id
-    SELECT fc.id AS comment_id, fc.parent_id AS current_id
-    FROM favorite_comments fc
-    WHERE fc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
--- Pick the post at the top of each comment's chain
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
 ),
 -- Immediate parent preview. Deliberately NOT filtered on is_deleted: the card
 -- renders a deleted parent as a stub.
@@ -1025,7 +1082,7 @@ SELECT
     fc.game_id,
     fc.game_title,
     fc.parent_id,
-    rp.post_id,
+    fc.root_post_id AS post_id,
     fc.author_id,
     fc.character_id,
     fc.content,
@@ -1047,7 +1104,6 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM favorite_comments fc
-LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
 ORDER BY fc.favorited_at DESC, fc.id DESC;
 

@@ -983,14 +983,14 @@ type MessageServiceInterface interface {
 	// ToggleCommentRead marks or unmarks a single comment as manually read by the current user
 	ToggleCommentRead(ctx context.Context, userID, gameID, postID, commentID int32, markAsRead bool) error
 
-	// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read by a user in a game
-	GetManualReadCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]*ManualCommentReads, error)
+	// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read by the viewer in a game
+	GetManualReadCommentIDsForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]*ManualCommentReads, error)
 
 	// DeleteManualCommentReadsForGame removes all manual comment read records for a game (e.g. on game reset)
 	DeleteManualCommentReadsForGame(ctx context.Context, gameID int32) error
 
-	// MarkAllCommentsReadForPhase marks every comment in a phase as manually read by the current user
-	MarkAllCommentsReadForPhase(ctx context.Context, userID, gameID, phaseID int32) error
+	// MarkAllCommentsReadForPhase marks every comment in a phase the viewer can see as manually read by them
+	MarkAllCommentsReadForPhase(ctx context.Context, gameID, phaseID int32, viewer ViewerScope) error
 
 	// Favorite methods — private, per-user starred comments spanning all games.
 	// Unlike read tracking these are not game-scoped: the comment ID is the
@@ -999,8 +999,8 @@ type MessageServiceInterface interface {
 	// SetCommentFavorite stars or unstars one comment for the current user (idempotent)
 	SetCommentFavorite(ctx context.Context, userID, commentID int32, favorite bool) error
 
-	// GetFavoriteCommentIDsForGame retrieves the user's favorited comment IDs within one game
-	GetFavoriteCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]int32, error)
+	// GetFavoriteCommentIDsForGame retrieves the viewer's favorited comment IDs within one game
+	GetFavoriteCommentIDsForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]int32, error)
 
 	// GetFavoriteCommentIDsForUser retrieves all of the user's favorited comment IDs across games
 	GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error)
@@ -1044,14 +1044,14 @@ type MessageServiceInterface interface {
 	// MarkPostAsRead marks a post as read by a user, recording the last read comment
 	MarkPostAsRead(ctx context.Context, userID, gameID, postID int32, lastReadCommentID *int32) (*ReadMarker, error)
 
-	// GetUserReadMarkersForGame retrieves all read markers for a user in a game
-	GetUserReadMarkersForGame(ctx context.Context, userID, gameID int32) ([]*ReadMarker, error)
+	// GetUserReadMarkersForGame retrieves all of the viewer's read markers in a game
+	GetUserReadMarkersForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]*ReadMarker, error)
 
-	// GetPostsWithUnreadInfo retrieves posts with unread status for the authenticated user
-	GetPostsWithUnreadInfo(ctx context.Context, gameID int32) ([]*PostUnreadInfo, error)
+	// GetPostsWithUnreadInfo retrieves comment counts for the posts the viewer can see
+	GetPostsWithUnreadInfo(ctx context.Context, gameID int32, viewer ViewerScope) ([]*PostUnreadInfo, error)
 
-	// GetUnreadCommentIDsForPosts retrieves unread comment IDs for posts a user has read markers for
-	GetUnreadCommentIDsForPosts(ctx context.Context, userID, gameID int32) ([]*PostUnreadComments, error)
+	// GetUnreadCommentIDsForPosts retrieves the viewer's unread comment IDs per post
+	GetUnreadCommentIDsForPosts(ctx context.Context, gameID int32, viewer ViewerScope) ([]*PostUnreadComments, error)
 
 	// Restricted posts (Common Room allowlists). See CanSeeAllRestrictedPosts
 	// for the rule.
@@ -1513,6 +1513,10 @@ type NotificationServiceInterface interface {
 
 	// NotifyCommonRoomPost creates notifications for all game participants about new post
 	NotifyCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32) error
+
+	// NotifyRestrictedCommonRoomPost notifies only the participants who can see
+	// a restricted post: the listed players, co-GMs and audience
+	NotifyRestrictedCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32, allowedUserIDs []int32) error
 
 	// NotifyPhaseCreated creates notifications for all participants when phase created
 	NotifyPhaseCreated(ctx context.Context, gameID int32, phaseID int32, phaseTitle string, excludeUserID int32) error

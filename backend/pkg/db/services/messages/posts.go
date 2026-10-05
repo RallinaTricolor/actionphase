@@ -93,10 +93,23 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 		})
 	}
 
-	// Notify all game participants about the new GM post (fire-and-forget)
+	// Notify game participants about the new GM post (fire-and-forget). A
+	// restricted post goes only to those who can see it: the notification
+	// title holds the start of the post. A public archive shows it to everyone.
+	restrictedTo := viewerIDs
+	if core.IsPublicArchive(game.State) {
+		restrictedTo = nil
+	}
 	observability.SafeGo(notifCtx, s.Logger, "notify-common-room-post", func() {
 		notifSvc := db.NewNotificationService(s.DB, s.Logger)
-		if err := notifSvc.NotifyCommonRoomPost(notifCtx, req.GameID, message.ID, truncatePostTitle(req.Content), req.AuthorID); err != nil {
+		title := truncatePostTitle(req.Content)
+		var err error
+		if restrictedTo != nil {
+			err = notifSvc.NotifyRestrictedCommonRoomPost(notifCtx, req.GameID, message.ID, title, req.AuthorID, restrictedTo)
+		} else {
+			err = notifSvc.NotifyCommonRoomPost(notifCtx, req.GameID, message.ID, title, req.AuthorID)
+		}
+		if err != nil {
 			s.Logger.LogError(notifCtx, err, "Failed to notify common room post", "game_id", req.GameID, "post_id", message.ID)
 			s.Metrics.RecordBackgroundJobFailure(notifCtx, "post_notification")
 		} else {

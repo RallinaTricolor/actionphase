@@ -548,3 +548,107 @@ func TestRestrictedPostsAPI_Feeds(t *testing.T) {
 		})
 	}
 }
+
+// TestRestrictedPostsAPI_ReadStateAndFavorites checks the read-tracking and
+// favorites endpoints over HTTP. B and the outsider have read state and stars
+// in the restricted thread, as if left from before they lost access; none of
+// it may come back to them.
+func TestRestrictedPostsAPI_ReadStateAndFavorites(t *testing.T) {
+	s := newRestrictedAPIScenario(t, "rapi_reads")
+	ctx := context.Background()
+	queries := models.New(s.testDB.Pool)
+
+	// The thread goes in a phase so "mark all read" has something to cover.
+	phase := s.testDB.CreateTestPhase(t, s.game.ID, "common_room", "scene")
+	_, err := s.testDB.Pool.Exec(ctx, `UPDATE messages SET phase_id = $1 WHERE game_id = $2`, phase.ID, s.game.ID)
+	require.NoError(t, err)
+
+	for _, uid := range []int32{s.aID, s.bID, s.outsiderID} {
+		_, err := queries.MarkPostRead(ctx, models.MarkPostReadParams{UserID: uid, GameID: s.game.ID, PostID: s.restrictedPost})
+		require.NoError(t, err)
+		require.NoError(t, queries.MarkCommentRead(ctx, models.MarkCommentReadParams{
+			UserID: uid, CommentID: s.aComment, PostID: s.restrictedPost, GameID: s.game.ID,
+		}))
+		require.NoError(t, queries.AddCommentFavorite(ctx, models.AddCommentFavoriteParams{
+			UserID: uid, CommentID: s.aComment, GameID: s.game.ID,
+		}))
+	}
+
+	get := func(t *testing.T, as apiClient, path string, into any) {
+		t.Helper()
+		rec := as.do(http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), into))
+	}
+
+	t.Run("post lists", func(t *testing.T) {
+		for name, c := range map[string]struct {
+			as   apiClient
+			sees bool
+		}{
+			"gm": {s.gm, true}, "co-gm": {s.coGM, true}, "audience": {s.audience, true},
+			"listed player": {s.playerA, true}, "unlisted player": {s.playerB, false},
+			"non-participant": {s.outsider, false}, "gm of another game": {s.otherGM, false},
+		} {
+			t.Run(name, func(t *testing.T) {
+				var infos []PostUnreadInfoResponse
+				get(t, c.as, s.base+"/posts-unread-info", &infos)
+				assert.Equal(t, c.sees, slices.ContainsFunc(infos, func(i PostUnreadInfoResponse) bool { return i.PostID == s.restrictedPost }), "unread info")
+
+				var unread []PostUnreadCommentsResponse
+				get(t, c.as, s.base+"/unread-comment-ids", &unread)
+				assert.Equal(t, c.sees, slices.ContainsFunc(unread, func(u PostUnreadCommentsResponse) bool { return u.PostID == s.restrictedPost }), "unread comment IDs")
+			})
+		}
+	})
+
+	for name, c := range map[string]struct {
+		as   apiClient
+		sees bool
+	}{
+		"listed player":   {s.playerA, true},
+		"unlisted player": {s.playerB, false},
+		"non-participant": {s.outsider, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var markers []ReadMarkerResponse
+			get(t, c.as, s.base+"/read-markers", &markers)
+			assert.Equal(t, c.sees, slices.ContainsFunc(markers, func(m ReadMarkerResponse) bool { return m.PostID == s.restrictedPost }), "read markers")
+
+			var reads []ManualReadCommentIDsResponse
+			get(t, c.as, s.base+"/manual-read-comment-ids", &reads)
+			assert.Equal(t, c.sees, slices.ContainsFunc(reads, func(r ManualReadCommentIDsResponse) bool {
+				return slices.Contains(r.ReadCommentIDs, s.aComment)
+			}), "manual reads")
+
+			var gameStars, allStars FavoriteCommentIDsResponse
+			get(t, c.as, s.base+"/favorite-comment-ids", &gameStars)
+			assert.Equal(t, c.sees, slices.Contains(gameStars.FavoriteCommentIDs, s.aComment), "game favorite IDs")
+			get(t, c.as, "/api/v1/favorites/comment-ids", &allStars)
+			assert.Equal(t, c.sees, slices.Contains(allStars.FavoriteCommentIDs, s.aComment), "favorite IDs")
+
+			var list FavoriteCommentsResponse
+			get(t, c.as, "/api/v1/favorites/comments", &list)
+			assert.Equal(t, c.sees, slices.ContainsFunc(list.Favorites, func(f *FavoriteCommentResponse) bool { return f.ID == s.aComment }), "favorites list")
+		})
+	}
+
+	t.Run("mark all read skips the hidden thread", func(t *testing.T) {
+		_, err := s.testDB.Pool.Exec(ctx, `DELETE FROM user_comment_reads WHERE user_id = $1`, s.bID)
+		require.NoError(t, err)
+		rec := s.playerB.do(http.MethodPost, fmt.Sprintf("%s/phases/%d/mark-all-comments-read", s.base, phase.ID), nil)
+		require.Less(t, rec.Code, 300, rec.Body.String())
+
+		var ids []int32
+		rows, err := s.testDB.Pool.Query(ctx, `SELECT comment_id FROM user_comment_reads WHERE user_id = $1`, s.bID)
+		require.NoError(t, err)
+		for rows.Next() {
+			var id int32
+			require.NoError(t, rows.Scan(&id))
+			ids = append(ids, id)
+		}
+		require.NoError(t, rows.Err())
+		assert.NotContains(t, ids, s.aComment)
+		assert.Contains(t, ids, s.publicComment, "the public thread is marked read")
+	})
+}

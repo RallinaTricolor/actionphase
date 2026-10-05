@@ -1098,7 +1098,7 @@ func (h *Handler) humaGetGameReadMarkers(ctx context.Context, in *gameIDInput) (
 		return nil, err
 	}
 
-	readMarkers, err := h.MessageService.GetUserReadMarkersForGame(ctx, userID, in.GameID)
+	readMarkers, err := h.MessageService.GetUserReadMarkersForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get read markers", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1115,7 +1115,7 @@ func (h *Handler) humaGetGameReadMarkers(ctx context.Context, in *gameIDInput) (
 func (h *Handler) humaGetPostsUnreadInfo(ctx context.Context, in *gameIDInput) (*postsUnreadInfoOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_posts_unread_info")()
 
-	postsInfo, err := h.MessageService.GetPostsWithUnreadInfo(ctx, in.GameID)
+	postsInfo, err := h.MessageService.GetPostsWithUnreadInfo(ctx, in.GameID, h.viewerScope(ctx, in.GameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get posts unread info", "error", err, "game_id", in.GameID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1144,7 +1144,7 @@ func (h *Handler) humaGetUnreadCommentIDs(ctx context.Context, in *gameIDInput) 
 		return nil, err
 	}
 
-	unreadComments, err := h.MessageService.GetUnreadCommentIDsForPosts(ctx, userID, in.GameID)
+	unreadComments, err := h.MessageService.GetUnreadCommentIDsForPosts(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get unread comment IDs", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1201,7 +1201,8 @@ func (h *Handler) humaMarkAllCommentsRead(ctx context.Context, in *markAllCommen
 		return nil, err
 	}
 
-	if err := h.MessageService.MarkAllCommentsReadForPhase(ctx, userID, in.GameID, in.PhaseID); err != nil {
+	scope := h.MessageService.ResolveViewerScope(ctx, in.GameID, userID)
+	if err := h.MessageService.MarkAllCommentsReadForPhase(ctx, in.GameID, in.PhaseID, scope); err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to mark all comments read for phase", "error", err,
 			"game_id", in.GameID, "phase_id", in.PhaseID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1218,7 +1219,7 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 		return nil, err
 	}
 
-	manualReads, err := h.MessageService.GetManualReadCommentIDsForGame(ctx, userID, in.GameID)
+	manualReads, err := h.MessageService.GetManualReadCommentIDsForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get manual read comment IDs", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1237,11 +1238,12 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 
 // Favorites
 //
-// These endpoints call authUser and nothing else. There is no per-game read
-// gate on comments anywhere on this path -- any authenticated user can already
-// read any game's common room -- so filtering favorites by game access would
-// make them stricter than the room they link back to, and a comment you
-// starred could vanish from your own list.
+// There is no per-game read gate on comments -- any authenticated user can
+// already read any game's common room -- so favorites aren't filtered by game
+// access, which would make them stricter than the room they link back to. The
+// one exception is restricted posts: starring needs the comment to be visible
+// (requireMessageVisible), and the lists leave out favorites in threads the
+// caller can no longer see.
 
 // encodeFavoriteCursor renders a keyset position as an opaque token. The
 // contents are the caller's own favorites, so the encoding is base64 for
@@ -1410,7 +1412,7 @@ func (h *Handler) humaGetGameFavoriteCommentIDs(ctx context.Context, in *gameIDI
 		return nil, err
 	}
 
-	ids, err := h.MessageService.GetFavoriteCommentIDsForGame(ctx, userID, in.GameID)
+	ids, err := h.MessageService.GetFavoriteCommentIDsForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game favorite comment IDs", "error", err,
 			"game_id", in.GameID, "user_id", userID)

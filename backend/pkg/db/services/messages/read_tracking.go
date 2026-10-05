@@ -74,23 +74,25 @@ func (s *MessageService) GetUserReadMarker(ctx context.Context, userID, postID i
 	return readMarkerToCore(&readMarker), nil
 }
 
-// GetUserReadMarkersForGame retrieves all read markers for a user in a specific game.
-// This is used to batch-check which posts have unread content.
+// GetUserReadMarkersForGame retrieves all of the viewer's read markers in a
+// specific game. This is used to batch-check which posts have unread content.
+// Markers on restricted posts the viewer can no longer see are left out.
 //
 // Parameters:
 //   - ctx: Request context
-//   - userID: The user ID
 //   - gameID: The game ID
+//   - viewer: Whose markers to return, and what they may see
 //
 // Returns:
 //   - []*core.ReadMarker: List of read markers for the user/game
 //   - error: Any error that occurred
-func (s *MessageService) GetUserReadMarkersForGame(ctx context.Context, userID, gameID int32) ([]*core.ReadMarker, error) {
+func (s *MessageService) GetUserReadMarkersForGame(ctx context.Context, gameID int32, viewer core.ViewerScope) ([]*core.ReadMarker, error) {
 	queries := models.New(s.DB)
 
 	params := models.GetUserReadMarkersForGameParams{
-		UserID: userID,
-		GameID: gameID,
+		GameID:        gameID,
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
 	}
 
 	readMarkers, err := queries.GetUserReadMarkersForGame(ctx, params)
@@ -109,18 +111,24 @@ func (s *MessageService) GetUserReadMarkersForGame(ctx context.Context, userID, 
 
 // GetPostsWithUnreadInfo retrieves posts with their total comment count and latest comment timestamp.
 // Frontend will compare these with read markers to determine unread status.
+// Restricted posts the viewer can't see are left out.
 //
 // Parameters:
 //   - ctx: Request context
 //   - gameID: The game ID
+//   - viewer: Who is reading
 //
 // Returns:
 //   - []*core.PostUnreadInfo: List of post unread info
 //   - error: Any error that occurred
-func (s *MessageService) GetPostsWithUnreadInfo(ctx context.Context, gameID int32) ([]*core.PostUnreadInfo, error) {
+func (s *MessageService) GetPostsWithUnreadInfo(ctx context.Context, gameID int32, viewer core.ViewerScope) ([]*core.PostUnreadInfo, error) {
 	queries := models.New(s.DB)
 
-	rows, err := queries.GetPostsWithUnreadCount(ctx, gameID)
+	rows, err := queries.GetPostsWithUnreadCount(ctx, models.GetPostsWithUnreadCountParams{
+		GameID:        gameID,
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get posts with unread info: %w", err)
 	}
@@ -150,22 +158,24 @@ func (s *MessageService) GetPostsWithUnreadInfo(ctx context.Context, gameID int3
 
 // GetUnreadCommentIDsForPosts retrieves the IDs of comments that are "new since last visit"
 // for each post in a game. A comment is considered new if it was created after the user's
-// last_read_at timestamp for that post.
+// last_read_at timestamp for that post. Draft posts and restricted posts the
+// viewer can't see are left out.
 //
 // Parameters:
 //   - ctx: Request context
-//   - userID: The user ID
 //   - gameID: The game ID
+//   - viewer: Whose read state to use, and what they may see
 //
 // Returns:
 //   - []*core.PostUnreadComments: List of posts with their unread comment IDs
 //   - error: Any error that occurred
-func (s *MessageService) GetUnreadCommentIDsForPosts(ctx context.Context, userID, gameID int32) ([]*core.PostUnreadComments, error) {
+func (s *MessageService) GetUnreadCommentIDsForPosts(ctx context.Context, gameID int32, viewer core.ViewerScope) ([]*core.PostUnreadComments, error) {
 	queries := models.New(s.DB)
 
 	params := models.GetUnreadCommentIDsForPostsParams{
-		UserID: userID,
-		GameID: gameID,
+		GameID:        gameID,
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
 	}
 
 	rows, err := queries.GetUnreadCommentIDsForPosts(ctx, params)
@@ -246,22 +256,24 @@ func (s *MessageService) ToggleCommentRead(ctx context.Context, userID, gameID, 
 }
 
 // GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read
-// by a user across all posts in a game. Results are grouped by post ID.
+// by the viewer across all posts in a game. Results are grouped by post ID.
+// Comments in restricted threads the viewer can no longer see are left out.
 //
 // Parameters:
 //   - ctx: Request context
-//   - userID: The user ID
 //   - gameID: The game ID
+//   - viewer: Whose read state to use, and what they may see
 //
 // Returns:
 //   - []*core.ManualCommentReads: Per-post lists of manually read comment IDs
 //   - error: Any error that occurred
-func (s *MessageService) GetManualReadCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]*core.ManualCommentReads, error) {
+func (s *MessageService) GetManualReadCommentIDsForGame(ctx context.Context, gameID int32, viewer core.ViewerScope) ([]*core.ManualCommentReads, error) {
 	queries := models.New(s.DB)
 
 	rows, err := queries.GetManualReadCommentIDsForGame(ctx, models.GetManualReadCommentIDsForGameParams{
-		UserID: userID,
-		GameID: gameID,
+		GameID:        gameID,
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manual read comment IDs: %w", err)
@@ -295,20 +307,23 @@ func (s *MessageService) DeleteManualCommentReadsForGame(ctx context.Context, ga
 	return nil
 }
 
-// MarkAllCommentsReadForPhase marks every comment in a phase as manually read by a user.
+// MarkAllCommentsReadForPhase marks every comment in a phase as manually read
+// by the viewer. Restricted threads the viewer can't see are skipped, so their
+// comments aren't already read if the viewer is added to the list later.
 // Idempotent - comments already marked read are left untouched.
 //
 // Parameters:
 //   - ctx: Request context
-//   - userID: The user marking content as read
 //   - gameID: The game the phase belongs to
 //   - phaseID: The phase whose comments should be marked read
-func (s *MessageService) MarkAllCommentsReadForPhase(ctx context.Context, userID, gameID, phaseID int32) error {
+//   - viewer: The user marking content as read, and what they may see
+func (s *MessageService) MarkAllCommentsReadForPhase(ctx context.Context, gameID, phaseID int32, viewer core.ViewerScope) error {
 	queries := models.New(s.DB)
 	err := queries.MarkAllCommentsReadForPhase(ctx, models.MarkAllCommentsReadForPhaseParams{
-		UserID:  userID,
-		GameID:  gameID,
-		PhaseID: pgtype.Int4{Int32: phaseID, Valid: true},
+		GameID:        gameID,
+		PhaseID:       pgtype.Int4{Int32: phaseID, Valid: true},
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to mark all comments read for phase: %w", err)

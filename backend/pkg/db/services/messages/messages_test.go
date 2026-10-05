@@ -213,7 +213,7 @@ func TestMessageService_CreateComment(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 
 		var found bool
@@ -263,7 +263,7 @@ func TestMessageService_CreateComment(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(freshPlayer.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(freshPlayer.ID)})
 		require.NoError(t, err)
 		require.Len(t, reads, 1)
 		assert.Equal(t, post.ID, reads[0].PostID, "read must be keyed on the root post, not the parent comment")

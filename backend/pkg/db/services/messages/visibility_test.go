@@ -3,6 +3,7 @@ package messages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"actionphase/pkg/core"
@@ -257,4 +258,141 @@ func TestResolveViewerScope(t *testing.T) {
 		scope := s.service.ResolveViewerScope(context.Background(), 999999, int32(s.gm.ID))
 		assert.False(t, scope.SeesAll)
 	})
+}
+
+// TestRestrictedRuleAgreement runs every role through every game state and
+// checks that each SQL copy of the restricted-post rule gives the same answer
+// as the Go rule (CanUserViewMessage). Cross-game queries can't take a
+// precomputed viewer_sees_all, so they restate the rule in SQL; this is what
+// stops a copy drifting.
+//
+// Admin mode is left out: it is a per-request flag, and the SQL copies treat
+// admins as normal users on purpose.
+func TestRestrictedRuleAgreement(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	s := newRestrictedScenario(t, testDB, "agree")
+	ctx := context.Background()
+	queries := models.New(testDB.Pool)
+
+	// Two participants whose role would bypass the list if they were active.
+	inactiveCoGM := testDB.CreateTestUser(t, "agree_inactive_cogm", "agree_inactive_cogm@example.com")
+	removedAudience := testDB.CreateTestUser(t, "agree_removed_audience", "agree_removed_audience@example.com")
+	testDB.AddTestGameParticipant(t, s.game.ID, int32(inactiveCoGM.ID), "co_gm")
+	testDB.AddTestGameParticipant(t, s.game.ID, int32(removedAudience.ID), "audience")
+	_, err := testDB.Pool.Exec(ctx, `UPDATE game_participants SET status = 'inactive' WHERE game_id = $1 AND user_id = $2`, s.game.ID, inactiveCoGM.ID)
+	require.NoError(t, err)
+	_, err = testDB.Pool.Exec(ctx, `UPDATE game_participants SET status = 'removed' WHERE game_id = $1 AND user_id = $2`, s.game.ID, removedAudience.ID)
+	require.NoError(t, err)
+
+	// The dashboard's unread count only covers the active Common Room phase.
+	_, err = testDB.Pool.Exec(ctx, `UPDATE game_phases SET is_active = true WHERE id = $1`, s.phase.ID)
+	require.NoError(t, err)
+
+	type member struct {
+		name   string
+		userID int32
+		// onDashboard: the dashboard covers this game for them at all.
+		// inRecent: the recent-messages snippet covers it (no audience).
+		onDashboard, inRecent bool
+	}
+	cast := []member{
+		{"gm", int32(s.gm.ID), true, true},
+		{"co-gm", int32(s.coGM.ID), true, true},
+		{"audience", int32(s.audience.ID), true, false},
+		{"listed player A", int32(s.playerA.ID), true, true},
+		{"unlisted player B", int32(s.playerB.ID), true, true},
+		{"non-participant", int32(s.outsider.ID), false, false},
+		{"site admin", int32(s.admin.ID), false, false},
+		{"inactive co-gm", int32(inactiveCoGM.ID), false, false},
+		{"removed audience", int32(removedAudience.ID), false, false},
+	}
+
+	// Everyone stars the GM's reply in the restricted thread.
+	for _, m := range cast {
+		require.NoError(t, queries.AddCommentFavorite(ctx, models.AddCommentFavoriteParams{
+			UserID: m.userID, CommentID: s.gmReply.ID, GameID: s.game.ID,
+		}))
+	}
+	notifications := &db.NotificationService{DB: testDB.Pool, Logger: core.NewTestApp(testDB.Pool).ObsLogger}
+	thread := []*models.Message{s.restrictedPost, s.aComment, s.gmReply, s.aReply}
+
+	for _, state := range core.ValidGameStates {
+		testDB.SetGameStateDirectly(t, s.game.ID, state)
+		for _, m := range cast {
+			t.Run(state+"/"+m.name, func(t *testing.T) {
+				want, err := s.service.CanUserViewMessage(ctx, s.gmReply.ID, m.userID)
+				require.NoError(t, err)
+
+				// Favorites: the ID set and the list.
+				ids, err := queries.GetFavoriteCommentIDsForUser(ctx, m.userID)
+				require.NoError(t, err)
+				assert.Equal(t, want, slices.Contains(ids, s.gmReply.ID), "GetFavoriteCommentIDsForUser")
+
+				rows, err := queries.ListFavoriteCommentsWithParents(ctx, models.ListFavoriteCommentsWithParentsParams{
+					ViewerUserID: m.userID, PageLimit: 50,
+				})
+				require.NoError(t, err)
+				listed := slices.ContainsFunc(rows, func(r models.ListFavoriteCommentsWithParentsRow) bool { return r.ID == s.gmReply.ID })
+				assert.Equal(t, want, listed, "ListFavoriteCommentsWithParents")
+
+				// Dashboard unread count: every thread comment the member
+				// didn't write is unread in manual mode.
+				if m.onDashboard {
+					counts, err := queries.GetUnreadCommentCountsForDashboard(ctx, models.GetUnreadCommentCountsForDashboardParams{
+						UserID: m.userID, CommentReadMode: "manual",
+					})
+					require.NoError(t, err)
+					var wantCount int64
+					if want {
+						for _, msg := range thread[1:] {
+							if msg.AuthorID != m.userID {
+								wantCount++
+							}
+						}
+					}
+					var got int64 = -1
+					for _, c := range counts {
+						if c.GameID == s.game.ID {
+							got = c.UnreadCount
+						}
+					}
+					assert.Equal(t, wantCount, got, "GetUnreadCommentCountsForDashboard")
+				}
+
+				// Dashboard recent messages.
+				if m.inRecent {
+					recent, err := queries.GetUserRecentMessages(ctx, models.GetUserRecentMessagesParams{UserID: m.userID, RowLimit: 100})
+					require.NoError(t, err)
+					for _, msg := range thread {
+						if msg.AuthorID == m.userID {
+							continue
+						}
+						found := slices.ContainsFunc(recent, func(r models.GetUserRecentMessagesRow) bool { return r.MessageID == msg.ID })
+						assert.Equal(t, want, found, "GetUserRecentMessages, message %d", msg.ID)
+					}
+				}
+
+				// The notification cleanup only runs outside a public archive,
+				// so its SQL has no state check to compare there.
+				if core.IsPublicArchive(state) {
+					return
+				}
+				const title = "agreement probe"
+				gameID, relatedID, relatedType := s.game.ID, s.aComment.ID, "comment"
+				_, err = notifications.CreateNotification(ctx, &core.CreateNotificationRequest{
+					UserID: m.userID, GameID: &gameID, Type: core.NotificationTypeCommentReply, Title: title,
+					RelatedType: &relatedType, RelatedID: &relatedID,
+				})
+				require.NoError(t, err)
+				require.NoError(t, queries.DeleteThreadNotificationsForHiddenUsers(ctx, s.restrictedPost.ID))
+				var kept int
+				require.NoError(t, testDB.Pool.QueryRow(ctx,
+					`SELECT count(*) FROM notifications WHERE user_id = $1 AND title = $2`, m.userID, title).Scan(&kept))
+				assert.Equal(t, want, kept == 1, "DeleteThreadNotificationsForHiddenUsers")
+				_, err = testDB.Pool.Exec(ctx, `DELETE FROM notifications WHERE user_id = $1 AND title = $2`, m.userID, title)
+				require.NoError(t, err)
+			})
+		}
+	}
 }

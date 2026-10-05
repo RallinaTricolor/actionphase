@@ -564,7 +564,7 @@ func TestMessageAPI_CreateComment(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 
-		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		var filedUnder []int32
 		for _, entry := range reads {
@@ -1029,7 +1029,7 @@ func TestMessageAPI_MarkAllCommentsRead(t *testing.T) {
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
-		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		readIDs := []int32{}
 		for _, r := range reads {

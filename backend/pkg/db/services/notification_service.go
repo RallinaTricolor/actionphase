@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -718,6 +719,11 @@ func (s *NotificationService) NotifyCommonRoomPost(ctx context.Context, gameID i
 	if err != nil {
 		return fmt.Errorf("failed to notify game participants: %w", err)
 	}
+	return s.notifyCommonRoomPostTo(ctx, userIDs, gameID, postID, postTitle)
+}
+
+// notifyCommonRoomPostTo sends the "New post" notification to userIDs.
+func (s *NotificationService) notifyCommonRoomPostTo(ctx context.Context, userIDs []int32, gameID, postID int32, postTitle string) error {
 	return s.CreateBulkNotifications(ctx, userIDs, &core.CreateNotificationRequest{
 		GameID:      &gameID,
 		Type:        core.NotificationTypeCommonRoomPost,
@@ -726,6 +732,29 @@ func (s *NotificationService) NotifyCommonRoomPost(ctx context.Context, gameID i
 		RelatedID:   &postID,
 		LinkURL:     stringPtr(fmt.Sprintf("/games/%d?tab=common-room", gameID)),
 	})
+}
+
+// NotifyRestrictedCommonRoomPost notifies the active participants who can see
+// a restricted post: those on allowedUserIDs, plus everyone who bypasses
+// allowlists by role (core.CanSeeAllRestrictedPosts). The title holds the start
+// of the post, so anyone else must not get it. Admin mode is a per-request flag
+// of the reader, so it plays no part in who is notified.
+func (s *NotificationService) NotifyRestrictedCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32, allowedUserIDs []int32) error {
+	gameSvc := &GameService{DB: s.DB, Logger: s.Logger}
+	participants, err := gameSvc.GetGameParticipants(ctx, gameID)
+	if err != nil {
+		return fmt.Errorf("failed to notify game participants: get game participants: %w", err)
+	}
+	var userIDs []int32
+	for _, p := range participants {
+		if p.UserID == excludeUserID || p.Status != "active" {
+			continue
+		}
+		if slices.Contains(allowedUserIDs, p.UserID) || core.CanSeeAllRestrictedPosts(p.Role, false) {
+			userIDs = append(userIDs, p.UserID)
+		}
+	}
+	return s.notifyCommonRoomPostTo(ctx, userIDs, gameID, postID, postTitle)
 }
 
 // NotifyPhaseCreated creates a notification for game participants about a new phase.

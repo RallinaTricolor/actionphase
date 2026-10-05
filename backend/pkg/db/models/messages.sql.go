@@ -30,6 +30,13 @@ type AddCommentFavoriteParams struct {
 // Favorites are private to the favoriting user and span every game. Unlike
 // manual read tracking, the listing is NOT game-scoped -- do not add a game
 // filter to ListFavoriteCommentsWithParents.
+//
+// A favorite in a restricted thread the user can no longer see is left out of
+// every read below. The cross-game queries can't take one precomputed
+// viewer_sees_all, so they restate core.CanSeeAllRestrictedPosts against
+// games and game_participants (admin mode aside: admins see their own
+// favorites as a normal user would). TestRestrictedRuleAgreement keeps the
+// copies in step with the Go rule.
 // Insert a favorite record; ignore if already exists (idempotent)
 func (q *Queries) AddCommentFavorite(ctx context.Context, arg AddCommentFavoriteParams) error {
 	_, err := q.db.Exec(ctx, addCommentFavorite, arg.UserID, arg.CommentID, arg.GameID)
@@ -954,15 +961,21 @@ const getFavoriteCommentIDsForGame = `-- name: GetFavoriteCommentIDsForGame :man
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
+JOIN messages root ON root.id = m.root_post_id
+WHERE f.user_id = $1::int
   AND f.game_id = $2
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
 `
 
 type GetFavoriteCommentIDsForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 // Returns favorited comment IDs for one user within one game.
@@ -973,7 +986,7 @@ type GetFavoriteCommentIDsForGameParams struct {
 // "your favorites" contains: a star that fills on a comment absent from
 // /favorites is a bug wherever it surfaces.
 func (q *Queries) GetFavoriteCommentIDsForGame(ctx context.Context, arg GetFavoriteCommentIDsForGameParams) ([]int32, error) {
-	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -996,16 +1009,26 @@ const getFavoriteCommentIDsForUser = `-- name: GetFavoriteCommentIDsForUser :man
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
+JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = m.game_id
+WHERE f.user_id = $1::int
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
+  AND (root.is_restricted = false
+       OR g.state IN ('completed', 'epilogue')
+       OR g.gm_user_id = $1::int
+       OR EXISTS (SELECT 1 FROM game_participants gp
+                  WHERE gp.game_id = g.id AND gp.user_id = $1::int
+                    AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
 `
 
 // Returns every favorited comment ID for a user, across all games.
 // Powers star state on non-game-scoped surfaces (e.g. character profile).
 // Excludes soft-deleted comments for the same reason as the per-game set.
-func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error) {
-	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, userID)
+func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, viewerUserID int32) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, viewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1183,15 +1206,23 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 }
 
 const getManualReadCommentIDsForGame = `-- name: GetManualReadCommentIDsForGame :many
-SELECT post_id, comment_id
-FROM user_comment_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY post_id, comment_id
+SELECT r.post_id, r.comment_id
+FROM user_comment_reads r
+JOIN messages c ON c.id = r.comment_id
+JOIN messages root ON root.id = c.root_post_id
+WHERE r.user_id = $1::int
+  AND r.game_id = $2
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+ORDER BY r.post_id, r.comment_id
 `
 
 type GetManualReadCommentIDsForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 type GetManualReadCommentIDsForGameRow struct {
@@ -1200,9 +1231,12 @@ type GetManualReadCommentIDsForGameRow struct {
 }
 
 // Returns (post_id, comment_id) pairs for all manually read comments in a game
-// Used to batch-load read state for the entire common room view
+// Used to batch-load read state for the entire common room view.
+// Rows in a restricted thread the viewer can no longer see are dropped. The
+// check uses the comment's own root, not the stored post_id, which came from
+// the request URL.
 func (q *Queries) GetManualReadCommentIDsForGame(ctx context.Context, arg GetManualReadCommentIDsForGameParams) ([]GetManualReadCommentIDsForGameRow, error) {
-	rows, err := q.db.Query(ctx, getManualReadCommentIDsForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getManualReadCommentIDsForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -1915,14 +1949,25 @@ SELECT
     COUNT(c.id) as total_comments,
     MAX(c.created_at) as latest_comment_at
 FROM messages m
+JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
 WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND ($2::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $3::int))
 GROUP BY m.id, m.created_at
 ORDER BY m.created_at DESC
 `
+
+type GetPostsWithUnreadCountParams struct {
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+}
 
 type GetPostsWithUnreadCountRow struct {
 	PostID          int32              `json:"post_id"`
@@ -1932,9 +1977,11 @@ type GetPostsWithUnreadCountRow struct {
 }
 
 // Get posts with their total comment count and last comment timestamp
-// Frontend will compare these with read markers to determine unread status
-func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, gameID int32) ([]GetPostsWithUnreadCountRow, error) {
-	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, gameID)
+// Frontend will compare these with read markers to determine unread status.
+// Restricted posts the viewer can't see are left out. For a post,
+// root_post_id is its own ID, so root is the post itself.
+func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, arg GetPostsWithUnreadCountParams) ([]GetPostsWithUnreadCountRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, arg.GameID, arg.ViewerSeesAll, arg.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1995,18 +2042,25 @@ SELECT
         '{}'::integer[]
     ) as unread_comment_ids
 FROM messages posts
-LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1
-LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1
+JOIN messages root ON root.id = posts.root_post_id
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1::int
+LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1::int
 WHERE posts.game_id = $2
   AND posts.message_type = 'post'
   AND posts.is_deleted = false
+  AND posts.is_draft = false
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
 GROUP BY posts.id
 ORDER BY posts.created_at DESC
 `
 
 type GetUnreadCommentIDsForPostsParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 type GetUnreadCommentIDsForPostsRow struct {
@@ -2022,8 +2076,11 @@ type GetUnreadCommentIDsForPostsRow struct {
 //
 // NOTE: If user has never visited (ucr.last_read_at IS NULL), returns empty array
 // This prevents overwhelming users with "NEW" badges on their first visit
+//
+// The outer query decides which post IDs come back, so it carries the draft
+// check and the restricted-post predicate; comment_threads only feeds it.
 func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnreadCommentIDsForPostsParams) ([]GetUnreadCommentIDsForPostsRow, error) {
-	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -2168,20 +2225,29 @@ func (q *Queries) GetUserReadMarker(ctx context.Context, arg GetUserReadMarkerPa
 }
 
 const getUserReadMarkersForGame = `-- name: GetUserReadMarkersForGame :many
-SELECT id, user_id, game_id, post_id, last_read_comment_id, last_read_at, created_at, updated_at FROM user_common_room_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY last_read_at DESC
+SELECT ucr.id, ucr.user_id, ucr.game_id, ucr.post_id, ucr.last_read_comment_id, ucr.last_read_at, ucr.created_at, ucr.updated_at FROM user_common_room_reads ucr
+JOIN messages root ON root.id = ucr.post_id
+WHERE ucr.user_id = $1::int
+  AND ucr.game_id = $2
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+ORDER BY ucr.last_read_at DESC
 `
 
 type GetUserReadMarkersForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 // Get all read markers for a user in a specific game
-// Used to batch-check which posts have unread content
+// Used to batch-check which posts have unread content.
+// Markers left over from before the viewer lost access to a restricted post
+// are dropped, so the post's ID doesn't surface here.
 func (q *Queries) GetUserReadMarkersForGame(ctx context.Context, arg GetUserReadMarkersForGameParams) ([]UserCommonRoomRead, error) {
-	rows, err := q.db.Query(ctx, getUserReadMarkersForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getUserReadMarkersForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -2404,7 +2470,7 @@ func (q *Queries) ListAllPrivateConversations(ctx context.Context, arg ListAllPr
 }
 
 const listFavoriteCommentsWithParents = `-- name: ListFavoriteCommentsWithParents :many
-WITH RECURSIVE favorite_comments AS (
+WITH favorite_comments AS (
     SELECT
         m.id,
         m.game_id,
@@ -2420,39 +2486,32 @@ WITH RECURSIVE favorite_comments AS (
         u.username as author_username,
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
+        m.root_post_id,
         f.created_at as favorited_at,
         g.title as game_title
     FROM user_comment_favorites f
     JOIN messages m ON m.id = f.comment_id
+    JOIN messages root ON root.id = m.root_post_id
     JOIN games g ON g.id = m.game_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
-    WHERE f.user_id = $1
+    WHERE f.user_id = $1::int
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
+      AND (root.is_restricted = false
+           OR g.state IN ('completed', 'epilogue')
+           OR g.gm_user_id = $1::int
+           OR EXISTS (SELECT 1 FROM game_participants gp
+                      WHERE gp.game_id = g.id AND gp.user_id = $1::int
+                        AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = root.id AND v.user_id = $1::int))
       AND (
           $2::timestamptz IS NULL
           OR (f.created_at, f.comment_id) < ($2::timestamptz, $3::integer)
       )
     ORDER BY f.created_at DESC, f.comment_id DESC
     LIMIT $4
-),
-root_posts AS (
-    -- Base: walk up from each favorited comment, tracking the original comment's id
-    SELECT fc.id AS comment_id, fc.parent_id AS current_id
-    FROM favorite_comments fc
-    WHERE fc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
 ),
 parent_messages AS (
     SELECT
@@ -2478,7 +2537,7 @@ SELECT
     fc.game_id,
     fc.game_title,
     fc.parent_id,
-    rp.post_id,
+    fc.root_post_id AS post_id,
     fc.author_id,
     fc.character_id,
     fc.content,
@@ -2500,13 +2559,12 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM favorite_comments fc
-LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
 ORDER BY fc.favorited_at DESC, fc.id DESC
 `
 
 type ListFavoriteCommentsWithParentsParams struct {
-	UserID            int32              `json:"user_id"`
+	ViewerUserID      int32              `json:"viewer_user_id"`
 	CursorFavoritedAt pgtype.Timestamptz `json:"cursor_favorited_at"`
 	CursorCommentID   pgtype.Int4        `json:"cursor_comment_id"`
 	PageLimit         int32              `json:"page_limit"`
@@ -2517,7 +2575,7 @@ type ListFavoriteCommentsWithParentsRow struct {
 	GameID                   int32              `json:"game_id"`
 	GameTitle                string             `json:"game_title"`
 	ParentID                 pgtype.Int4        `json:"parent_id"`
-	PostID                   pgtype.Int4        `json:"post_id"`
+	PostID                   int32              `json:"post_id"`
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
@@ -2560,16 +2618,17 @@ type ListFavoriteCommentsWithParentsRow struct {
 // rows up to the planner and lets a row repeat on one page and vanish from the
 // next. The tie-break is also what makes the cursor comparison total.
 //
-// $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
-// the row comparison is skipped in that case rather than compared against
-// NULL (which would match nothing).
-// Walk up the message tree recursively to find the root post for each comment
-// Pick the post at the top of each comment's chain
+// The cursor args are nullable. Passing NULL for both starts at the newest
+// favorite; the row comparison is skipped in that case rather than compared
+// against NULL (which would match nothing).
+//
+// The restricted-post predicate sits inside favorite_comments, before the
+// LIMIT, so a hidden favorite can't leave a page short.
 // Immediate parent preview. Deliberately NOT filtered on is_deleted: the card
 // renders a deleted parent as a stub.
 func (q *Queries) ListFavoriteCommentsWithParents(ctx context.Context, arg ListFavoriteCommentsWithParentsParams) ([]ListFavoriteCommentsWithParentsRow, error) {
 	rows, err := q.db.Query(ctx, listFavoriteCommentsWithParents,
-		arg.UserID,
+		arg.ViewerUserID,
 		arg.CursorFavoritedAt,
 		arg.CursorCommentID,
 		arg.PageLimit,
@@ -2657,8 +2716,13 @@ WITH RECURSIVE comment_threads AS (
         c.parent_id as post_id
     FROM messages c
     WHERE c.parent_id IN (
-        SELECT p.id FROM messages p
-        WHERE p.game_id = $2 AND p.phase_id = $3 AND p.message_type = 'post' AND p.is_deleted = false
+        SELECT root.id FROM messages root
+        WHERE root.game_id = $2 AND root.phase_id = $3
+          AND root.message_type = 'post' AND root.is_deleted = false
+          AND ($4::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = root.id AND v.user_id = $1::int))
     )
     AND c.is_deleted = false
 
@@ -2672,15 +2736,16 @@ WITH RECURSIVE comment_threads AS (
     WHERE m.is_deleted = false
 )
 INSERT INTO user_comment_reads (user_id, comment_id, post_id, game_id)
-SELECT $1, ct.comment_id, ct.post_id, $2
+SELECT $1::int, ct.comment_id, ct.post_id, $2
 FROM comment_threads ct
 ON CONFLICT (user_id, comment_id) DO NOTHING
 `
 
 type MarkAllCommentsReadForPhaseParams struct {
-	UserID  int32       `json:"user_id"`
-	GameID  int32       `json:"game_id"`
-	PhaseID pgtype.Int4 `json:"phase_id"`
+	ViewerUserID  int32       `json:"viewer_user_id"`
+	GameID        int32       `json:"game_id"`
+	PhaseID       pgtype.Int4 `json:"phase_id"`
+	ViewerSeesAll bool        `json:"viewer_sees_all"`
 }
 
 // Bulk-insert manual read records for every comment in a phase, for one user.
@@ -2688,8 +2753,15 @@ type MarkAllCommentsReadForPhaseParams struct {
 // comment's root post_id is resolved by walking up parent_id, mirroring the
 // comment_threads CTE used by GetUnreadCommentIDsForPosts.
 // Idempotent: existing records are left untouched.
+// Restricted posts the viewer can't see are skipped. Otherwise their comments
+// would already read as read if the viewer were added to the list later.
 func (q *Queries) MarkAllCommentsReadForPhase(ctx context.Context, arg MarkAllCommentsReadForPhaseParams) error {
-	_, err := q.db.Exec(ctx, markAllCommentsReadForPhase, arg.UserID, arg.GameID, arg.PhaseID)
+	_, err := q.db.Exec(ctx, markAllCommentsReadForPhase,
+		arg.ViewerUserID,
+		arg.GameID,
+		arg.PhaseID,
+		arg.ViewerSeesAll,
+	)
 	return err
 }
 
