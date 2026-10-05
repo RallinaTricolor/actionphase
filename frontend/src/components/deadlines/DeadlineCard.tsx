@@ -228,11 +228,12 @@ export function DeadlineCard({ deadline, isGM, onEdit, onDelete, onExtend, onCli
               title="View description"
             />
 
-            {/* Tooltip - positioned above card */}
+            {/* Tooltip - positioned above card. `hidden` rather than `invisible` so the
+                panel takes no layout space (and adds no scroll width) until hovered. */}
             <div className="
-              invisible group-hover:visible
+              hidden group-hover:block
               absolute bottom-full right-0 mb-2
-              w-64 p-3 rounded-lg
+              w-64 max-w-[calc(100vw-2rem)] p-3 rounded-lg
               bg-surface-raised border border-theme-default shadow-lg
               text-xs text-content-primary
               z-50

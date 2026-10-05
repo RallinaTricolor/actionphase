@@ -76,7 +76,7 @@ export function Pagination({
 
   return (
     <nav
-      className="flex items-center justify-between gap-4 px-4 py-3 surface-raised border-t border-theme-default"
+      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 surface-raised border-t border-theme-default"
       aria-label="Pagination"
     >
       {/* Page info and size selector */}
