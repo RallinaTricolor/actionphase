@@ -325,7 +325,7 @@ func TestGetGamePosts_HiddenNPCContentStaysVisible(t *testing.T) {
 	require.NoError(t, err, "The GM must be able to post as a hidden NPC")
 	require.NotNil(t, post)
 
-	posts, err := service.GetGamePosts(ctx, f.game.ID, nil, 50, 0)
+	posts, err := service.GetGamePosts(ctx, f.game.ID, nil, 50, 0, core.ViewerScope{})
 	require.NoError(t, err)
 
 	var found *core.MessageWithDetails

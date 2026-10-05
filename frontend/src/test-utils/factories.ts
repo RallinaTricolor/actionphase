@@ -58,9 +58,10 @@ type ConversationParticipant = ConversationWithDetails['participants'][number];
 /**
  * A Message -- the detail shape returned by the post and comment endpoints.
  *
- * `comment_count`, `edit_count` and `is_draft` are required and were the single
- * biggest source of stale mocks: all three are plain non-`omitempty` Go fields,
- * so the wire always carries them (0 and false included).
+ * `comment_count`, `edit_count`, `is_draft` and `is_restricted` are required
+ * and were the single biggest source of stale mocks: all are plain
+ * non-`omitempty` Go fields, so the wire always carries them (0 and false
+ * included).
  *
  * Note this is NOT the threaded-comment shape -- see makeCommentWithDepth.
  */
@@ -78,6 +79,7 @@ export function makeMessage(overrides: Partial<Message> = {}): Message {
     comment_count: 0,
     edit_count: 0,
     is_draft: false,
+    is_restricted: false,
     is_edited: false,
     is_deleted: false,
     created_at: '2025-01-15T10:30:00Z',

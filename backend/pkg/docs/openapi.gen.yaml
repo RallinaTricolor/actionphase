@@ -1885,6 +1885,17 @@ components:
                     maxLength: 50000
                     minLength: 1
                     type: string
+                restricted_to_user_ids:
+                    description: Restrict the post to these players (user IDs of active players). Omit for a public post.
+                    items:
+                        format: int32
+                        type: integer
+                    maxItems: 100
+                    minItems: 1
+                    type:
+                        - array
+                        - "null"
+                    uniqueItems: true
             required:
                 - character_id
                 - content
@@ -2141,6 +2152,17 @@ components:
                     description: Phase to attach the post to
                     format: int32
                     type: integer
+                restricted_to_user_ids:
+                    description: Restrict the post to these players (user IDs of active players). Omit for a public post.
+                    items:
+                        format: int32
+                        type: integer
+                    maxItems: 100
+                    minItems: 1
+                    type:
+                        - array
+                        - "null"
+                    uniqueItems: true
             required:
                 - character_id
                 - content
@@ -3792,6 +3814,9 @@ components:
                     type: boolean
                 is_edited:
                     type: boolean
+                is_restricted:
+                    description: Whether the post is restricted to an allowlist of players; always false for comments
+                    type: boolean
                 mentioned_character_ids:
                     items:
                         format: int32
@@ -3816,6 +3841,12 @@ components:
                 updated_at:
                     format: date-time
                     type: string
+                viewer_user_ids:
+                    description: The post's allowlist. Present only on posts, for callers who can see every restricted post.
+                    items:
+                        format: int32
+                        type: integer
+                    type: array
             required:
                 - id
                 - game_id
@@ -3833,6 +3864,7 @@ components:
                 - created_at
                 - updated_at
                 - edit_count
+                - is_restricted
             type: object
         MessageThreadContextResponse:
             additionalProperties: false
@@ -4569,6 +4601,9 @@ components:
                     type: boolean
                 is_edited:
                     type: boolean
+                is_restricted:
+                    description: Whether the post is restricted to an allowlist of players
+                    type: boolean
                 message_type:
                     description: Always "post" for this endpoint
                     type: string
@@ -4584,6 +4619,12 @@ components:
                     description: Always 0 for a top-level post
                     format: int32
                     type: integer
+                viewer_user_ids:
+                    description: The post's allowlist. Present only for callers who can see every restricted post.
+                    items:
+                        format: int32
+                        type: integer
+                    type: array
             required:
                 - id
                 - game_id
@@ -4599,6 +4640,7 @@ components:
                 - is_edited
                 - is_deleted
                 - created_at
+                - is_restricted
             type: object
         PostUnreadCommentsResponse:
             additionalProperties: false
@@ -5027,6 +5069,25 @@ components:
                     type: boolean
             required:
                 - is_hidden
+            type: object
+        SetPostViewersRequest:
+            additionalProperties: false
+            properties:
+                restricted:
+                    description: true restricts the post to user_ids; false makes it public
+                    type: boolean
+                user_ids:
+                    description: Players who may see the post. Required and non-empty when restricted is true; must be empty or omitted when it is false.
+                    items:
+                        format: int32
+                        type: integer
+                    maxItems: 100
+                    type:
+                        - array
+                        - "null"
+                    uniqueItems: true
+            required:
+                - restricted
             type: object
         StagedPartBody:
             additionalProperties: false
@@ -11097,7 +11158,7 @@ paths:
                 "401":
                     description: Not authenticated
                 "404":
-                    description: No such message
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -11148,6 +11209,8 @@ paths:
                     description: Invalid max_parents
                 "401":
                     description: Not authenticated
+                "404":
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -11831,7 +11894,7 @@ paths:
                 "403":
                     description: Not the post's author
                 "404":
-                    description: Post not found
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -11873,6 +11936,8 @@ paths:
                     description: OK
                 "401":
                     description: Not authenticated
+                "404":
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -11881,7 +11946,7 @@ paths:
             tags:
                 - Common Room
         post:
-            description: Adds a comment. The path's postId is the immediate parent; send root_post_id in the body when replying below a top-level post, or read tracking will key off the wrong thread. Requires a verified email.
+            description: Adds a comment. The path's postId is the immediate parent, a post or another comment; the thread's root post is derived from it. Requires a verified email.
             operationId: createComment
             parameters:
                 - description: Game ID
@@ -11918,6 +11983,8 @@ paths:
                     description: Not authenticated
                 "403":
                     description: Email not verified
+                "404":
+                    description: Parent not found, or in a thread hidden from the caller
                 "409":
                     description: Game is archived
                 "422":
@@ -11991,6 +12058,8 @@ paths:
                     description: Invalid limit, offset or max_depth
                 "401":
                     description: Not authenticated
+                "404":
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -12039,7 +12108,7 @@ paths:
                 "403":
                     description: Not allowed to delete this comment
                 "404":
-                    description: No such comment
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -12094,7 +12163,7 @@ paths:
                 "403":
                     description: Not the comment's author, or the character is not the caller's
                 "404":
-                    description: No such comment
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -12141,6 +12210,8 @@ paths:
                     description: No Content
                 "401":
                     description: Not authenticated
+                "404":
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
@@ -12183,11 +12254,61 @@ paths:
                     description: OK
                 "401":
                     description: Not authenticated
+                "404":
+                    description: Not found, or in a thread hidden from the caller
                 "422":
                     description: Request failed validation
             security:
                 - BearerAuth: []
             summary: Mark a post read
+            tags:
+                - Common Room
+    /games/{gameID}/posts/{postId}/viewers:
+        put:
+            description: Replaces a post's allowlist. restricted:true limits the post and its whole thread to the listed players (plus the GM, co-GMs and audience); restricted:false makes it public. Players who lose access also lose their in-app notifications from the thread. GM and co-GM only; works on drafts too.
+            operationId: setPostViewers
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+                - description: Post ID
+                  in: path
+                  name: postId
+                  required: true
+                  schema:
+                    description: Post ID
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetPostViewersRequest'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/MessageResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Not the GM or co-GM
+                "404":
+                    description: No such post in this game
+                "409":
+                    description: Game is archived
+                "422":
+                    description: Empty list, non-player IDs, or a list on a public post
+            security:
+                - BearerAuth: []
+            summary: Set who can see a post
             tags:
                 - Common Room
     /games/{gameID}/private-messages/all:

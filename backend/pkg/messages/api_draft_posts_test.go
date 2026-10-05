@@ -269,7 +269,7 @@ func TestDraftPostAPI_NotVisibleInGamePosts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("draft post does not appear in GetGamePosts", func(t *testing.T) {
-		posts, err := msgService.GetGamePosts(context.Background(), game.ID, &phaseID, 10, 0)
+		posts, err := msgService.GetGamePosts(context.Background(), game.ID, &phaseID, 10, 0, core.ViewerScope{SeesAll: true})
 		require.NoError(t, err)
 		assert.Empty(t, posts, "draft posts must not appear in game posts list")
 	})

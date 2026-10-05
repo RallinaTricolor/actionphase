@@ -17,10 +17,12 @@ INSERT INTO messages (
     message_type,
     visibility,
     mentioned_character_ids,
-    character_avatar_url_at_post
+    character_avatar_url_at_post,
+    is_restricted
 ) VALUES (
     $1, $2, $3, $4, $5, 'post', $6, $7,
-    (SELECT avatar_url FROM characters WHERE id = $4)
+    (SELECT avatar_url FROM characters WHERE id = $4),
+    $8
 )
 RETURNING *;
 
@@ -160,6 +162,10 @@ WHERE pc.thread_depth > (SELECT m.thread_depth FROM messages m WHERE m.id = sqlc
 ORDER BY pc.thread_depth ASC;  -- Return in parent-to-child order
 
 -- name: GetGamePosts :many
+-- Restricted posts the viewer may not see are left out. viewer_sees_all is
+-- computed in Go (ResolveViewerScope) and already covers the public archive,
+-- so no state check here. For a post root_post_id = id, so the allowlist is
+-- keyed by m.id directly.
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
@@ -168,15 +174,23 @@ SELECT m.*,
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.game_id = $1
+WHERE m.game_id = sqlc.arg(game_id)
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
-  AND (CASE WHEN $2 = 0 THEN TRUE ELSE m.phase_id = $2 END)
+  AND (sqlc.arg(phase_id)::int = 0 OR m.phase_id = sqlc.arg(phase_id)::int)
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 ORDER BY m.created_at DESC
-LIMIT $3 OFFSET $4;
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetPhasePosts :many
+-- Restricted posts the viewer may not see are left out. viewer_sees_all is
+-- computed in Go (ResolveViewerScope) and already covers the public archive,
+-- so no state check here. For a post root_post_id = id, so the allowlist is
+-- keyed by m.id directly.
 SELECT m.*,
        u.username as author_username,
        c.name as character_name,
@@ -185,10 +199,14 @@ SELECT m.*,
 FROM messages m
 JOIN users u ON m.author_id = u.id
 LEFT JOIN characters c ON m.character_id = c.id
-WHERE m.phase_id = $1
+WHERE m.phase_id = sqlc.arg(phase_id)
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 ORDER BY m.created_at DESC;
 
 -- name: UpdatePost :one
@@ -239,10 +257,12 @@ INSERT INTO messages (
     visibility,
     mentioned_character_ids,
     is_draft,
-    character_avatar_url_at_post
+    character_avatar_url_at_post,
+    is_restricted
 ) VALUES (
     $1, $2, $3, $4, $5, 'post', $6, $7, true,
-    (SELECT avatar_url FROM characters WHERE id = $4)
+    (SELECT avatar_url FROM characters WHERE id = $4),
+    $8
 )
 RETURNING *;
 
@@ -438,13 +458,18 @@ WHERE id = $1 AND message_type = 'post';
 -- ============================================================================
 
 -- name: GetGamePostCount :one
+-- Same filter as GetGamePosts, so the count never includes a hidden post.
 SELECT COUNT(*)
-FROM messages
-WHERE game_id = $1
-  AND message_type = 'post'
-  AND is_deleted = false
-  AND is_draft = false
-  AND (CASE WHEN $2 = 0 THEN TRUE ELSE phase_id = $2 END);
+FROM messages m
+WHERE m.game_id = sqlc.arg(game_id)
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+  AND m.is_draft = false
+  AND (sqlc.arg(phase_id)::int = 0 OR m.phase_id = sqlc.arg(phase_id)::int)
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = sqlc.arg(viewer_user_id)::int));
 
 -- name: GetPostCommentCount :one
 SELECT COUNT(*)
@@ -1025,3 +1050,96 @@ FROM favorite_comments fc
 LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
 ORDER BY fc.favorited_at DESC, fc.id DESC;
+
+-- ============================================================================
+-- RESTRICTED POSTS (Common Room allowlists)
+-- ============================================================================
+-- The rule lives in core.CanSeeAllRestrictedPosts. These queries return the
+-- facts it needs; Go applies it.
+
+-- name: GetViewerRestrictedPostContext :one
+-- Everything ResolveViewerScope needs to decide whether a viewer bypasses the
+-- allowlists in one game. viewer_role is '' for a non-participant; the primary
+-- GM is not a game_participants row, so Go compares gm_user_id itself.
+SELECT g.state,
+       g.gm_user_id,
+       COALESCE((SELECT gp.role FROM game_participants gp
+                 WHERE gp.game_id = g.id AND gp.user_id = sqlc.arg(user_id)::int
+                   AND gp.status = 'active'), '')::text AS viewer_role,
+       COALESCE((SELECT u.is_admin FROM users u WHERE u.id = sqlc.arg(user_id)::int), false)::bool AS viewer_is_admin
+FROM games g
+WHERE g.id = sqlc.arg(game_id);
+
+-- name: GetMessageVisibilityContext :one
+-- Everything CanUserViewMessage needs for one message, resolved from the
+-- message's OWN game and root post -- never from IDs in the URL.
+SELECT m.game_id,
+       root.is_restricted AS root_is_restricted,
+       root.is_draft AS root_is_draft,
+       g.state,
+       g.gm_user_id,
+       COALESCE((SELECT gp.role FROM game_participants gp
+                 WHERE gp.game_id = m.game_id AND gp.user_id = sqlc.arg(user_id)::int
+                   AND gp.status = 'active'), '')::text AS viewer_role,
+       COALESCE((SELECT u.is_admin FROM users u WHERE u.id = sqlc.arg(user_id)::int), false)::bool AS viewer_is_admin,
+       EXISTS (SELECT 1 FROM common_room_post_viewers v
+               WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(user_id)::int) AS is_listed_viewer
+FROM messages m
+JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = m.game_id
+WHERE m.id = sqlc.arg(message_id);
+
+-- name: GetMessageRootPostID :one
+SELECT root_post_id FROM messages WHERE id = $1;
+
+-- name: CountActivePlayersAmong :one
+-- How many of user_ids are active players in the game. Allowlists may only
+-- name active players: GMs, co-GMs and audience already see everything.
+SELECT COUNT(*)
+FROM game_participants
+WHERE game_id = sqlc.arg(game_id)
+  AND user_id = ANY(sqlc.arg(user_ids)::int[])
+  AND role = 'player'
+  AND status = 'active';
+
+-- name: SetPostRestricted :exec
+UPDATE messages
+SET is_restricted = sqlc.arg(is_restricted)
+WHERE id = sqlc.arg(post_id) AND message_type = 'post';
+
+-- name: AddPostViewers :exec
+INSERT INTO common_room_post_viewers (post_id, user_id)
+SELECT sqlc.arg(post_id)::int, unnest(sqlc.arg(user_ids)::int[]);
+
+-- name: DeletePostViewers :exec
+DELETE FROM common_room_post_viewers WHERE post_id = $1;
+
+-- name: ListPostViewers :many
+SELECT post_id, user_id
+FROM common_room_post_viewers
+WHERE post_id = ANY(sqlc.arg(post_ids)::int[])
+ORDER BY post_id, user_id;
+
+-- name: DeleteThreadNotificationsForHiddenUsers :exec
+-- Removes in-app notifications pointing into a restricted thread from every
+-- user who can no longer see it. A common_room_post notification's title holds
+-- the start of the post, so leaving it would be a leak.
+--
+-- This restates core.CanSeeAllRestrictedPosts in SQL (primary GM, active
+-- co-GM or audience) plus the allowlist. Admin mode is a per-request flag, so
+-- it has no place here. Callers run it only for a restricted post that is not
+-- in a public archive.
+DELETE FROM notifications n
+WHERE n.related_type IN ('post', 'comment')
+  AND n.related_id IN (SELECT id FROM messages WHERE root_post_id = sqlc.arg(post_id)::int)
+  AND n.user_id <> (SELECT g.gm_user_id FROM games g
+                    JOIN messages p ON p.game_id = g.id
+                    WHERE p.id = sqlc.arg(post_id)::int)
+  AND NOT EXISTS (SELECT 1 FROM game_participants gp
+                  JOIN messages p ON p.game_id = gp.game_id
+                  WHERE p.id = sqlc.arg(post_id)::int
+                    AND gp.user_id = n.user_id
+                    AND gp.status = 'active'
+                    AND gp.role IN ('co_gm', 'audience'))
+  AND NOT EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = sqlc.arg(post_id)::int AND v.user_id = n.user_id);

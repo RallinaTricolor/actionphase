@@ -216,6 +216,7 @@ func (s *MessageService) GetMessage(ctx context.Context, messageID int32) (*core
 			MentionedCharacterIds: message.MentionedCharacterIds,
 			IsEdited:              message.IsEdited,
 			IsDeleted:             message.IsDeleted,
+			IsRestricted:          message.IsRestricted,
 			CreatedAt:             message.CreatedAt,
 			DeletedAt:             message.DeletedAt,
 		},

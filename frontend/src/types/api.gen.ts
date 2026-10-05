@@ -2717,7 +2717,7 @@ export interface paths {
         put?: never;
         /**
          * Comment on a post or another comment
-         * @description Adds a comment. The path's postId is the immediate parent; send root_post_id in the body when replying below a top-level post, or read tracking will key off the wrong thread. Requires a verified email.
+         * @description Adds a comment. The path's postId is the immediate parent, a post or another comment; the thread's root post is derived from it. Requires a verified email.
          */
         post: operations["createComment"];
         delete?: never;
@@ -2804,6 +2804,26 @@ export interface paths {
          * @description Records how far the caller has read in a thread. The body is optional: omit it to mark the post itself read without naming a comment.
          */
         post: operations["markPostRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/posts/{postId}/viewers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set who can see a post
+         * @description Replaces a post's allowlist. restricted:true limits the post and its whole thread to the listed players (plus the GM, co-GMs and audience); restricted:false makes it public. Players who lose access also lose their in-app notifications from the thread. GM and co-GM only; works on drafts too.
+         */
+        put: operations["setPostViewers"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4550,6 +4570,8 @@ export interface components {
             character_id: number;
             /** @description Draft body, as markdown */
             content: string;
+            /** @description Restrict the post to these players (user IDs of active players). Omit for a public post. */
+            restricted_to_user_ids?: number[] | null;
         };
         CreateDraftUpdateBody: {
             /**
@@ -4690,6 +4712,8 @@ export interface components {
              * @description Phase to attach the post to
              */
             phase_id?: number;
+            /** @description Restrict the post to these players (user IDs of active players). Omit for a public post. */
+            restricted_to_user_ids?: number[] | null;
         };
         CreateStagedChainBody: {
             /** Format: int32 */
@@ -5512,6 +5536,8 @@ export interface components {
             is_deleted: boolean;
             is_draft: boolean;
             is_edited: boolean;
+            /** @description Whether the post is restricted to an allowlist of players; always false for comments */
+            is_restricted: boolean;
             mentioned_character_ids?: number[] | null;
             message_type: string;
             /** Format: int32 */
@@ -5524,6 +5550,8 @@ export interface components {
             thread_depth: number;
             /** Format: date-time */
             updated_at: string;
+            /** @description The post's allowlist. Present only on posts, for callers who can see every restricted post. */
+            viewer_user_ids?: number[];
         };
         MessageThreadContextResponse: {
             chain: components["schemas"]["MessageResponse"][];
@@ -5863,6 +5891,8 @@ export interface components {
             id: number;
             is_deleted: boolean;
             is_edited: boolean;
+            /** @description Whether the post is restricted to an allowlist of players */
+            is_restricted: boolean;
             /** @description Always "post" for this endpoint */
             message_type: string;
             /**
@@ -5880,6 +5910,8 @@ export interface components {
              * @description Always 0 for a top-level post
              */
             thread_depth: number;
+            /** @description The post's allowlist. Present only for callers who can see every restricted post. */
+            viewer_user_ids?: number[];
         };
         PostUnreadCommentsResponse: {
             /** Format: int32 */
@@ -6079,6 +6111,12 @@ export interface components {
         SetCharacterHiddenRequest: {
             /** @description Whether regular players may discover this NPC */
             is_hidden: boolean;
+        };
+        SetPostViewersRequest: {
+            /** @description true restricts the post to user_ids; false makes it public */
+            restricted: boolean;
+            /** @description Players who may see the post. Required and non-empty when restricted is true; must be empty or omitted when it is false. */
+            user_ids?: number[] | null;
         };
         StagedPartBody: {
             /** @description Part content */
@@ -13228,7 +13266,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such message */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -13279,6 +13317,13 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14085,7 +14130,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Post not found */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14126,6 +14171,13 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14183,6 +14235,13 @@ export interface operations {
             };
             /** @description Email not verified */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14248,6 +14307,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
                 headers: {
@@ -14296,7 +14362,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such comment */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14362,7 +14428,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such comment */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14412,6 +14478,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
                 headers: {
@@ -14455,7 +14528,78 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setPostViewers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Post ID */
+                postId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SetPostViewersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM or co-GM */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such post in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game is archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Empty list, non-player IDs, or a list on a public post */
             422: {
                 headers: {
                     [name: string]: unknown;

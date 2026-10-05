@@ -11,6 +11,12 @@ var ErrCharacterNotControlled = errors.New("you do not control this character")
 // ErrDraftPostExists is returned when attempting to create a draft post for a phase that already has one
 var ErrDraftPostExists = errors.New("a draft post already exists for this phase")
 
+// ErrInvalidPostViewers is returned when a restricted post's allowlist is
+// empty or names someone who is not an active player in the game. It is the
+// caller's mistake, so handlers answer 422 rather than letting it surface as a
+// 500.
+var ErrInvalidPostViewers = errors.New("invalid post viewers")
+
 // ErrInvalidStagedChain is returned when a staged result chain violates its
 // shape rules: too few parts, too many, a delay out of range, or a head
 // carrying a delay. Wrapped so handlers can answer 400 rather than 500 — these

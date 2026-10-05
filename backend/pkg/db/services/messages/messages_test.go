@@ -402,7 +402,7 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 	}
 
 	t.Run("retrieves all game posts", func(t *testing.T) {
-		posts, err := service.GetGamePosts(context.Background(), game.ID, nil, 10, 0)
+		posts, err := service.GetGamePosts(context.Background(), game.ID, nil, 10, 0, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Len(t, posts, 3)
@@ -413,12 +413,12 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 
 	t.Run("respects pagination", func(t *testing.T) {
 		// Get first page
-		posts1, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 0)
+		posts1, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, posts1, 2)
 
 		// Get second page
-		posts2, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 2)
+		posts2, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 2, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, posts2, 1)
 	})
@@ -837,7 +837,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		posts, err := service.GetPhasePosts(context.Background(), phase.ID)
+		posts, err := service.GetPhasePosts(context.Background(), phase.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Len(t, posts, 3)
@@ -858,7 +858,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		posts, err := service.GetPhasePosts(context.Background(), newPhase.ID)
+		posts, err := service.GetPhasePosts(context.Background(), newPhase.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Empty(t, posts)
@@ -910,7 +910,7 @@ func TestMessageService_PostCounts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("GetGamePostCount returns correct total", func(t *testing.T) {
-		count, err := service.GetGamePostCount(context.Background(), game.ID, nil)
+		count, err := service.GetGamePostCount(context.Background(), game.ID, nil, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), count)

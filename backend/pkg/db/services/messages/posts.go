@@ -9,6 +9,8 @@ import (
 	db "actionphase/pkg/db/services"
 	"actionphase/pkg/observability"
 	"actionphase/pkg/validation"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // CreatePost creates a new top-level message post
@@ -35,6 +37,11 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 		return nil, err
 	}
 
+	viewerIDs, err := resolveRequestedViewers(ctx, queries, req)
+	if err != nil {
+		return nil, err
+	}
+
 	// Extract character mentions from content
 	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID, req.AuthorID)
 	if err != nil {
@@ -43,18 +50,30 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 		mentionedIDs = []int32{}
 	}
 
-	// Create the post using sqlc-generated query
-	message, err := queries.CreatePost(ctx, models.CreatePostParams{
-		GameID:                req.GameID,
-		PhaseID:               int32ToPgInt4(req.PhaseID),
-		AuthorID:              req.AuthorID,
-		CharacterID:           req.CharacterID,
-		Content:               req.Content,
-		Visibility:            models.MessageVisibility(req.Visibility),
-		MentionedCharacterIds: mentionedIDs,
+	// The post and its allowlist go in together: a restricted post whose
+	// viewer rows failed to land would fail closed, but be invisible to the
+	// players it was written for.
+	var message models.Message
+	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		q := models.New(tx)
+		var err error
+		message, err = q.CreatePost(ctx, models.CreatePostParams{
+			GameID:                req.GameID,
+			PhaseID:               int32ToPgInt4(req.PhaseID),
+			AuthorID:              req.AuthorID,
+			CharacterID:           req.CharacterID,
+			Content:               req.Content,
+			Visibility:            models.MessageVisibility(req.Visibility),
+			MentionedCharacterIds: mentionedIDs,
+			IsRestricted:          viewerIDs != nil,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create post: %w", err)
+		}
+		return addInitialViewers(ctx, q, message.ID, viewerIDs)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create post: %w", err)
+		return nil, err
 	}
 
 	s.Logger.Info(ctx, "Post created",
@@ -88,6 +107,31 @@ func (s *MessageService) CreatePost(ctx context.Context, req core.CreatePostRequ
 	return &message, nil
 }
 
+// resolveRequestedViewers validates a create request's allowlist. It returns
+// nil for a public post and the normalized IDs for a restricted one.
+func resolveRequestedViewers(ctx context.Context, queries *models.Queries, req core.CreatePostRequest) ([]int32, error) {
+	if req.RestrictedToUserIDs == nil {
+		return nil, nil
+	}
+	ids := normalizeViewerIDs(req.RestrictedToUserIDs)
+	if err := validatePostViewers(ctx, queries, req.GameID, ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// addInitialViewers writes a new post's allowlist inside the insert's
+// transaction. No-op for a public post.
+func addInitialViewers(ctx context.Context, q *models.Queries, postID int32, viewerIDs []int32) error {
+	if len(viewerIDs) == 0 {
+		return nil
+	}
+	if err := q.AddPostViewers(ctx, models.AddPostViewersParams{PostID: postID, UserIds: viewerIDs}); err != nil {
+		return fmt.Errorf("failed to add post viewers: %w", err)
+	}
+	return nil
+}
+
 // truncatePostTitle returns the first 60 characters of a post for use as a notification title.
 func truncatePostTitle(content string) string {
 	const maxLen = 60
@@ -119,20 +163,21 @@ func (s *MessageService) GetPost(ctx context.Context, postID int32) (*core.Messa
 
 	return &core.MessageWithDetails{
 		Message: models.Message{
-			ID:          post.ID,
-			GameID:      post.GameID,
-			PhaseID:     post.PhaseID,
-			AuthorID:    post.AuthorID,
-			CharacterID: post.CharacterID,
-			Content:     post.Content,
-			MessageType: post.MessageType,
-			ParentID:    post.ParentID,
-			ThreadDepth: post.ThreadDepth,
-			Visibility:  post.Visibility,
-			IsEdited:    post.IsEdited,
-			IsDeleted:   post.IsDeleted,
-			CreatedAt:   post.CreatedAt,
-			DeletedAt:   post.DeletedAt,
+			ID:           post.ID,
+			GameID:       post.GameID,
+			PhaseID:      post.PhaseID,
+			AuthorID:     post.AuthorID,
+			CharacterID:  post.CharacterID,
+			Content:      post.Content,
+			MessageType:  post.MessageType,
+			ParentID:     post.ParentID,
+			ThreadDepth:  post.ThreadDepth,
+			Visibility:   post.Visibility,
+			IsEdited:     post.IsEdited,
+			IsDeleted:    post.IsDeleted,
+			IsRestricted: post.IsRestricted,
+			CreatedAt:    post.CreatedAt,
+			DeletedAt:    post.DeletedAt,
 		},
 		AuthorUsername:     post.AuthorUsername,
 		CharacterName:      post.CharacterName.String,
@@ -142,21 +187,22 @@ func (s *MessageService) GetPost(ctx context.Context, postID int32) (*core.Messa
 }
 
 // GetGamePosts retrieves posts for a game, optionally filtered by phase
-func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32) ([]core.MessageWithDetails, error) {
+func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32, viewer core.ViewerScope) ([]core.MessageWithDetails, error) {
 	queries := models.New(s.DB)
 
-	// Convert phaseID to int32 for use with Column2 parameter
-	// If nil, pass 0 to get all posts (CASE WHEN 0 THEN TRUE)
+	// 0 means "every phase".
 	phaseIDValue := int32(0)
 	if phaseID != nil {
 		phaseIDValue = *phaseID
 	}
 
 	posts, err := queries.GetGamePosts(ctx, models.GetGamePostsParams{
-		GameID:  gameID,
-		Column2: phaseIDValue,
-		Limit:   limit,
-		Offset:  offset,
+		GameID:        gameID,
+		PhaseID:       phaseIDValue,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+		RowLimit:      limit,
+		RowOffset:     offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get game posts: %w", err)
@@ -190,6 +236,7 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 				MentionedCharacterIds: post.MentionedCharacterIds,
 				IsEdited:              post.IsEdited,
 				IsDeleted:             post.IsDeleted,
+				IsRestricted:          post.IsRestricted,
 				CreatedAt:             post.CreatedAt,
 				DeletedAt:             post.DeletedAt,
 			},
@@ -204,10 +251,14 @@ func (s *MessageService) GetGamePosts(ctx context.Context, gameID int32, phaseID
 }
 
 // GetPhasePosts retrieves all posts for a specific phase
-func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32) ([]core.MessageWithDetails, error) {
+func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32, viewer core.ViewerScope) ([]core.MessageWithDetails, error) {
 	queries := models.New(s.DB)
 
-	posts, err := queries.GetPhasePosts(ctx, int32ValueToPgInt4(phaseID))
+	posts, err := queries.GetPhasePosts(ctx, models.GetPhasePostsParams{
+		PhaseID:       int32ValueToPgInt4(phaseID),
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get phase posts: %w", err)
 	}
@@ -221,20 +272,21 @@ func (s *MessageService) GetPhasePosts(ctx context.Context, phaseID int32) ([]co
 
 		result[i] = core.MessageWithDetails{
 			Message: models.Message{
-				ID:          post.ID,
-				GameID:      post.GameID,
-				PhaseID:     post.PhaseID,
-				AuthorID:    post.AuthorID,
-				CharacterID: post.CharacterID,
-				Content:     post.Content,
-				MessageType: post.MessageType,
-				ParentID:    post.ParentID,
-				ThreadDepth: post.ThreadDepth,
-				Visibility:  post.Visibility,
-				IsEdited:    post.IsEdited,
-				IsDeleted:   post.IsDeleted,
-				CreatedAt:   post.CreatedAt,
-				DeletedAt:   post.DeletedAt,
+				ID:           post.ID,
+				GameID:       post.GameID,
+				PhaseID:      post.PhaseID,
+				AuthorID:     post.AuthorID,
+				CharacterID:  post.CharacterID,
+				Content:      post.Content,
+				MessageType:  post.MessageType,
+				ParentID:     post.ParentID,
+				ThreadDepth:  post.ThreadDepth,
+				Visibility:   post.Visibility,
+				IsEdited:     post.IsEdited,
+				IsDeleted:    post.IsDeleted,
+				CreatedAt:    post.CreatedAt,
+				IsRestricted: post.IsRestricted,
+				DeletedAt:    post.DeletedAt,
 			},
 			AuthorUsername:     post.AuthorUsername,
 			CharacterName:      post.CharacterName.String,
@@ -304,19 +356,20 @@ func (s *MessageService) DeletePost(ctx context.Context, postID int32) error {
 }
 
 // GetGamePostCount returns the count of posts for a game, optionally filtered by phase
-func (s *MessageService) GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32) (int64, error) {
+func (s *MessageService) GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32, viewer core.ViewerScope) (int64, error) {
 	queries := models.New(s.DB)
 
-	// Convert phaseID to int32 for use with Column2 parameter
-	// If nil, pass 0 to get all posts (CASE WHEN 0 THEN TRUE)
+	// 0 means "every phase".
 	phaseIDValue := int32(0)
 	if phaseID != nil {
 		phaseIDValue = *phaseID
 	}
 
 	count, err := queries.GetGamePostCount(ctx, models.GetGamePostCountParams{
-		GameID:  gameID,
-		Column2: phaseIDValue,
+		GameID:        gameID,
+		PhaseID:       phaseIDValue,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get game post count: %w", err)

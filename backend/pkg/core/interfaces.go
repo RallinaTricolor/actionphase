@@ -882,11 +882,12 @@ type MessageServiceInterface interface {
 	// GetPost retrieves a specific post by ID with metadata
 	GetPost(ctx context.Context, postID int32) (*MessageWithDetails, error)
 
-	// GetGamePosts retrieves posts for a game, optionally filtered by phase
-	GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32) ([]MessageWithDetails, error)
+	// GetGamePosts retrieves posts for a game, optionally filtered by phase,
+	// leaving out restricted posts the viewer may not see
+	GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32, viewer ViewerScope) ([]MessageWithDetails, error)
 
-	// GetPhasePosts retrieves all posts for a specific phase
-	GetPhasePosts(ctx context.Context, phaseID int32) ([]MessageWithDetails, error)
+	// GetPhasePosts retrieves all posts for a specific phase that the viewer may see
+	GetPhasePosts(ctx context.Context, phaseID int32, viewer ViewerScope) ([]MessageWithDetails, error)
 
 	// UpdatePost updates the content of an existing post
 	UpdatePost(ctx context.Context, postID int32, content string) (*models.Message, error)
@@ -916,8 +917,8 @@ type MessageServiceInterface interface {
 	// CanUserDeleteComment checks if a user can delete a comment (author, GM, or admin in admin mode)
 	CanUserDeleteComment(ctx context.Context, commentID int32, userID int32, isAdmin bool) (bool, error)
 
-	// GetGamePostCount returns total post count for a game
-	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32) (int64, error)
+	// GetGamePostCount returns the number of posts in a game the viewer may see
+	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32, viewer ViewerScope) (int64, error)
 
 	// GetPostCommentCount returns total comment count for a post
 	GetPostCommentCount(ctx context.Context, postID int32) (int64, error)
@@ -1050,6 +1051,33 @@ type MessageServiceInterface interface {
 
 	// GetUnreadCommentIDsForPosts retrieves unread comment IDs for posts a user has read markers for
 	GetUnreadCommentIDsForPosts(ctx context.Context, userID, gameID int32) ([]*PostUnreadComments, error)
+
+	// Restricted posts (Common Room allowlists). See CanSeeAllRestrictedPosts
+	// for the rule.
+
+	// ResolveViewerScope works out once per request whether userID bypasses
+	// the allowlists in gameID. Any lookup failure resolves to SeesAll=false:
+	// a failed check never grants access.
+	ResolveViewerScope(ctx context.Context, gameID, userID int32) ViewerScope
+
+	// CanUserViewMessage reports whether userID may see messageID (a post or any
+	// comment under it). It resolves the message's own game and root post, and
+	// never trusts IDs from the URL. Unknown message → (false, nil).
+	CanUserViewMessage(ctx context.Context, messageID, userID int32) (bool, error)
+
+	// SetPostViewers replaces a post's allowlist. restricted=false makes the
+	// post public and requires userIDs to be empty; restricted=true requires at
+	// least one active player. Users who lose access also lose their in-app
+	// notifications pointing into the thread, in the same transaction.
+	SetPostViewers(ctx context.Context, postID int32, restricted bool, userIDs []int32) error
+
+	// IsMessageInThread reports whether messageID belongs to the thread rooted
+	// at postID. Unknown message → (false, nil).
+	IsMessageInThread(ctx context.Context, messageID, postID int32) (bool, error)
+
+	// ListPostViewers returns the allowlist of each given post, keyed by post
+	// ID. Posts with no rows are absent from the map.
+	ListPostViewers(ctx context.Context, postIDs []int32) (map[int32][]int32, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -1210,6 +1238,21 @@ type CreatePostRequest struct {
 	CharacterID int32
 	Content     string
 	Visibility  string // "game" or "private"
+
+	// RestrictedToUserIDs restricts the post to these players. nil means a
+	// public post. A non-nil empty slice is rejected: "restricted to nobody"
+	// is what drafts are for.
+	RestrictedToUserIDs []int32
+}
+
+// ViewerScope carries who is reading, for Common Room allowlist filtering.
+//
+// SeesAll already folds in the public-archive exemption and admin mode, so a
+// listing query takes it as-is and never re-checks the game state. UserID 0
+// means no identified caller, which no allowlist row ever matches.
+type ViewerScope struct {
+	UserID  int32
+	SeesAll bool
 }
 
 // CreateCommentRequest represents the parameters needed to create a comment
