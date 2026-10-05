@@ -80,11 +80,11 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 	}
 
 	t.Run("returns all comments when none are marked read", func(t *testing.T) {
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(reader.ID), 10, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 10, 0, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"Comment 1", "Comment 2", "Comment 3"}, contentsOf(got))
 
-		count, err := service.GetTotalUnreadCommentCount(ctx, game.ID, int32(reader.ID))
+		count, err := service.GetTotalUnreadCommentCount(ctx, game.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		assert.Equal(t, int64(3), count)
 	})
@@ -92,19 +92,19 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 	t.Run("omits comments the user marked as read", func(t *testing.T) {
 		require.NoError(t, service.ToggleCommentRead(ctx, int32(reader.ID), game.ID, post.ID, comments[1].ID, true))
 
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(reader.ID), 10, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 10, 0, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"Comment 1", "Comment 3"}, contentsOf(got),
 			"the manually-read comment must not appear")
 
-		count, err := service.GetTotalUnreadCommentCount(ctx, game.ID, int32(reader.ID))
+		count, err := service.GetTotalUnreadCommentCount(ctx, game.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), count, "total count must reflect the filter")
 	})
 
 	t.Run("read state is per-user", func(t *testing.T) {
 		// Comment 2 is read for `reader` (previous subtest) but not for `other`.
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(other.ID), 10, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 10, 0, core.ViewerScope{UserID: int32(other.ID)})
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"Comment 1", "Comment 2", "Comment 3"}, contentsOf(got),
 			"another user's read marks must not filter this user's list")
@@ -113,7 +113,7 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 	t.Run("unmarking as read restores the comment", func(t *testing.T) {
 		require.NoError(t, service.ToggleCommentRead(ctx, int32(reader.ID), game.ID, post.ID, comments[1].ID, false))
 
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(reader.ID), 10, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 10, 0, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []string{"Comment 1", "Comment 2", "Comment 3"}, contentsOf(got))
 	})
@@ -124,14 +124,14 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 		require.NoError(t, service.ToggleCommentRead(ctx, int32(reader.ID), game.ID, post.ID, comments[2].ID, true))
 		require.NoError(t, service.ToggleCommentRead(ctx, int32(reader.ID), game.ID, post.ID, comments[1].ID, true))
 
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(reader.ID), 1, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 1, 0, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		assert.Equal(t, "Comment 1", got[0].Content)
 	})
 
 	t.Run("includes parent context and post_id like the unfiltered listing", func(t *testing.T) {
-		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, int32(reader.ID), 10, 0)
+		got, err := service.ListRecentUnreadCommentsWithParents(ctx, game.ID, 10, 0, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 		require.NotEmpty(t, got)
 

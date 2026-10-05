@@ -21,10 +21,11 @@ import (
 //
 // Both posts are in one phase so phase-scoped listings can be checked too.
 type restrictedScenario struct {
-	testDB  *core.TestDatabase
-	service *MessageService
-	game    *models.Game
-	phase   *models.GamePhase
+	testDB     *core.TestDatabase
+	service    *MessageService
+	characters *db.CharacterService
+	game       *models.Game
+	phase      *models.GamePhase
 
 	gm, coGM, playerA, playerB, playerC, audience, outsider, admin *core.User
 
@@ -64,6 +65,7 @@ func newRestrictedScenario(t *testing.T, testDB *core.TestDatabase, prefix strin
 	testDB.AddTestGameParticipant(t, s.game.ID, int32(s.audience.ID), "audience")
 
 	characters := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	s.characters = characters
 	character := func(owner *core.User, name string) *models.Character {
 		ownerID := int32(owner.ID)
 		c, err := characters.CreateCharacter(ctx, db.CreateCharacterRequest{

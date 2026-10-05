@@ -948,20 +948,20 @@ type MessageServiceInterface interface {
 	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
 
 	// ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
-	// for the "New Comments" view. Supports pagination via limit/offset.
-	ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32) ([]CommentWithParent, error)
+	// for the "New Comments" view. Supports pagination via limit/offset. Comments in
+	// restricted threads the viewer can't see are left out before paginating.
+	ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer ViewerScope) ([]CommentWithParent, error)
 
 	// ListRecentUnreadCommentsWithParents behaves like ListRecentCommentsWithParents but
-	// omits comments the user has manually marked as read. Backs the "New Comments"
+	// omits comments the viewer has manually marked as read. Backs the "New Comments"
 	// view's unread-only filter in manual read mode.
-	ListRecentUnreadCommentsWithParents(ctx context.Context, gameID, userID int32, limit, offset int32) ([]CommentWithParent, error)
+	ListRecentUnreadCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer ViewerScope) ([]CommentWithParent, error)
 
-	// GetTotalCommentCount returns the total count of non-deleted comments in a game
-	GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error)
+	// GetTotalCommentCount returns the total for ListRecentCommentsWithParents
+	GetTotalCommentCount(ctx context.Context, gameID int32, viewer ViewerScope) (int64, error)
 
-	// GetTotalUnreadCommentCount returns the count of non-deleted comments in a game
-	// that the user has not manually marked as read
-	GetTotalUnreadCommentCount(ctx context.Context, gameID, userID int32) (int64, error)
+	// GetTotalUnreadCommentCount returns the total for ListRecentUnreadCommentsWithParents
+	GetTotalUnreadCommentCount(ctx context.Context, gameID int32, viewer ViewerScope) (int64, error)
 
 	// GetPostCommentsWithThreads retrieves paginated top-level comments with all nested replies
 	// Uses a recursive CTE to load entire comment trees in a single query (eliminates N+1 pattern)
@@ -973,11 +973,12 @@ type MessageServiceInterface interface {
 	CountTopLevelComments(ctx context.Context, postID int32) (int64, error)
 
 	// ListCharacterPostsAndComments retrieves paginated public messages by a specific character
-	// Returns posts and comments with parent context for the Character Page
-	ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32) ([]CharacterMessage, error)
+	// Returns posts and comments with parent context for the Character Page. viewer
+	// must be resolved for the character's game.
+	ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32, viewer ViewerScope) ([]CharacterMessage, error)
 
-	// CountCharacterPostsAndComments returns the total count of public messages by a character
-	CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error)
+	// CountCharacterPostsAndComments returns the total for ListCharacterPostsAndComments
+	CountCharacterPostsAndComments(ctx context.Context, characterID int32, viewer ViewerScope) (int64, error)
 
 	// ToggleCommentRead marks or unmarks a single comment as manually read by the current user
 	ToggleCommentRead(ctx context.Context, userID, gameID, postID, commentID int32, markAsRead bool) error
@@ -2146,8 +2147,9 @@ type CharacterServiceInterface interface {
 	DeactivatePlayerCharacters(ctx context.Context, gameID, userID int32) error
 	DeleteCharacter(ctx context.Context, characterID int32) error
 	ListAudienceNPCs(ctx context.Context, gameID int32) ([]models.ListAudienceNPCsRow, error)
-	GetCharacterActivityStats(ctx context.Context, characterID int32) (*CharacterActivityStats, error)
-	GetCharacterActivityStatsByGame(ctx context.Context, gameID int32) (map[int32]*CharacterActivityStats, error)
+	// The public counts leave out restricted threads the viewer can't see.
+	GetCharacterActivityStats(ctx context.Context, characterID int32, viewer ViewerScope) (*CharacterActivityStats, error)
+	GetCharacterActivityStatsByGame(ctx context.Context, gameID int32, viewer ViewerScope) (map[int32]*CharacterActivityStats, error)
 	AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error)
 }
 

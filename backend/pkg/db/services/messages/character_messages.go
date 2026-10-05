@@ -8,14 +8,18 @@ import (
 	models "actionphase/pkg/db/models"
 )
 
-// ListCharacterPostsAndComments retrieves paginated public messages by a specific character
-func (s *MessageService) ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32) ([]core.CharacterMessage, error) {
+// ListCharacterPostsAndComments retrieves paginated public messages by a specific
+// character, leaving out restricted threads the viewer can't see. viewer must be
+// resolved for the character's game.
+func (s *MessageService) ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32, viewer core.ViewerScope) ([]core.CharacterMessage, error) {
 	queries := models.New(s.DB)
 
 	rows, err := queries.ListCharacterPostsAndComments(ctx, models.ListCharacterPostsAndCommentsParams{
-		CharacterID: characterID,
-		Limit:       limit,
-		Offset:      offset,
+		CharacterID:   characterID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+		RowLimit:      limit,
+		RowOffset:     offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list character messages: %w", err)
@@ -61,11 +65,15 @@ func (s *MessageService) ListCharacterPostsAndComments(ctx context.Context, char
 	return messages, nil
 }
 
-// CountCharacterPostsAndComments returns the total count of public messages by a character
-func (s *MessageService) CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error) {
+// CountCharacterPostsAndComments returns the total for ListCharacterPostsAndComments
+func (s *MessageService) CountCharacterPostsAndComments(ctx context.Context, characterID int32, viewer core.ViewerScope) (int64, error) {
 	queries := models.New(s.DB)
 
-	count, err := queries.CountCharacterPostsAndComments(ctx, characterID)
+	count, err := queries.CountCharacterPostsAndComments(ctx, models.CountCharacterPostsAndCommentsParams{
+		CharacterID:   characterID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to count character messages: %w", err)
 	}

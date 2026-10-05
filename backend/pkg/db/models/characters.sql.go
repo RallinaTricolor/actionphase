@@ -242,13 +242,27 @@ func (q *Queries) GetCharacter(ctx context.Context, id int32) (Character, error)
 
 const getCharacterActivityStats = `-- name: GetCharacterActivityStats :one
 SELECT
-    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT m.id) FILTER (
+        WHERE m.is_deleted = false
+          AND root.is_draft = false
+          AND ($1::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = m.root_post_id AND v.user_id = $2::int))
+    ) AS public_messages,
     COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
 FROM characters c
 LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
-WHERE c.id = $1
+WHERE c.id = $3
 `
+
+type GetCharacterActivityStatsParams struct {
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	CharacterID   int32 `json:"character_id"`
+}
 
 type GetCharacterActivityStatsRow struct {
 	PublicMessages  int64 `json:"public_messages"`
@@ -256,10 +270,15 @@ type GetCharacterActivityStatsRow struct {
 }
 
 // Returns public message count and private message count for a character.
-// public_messages: all non-deleted messages (posts + comments) in the common room
+// public_messages: all non-deleted messages (posts + comments) in the common
+//
+//	room the viewer can see. Unpublished drafts and their comments are left
+//	out, and so are threads under a restricted post the viewer isn't on.
+//	viewer_sees_all comes from ResolveViewerScope for the character's game.
+//
 // private_messages: all non-deleted private messages sent as this character
-func (q *Queries) GetCharacterActivityStats(ctx context.Context, id int32) (GetCharacterActivityStatsRow, error) {
-	row := q.db.QueryRow(ctx, getCharacterActivityStats, id)
+func (q *Queries) GetCharacterActivityStats(ctx context.Context, arg GetCharacterActivityStatsParams) (GetCharacterActivityStatsRow, error) {
+	row := q.db.QueryRow(ctx, getCharacterActivityStats, arg.ViewerSeesAll, arg.ViewerUserID, arg.CharacterID)
 	var i GetCharacterActivityStatsRow
 	err := row.Scan(&i.PublicMessages, &i.PrivateMessages)
 	return i, err
@@ -268,14 +287,28 @@ func (q *Queries) GetCharacterActivityStats(ctx context.Context, id int32) (GetC
 const getCharacterActivityStatsByGame = `-- name: GetCharacterActivityStatsByGame :many
 SELECT
     c.id AS character_id,
-    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT m.id) FILTER (
+        WHERE m.is_deleted = false
+          AND root.is_draft = false
+          AND ($1::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = m.root_post_id AND v.user_id = $2::int))
+    ) AS public_messages,
     COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
 FROM characters c
 LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
-WHERE c.game_id = $1
+WHERE c.game_id = $3
 GROUP BY c.id
 `
+
+type GetCharacterActivityStatsByGameParams struct {
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+}
 
 type GetCharacterActivityStatsByGameRow struct {
 	CharacterID     int32 `json:"character_id"`
@@ -287,8 +320,8 @@ type GetCharacterActivityStatsByGameRow struct {
 // query. Used to avoid firing one /stats request per roster member from the
 // frontend, which was bursting the DB connection pool on rosters of 20+
 // characters.
-func (q *Queries) GetCharacterActivityStatsByGame(ctx context.Context, gameID int32) ([]GetCharacterActivityStatsByGameRow, error) {
-	rows, err := q.db.Query(ctx, getCharacterActivityStatsByGame, gameID)
+func (q *Queries) GetCharacterActivityStatsByGame(ctx context.Context, arg GetCharacterActivityStatsByGameParams) ([]GetCharacterActivityStatsByGameRow, error) {
+	rows, err := q.db.Query(ctx, getCharacterActivityStatsByGame, arg.ViewerSeesAll, arg.ViewerUserID, arg.GameID)
 	if err != nil {
 		return nil, err
 	}

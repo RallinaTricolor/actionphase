@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -486,4 +487,64 @@ func TestRestrictedPostsAPI_DraftPost(t *testing.T) {
 		rec = s.playerA.do(http.MethodGet, fmt.Sprintf("%s/messages/%d", s.base, resp.ID), nil)
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	})
+}
+
+// TestRestrictedPostsAPI_Feeds checks New Comments (both read modes) and the
+// character profile feed per role. The scope comes from the URL's game for New
+// Comments and from the character's own game for the profile, which has no
+// game in its path.
+func TestRestrictedPostsAPI_Feeds(t *testing.T) {
+	s := newRestrictedAPIScenario(t, "rapi_feeds")
+
+	type feedPage struct {
+		ids   []int32
+		total int64
+	}
+	read := func(t *testing.T, as apiClient, path, key string) feedPage {
+		t.Helper()
+		rec := as.do(http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var body map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		var rows []struct {
+			ID int32 `json:"id"`
+		}
+		require.NoError(t, json.Unmarshal(body[key], &rows))
+		var pagination PaginationResponse
+		require.NoError(t, json.Unmarshal(body["pagination"], &pagination))
+		page := feedPage{total: pagination.Total}
+		for _, row := range rows {
+			page.ids = append(page.ids, row.ID)
+		}
+		return page
+	}
+
+	for name, c := range map[string]struct {
+		as   apiClient
+		sees bool
+	}{
+		"gm":                 {s.gm, true},
+		"co-gm":              {s.coGM, true},
+		"audience":           {s.audience, true},
+		"listed player":      {s.playerA, true},
+		"unlisted player":    {s.playerB, false},
+		"non-participant":    {s.outsider, false},
+		"gm of another game": {s.otherGM, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			page := read(t, c.as, s.base+"/comments/recent", "comments")
+			assert.Equal(t, c.sees, slices.Contains(page.ids, s.aComment), "New Comments")
+			assert.Equal(t, int64(len(page.ids)), page.total, "New Comments total")
+
+			// A wrote the comment, so it was never unread for A; everyone else
+			// who can see it has it unread.
+			page = read(t, c.as, s.base+"/comments/recent?unread_only=true", "comments")
+			assert.Equal(t, c.sees && c.as.token != s.playerA.token, slices.Contains(page.ids, s.aComment), "unread only")
+			assert.Equal(t, int64(len(page.ids)), page.total, "unread only total")
+
+			page = read(t, c.as, fmt.Sprintf("/api/v1/characters/%d/comments", s.aChar.ID), "messages")
+			assert.Equal(t, c.sees, slices.Contains(page.ids, s.aComment), "A's profile")
+			assert.Equal(t, int64(len(page.ids)), page.total, "profile total")
+		})
+	}
 }

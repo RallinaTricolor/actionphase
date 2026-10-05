@@ -923,23 +923,29 @@ func (h *Handler) humaListRecentComments(ctx context.Context, in *recentComments
 		return nil, huma.Error401Unauthorized("authentication required for unread_only")
 	}
 
+	// An anonymous caller resolves as user 0, which sees only public threads.
+	if userIDErr != nil {
+		userID = 0
+	}
+	scope := h.MessageService.ResolveViewerScope(ctx, in.GameID, userID)
+
 	var comments []core.CommentWithParent
 	var totalCount int64
 	var svcErr error
 	if in.UnreadOnly {
-		comments, svcErr = h.MessageService.ListRecentUnreadCommentsWithParents(ctx, in.GameID, userID, int32(limit), int32(offset))
+		comments, svcErr = h.MessageService.ListRecentUnreadCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset), scope)
 		if svcErr != nil {
 			h.App.ObsLogger.Error(ctx, "Failed to list recent unread comments", "error", svcErr, "game_id", in.GameID, "user_id", userID)
 			return nil, huma.Error500InternalServerError(svcErr.Error())
 		}
-		totalCount, svcErr = h.MessageService.GetTotalUnreadCommentCount(ctx, in.GameID, userID)
+		totalCount, svcErr = h.MessageService.GetTotalUnreadCommentCount(ctx, in.GameID, scope)
 	} else {
-		comments, svcErr = h.MessageService.ListRecentCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset))
+		comments, svcErr = h.MessageService.ListRecentCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset), scope)
 		if svcErr != nil {
 			h.App.ObsLogger.Error(ctx, "Failed to list recent comments", "error", svcErr, "game_id", in.GameID)
 			return nil, huma.Error500InternalServerError(svcErr.Error())
 		}
-		totalCount, svcErr = h.MessageService.GetTotalCommentCount(ctx, in.GameID)
+		totalCount, svcErr = h.MessageService.GetTotalCommentCount(ctx, in.GameID, scope)
 	}
 	if svcErr != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get total comment count", "error", svcErr, "game_id", in.GameID)
@@ -974,13 +980,17 @@ func (h *Handler) humaGetCharacterComments(ctx context.Context, in *characterCom
 		return nil, err
 	}
 
-	messages, err := h.MessageService.ListCharacterPostsAndComments(ctx, in.ID, int32(limit), int32(offset))
+	// No GameMiddleware on /characters: resolve the scope from the character's
+	// own game.
+	scope := h.viewerScope(ctx, character.GameID)
+
+	messages, err := h.MessageService.ListCharacterPostsAndComments(ctx, in.ID, int32(limit), int32(offset), scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list character messages", "error", err, "character_id", in.ID)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
-	totalCount, err := h.MessageService.CountCharacterPostsAndComments(ctx, in.ID)
+	totalCount, err := h.MessageService.CountCharacterPostsAndComments(ctx, in.ID, scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to count character messages", "error", err, "character_id", in.ID)
 		return nil, huma.Error500InternalServerError(err.Error())

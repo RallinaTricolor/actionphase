@@ -41,18 +41,29 @@ func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConvers
 const countCharacterPostsAndComments = `-- name: CountCharacterPostsAndComments :one
 SELECT COUNT(*) as total
 FROM messages m
+JOIN messages root ON root.id = m.root_post_id
 JOIN characters c ON m.character_id = c.id
 WHERE m.character_id = $1
   AND m.visibility = 'game'
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
   AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+  AND root.is_draft = false
+  AND ($2::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = $3::int))
 `
 
-// Count all public non-deleted posts and comments by a character
-// NPCs only count comments (not top-level posts)
-func (q *Queries) CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, countCharacterPostsAndComments, characterID)
+type CountCharacterPostsAndCommentsParams struct {
+	CharacterID   int32 `json:"character_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+}
+
+// Total for ListCharacterPostsAndComments, with the same filters.
+func (q *Queries) CountCharacterPostsAndComments(ctx context.Context, arg CountCharacterPostsAndCommentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCharacterPostsAndComments, arg.CharacterID, arg.ViewerSeesAll, arg.ViewerUserID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -666,16 +677,29 @@ func (q *Queries) GetThreadPosts(ctx context.Context, threadID int32) ([]GetThre
 
 const getTotalCommentCount = `-- name: GetTotalCommentCount :one
 SELECT COUNT(*) as total
-FROM messages
-WHERE game_id = $1
-  AND message_type = 'comment'
-  AND is_deleted = false
-  AND deleted_at IS NULL
+FROM messages m
+JOIN messages root ON root.id = m.root_post_id
+WHERE m.game_id = $1
+  AND m.message_type = 'comment'
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
+  AND root.is_draft = false
+  AND ($2::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = $3::int))
 `
 
-// Get total count of comments in a game
-func (q *Queries) GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error) {
-	row := q.db.QueryRow(ctx, getTotalCommentCount, gameID)
+type GetTotalCommentCountParams struct {
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+}
+
+// Total for ListRecentCommentsWithParents: the same filters, so it never
+// counts a comment the viewer can't be shown.
+func (q *Queries) GetTotalCommentCount(ctx context.Context, arg GetTotalCommentCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalCommentCount, arg.GameID, arg.ViewerSeesAll, arg.ViewerUserID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -684,24 +708,31 @@ func (q *Queries) GetTotalCommentCount(ctx context.Context, gameID int32) (int64
 const getTotalUnreadCommentCount = `-- name: GetTotalUnreadCommentCount :one
 SELECT COUNT(*) as total
 FROM messages m
+JOIN messages root ON root.id = m.root_post_id
 WHERE m.game_id = $1
   AND m.message_type = 'comment'
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
   AND NOT EXISTS (
       SELECT 1 FROM user_comment_reads ucr
-      WHERE ucr.comment_id = m.id AND ucr.user_id = $2
+      WHERE ucr.comment_id = m.id AND ucr.user_id = $2::int
   )
+  AND root.is_draft = false
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = $2::int))
 `
 
 type GetTotalUnreadCommentCountParams struct {
-	GameID int32 `json:"game_id"`
-	UserID int32 `json:"user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
-// Count of comments in a game the user has not manually marked as read
+// Total for ListRecentUnreadCommentsWithParents, with the same filters.
 func (q *Queries) GetTotalUnreadCommentCount(ctx context.Context, arg GetTotalUnreadCommentCountParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getTotalUnreadCommentCount, arg.GameID, arg.UserID)
+	row := q.db.QueryRow(ctx, getTotalUnreadCommentCount, arg.GameID, arg.ViewerUserID, arg.ViewerSeesAll)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -994,6 +1025,7 @@ WITH character_messages AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     JOIN characters c ON m.character_id = c.id
     WHERE m.character_id = $1
@@ -1001,8 +1033,13 @@ WITH character_messages AS (
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
       AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+      AND root.is_draft = false
+      AND ($2::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = $3::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
+    LIMIT $5 OFFSET $4
 ),
 parent_messages AS (
     SELECT
@@ -1053,9 +1090,11 @@ ORDER BY cm.created_at DESC
 `
 
 type ListCharacterPostsAndCommentsParams struct {
-	CharacterID int32 `json:"character_id"`
-	Limit       int32 `json:"limit"`
-	Offset      int32 `json:"offset"`
+	CharacterID   int32 `json:"character_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	RowOffset     int32 `json:"row_offset"`
+	RowLimit      int32 `json:"row_limit"`
 }
 
 type ListCharacterPostsAndCommentsRow struct {
@@ -1090,8 +1129,17 @@ type ListCharacterPostsAndCommentsRow struct {
 // Returns both posts and comments with parent context for comments
 // Only returns public (game-visibility) messages, not deleted ones
 // NPCs only show comments (not top-level posts)
+// Leaves out unpublished drafts and their comments, and threads under a
+// restricted post the viewer isn't on (filtered before LIMIT, so pages stay
+// full). viewer_sees_all comes from ResolveViewerScope for the character's game.
 func (q *Queries) ListCharacterPostsAndComments(ctx context.Context, arg ListCharacterPostsAndCommentsParams) ([]ListCharacterPostsAndCommentsRow, error) {
-	rows, err := q.db.Query(ctx, listCharacterPostsAndComments, arg.CharacterID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listCharacterPostsAndComments,
+		arg.CharacterID,
+		arg.ViewerSeesAll,
+		arg.ViewerUserID,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1135,11 +1183,12 @@ func (q *Queries) ListCharacterPostsAndComments(ctx context.Context, arg ListCha
 }
 
 const listRecentCommentsWithParents = `-- name: ListRecentCommentsWithParents :many
-WITH RECURSIVE recent_comments AS (
+WITH recent_comments AS (
     SELECT
         m.id,
         m.game_id,
         m.parent_id,
+        m.root_post_id,
         m.author_id,
         m.character_id,
         m.content,
@@ -1152,31 +1201,20 @@ WITH RECURSIVE recent_comments AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
     WHERE m.game_id = $1
       AND m.message_type = 'comment'
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
+      AND root.is_draft = false
+      AND ($2::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = $3::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
-),
-root_posts AS (
-    -- Base: walk up from each recent comment, tracking the original comment's id
-    SELECT rc.id AS comment_id, rc.parent_id AS current_id
-    FROM recent_comments rc
-    WHERE rc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
+    LIMIT $5 OFFSET $4
 ),
 parent_messages AS (
     SELECT
@@ -1201,7 +1239,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
-    rp.post_id,
+    rc.root_post_id AS post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -1222,22 +1260,23 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
-LEFT JOIN root_post_ids rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC
 `
 
 type ListRecentCommentsWithParentsParams struct {
-	GameID int32 `json:"game_id"`
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	RowOffset     int32 `json:"row_offset"`
+	RowLimit      int32 `json:"row_limit"`
 }
 
 type ListRecentCommentsWithParentsRow struct {
 	ID                       int32              `json:"id"`
 	GameID                   int32              `json:"game_id"`
 	ParentID                 pgtype.Int4        `json:"parent_id"`
-	PostID                   pgtype.Int4        `json:"post_id"`
+	PostID                   int32              `json:"post_id"`
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
@@ -1263,10 +1302,19 @@ type ListRecentCommentsWithParentsRow struct {
 // Avatars are pinned at authoring time (messages.character_avatar_url_at_post),
 // so both the comment and its parent COALESCE to the live characters.avatar_url
 // only for rows predating that column.
-// Walk up the message tree recursively to find the root post for each comment
-// Pick the post at the top of each comment's chain
+// Restricted threads (common_room_post_viewers) are filtered inside the
+// paginating CTE, before LIMIT/OFFSET, so pages stay full and the total
+// matches. viewer_sees_all comes from ResolveViewerScope and already includes
+// the public-archive check. Comments under an unpublished draft are left out
+// for everyone, as the post list leaves out the draft itself.
 func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRecentCommentsWithParentsParams) ([]ListRecentCommentsWithParentsRow, error) {
-	rows, err := q.db.Query(ctx, listRecentCommentsWithParents, arg.GameID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listRecentCommentsWithParents,
+		arg.GameID,
+		arg.ViewerSeesAll,
+		arg.ViewerUserID,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1310,11 +1358,12 @@ func (q *Queries) ListRecentCommentsWithParents(ctx context.Context, arg ListRec
 }
 
 const listRecentUnreadCommentsWithParents = `-- name: ListRecentUnreadCommentsWithParents :many
-WITH RECURSIVE recent_comments AS (
+WITH recent_comments AS (
     SELECT
         m.id,
         m.game_id,
         m.parent_id,
+        m.root_post_id,
         m.author_id,
         m.character_id,
         m.content,
@@ -1327,6 +1376,7 @@ WITH RECURSIVE recent_comments AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
     WHERE m.game_id = $1
@@ -1335,27 +1385,15 @@ WITH RECURSIVE recent_comments AS (
       AND m.deleted_at IS NULL
       AND NOT EXISTS (
           SELECT 1 FROM user_comment_reads ucr
-          WHERE ucr.comment_id = m.id AND ucr.user_id = $4
+          WHERE ucr.comment_id = m.id AND ucr.user_id = $2::int
       )
+      AND root.is_draft = false
+      AND ($3::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = $2::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
-),
-root_posts AS (
-    -- Base: walk up from each recent comment, tracking the original comment's id
-    SELECT rc.id AS comment_id, rc.parent_id AS current_id
-    FROM recent_comments rc
-    WHERE rc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
+    LIMIT $5 OFFSET $4
 ),
 parent_messages AS (
     SELECT
@@ -1380,7 +1418,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
-    rp.post_id,
+    rc.root_post_id AS post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -1401,23 +1439,23 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
-LEFT JOIN root_post_ids rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC
 `
 
 type ListRecentUnreadCommentsWithParentsParams struct {
-	GameID int32 `json:"game_id"`
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-	UserID int32 `json:"user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	RowOffset     int32 `json:"row_offset"`
+	RowLimit      int32 `json:"row_limit"`
 }
 
 type ListRecentUnreadCommentsWithParentsRow struct {
 	ID                       int32              `json:"id"`
 	GameID                   int32              `json:"game_id"`
 	ParentID                 pgtype.Int4        `json:"parent_id"`
-	PostID                   pgtype.Int4        `json:"post_id"`
+	PostID                   int32              `json:"post_id"`
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
@@ -1439,18 +1477,22 @@ type ListRecentUnreadCommentsWithParentsRow struct {
 	ParentCharacterAvatarUrl pgtype.Text        `json:"parent_character_avatar_url"`
 }
 
-// Same as ListRecentCommentsWithParents, but excludes comments the user has
+// Same as ListRecentCommentsWithParents, but excludes comments the viewer has
 // manually marked as read. Used by the "New Comments" view's unread-only filter
 // in manual read mode. Filtering happens before LIMIT/OFFSET so pagination
 // counts stay accurate.
-// Walk up the message tree recursively to find the root post for each comment
-// Pick the post at the top of each comment's chain
+// Restricted threads (common_room_post_viewers) are filtered inside the
+// paginating CTE, before LIMIT/OFFSET, so pages stay full and the total
+// matches. viewer_sees_all comes from ResolveViewerScope and already includes
+// the public-archive check. Comments under an unpublished draft are left out
+// for everyone, as the post list leaves out the draft itself.
 func (q *Queries) ListRecentUnreadCommentsWithParents(ctx context.Context, arg ListRecentUnreadCommentsWithParentsParams) ([]ListRecentUnreadCommentsWithParentsRow, error) {
 	rows, err := q.db.Query(ctx, listRecentUnreadCommentsWithParents,
 		arg.GameID,
-		arg.Limit,
-		arg.Offset,
-		arg.UserID,
+		arg.ViewerUserID,
+		arg.ViewerSeesAll,
+		arg.RowOffset,
+		arg.RowLimit,
 	)
 	if err != nil {
 		return nil, err
