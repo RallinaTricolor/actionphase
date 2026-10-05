@@ -201,14 +201,13 @@ func TestMessageService_CreateComment(t *testing.T) {
 		assert.Equal(t, post.ID, comment.ParentID.Int32)
 	})
 
-	t.Run("auto-marks the author's own comment as read when RootPostID is set", func(t *testing.T) {
+	t.Run("auto-marks the author's own comment as read", func(t *testing.T) {
 		// The author just wrote it, so CreateComment records it as read for them.
 		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			AuthorID:    int32(player.ID),
 			CharacterID: char.ID,
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			Content:     "Auto-read comment",
 			Visibility:  string(models.MessageVisibilityGame),
 		})
@@ -230,9 +229,9 @@ func TestMessageService_CreateComment(t *testing.T) {
 		assert.True(t, found, "the author's own comment should be auto-marked read")
 	})
 
-	t.Run("does not auto-mark as read when RootPostID is omitted", func(t *testing.T) {
-		// Without RootPostID the read-tracking write is skipped (read tracking is
-		// keyed on the root post), so the comment must not appear in the read set.
+	t.Run("auto-marks a nested reply as read under the thread's root post", func(t *testing.T) {
+		// Read tracking is keyed on the top-level post. A reply to a comment must
+		// be recorded under the post, not under the comment it replies to.
 		freshPlayer := testDB.CreateTestUser(t, "freshreader", "freshreader@example.com")
 		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(freshPlayer.ID), "player")
 		require.NoError(t, err)
@@ -244,25 +243,31 @@ func TestMessageService_CreateComment(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+		parent, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
+			ParentID:    post.ID,
+			Content:     "Parent comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+
+		reply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			AuthorID:    int32(freshPlayer.ID),
 			CharacterID: freshChar.ID,
-			ParentID:    post.ID,
-			// RootPostID intentionally omitted (zero)
-			Content:    "No-root comment",
-			Visibility: string(models.MessageVisibilityGame),
+			ParentID:    parent.ID,
+			Content:     "Nested reply",
+			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
 
 		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(freshPlayer.ID), game.ID)
 		require.NoError(t, err)
-
-		for _, entry := range reads {
-			for _, id := range entry.ReadCommentIDs {
-				assert.NotEqual(t, comment.ID, id, "comment must not be auto-marked read without RootPostID")
-			}
-		}
+		require.Len(t, reads, 1)
+		assert.Equal(t, post.ID, reads[0].PostID, "read must be keyed on the root post, not the parent comment")
+		assert.Contains(t, reads[0].ReadCommentIDs, reply.ID)
 	})
 
 	t.Run("maintains thread depth", func(t *testing.T) {

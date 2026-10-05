@@ -40,16 +40,17 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 
 	char, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
 		GameID:        game.ID,
-		UserID:        int32Ptr(int32(reader.ID)),
+		UserID:        int32Ptr(int32(gm.ID)),
 		Name:          "Unread Test Character",
 		CharacterType: "player_character",
 	})
 	require.NoError(t, err)
 
-	// One post with three comments on it.
+	// One post with three comments on it, written by the GM. Authors get their
+	// own comments auto-marked read, so the reader must not be the author.
 	post, err := service.CreatePost(ctx, core.CreatePostRequest{
 		GameID:      game.ID,
-		AuthorID:    int32(reader.ID),
+		AuthorID:    int32(gm.ID),
 		CharacterID: char.ID,
 		Content:     "Root post",
 		Visibility:  string(models.MessageVisibilityGame),
@@ -60,7 +61,7 @@ func TestMessageService_ListRecentUnreadCommentsWithParents(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		c, err := service.CreateComment(ctx, core.CreateCommentRequest{
 			GameID:      game.ID,
-			AuthorID:    int32(reader.ID),
+			AuthorID:    int32(gm.ID),
 			CharacterID: char.ID,
 			ParentID:    post.ID,
 			Content:     fmt.Sprintf("Comment %d", i+1),

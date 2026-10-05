@@ -110,22 +110,21 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	s.Metrics.RecordCommentCreated(ctx)
 
 	// Auto-mark the comment as read for its author — they just wrote it.
-	// Requires RootPostID to be set (zero means caller didn't provide it; skip silently).
-	// ON CONFLICT DO NOTHING makes this idempotent.
-	if req.RootPostID != 0 {
-		if err := queries.MarkCommentRead(ctx, models.MarkCommentReadParams{
-			UserID:    req.AuthorID,
-			CommentID: message.ID,
-			PostID:    req.RootPostID,
-			GameID:    req.GameID,
-		}); err != nil {
-			// Non-fatal: log and continue. The comment was created successfully.
-			s.Logger.LogError(ctx, err, "Failed to auto-mark own comment as read",
-				"comment_id", message.ID,
-				"author_id", req.AuthorID,
-				"post_id", req.RootPostID,
-			)
-		}
+	// The thread root comes from the inserted row (the insert trigger derives it
+	// from parent_id), never from the client. ON CONFLICT DO NOTHING makes this
+	// idempotent.
+	if err := queries.MarkCommentRead(ctx, models.MarkCommentReadParams{
+		UserID:    req.AuthorID,
+		CommentID: message.ID,
+		PostID:    message.RootPostID,
+		GameID:    req.GameID,
+	}); err != nil {
+		// Non-fatal: log and continue. The comment was created successfully.
+		s.Logger.LogError(ctx, err, "Failed to auto-mark own comment as read",
+			"comment_id", message.ID,
+			"author_id", req.AuthorID,
+			"post_id", message.RootPostID,
+		)
 	}
 
 	// Preserve context values (correlation_id, trace_id) without inheriting cancellation

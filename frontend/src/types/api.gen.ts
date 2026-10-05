@@ -4502,7 +4502,8 @@ export interface components {
             phase_id?: number;
             /**
              * Format: int32
-             * @description Top-level post of this thread. Required for replies nested below a post; defaults to the path's postId.
+             * @deprecated
+             * @description Ignored. The server derives the thread root from the parent in the path.
              */
             root_post_id?: number;
         };

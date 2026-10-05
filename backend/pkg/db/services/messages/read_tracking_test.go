@@ -1011,10 +1011,15 @@ func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
 	game := testDB.CreateTestGame(t, int32(player.ID), "GetManual Test Game")
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
+	// Content is written by someone else: authors get their own comments
+	// auto-marked read, which would pollute the reader's read set.
+	author := testDB.CreateTestUser(t, "getmanual_author", "getmanual_author@example.com")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(author.ID), "player")
+	require.NoError(t, err)
 
 	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
-		UserID:        int32Ptr(int32(player.ID)),
+		UserID:        int32Ptr(int32(author.ID)),
 		Name:          "Manual Char",
 		CharacterType: "player_character",
 	})
@@ -1022,25 +1027,25 @@ func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
 
 	// Create two posts, each with a comment
 	post1, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Post 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	post2, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Post 2", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment1, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: post1.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, ParentID: post1.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Comment on post 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment2, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: post2.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, ParentID: post2.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Comment on post 2", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
@@ -1108,14 +1113,14 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 
 	// Two comments in phase 1, one in phase 2
 	comment1, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment 1 in phase 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment2, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment 2 in phase 1", Visibility: string(models.MessageVisibilityGame),
 	})
@@ -1125,14 +1130,14 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 	// is comment1.ID, not post1.ID, so grouping it under the right post
 	// requires resolving the full parent chain back to the root post.
 	nestedReply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: comment1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: comment1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Nested reply to comment 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	commentOtherPhase, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase2.ID, ParentID: post2.ID, RootPostID: post2.ID,
+		GameID: game.ID, PhaseID: &phase2.ID, ParentID: post2.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment in phase 2", Visibility: string(models.MessageVisibilityGame),
 	})
@@ -1223,11 +1228,10 @@ func TestCreateComment_AutoMarksAuthorAsRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("comment is auto-marked read for author when RootPostID is set", func(t *testing.T) {
+	t.Run("comment is auto-marked read for its author", func(t *testing.T) {
 		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			AuthorID:    int32(author.ID),
 			CharacterID: char.ID,
 			Content:     "Author's own comment",
@@ -1247,29 +1251,30 @@ func TestCreateComment_AutoMarksAuthorAsRead(t *testing.T) {
 		assert.Empty(t, reads, "auto-mark should only apply to the author, not other users")
 	})
 
-	t.Run("comment is NOT auto-marked read when RootPostID is zero", func(t *testing.T) {
-		// Simulate old callers that don't set RootPostID
-		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+	t.Run("nested reply is auto-marked read under the root post", func(t *testing.T) {
+		parent, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			ParentID:    post.ID,
 			AuthorID:    int32(author.ID),
 			CharacterID: char.ID,
-			Content:     "Comment without root post ID",
+			Content:     "Parent comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		reply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    parent.ID,
+			AuthorID:    int32(author.ID),
+			CharacterID: char.ID,
+			Content:     "Nested reply",
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
 
 		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(author.ID), game.ID)
 		require.NoError(t, err)
-		// Only the first comment (from the previous sub-test) should be in the list
-		found := false
-		for _, r := range reads {
-			for _, id := range r.ReadCommentIDs {
-				if id == comment.ID {
-					found = true
-				}
-			}
-		}
-		assert.False(t, found, "comment without RootPostID should not be auto-marked read")
+		require.Len(t, reads, 1, "every read in this thread must be keyed on the one root post")
+		assert.Equal(t, post.ID, reads[0].PostID)
+		assert.Contains(t, reads[0].ReadCommentIDs, reply.ID)
 	})
 }

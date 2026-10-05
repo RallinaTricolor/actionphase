@@ -1793,7 +1793,8 @@ components:
                     format: int32
                     type: integer
                 root_post_id:
-                    description: Top-level post of this thread. Required for replies nested below a post; defaults to the path's postId.
+                    deprecated: true
+                    description: Ignored. The server derives the thread root from the parent in the path.
                     format: int32
                     type: integer
             required:

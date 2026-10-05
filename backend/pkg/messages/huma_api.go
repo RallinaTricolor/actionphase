@@ -531,14 +531,9 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		return nil, humaErr(errResp)
 	}
 
-	// {postId} in the path is the immediate parent (post or comment).
-	// root_post_id in the body is the top-level post, needed for read tracking.
-	// Replying directly to a post makes them the same, so postId is the fallback.
-	rootPostID := in.PostID
-	if in.Body.RootPostID != nil {
-		rootPostID = *in.Body.RootPostID
-	}
-
+	// {postId} in the path is the immediate parent (post or comment). The
+	// thread root is derived from it in the database; the body's root_post_id
+	// is ignored.
 	comment, err := h.MessageService.CreateComment(ctx, core.CreateCommentRequest{
 		GameID:      in.GameID,
 		PhaseID:     in.Body.PhaseID,
@@ -546,7 +541,6 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		CharacterID: in.Body.CharacterID,
 		Content:     in.Body.Content,
 		ParentID:    in.PostID,
-		RootPostID:  rootPostID,
 		Visibility:  "game",
 	})
 	if err != nil {

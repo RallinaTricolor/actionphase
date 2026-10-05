@@ -49,12 +49,10 @@ type CreateCommentRequest struct {
 	PhaseID     *int32 `json:"phase_id,omitempty" required:"false" doc:"Phase to attach the comment to"`
 	CharacterID int32  `json:"character_id" minimum:"1" doc:"Character to attribute the comment to"`
 	Content     string `json:"content" minLength:"1" doc:"Comment body, as markdown"`
-	// The path's {postId} is the immediate parent, which for a nested reply is
-	// another comment rather than the post. Read tracking keys off the top-level
-	// post, so clients must send it explicitly once they reply below depth 0.
-	// Omitting it falls back to {postId}, which is correct only for a direct
-	// reply to a post.
-	RootPostID *int32 `json:"root_post_id,omitempty" required:"false" doc:"Top-level post of this thread. Required for replies nested below a post; defaults to the path's postId."`
+	// Deprecated and ignored: the server derives the thread root from the
+	// parent in {postId}. Kept so existing clients that still send it aren't
+	// rejected; remove once the frontend stops sending it.
+	RootPostID *int32 `json:"root_post_id,omitempty" required:"false" deprecated:"true" doc:"Ignored. The server derives the thread root from the parent in the path."`
 }
 
 func (r *CreateCommentRequest) Resolve(huma.Context) []error {
