@@ -127,14 +127,14 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
   return (
     <div className={`surface-base rounded-lg border border-theme-default ${className}`} data-testid="actions-list">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-xl font-semibold text-content-primary">Submitted Actions</h2>
             <p className="text-sm text-content-secondary mt-1">
               View and manage player action submissions
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="primary">
               {filteredActions.length} {filteredActions.length === 1 ? 'Action' : 'Actions'}
             </Badge>
@@ -170,7 +170,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
         {/* Publish All Results Button */}
         {displayPhaseId && unpublishedCount > 0 && (
           <div className="mb-6 p-4 bg-semantic-warning-subtle border border-semantic-warning rounded-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center">
                 <svg className="w-5 h-5 text-semantic-warning mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

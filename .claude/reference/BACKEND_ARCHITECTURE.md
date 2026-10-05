@@ -76,7 +76,7 @@ backend/
 │   │   │   │                       #   validation, queries, draft_updates,
 │   │   │   │                       #   staged, staged_worker
 │   │   │   ├── messages/           # Decomposed: service, posts, draft_posts,
-│   │   │   │                       #   comments, reactions, validation,
+│   │   │   │                       #   comments, validation,
 │   │   │   │                       #   read_tracking, audience, character_messages
 │   │   │   └── *.go                # games, characters, users, sessions,
 │   │   │                           #   notifications, conversations, handouts,

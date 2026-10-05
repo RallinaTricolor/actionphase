@@ -54,6 +54,33 @@ import { Button } from '@/components/ui';
 <Button variant="primary" size="lg">Get Started</Button>
 ```
 
+**Rows of buttons must wrap.** Button labels are `whitespace-nowrap`, so a button
+never shrinks below its label. A `flex` row holding buttons (a heading plus actions,
+a filter bar) has to be `flex flex-wrap ... gap-*`, or on a phone it pushes past
+the viewport and the whole page scrolls sideways. Use `gap-*`, not `space-x-*`:
+`space-x` margins misalign wrapped items.
+
+```tsx
+// ❌ Overflows a 360px screen
+<div className="flex items-center justify-between">
+  <h2>Submitted Actions</h2>
+  <div className="flex items-center space-x-2">
+    <Badge>3 Actions</Badge>
+    <Button>Send Standalone Result</Button>
+  </div>
+</div>
+
+// ✅ Wraps the actions under the heading
+<div className="flex flex-wrap items-center justify-between gap-3">
+  <h2>Submitted Actions</h2>
+  <div className="flex flex-wrap items-center gap-2">...</div>
+</div>
+```
+
+`frontend/e2e/edge-cases/mobile-horizontal-overflow.spec.ts` guards the pages that
+have hit this; `assertNoHorizontalOverflow` (in `e2e/utils/assertions.ts`) names the
+offending element when one does.
+
 ---
 
 ### Input
@@ -473,6 +500,11 @@ Inline help affordance.
 ```tsx
 <HelpTooltip text="Only the GM can see this." align="right" />
 ```
+
+The panel is `hidden` until hover, not `invisible`. An `invisible` element still
+takes up layout space, so a 16rem panel anchored near the right of a phone screen
+widens the page even though nothing visible is wrong. Any hover-reveal panel
+should follow the same rule.
 
 ---
 
