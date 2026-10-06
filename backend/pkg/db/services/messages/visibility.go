@@ -19,19 +19,27 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// seesAllRestricted applies the bypass rule to facts already loaded.
-//
-// adminFlag is the user's is_admin column; it only counts together with the
-// request's admin-mode header, which is read from ctx here so no caller can
-// forget half of the pair.
-func seesAllRestricted(ctx context.Context, state string, gmUserID, userID int32, role string, adminFlag bool) bool {
-	if core.IsPublicArchive(state) {
-		return true
-	}
+// viewerRole returns the viewer's role in the game. The primary GM has no
+// game_participants row, so participantRole is ” for them and they are
+// promoted here.
+func viewerRole(gmUserID, userID int32, participantRole string) string {
 	if userID != 0 && gmUserID == userID {
-		role = "gm"
+		return "gm"
 	}
-	return core.CanSeeAllRestrictedPosts(role, adminFlag && core.GetAdminMode(ctx))
+	return participantRole
+}
+
+// adminModeOn reports whether the request runs in admin mode. isAdmin is the
+// user's is_admin column; it only counts together with the request's
+// admin-mode header, which is read from ctx here so no caller can forget half
+// of the pair.
+func adminModeOn(ctx context.Context, isAdmin bool) bool {
+	return isAdmin && core.GetAdminMode(ctx)
+}
+
+// seesAllRestricted applies the bypass rule to a resolved role and admin mode.
+func seesAllRestricted(state, role string, adminMode bool) bool {
+	return core.IsPublicArchive(state) || core.CanSeeAllRestrictedPosts(role, adminMode)
 }
 
 // ResolveViewerScope works out whether userID bypasses the allowlists in
@@ -49,7 +57,7 @@ func (s *MessageService) ResolveViewerScope(ctx context.Context, gameID, userID 
 		return scope
 	}
 
-	scope.SeesAll = seesAllRestricted(ctx, row.State, row.GmUserID, userID, row.ViewerRole, row.ViewerIsAdmin)
+	scope.SeesAll = seesAllRestricted(row.State, viewerRole(row.GmUserID, userID, row.ViewerRole), adminModeOn(ctx, row.ViewerIsAdmin))
 	return scope
 }
 
@@ -76,11 +84,8 @@ func (s *MessageService) CanUserViewMessage(ctx context.Context, messageID, user
 		return false, fmt.Errorf("failed to load message visibility context: %w", err)
 	}
 
-	role := row.ViewerRole
-	if userID != 0 && row.GmUserID == userID {
-		role = "gm"
-	}
-	adminMode := row.ViewerIsAdmin && core.GetAdminMode(ctx)
+	role := viewerRole(row.GmUserID, userID, row.ViewerRole)
+	adminMode := adminModeOn(ctx, row.ViewerIsAdmin)
 
 	if row.RootIsDraft {
 		return adminMode || role == "gm" || role == "co_gm", nil
@@ -88,7 +93,7 @@ func (s *MessageService) CanUserViewMessage(ctx context.Context, messageID, user
 	if !row.RootIsRestricted {
 		return true, nil
 	}
-	if seesAllRestricted(ctx, row.State, row.GmUserID, userID, row.ViewerRole, row.ViewerIsAdmin) {
+	if seesAllRestricted(row.State, role, adminMode) {
 		return true, nil
 	}
 	return row.IsListedViewer, nil
@@ -142,32 +147,38 @@ func validatePostViewers(ctx context.Context, queries *models.Queries, gameID in
 // a player taken off the list and every player when a public post becomes
 // restricted. Making a post public removes nobody, so nothing is deleted.
 // Discord DMs already sent can't be recalled.
-func (s *MessageService) SetPostViewers(ctx context.Context, postID int32, restricted bool, userIDs []int32) error {
+//
+// It returns the updated post and its allowlist (sorted, empty for a public
+// post), so the caller can answer without reading either back.
+func (s *MessageService) SetPostViewers(ctx context.Context, gameID, postID int32, restricted bool, userIDs []int32) (*core.MessageWithDetails, []int32, error) {
 	queries := models.New(s.DB)
 
-	post, err := queries.GetPost(ctx, postID)
+	post, err := s.GetPost(ctx, postID)
 	if err != nil {
-		return fmt.Errorf("failed to get post: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, core.ErrPostNotFound
+		}
+		return nil, nil, err
 	}
-	if post.MessageType != models.MessageTypePost {
-		return fmt.Errorf("message %d is not a post", postID)
+	if post.GameID != gameID || post.MessageType != models.MessageTypePost {
+		return nil, nil, core.ErrPostNotFound
 	}
 
 	game, err := queries.GetGame(ctx, post.GameID)
 	if err != nil {
-		return fmt.Errorf("failed to get game: %w", err)
+		return nil, nil, fmt.Errorf("failed to get game: %w", err)
 	}
 	if err := core.ValidateGameNotCompleted(ctx, &game); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	ids := normalizeViewerIDs(userIDs)
 	if restricted {
 		if err := validatePostViewers(ctx, queries, post.GameID, ids); err != nil {
-			return err
+			return nil, nil, err
 		}
 	} else if len(ids) > 0 {
-		return fmt.Errorf("%w: a public post has no viewer list", core.ErrInvalidPostViewers)
+		return nil, nil, fmt.Errorf("%w: a public post has no viewer list", core.ErrInvalidPostViewers)
 	}
 
 	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
@@ -193,12 +204,17 @@ func (s *MessageService) SetPostViewers(ctx context.Context, postID int32, restr
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	s.Logger.Info(ctx, "Post viewers updated",
 		"post_id", postID, "game_id", post.GameID, "restricted", restricted, "viewer_count", len(ids))
-	return nil
+
+	post.IsRestricted = restricted
+	if ids == nil {
+		ids = []int32{}
+	}
+	return post, ids, nil
 }
 
 // ListPostViewers returns each post's allowlist, keyed by post ID, in one

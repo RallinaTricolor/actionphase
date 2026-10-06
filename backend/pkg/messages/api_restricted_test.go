@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -336,6 +337,64 @@ func TestRestrictedPostsAPI_Gates(t *testing.T) {
 	})
 }
 
+// A comment belongs to its thread's game. Filing one under a different game
+// would let that game's role (here, GM) decide who sees the thread, so the GM
+// of another game would keep reading it after coming off the list.
+func TestRestrictedPostsAPI_CrossGameComment(t *testing.T) {
+	s := newRestrictedAPIScenario(t, "rapi_crossgame")
+	ctx := context.Background()
+
+	// otherGM is also a player here, listed on the restricted post, with an NPC
+	// in the game they run.
+	otherGMID := s.otherGame.GmUserID
+	s.testDB.AddTestGameParticipant(t, s.game.ID, otherGMID, "player")
+	rec := s.gm.do(http.MethodPut, fmt.Sprintf("%s/posts/%d/viewers", s.base, s.restrictedPost),
+		map[string]any{"restricted": true, "user_ids": []int32{s.aID, otherGMID}})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	characters := &db.CharacterService{DB: s.testDB.Pool, Logger: core.NewTestApp(s.testDB.Pool).ObsLogger}
+	otherNPC, err := characters.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID: s.otherGame.ID, UserID: &otherGMID, Name: "rapi_crossgame NPC", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	otherBase := "/api/v1/games/" + strconv.Itoa(int(s.otherGame.ID))
+
+	t.Run("a reply filed under another game is rejected like a missing parent", func(t *testing.T) {
+		body := map[string]any{"character_id": otherNPC.ID, "content": "from my own game"}
+		recCross := s.otherGM.do(http.MethodPost, fmt.Sprintf("%s/posts/%d/comments", otherBase, s.restrictedPost), body)
+		recAbsent := s.otherGM.do(http.MethodPost, otherBase+"/posts/999999/comments", body)
+		assert.Equal(t, http.StatusNotFound, recCross.Code, recCross.Body.String())
+		assert.JSONEq(t, recAbsent.Body.String(), recCross.Body.String())
+	})
+
+	t.Run("an existing cross-game reply doesn't keep the thread open", func(t *testing.T) {
+		// Written straight to the database, as a row from before the check.
+		stray, err := models.New(s.testDB.Pool).CreateComment(ctx, models.CreateCommentParams{
+			GameID:      s.otherGame.ID,
+			AuthorID:    otherGMID,
+			CharacterID: otherNPC.ID,
+			Content:     "stray",
+			ParentID:    pgtype.Int4{Int32: s.restrictedPost, Valid: true},
+			Visibility:  models.MessageVisibilityGame,
+		})
+		require.NoError(t, err)
+
+		rec := s.gm.do(http.MethodPut, fmt.Sprintf("%s/posts/%d/viewers", s.base, s.restrictedPost),
+			map[string]any{"restricted": true, "user_ids": []int32{s.aID}})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+		for _, path := range []string{
+			fmt.Sprintf("/messages/%d", stray.ID),
+			fmt.Sprintf("/messages/%d/thread-context", stray.ID),
+			fmt.Sprintf("/posts/%d/comments-with-threads", stray.ID),
+		} {
+			for _, base := range []string{otherBase, s.base} {
+				rec := s.otherGM.do(http.MethodGet, base+path, nil)
+				assert.Equal(t, http.StatusNotFound, rec.Code, base+path)
+			}
+		}
+	})
+}
+
 func TestRestrictedPostsAPI_MarkPostRead(t *testing.T) {
 	s := newRestrictedAPIScenario(t, "rapi_markread")
 
@@ -393,6 +452,13 @@ func TestRestrictedPostsAPI_SetPostViewers(t *testing.T) {
 		})
 	}
 
+	t.Run("400 for a missing body", func(t *testing.T) {
+		rec := s.gm.do(http.MethodPut, path, nil)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+		assert.True(t, canSee(s.playerA), "nothing changed")
+		assert.False(t, canSee(s.playerB), "nothing changed")
+	})
+
 	t.Run("404 for a comment, a missing post, or a post in another game", func(t *testing.T) {
 		for _, p := range []string{
 			fmt.Sprintf("%s/posts/%d/viewers", s.base, s.aComment),
@@ -416,6 +482,7 @@ func TestRestrictedPostsAPI_SetPostViewers(t *testing.T) {
 		assert.True(t, resp.IsRestricted)
 		require.NotNil(t, resp.ViewerUserIDs)
 		assert.Equal(t, []int32{s.bID}, *resp.ViewerUserIDs)
+		assert.Equal(t, int64(1), resp.CommentCount, "A's comment, so the card's count survives the swap")
 
 		assert.False(t, canSee(s.playerA))
 		assert.True(t, canSee(s.playerB))

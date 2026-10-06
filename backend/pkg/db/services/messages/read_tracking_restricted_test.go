@@ -174,7 +174,7 @@ func TestRestrictedMarkAllCommentsRead(t *testing.T) {
 
 	t.Run("B added to the list later finds the thread unread", func(t *testing.T) {
 		b := int32(s.playerB.ID)
-		require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerA.ID), b}))
+		require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerA.ID), b}))
 		reads, err := s.service.GetManualReadCommentIDsForGame(ctx, s.game.ID, s.service.ResolveViewerScope(ctx, s.game.ID, b))
 		require.NoError(t, err)
 		for _, r := range reads {

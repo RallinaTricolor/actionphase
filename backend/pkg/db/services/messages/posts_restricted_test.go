@@ -237,7 +237,7 @@ func TestSetPostViewers(t *testing.T) {
 		coGM := notify(t, s, s.coGM, "post", s.restrictedPost.ID)
 		audience := notify(t, s, s.audience, "comment", s.aComment.ID)
 
-		require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerB.ID)}))
+		require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerB.ID)}))
 
 		for _, id := range s.threadIDs() {
 			assert.False(t, canView(t, s, s.playerA, id), "A lost message %d, including their own comments", id)
@@ -263,7 +263,7 @@ func TestSetPostViewers(t *testing.T) {
 		bNotif := notify(t, s, s.playerB, "comment", comment.ID)
 		aNotif := notify(t, s, s.playerA, "post", s.publicPost.ID)
 
-		require.NoError(t, s.service.SetPostViewers(ctx, s.publicPost.ID, true, []int32{int32(s.playerA.ID)}))
+		require.NoError(t, s.setPostViewers(ctx, s.publicPost.ID, true, []int32{int32(s.playerA.ID)}))
 
 		assert.False(t, canView(t, s, s.playerB, s.publicPost.ID))
 		assert.False(t, canView(t, s, s.playerB, comment.ID))
@@ -279,7 +279,7 @@ func TestSetPostViewers(t *testing.T) {
 		s := newRestrictedScenario(t, testDB, "setviewers_public")
 		aNotif := notify(t, s, s.playerA, "comment", s.aComment.ID)
 
-		require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, false, nil))
+		require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, false, nil))
 
 		for _, id := range s.threadIDs() {
 			assert.True(t, canView(t, s, s.playerB, id))
@@ -308,7 +308,7 @@ func TestSetPostViewers(t *testing.T) {
 		}
 		for name, c := range cases {
 			t.Run(name, func(t *testing.T) {
-				err := s.service.SetPostViewers(ctx, s.restrictedPost.ID, c.restricted, c.ids)
+				err := s.setPostViewers(ctx, s.restrictedPost.ID, c.restricted, c.ids)
 				assert.True(t, errors.Is(err, core.ErrInvalidPostViewers), "got %v", err)
 			})
 		}
@@ -320,18 +320,26 @@ func TestSetPostViewers(t *testing.T) {
 
 	t.Run("a comment is not a post", func(t *testing.T) {
 		s := newRestrictedScenario(t, testDB, "setviewers_comment")
-		err := s.service.SetPostViewers(ctx, s.aComment.ID, true, []int32{int32(s.playerB.ID)})
-		require.Error(t, err)
+		err := s.setPostViewers(ctx, s.aComment.ID, true, []int32{int32(s.playerB.ID)})
+		assert.ErrorIs(t, err, core.ErrPostNotFound)
 
 		msg, err := models.New(testDB.Pool).GetMessage(ctx, s.aComment.ID)
 		require.NoError(t, err)
 		assert.False(t, msg.IsRestricted)
 	})
 
+	t.Run("a post in another game is not found", func(t *testing.T) {
+		s := newRestrictedScenario(t, testDB, "setviewers_othergame")
+		other := testDB.CreateTestGameWithState(t, int32(s.outsider.ID), "setviewers other game", core.GameStateInProgress)
+		_, _, err := s.service.SetPostViewers(ctx, other.ID, s.restrictedPost.ID, false, nil)
+		assert.ErrorIs(t, err, core.ErrPostNotFound)
+		assert.False(t, canView(t, s, s.playerB, s.restrictedPost.ID), "still restricted")
+	})
+
 	t.Run("a completed game is read-only", func(t *testing.T) {
 		s := newRestrictedScenario(t, testDB, "setviewers_completed")
 		testDB.SetGameStateDirectly(t, s.game.ID, core.GameStateCompleted)
-		err := s.service.SetPostViewers(ctx, s.restrictedPost.ID, false, nil)
+		err := s.setPostViewers(ctx, s.restrictedPost.ID, false, nil)
 		assert.True(t, core.IsArchivedGameError(err), "got %v", err)
 	})
 }

@@ -50,11 +50,11 @@ LEFT JOIN characters c ON m.character_id = c.id
 WHERE m.id = $1
   AND m.is_deleted = false;
 
--- name: GetMessagePhaseID :one
--- Get just the phase_id of a message, used when a new comment inherits its
--- phase from the message it replies to. Deliberately does NOT filter on
+-- name: GetCommentParent :one
+-- The game and phase of the message a new comment replies to: the comment must
+-- be in the same game, and inherits the phase. Deliberately does NOT filter on
 -- is_deleted: a reply to a soft-deleted parent still belongs to that phase.
-SELECT phase_id
+SELECT game_id, phase_id
 FROM messages
 WHERE id = $1;
 
@@ -556,24 +556,22 @@ ORDER BY ucr.last_read_at DESC;
 -- name: GetPostsWithUnreadCount :many
 -- Get posts with their total comment count and last comment timestamp
 -- Frontend will compare these with read markers to determine unread status.
--- Restricted posts the viewer can't see are left out. For a post,
--- root_post_id is its own ID, so root is the post itself.
+-- Restricted posts the viewer can't see are left out.
 SELECT
     m.id as post_id,
     m.created_at as post_created_at,
     COUNT(c.id) as total_comments,
     MAX(c.created_at) as latest_comment_at
 FROM messages m
-JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
 WHERE m.game_id = sqlc.arg(game_id)
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
   AND (sqlc.arg(viewer_sees_all)::bool
-       OR root.is_restricted = false
+       OR m.is_restricted = false
        OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+                  WHERE v.post_id = m.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 GROUP BY m.id, m.created_at
 ORDER BY m.created_at DESC;
 
@@ -639,7 +637,6 @@ SELECT
         '{}'::integer[]
     ) as unread_comment_ids
 FROM messages posts
-JOIN messages root ON root.id = posts.root_post_id
 LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = sqlc.arg(viewer_user_id)::int
 LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != sqlc.arg(viewer_user_id)::int
 WHERE posts.game_id = sqlc.arg(game_id)
@@ -647,9 +644,9 @@ WHERE posts.game_id = sqlc.arg(game_id)
   AND posts.is_deleted = false
   AND posts.is_draft = false
   AND (sqlc.arg(viewer_sees_all)::bool
-       OR root.is_restricted = false
+       OR posts.is_restricted = false
        OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+                  WHERE v.post_id = posts.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
 GROUP BY posts.id
 ORDER BY posts.created_at DESC;
 
@@ -928,10 +925,10 @@ ORDER BY ch.name;
 --
 -- A favorite in a restricted thread the user can no longer see is left out of
 -- every read below. The cross-game queries can't take one precomputed
--- viewer_sees_all, so they restate core.CanSeeAllRestrictedPosts against
--- games and game_participants (admin mode aside: admins see their own
--- favorites as a normal user would). TestRestrictedRuleAgreement keeps the
--- copies in step with the Go rule.
+-- viewer_sees_all, so they use restricted_thread_visible_to_user, which restates
+-- core.CanSeeAllRestrictedPosts against the root post's game (admin mode
+-- aside: admins see their own favorites as a normal user would).
+-- TestRestrictedRuleAgreement keeps it in step with the Go rule.
 
 -- name: AddCommentFavorite :exec
 -- Insert a favorite record; ignore if already exists (idempotent)
@@ -973,18 +970,10 @@ SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
 JOIN messages root ON root.id = m.root_post_id
-JOIN games g ON g.id = m.game_id
 WHERE f.user_id = sqlc.arg(viewer_user_id)::int
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
-  AND (root.is_restricted = false
-       OR g.state IN ('completed', 'epilogue')
-       OR g.gm_user_id = sqlc.arg(viewer_user_id)::int
-       OR EXISTS (SELECT 1 FROM game_participants gp
-                  WHERE gp.game_id = g.id AND gp.user_id = sqlc.arg(viewer_user_id)::int
-                    AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
-       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int));
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(viewer_user_id)::int));
 
 -- name: ListFavoriteCommentsWithParents :many
 -- Favorited comments with parent context and root post, ordered by when they
@@ -1041,14 +1030,7 @@ WITH favorite_comments AS (
     WHERE f.user_id = sqlc.arg(viewer_user_id)::int
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
-      AND (root.is_restricted = false
-           OR g.state IN ('completed', 'epilogue')
-           OR g.gm_user_id = sqlc.arg(viewer_user_id)::int
-           OR EXISTS (SELECT 1 FROM game_participants gp
-                      WHERE gp.game_id = g.id AND gp.user_id = sqlc.arg(viewer_user_id)::int
-                        AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
-           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                      WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+      AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(viewer_user_id)::int))
       AND (
           sqlc.narg(cursor_favorited_at)::timestamptz IS NULL
           OR (f.created_at, f.comment_id) < (sqlc.narg(cursor_favorited_at)::timestamptz, sqlc.narg(cursor_comment_id)::integer)
@@ -1111,7 +1093,10 @@ ORDER BY fc.favorited_at DESC, fc.id DESC;
 -- RESTRICTED POSTS (Common Room allowlists)
 -- ============================================================================
 -- The rule lives in core.CanSeeAllRestrictedPosts. These queries return the
--- facts it needs; Go applies it.
+-- facts it needs; Go applies it. Single-game read queries take the resolved
+-- scope as viewer_sees_all; cross-game ones call the SQL function
+-- restricted_thread_visible_to_user (migration
+-- 20261006184500_add_thread_visibility_functions).
 
 -- name: GetViewerRestrictedPostContext :one
 -- Everything ResolveViewerScope needs to decide whether a viewer bypasses the
@@ -1128,21 +1113,23 @@ WHERE g.id = sqlc.arg(game_id);
 
 -- name: GetMessageVisibilityContext :one
 -- Everything CanUserViewMessage needs for one message, resolved from the
--- message's OWN game and root post -- never from IDs in the URL.
-SELECT m.game_id,
+-- message's OWN root post and that post's game -- never from IDs in the URL.
+-- The root's game, not m.game_id: a comment filed under another game (rows
+-- from before CreateComment checked) must not let that game's role decide.
+SELECT root.game_id,
        root.is_restricted AS root_is_restricted,
        root.is_draft AS root_is_draft,
        g.state,
        g.gm_user_id,
        COALESCE((SELECT gp.role FROM game_participants gp
-                 WHERE gp.game_id = m.game_id AND gp.user_id = sqlc.arg(user_id)::int
+                 WHERE gp.game_id = root.game_id AND gp.user_id = sqlc.arg(user_id)::int
                    AND gp.status = 'active'), '')::text AS viewer_role,
        COALESCE((SELECT u.is_admin FROM users u WHERE u.id = sqlc.arg(user_id)::int), false)::bool AS viewer_is_admin,
        EXISTS (SELECT 1 FROM common_room_post_viewers v
                WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(user_id)::int) AS is_listed_viewer
 FROM messages m
 JOIN messages root ON root.id = m.root_post_id
-JOIN games g ON g.id = m.game_id
+JOIN games g ON g.id = root.game_id
 WHERE m.id = sqlc.arg(message_id);
 
 -- name: GetMessageRootPostID :one
@@ -1181,21 +1168,10 @@ ORDER BY post_id, user_id;
 -- user who can no longer see it. A common_room_post notification's title holds
 -- the start of the post, so leaving it would be a leak.
 --
--- This restates core.CanSeeAllRestrictedPosts in SQL (primary GM, active
--- co-GM or audience) plus the allowlist. Admin mode is a per-request flag, so
--- it has no place here. Callers run it only for a restricted post that is not
--- in a public archive.
+-- Who can still see it is restricted_thread_visible_to_user (the bypass
+-- roles plus the allowlist). Callers run it only for a restricted post that
+-- is not in a public archive.
 DELETE FROM notifications n
 WHERE n.related_type IN ('post', 'comment')
   AND n.related_id IN (SELECT id FROM messages WHERE root_post_id = sqlc.arg(post_id)::int)
-  AND n.user_id <> (SELECT g.gm_user_id FROM games g
-                    JOIN messages p ON p.game_id = g.id
-                    WHERE p.id = sqlc.arg(post_id)::int)
-  AND NOT EXISTS (SELECT 1 FROM game_participants gp
-                  JOIN messages p ON p.game_id = gp.game_id
-                  WHERE p.id = sqlc.arg(post_id)::int
-                    AND gp.user_id = n.user_id
-                    AND gp.status = 'active'
-                    AND gp.role IN ('co_gm', 'audience'))
-  AND NOT EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = sqlc.arg(post_id)::int AND v.user_id = n.user_id);
+  AND NOT restricted_thread_visible_to_user(sqlc.arg(post_id)::int, n.user_id);

@@ -36,6 +36,13 @@ type restrictedScenario struct {
 	aComment, gmReply, aReply  *models.Message
 }
 
+// setPostViewers calls SetPostViewers in the scenario's game, for tests that
+// only need its side effects.
+func (s *restrictedScenario) setPostViewers(ctx context.Context, postID int32, restricted bool, userIDs []int32) error {
+	_, _, err := s.service.SetPostViewers(ctx, s.game.ID, postID, restricted, userIDs)
+	return err
+}
+
 // newRestrictedScenario builds the cast. prefix keeps usernames unique when a
 // package builds more than one scenario in the same database.
 func newRestrictedScenario(t *testing.T, testDB *core.TestDatabase, prefix string) *restrictedScenario {

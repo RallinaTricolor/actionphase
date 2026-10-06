@@ -9,6 +9,7 @@ import (
 	models "actionphase/pkg/db/models"
 	db "actionphase/pkg/db/services"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -117,17 +118,27 @@ func TestRestrictedReplyNotification(t *testing.T) {
 	ctx := context.Background()
 	aID := int32(s.playerA.ID)
 
-	// Called directly so nothing races the background notifications.
+	// The reply is inserted straight into the database and notified directly:
+	// CreateComment would also notify from a background goroutine, which can
+	// land after setPostViewers has deleted the thread's notifications.
 	replyTo := func(parent *models.Message) *models.Message {
-		reply := s.reply(t, parent.ID, s.gm, s.gmChar)
+		reply, err := models.New(testDB.Pool).CreateComment(ctx, models.CreateCommentParams{
+			GameID:      s.game.ID,
+			AuthorID:    int32(s.gm.ID),
+			CharacterID: s.gmChar.ID,
+			Content:     "reply",
+			ParentID:    pgtype.Int4{Int32: parent.ID, Valid: true},
+			Visibility:  models.MessageVisibilityGame,
+		})
+		require.NoError(t, err)
 		s.service.notifyCommentReply(ctx, parent.ID, s.gmChar.ID, int32(s.gm.ID), s.game.ID, reply.ID)
-		return reply
+		return &reply
 	}
 
 	listed := replyTo(s.aReply)
 	assert.GreaterOrEqual(t, s.notificationsAbout(t, aID, core.NotificationTypeCommentReply, listed.ID), 1, "A is on the list")
 
-	require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerC.ID)}))
+	require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{int32(s.playerC.ID)}))
 	removed := replyTo(s.aReply)
 	assert.Zero(t, s.notificationsAbout(t, aID, core.NotificationTypeCommentReply, removed.ID), "A was taken off the list")
 	assert.Zero(t, s.notificationsAbout(t, aID, core.NotificationTypeCommentReply, listed.ID),

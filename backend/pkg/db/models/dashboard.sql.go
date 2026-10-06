@@ -65,18 +65,10 @@ LEFT JOIN (
   JOIN game_phases ph ON ph.id = root.phase_id
     AND ph.is_active = true
     AND ph.phase_type = 'common_room'
-  JOIN games rg ON rg.id = c.game_id
   WHERE c.message_type = 'comment'
     AND root.is_deleted = false
     AND root.is_draft = false
-    AND (root.is_restricted = false
-         OR rg.state IN ('completed', 'epilogue')
-         OR rg.gm_user_id = $2::int
-         OR EXISTS (SELECT 1 FROM game_participants gpv
-                    WHERE gpv.game_id = rg.id AND gpv.user_id = $2::int
-                      AND gpv.status = 'active' AND gpv.role IN ('co_gm', 'audience'))
-         OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                    WHERE v.post_id = root.id AND v.user_id = $2::int))
+    AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $2::int))
 ) ac ON ac.game_id = g.id
 LEFT JOIN user_common_room_reads ucr ON ucr.post_id = ac.root_post_id AND ucr.user_id = $2::int
 LEFT JOIN user_comment_reads ucmr ON ucmr.comment_id = ac.id AND ucmr.user_id = $2::int
@@ -100,9 +92,8 @@ type GetUnreadCommentCountsForDashboardRow struct {
 // comments not manually marked read. The user's own comments never count.
 //
 // Comments in a restricted thread the user can't see are left out. This is
-// cross-game, so it restates core.CanSeeAllRestrictedPosts against games and
-// game_participants; TestRestrictedRuleAgreement keeps the copy in step with
-// the Go rule.
+// cross-game, so it uses restricted_thread_visible_to_user; TestRestrictedRuleAgreement
+// keeps that in step with the Go rule.
 func (q *Queries) GetUnreadCommentCountsForDashboard(ctx context.Context, arg GetUnreadCommentCountsForDashboardParams) ([]GetUnreadCommentCountsForDashboardRow, error) {
 	rows, err := q.db.Query(ctx, getUnreadCommentCountsForDashboard, arg.CommentReadMode, arg.UserID)
 	if err != nil {
@@ -285,14 +276,7 @@ WHERE ((gp.user_id = $1::int AND gp.status = 'active' AND gp.role != 'audience')
   AND m.is_deleted = false
   AND m.is_draft = false
   AND root.is_draft = false
-  AND (root.is_restricted = false
-       OR g.state IN ('completed', 'epilogue')
-       OR g.gm_user_id = $1::int
-       OR EXISTS (SELECT 1 FROM game_participants gpv
-                  WHERE gpv.game_id = g.id AND gpv.user_id = $1::int
-                    AND gpv.status = 'active' AND gpv.role IN ('co_gm', 'audience'))
-       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
 ORDER BY m.created_at DESC
 LIMIT $2
 `
@@ -319,9 +303,9 @@ type GetUserRecentMessagesRow struct {
 // Get recent messages from games user participates in OR is GM of (excluding their own messages)
 //
 // Messages in a restricted thread the user can't see are left out, and so is
-// anything under an unpublished draft. This is cross-game, so it restates
-// core.CanSeeAllRestrictedPosts against games and game_participants;
-// TestRestrictedRuleAgreement keeps the copy in step with the Go rule.
+// anything under an unpublished draft. This is cross-game, so it uses
+// restricted_thread_visible_to_user; TestRestrictedRuleAgreement keeps that in step with
+// the Go rule.
 func (q *Queries) GetUserRecentMessages(ctx context.Context, arg GetUserRecentMessagesParams) ([]GetUserRecentMessagesRow, error) {
 	rows, err := q.db.Query(ctx, getUserRecentMessages, arg.UserID, arg.RowLimit)
 	if err != nil {

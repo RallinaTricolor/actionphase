@@ -1069,8 +1069,10 @@ type MessageServiceInterface interface {
 	// SetPostViewers replaces a post's allowlist. restricted=false makes the
 	// post public and requires userIDs to be empty; restricted=true requires at
 	// least one active player. Users who lose access also lose their in-app
-	// notifications pointing into the thread, in the same transaction.
-	SetPostViewers(ctx context.Context, postID int32, restricted bool, userIDs []int32) error
+	// notifications pointing into the thread, in the same transaction. A
+	// postID that isn't a post in gameID is ErrPostNotFound. Returns the
+	// updated post and its sorted allowlist (empty when public).
+	SetPostViewers(ctx context.Context, gameID, postID int32, restricted bool, userIDs []int32) (*MessageWithDetails, []int32, error)
 
 	// IsMessageInThread reports whether messageID belongs to the thread rooted
 	// at postID. Unknown message → (false, nil).

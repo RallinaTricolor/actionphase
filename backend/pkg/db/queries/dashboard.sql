@@ -78,9 +78,9 @@ LIMIT 15;
 -- Get recent messages from games user participates in OR is GM of (excluding their own messages)
 --
 -- Messages in a restricted thread the user can't see are left out, and so is
--- anything under an unpublished draft. This is cross-game, so it restates
--- core.CanSeeAllRestrictedPosts against games and game_participants;
--- TestRestrictedRuleAgreement keeps the copy in step with the Go rule.
+-- anything under an unpublished draft. This is cross-game, so it uses
+-- restricted_thread_visible_to_user; TestRestrictedRuleAgreement keeps that in step with
+-- the Go rule.
 SELECT
   m.id as message_id,
   m.game_id,
@@ -105,14 +105,7 @@ WHERE ((gp.user_id = sqlc.arg(user_id)::int AND gp.status = 'active' AND gp.role
   AND m.is_deleted = false
   AND m.is_draft = false
   AND root.is_draft = false
-  AND (root.is_restricted = false
-       OR g.state IN ('completed', 'epilogue')
-       OR g.gm_user_id = sqlc.arg(user_id)::int
-       OR EXISTS (SELECT 1 FROM game_participants gpv
-                  WHERE gpv.game_id = g.id AND gpv.user_id = sqlc.arg(user_id)::int
-                    AND gpv.status = 'active' AND gpv.role IN ('co_gm', 'audience'))
-       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = sqlc.arg(user_id)::int))
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(user_id)::int))
 ORDER BY m.created_at DESC
 LIMIT sqlc.arg(row_limit);
 
@@ -211,9 +204,8 @@ WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1;
 -- comments not manually marked read. The user's own comments never count.
 --
 -- Comments in a restricted thread the user can't see are left out. This is
--- cross-game, so it restates core.CanSeeAllRestrictedPosts against games and
--- game_participants; TestRestrictedRuleAgreement keeps the copy in step with
--- the Go rule.
+-- cross-game, so it uses restricted_thread_visible_to_user; TestRestrictedRuleAgreement
+-- keeps that in step with the Go rule.
 SELECT
   g.id AS game_id,
   COALESCE(SUM(CASE
@@ -238,18 +230,10 @@ LEFT JOIN (
   JOIN game_phases ph ON ph.id = root.phase_id
     AND ph.is_active = true
     AND ph.phase_type = 'common_room'
-  JOIN games rg ON rg.id = c.game_id
   WHERE c.message_type = 'comment'
     AND root.is_deleted = false
     AND root.is_draft = false
-    AND (root.is_restricted = false
-         OR rg.state IN ('completed', 'epilogue')
-         OR rg.gm_user_id = sqlc.arg(user_id)::int
-         OR EXISTS (SELECT 1 FROM game_participants gpv
-                    WHERE gpv.game_id = rg.id AND gpv.user_id = sqlc.arg(user_id)::int
-                      AND gpv.status = 'active' AND gpv.role IN ('co_gm', 'audience'))
-         OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                    WHERE v.post_id = root.id AND v.user_id = sqlc.arg(user_id)::int))
+    AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(user_id)::int))
 ) ac ON ac.game_id = g.id
 LEFT JOIN user_common_room_reads ucr ON ucr.post_id = ac.root_post_id AND ucr.user_id = sqlc.arg(user_id)::int
 LEFT JOIN user_comment_reads ucmr ON ucmr.comment_id = ac.id AND ucmr.user_id = sqlc.arg(user_id)::int

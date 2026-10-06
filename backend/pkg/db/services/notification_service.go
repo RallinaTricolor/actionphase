@@ -691,21 +691,22 @@ func (s *NotificationService) NotifyActionResult(ctx context.Context, playerUser
 // getActiveParticipantIDs returns user IDs of all active game participants excluding one user.
 // If roles is non-empty, only participants with one of those roles are included.
 func (s *NotificationService) getActiveParticipantIDs(ctx context.Context, gameID int32, excludeUserID int32, roles ...string) ([]int32, error) {
+	return s.getActiveParticipantIDsWhere(ctx, gameID, excludeUserID, func(p models.GetGameParticipantsRow) bool {
+		return len(roles) == 0 || slices.Contains(roles, p.Role)
+	})
+}
+
+// getActiveParticipantIDsWhere returns user IDs of the active game participants,
+// excluding one user, for whom keep is true.
+func (s *NotificationService) getActiveParticipantIDsWhere(ctx context.Context, gameID int32, excludeUserID int32, keep func(models.GetGameParticipantsRow) bool) ([]int32, error) {
 	gameSvc := &GameService{DB: s.DB, Logger: s.Logger}
 	participants, err := gameSvc.GetGameParticipants(ctx, gameID)
 	if err != nil {
 		return nil, fmt.Errorf("get game participants: %w", err)
 	}
-	roleSet := make(map[string]bool, len(roles))
-	for _, r := range roles {
-		roleSet[r] = true
-	}
 	var ids []int32
 	for _, p := range participants {
-		if p.UserID == excludeUserID || p.Status != "active" {
-			continue
-		}
-		if len(roleSet) > 0 && !roleSet[p.Role] {
+		if p.UserID == excludeUserID || p.Status != "active" || !keep(p) {
 			continue
 		}
 		ids = append(ids, p.UserID)
@@ -740,19 +741,11 @@ func (s *NotificationService) notifyCommonRoomPostTo(ctx context.Context, userID
 // of the post, so anyone else must not get it. Admin mode is a per-request flag
 // of the reader, so it plays no part in who is notified.
 func (s *NotificationService) NotifyRestrictedCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32, allowedUserIDs []int32) error {
-	gameSvc := &GameService{DB: s.DB, Logger: s.Logger}
-	participants, err := gameSvc.GetGameParticipants(ctx, gameID)
+	userIDs, err := s.getActiveParticipantIDsWhere(ctx, gameID, excludeUserID, func(p models.GetGameParticipantsRow) bool {
+		return slices.Contains(allowedUserIDs, p.UserID) || core.CanSeeAllRestrictedPosts(p.Role, false)
+	})
 	if err != nil {
-		return fmt.Errorf("failed to notify game participants: get game participants: %w", err)
-	}
-	var userIDs []int32
-	for _, p := range participants {
-		if p.UserID == excludeUserID || p.Status != "active" {
-			continue
-		}
-		if slices.Contains(allowedUserIDs, p.UserID) || core.CanSeeAllRestrictedPosts(p.Role, false) {
-			userIDs = append(userIDs, p.UserID)
-		}
+		return fmt.Errorf("failed to notify game participants: %w", err)
 	}
 	return s.notifyCommonRoomPostTo(ctx, userIDs, gameID, postID, postTitle)
 }

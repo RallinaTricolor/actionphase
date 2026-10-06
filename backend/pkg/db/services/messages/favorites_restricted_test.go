@@ -121,14 +121,14 @@ func TestRestrictedFavorites_Pagination(t *testing.T) {
 	ctx := context.Background()
 	a, b := int32(s.playerA.ID), int32(s.playerB.ID)
 
-	require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{a, b}))
+	require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{a, b}))
 	public, restricted := s.interleave(t)
 	everything := append(append([]int32{}, public...), restricted...)
 	for _, id := range everything {
 		require.NoError(t, s.service.SetCommentFavorite(ctx, b, id, true))
 		require.NoError(t, s.service.SetCommentFavorite(ctx, a, id, true))
 	}
-	require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{a}))
+	require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{a}))
 
 	const limit = 5
 	t.Run("removed player B", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestRestrictedFavorites_Pagination(t *testing.T) {
 		assert.ElementsMatch(t, everything, s.walkFavorites(t, a, limit))
 	})
 	t.Run("B added back gets the stars back", func(t *testing.T) {
-		require.NoError(t, s.service.SetPostViewers(ctx, s.restrictedPost.ID, true, []int32{a, b}))
+		require.NoError(t, s.setPostViewers(ctx, s.restrictedPost.ID, true, []int32{a, b}))
 		assert.ElementsMatch(t, everything, s.walkFavorites(t, b, limit))
 	})
 }

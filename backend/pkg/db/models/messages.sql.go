@@ -33,10 +33,10 @@ type AddCommentFavoriteParams struct {
 //
 // A favorite in a restricted thread the user can no longer see is left out of
 // every read below. The cross-game queries can't take one precomputed
-// viewer_sees_all, so they restate core.CanSeeAllRestrictedPosts against
-// games and game_participants (admin mode aside: admins see their own
-// favorites as a normal user would). TestRestrictedRuleAgreement keeps the
-// copies in step with the Go rule.
+// viewer_sees_all, so they use restricted_thread_visible_to_user, which restates
+// core.CanSeeAllRestrictedPosts against the root post's game (admin mode
+// aside: admins see their own favorites as a normal user would).
+// TestRestrictedRuleAgreement keeps it in step with the Go rule.
 // Insert a favorite record; ignore if already exists (idempotent)
 func (q *Queries) AddCommentFavorite(ctx context.Context, arg AddCommentFavoriteParams) error {
 	_, err := q.db.Exec(ctx, addCommentFavorite, arg.UserID, arg.CommentID, arg.GameID)
@@ -610,27 +610,16 @@ const deleteThreadNotificationsForHiddenUsers = `-- name: DeleteThreadNotificati
 DELETE FROM notifications n
 WHERE n.related_type IN ('post', 'comment')
   AND n.related_id IN (SELECT id FROM messages WHERE root_post_id = $1::int)
-  AND n.user_id <> (SELECT g.gm_user_id FROM games g
-                    JOIN messages p ON p.game_id = g.id
-                    WHERE p.id = $1::int)
-  AND NOT EXISTS (SELECT 1 FROM game_participants gp
-                  JOIN messages p ON p.game_id = gp.game_id
-                  WHERE p.id = $1::int
-                    AND gp.user_id = n.user_id
-                    AND gp.status = 'active'
-                    AND gp.role IN ('co_gm', 'audience'))
-  AND NOT EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = $1::int AND v.user_id = n.user_id)
+  AND NOT restricted_thread_visible_to_user($1::int, n.user_id)
 `
 
 // Removes in-app notifications pointing into a restricted thread from every
 // user who can no longer see it. A common_room_post notification's title holds
 // the start of the post, so leaving it would be a leak.
 //
-// This restates core.CanSeeAllRestrictedPosts in SQL (primary GM, active
-// co-GM or audience) plus the allowlist. Admin mode is a per-request flag, so
-// it has no place here. Callers run it only for a restricted post that is not
-// in a public archive.
+// Who can still see it is restricted_thread_visible_to_user (the bypass
+// roles plus the allowlist). Callers run it only for a restricted post that
+// is not in a public archive.
 func (q *Queries) DeleteThreadNotificationsForHiddenUsers(ctx context.Context, postID int32) error {
 	_, err := q.db.Exec(ctx, deleteThreadNotificationsForHiddenUsers, postID)
 	return err
@@ -809,6 +798,27 @@ func (q *Queries) GetComment(ctx context.Context, id int32) (GetCommentRow, erro
 		&i.CharacterAvatarUrl,
 		&i.ReplyCount,
 	)
+	return i, err
+}
+
+const getCommentParent = `-- name: GetCommentParent :one
+SELECT game_id, phase_id
+FROM messages
+WHERE id = $1
+`
+
+type GetCommentParentRow struct {
+	GameID  int32       `json:"game_id"`
+	PhaseID pgtype.Int4 `json:"phase_id"`
+}
+
+// The game and phase of the message a new comment replies to: the comment must
+// be in the same game, and inherits the phase. Deliberately does NOT filter on
+// is_deleted: a reply to a soft-deleted parent still belongs to that phase.
+func (q *Queries) GetCommentParent(ctx context.Context, id int32) (GetCommentParentRow, error) {
+	row := q.db.QueryRow(ctx, getCommentParent, id)
+	var i GetCommentParentRow
+	err := row.Scan(&i.GameID, &i.PhaseID)
 	return i, err
 }
 
@@ -1010,18 +1020,10 @@ SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
 JOIN messages root ON root.id = m.root_post_id
-JOIN games g ON g.id = m.game_id
 WHERE f.user_id = $1::int
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
-  AND (root.is_restricted = false
-       OR g.state IN ('completed', 'epilogue')
-       OR g.gm_user_id = $1::int
-       OR EXISTS (SELECT 1 FROM game_participants gp
-                  WHERE gp.game_id = g.id AND gp.user_id = $1::int
-                    AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
-       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
 `
 
 // Returns every favorited comment ID for a user, across all games.
@@ -1364,22 +1366,6 @@ func (q *Queries) GetMessage(ctx context.Context, id int32) (GetMessageRow, erro
 	return i, err
 }
 
-const getMessagePhaseID = `-- name: GetMessagePhaseID :one
-SELECT phase_id
-FROM messages
-WHERE id = $1
-`
-
-// Get just the phase_id of a message, used when a new comment inherits its
-// phase from the message it replies to. Deliberately does NOT filter on
-// is_deleted: a reply to a soft-deleted parent still belongs to that phase.
-func (q *Queries) GetMessagePhaseID(ctx context.Context, id int32) (pgtype.Int4, error) {
-	row := q.db.QueryRow(ctx, getMessagePhaseID, id)
-	var phase_id pgtype.Int4
-	err := row.Scan(&phase_id)
-	return phase_id, err
-}
-
 const getMessageRootPostID = `-- name: GetMessageRootPostID :one
 SELECT root_post_id FROM messages WHERE id = $1
 `
@@ -1392,20 +1378,20 @@ func (q *Queries) GetMessageRootPostID(ctx context.Context, id int32) (int32, er
 }
 
 const getMessageVisibilityContext = `-- name: GetMessageVisibilityContext :one
-SELECT m.game_id,
+SELECT root.game_id,
        root.is_restricted AS root_is_restricted,
        root.is_draft AS root_is_draft,
        g.state,
        g.gm_user_id,
        COALESCE((SELECT gp.role FROM game_participants gp
-                 WHERE gp.game_id = m.game_id AND gp.user_id = $1::int
+                 WHERE gp.game_id = root.game_id AND gp.user_id = $1::int
                    AND gp.status = 'active'), '')::text AS viewer_role,
        COALESCE((SELECT u.is_admin FROM users u WHERE u.id = $1::int), false)::bool AS viewer_is_admin,
        EXISTS (SELECT 1 FROM common_room_post_viewers v
                WHERE v.post_id = m.root_post_id AND v.user_id = $1::int) AS is_listed_viewer
 FROM messages m
 JOIN messages root ON root.id = m.root_post_id
-JOIN games g ON g.id = m.game_id
+JOIN games g ON g.id = root.game_id
 WHERE m.id = $2
 `
 
@@ -1426,7 +1412,9 @@ type GetMessageVisibilityContextRow struct {
 }
 
 // Everything CanUserViewMessage needs for one message, resolved from the
-// message's OWN game and root post -- never from IDs in the URL.
+// message's OWN root post and that post's game -- never from IDs in the URL.
+// The root's game, not m.game_id: a comment filed under another game (rows
+// from before CreateComment checked) must not let that game's role decide.
 func (q *Queries) GetMessageVisibilityContext(ctx context.Context, arg GetMessageVisibilityContextParams) (GetMessageVisibilityContextRow, error) {
 	row := q.db.QueryRow(ctx, getMessageVisibilityContext, arg.UserID, arg.MessageID)
 	var i GetMessageVisibilityContextRow
@@ -1949,16 +1937,15 @@ SELECT
     COUNT(c.id) as total_comments,
     MAX(c.created_at) as latest_comment_at
 FROM messages m
-JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN messages c ON c.parent_id = m.id AND c.is_deleted = false
 WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
   AND ($2::bool
-       OR root.is_restricted = false
+       OR m.is_restricted = false
        OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = $3::int))
+                  WHERE v.post_id = m.id AND v.user_id = $3::int))
 GROUP BY m.id, m.created_at
 ORDER BY m.created_at DESC
 `
@@ -1978,8 +1965,7 @@ type GetPostsWithUnreadCountRow struct {
 
 // Get posts with their total comment count and last comment timestamp
 // Frontend will compare these with read markers to determine unread status.
-// Restricted posts the viewer can't see are left out. For a post,
-// root_post_id is its own ID, so root is the post itself.
+// Restricted posts the viewer can't see are left out.
 func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, arg GetPostsWithUnreadCountParams) ([]GetPostsWithUnreadCountRow, error) {
 	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, arg.GameID, arg.ViewerSeesAll, arg.ViewerUserID)
 	if err != nil {
@@ -2042,7 +2028,6 @@ SELECT
         '{}'::integer[]
     ) as unread_comment_ids
 FROM messages posts
-JOIN messages root ON root.id = posts.root_post_id
 LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1::int
 LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1::int
 WHERE posts.game_id = $2
@@ -2050,9 +2035,9 @@ WHERE posts.game_id = $2
   AND posts.is_deleted = false
   AND posts.is_draft = false
   AND ($3::bool
-       OR root.is_restricted = false
+       OR posts.is_restricted = false
        OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+                  WHERE v.post_id = posts.id AND v.user_id = $1::int))
 GROUP BY posts.id
 ORDER BY posts.created_at DESC
 `
@@ -2303,7 +2288,10 @@ type GetViewerRestrictedPostContextRow struct {
 // RESTRICTED POSTS (Common Room allowlists)
 // ============================================================================
 // The rule lives in core.CanSeeAllRestrictedPosts. These queries return the
-// facts it needs; Go applies it.
+// facts it needs; Go applies it. Single-game read queries take the resolved
+// scope as viewer_sees_all; cross-game ones call the SQL function
+// restricted_thread_visible_to_user (migration
+// 20261006184500_add_thread_visibility_functions).
 // Everything ResolveViewerScope needs to decide whether a viewer bypasses the
 // allowlists in one game. viewer_role is ” for a non-participant; the primary
 // GM is not a game_participants row, so Go compares gm_user_id itself.
@@ -2498,14 +2486,7 @@ WITH favorite_comments AS (
     WHERE f.user_id = $1::int
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
-      AND (root.is_restricted = false
-           OR g.state IN ('completed', 'epilogue')
-           OR g.gm_user_id = $1::int
-           OR EXISTS (SELECT 1 FROM game_participants gp
-                      WHERE gp.game_id = g.id AND gp.user_id = $1::int
-                        AND gp.status = 'active' AND gp.role IN ('co_gm', 'audience'))
-           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
-                      WHERE v.post_id = root.id AND v.user_id = $1::int))
+      AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
       AND (
           $2::timestamptz IS NULL
           OR (f.created_at, f.comment_id) < ($2::timestamptz, $3::integer)

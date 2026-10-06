@@ -143,9 +143,9 @@ type characterCommentsInput struct {
 }
 
 type setPostViewersInput struct {
-	GameID int32 `path:"gameID" doc:"Game ID"`
-	PostID int32 `path:"postId" doc:"Post ID"`
-	Body   *SetPostViewersRequest
+	GameID int32                  `path:"gameID" doc:"Game ID"`
+	PostID int32                  `path:"postId" doc:"Post ID"`
+	Body   *SetPostViewersRequest `required:"true"`
 }
 
 type phaseIDInput struct {
@@ -571,16 +571,11 @@ func (h *Handler) humaSetPostViewers(ctx context.Context, in *setPostViewersInpu
 		return nil, humaErr(errResp)
 	}
 
-	post, err := h.MessageService.GetPost(ctx, in.PostID)
+	updated, viewerIDs, err := h.MessageService.SetPostViewers(ctx, in.GameID, in.PostID, in.Body.Restricted, in.Body.UserIDs)
 	if err != nil {
-		h.App.ObsLogger.Warn(ctx, "Set post viewers: post lookup failed", "error", err, "post_id", in.PostID)
-		return nil, core.NotFoundOr500(err, "post")
-	}
-	if post.GameID != in.GameID || string(post.MessageType) != "post" {
-		return nil, huma.Error404NotFound("post not found")
-	}
-
-	if err := h.MessageService.SetPostViewers(ctx, in.PostID, in.Body.Restricted, in.Body.UserIDs); err != nil {
+		if errors.Is(err, core.ErrPostNotFound) {
+			return nil, huma.Error404NotFound("post not found")
+		}
 		if errors.Is(err, core.ErrInvalidPostViewers) {
 			h.App.ObsLogger.Warn(ctx, "Set post viewers rejected", "error", err, "post_id", in.PostID, "user_id", userID)
 			return nil, huma.Error422UnprocessableEntity(err.Error())
@@ -595,15 +590,10 @@ func (h *Handler) humaSetPostViewers(ctx context.Context, in *setPostViewersInpu
 	h.App.ObsLogger.Info(ctx, "Post viewers set", "post_id", in.PostID, "game_id", in.GameID,
 		"restricted", in.Body.Restricted, "viewer_count", len(in.Body.UserIDs), "user_id", userID)
 
-	updated, err := h.MessageService.GetPost(ctx, in.PostID)
-	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to fetch post after setting viewers", "error", err, "post_id", in.PostID)
-		return nil, huma.Error500InternalServerError(err.Error())
-	}
-	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(updated))
-	if err != nil {
-		return nil, err
-	}
+	// The caller passed requireGMOrCoGM, so they bypass the allowlists and get
+	// the list back (D8).
+	resp := messageWithDetailsToResponse(updated)
+	resp.ViewerUserIDs = &viewerIDs
 	return &messageOutput{Body: resp}, nil
 }
 
@@ -639,6 +629,11 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		Visibility:  "game",
 	})
 	if err != nil {
+		// Same answer as an unknown or hidden {postId} from the gate above.
+		if errors.Is(err, core.ErrCommentParentNotFound) {
+			h.App.ObsLogger.Warn(ctx, "Create comment rejected: parent is in another game", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
+			return nil, huma.Error404NotFound("post not found")
+		}
 		if core.IsArchivedGameError(err) {
 			h.App.ObsLogger.Warn(ctx, "Create comment rejected: game is archived", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 			return nil, humaErr(core.ErrGameArchived())

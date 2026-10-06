@@ -603,9 +603,9 @@ thread to everyone, as hidden NPCs do. Otherwise a viewer row grants access.
 
 | Path | How it applies the rule |
 |---|---|
-| One message by ID | `MessageService.CanUserViewMessage` resolves the message's **own** game and root. Never the URL's game or the `is_gm` context value: a GM of game X must not read game Y's threads through X's URL. Unknown or hidden → `requireMessageVisible` returns the **same 404 as a missing message** (not 403), on reads and writes alike |
+| One message by ID | `MessageService.CanUserViewMessage` resolves the message's **root post** and that post's game. Never the URL's game, the `is_gm` context value, or a comment's own `game_id`: a GM of game X must not read game Y's threads through X's URL, or through a comment filed under X. `CreateComment` rejects a parent from another game (`ErrCommentParentNotFound` → 404). Unknown or hidden → `requireMessageVisible` returns the **same 404 as a missing message** (not 403), on reads and writes alike |
 | Single-game listings | `ResolveViewerScope` builds a `core.ViewerScope{UserID, SeesAll}` once per request (fails closed); SQL takes `viewer_user_id` + `viewer_sees_all` |
-| Cross-game listings (favorites, dashboard) | The rule restated in SQL against `games` and `game_participants` (active co-GM/audience only); admin mode isn't in it |
+| Cross-game listings (favorites, dashboard) | `root.is_restricted = false OR restricted_thread_visible_to_user(root.id, viewer)`: the one SQL restatement of the rule, against the root post's game (active co-GM/audience only); admin mode isn't in it. Keep the inline guard: the function can't be inlined and costs ~9µs a call |
 | Notifications | `recipientCanSee` runs the rule for the **recipient**, with the author's admin mode switched off. A restricted post notifies only those who can see it; taking someone off the list deletes their in-app notifications for the thread (Discord DMs can't be recalled) |
 
 The single-game predicate:
@@ -621,9 +621,15 @@ AND (sqlc.arg(viewer_sees_all)::bool OR root.is_restricted = false
 🔴 **Every new query that reads `messages` must apply it**, or be gated upstream,
 internal, or archive-only. On a paginated query it goes **inside** the
 paginating CTE, before `LIMIT`, and in the matching count; filtering afterwards
-gives short pages and totals that leak. A new cross-game SQL copy of the rule
-must be added to `TestRestrictedRuleAgreement` (`services/messages/visibility_test.go`),
-which checks every copy against the Go rule over every role and game state.
+gives short pages and totals that leak. A new cross-game query calls
+`restricted_thread_visible_to_user` rather than restating the rule, and goes in
+`TestRestrictedRuleAgreement` (`services/messages/visibility_test.go`), which
+checks every caller against the Go rule over every role and game state.
+
+Keep the single-game predicate inline; don't wrap it in a SQL function.
+Postgres never inlines a SQL function containing a subquery, and inline the
+planner runs the allowlist `EXISTS` once as a hashed subplan; inside a function
+it runs per row (measured 6.5x slower on 15k comments, every thread restricted).
 
 Drafts: `CanUserViewMessage` hides a draft's thread from everyone but the GM,
 co-GMs and admin mode, and listings drop threads under an unpublished draft
