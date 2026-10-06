@@ -220,6 +220,49 @@ describe('PhaseManagement', () => {
         expect(screen.queryByText('Create New Phase')).not.toBeInTheDocument()
       })
     })
+
+    it('saves a restricted draft opening post with its viewers', async () => {
+      setupDefaultHandlers()
+      const draftBodies: unknown[] = []
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          HttpResponse.json({ id: 1, username: 'thegm', email: 'gm@example.com', is_admin: false })
+        ),
+        http.get('/api/v1/games/:gameId/details', () =>
+          HttpResponse.json({ id: 1, title: 'Test Game', gm_user_id: 1, gm_username: 'thegm', state: 'in_progress' })
+        ),
+        http.get('/api/v1/games/:gameId/participants', () =>
+          HttpResponse.json([
+            { id: 1, game_id: 1, user_id: 10, username: 'amy', role: 'player', status: 'active' },
+            { id: 2, game_id: 1, user_id: 11, username: 'zed', role: 'player', status: 'active' },
+          ])
+        ),
+        http.get('/api/v1/games/:gameId/characters', () => HttpResponse.json([])),
+        http.get('/api/v1/games/:gameId/characters/controllable', () =>
+          HttpResponse.json([{ id: 7, game_id: 1, name: 'Narrator', character_type: 'npc' }])
+        ),
+        http.post('/api/v1/phases/:phaseId/draft-post', async ({ request }) => {
+          draftBodies.push(await request.json())
+          return HttpResponse.json({ id: 99 }, { status: 201 })
+        })
+      )
+
+      renderWithProviders(<PhaseManagement gameId={1} />, { gameId: 1 })
+
+      fireEvent.click(await screen.findByRole('button', { name: /new phase/i }))
+      fireEvent.click(screen.getByTestId('draft-post-toggle'))
+      fireEvent.change(await screen.findByTestId('draft-character-select'), { target: { value: '7' } })
+      fireEvent.change(screen.getByTestId('draft-post-content'), { target: { value: 'For your eyes only' } })
+      fireEvent.click(screen.getByTestId('restrict-post-toggle'))
+      fireEvent.click(await screen.findByLabelText('zed'))
+      fireEvent.click(screen.getByRole('button', { name: /create phase/i }))
+
+      await waitFor(() => {
+        expect(draftBodies).toEqual([
+          { character_id: 7, content: 'For your eyes only', restricted_to_user_ids: [11] },
+        ])
+      })
+    })
   })
 
   describe('Phase Activation', () => {

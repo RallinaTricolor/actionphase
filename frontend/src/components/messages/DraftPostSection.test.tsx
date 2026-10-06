@@ -242,5 +242,19 @@ describe('DraftPostSection', () => {
       expect(screen.getByTestId('post-viewer-names')).toHaveTextContent('Visible to Brynn, zed');
       expect(screen.getByTestId('edit-post-viewers')).toHaveTextContent('Edit viewers');
     });
+
+    it('offers to restrict a public draft', () => {
+      vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+        data: mockDraft,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+      }));
+
+      renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
+
+      expect(screen.queryByTestId('restricted-badge')).not.toBeInTheDocument();
+      expect(screen.getByTestId('edit-post-viewers')).toHaveTextContent('Restrict');
+    });
   });
 });

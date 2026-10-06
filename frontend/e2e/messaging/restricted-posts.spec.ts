@@ -81,7 +81,7 @@ test.describe('Restricted Common Room posts', () => {
     await expect(restriction.getByTestId('post-viewer-names')).toHaveText(`Visible to ${IVY}`);
 
     // Widen it through the modal.
-    await restriction.getByTestId('edit-post-viewers').click();
+    await commonRoom.getEditViewersButton(content).click();
     const modal = page.getByTestId('post-viewers-modal');
     await expect(modal).toBeVisible();
     await expect(modal.getByLabel(IVY, { exact: true })).toBeChecked();
@@ -118,7 +118,7 @@ test.describe('Restricted Common Room posts', () => {
       // A listed player learns it's restricted, not who else can see it, and
       // can't change it.
       await expect(restriction.getByTestId('post-viewer-names')).toHaveCount(0);
-      await expect(restriction.getByTestId('edit-post-viewers')).toHaveCount(0);
+      await expect(ivyRoom.getPostCard(RESTRICTED_POST).getByTestId('edit-post-viewers')).toHaveCount(0);
 
       await ivyRoom.expandComments(RESTRICTED_POST);
       await ivyRoom.verifyCommentExists(IVY_COMMENT);

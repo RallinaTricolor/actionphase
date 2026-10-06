@@ -24,7 +24,7 @@ import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { postCachingService } from '@/services/PostCachingService';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { ViewSourceModal } from './ViewSourceModal';
-import { PostRestriction } from './PostRestriction';
+import { PostRestriction, PostViewersButton } from './PostRestriction';
 
 interface PostCardProps {
   post: Message;
@@ -510,11 +510,15 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   );
 
   const restriction = (className: string) => (
-    <PostRestriction
+    <PostRestriction post={post} className={className} />
+  );
+
+  const viewersButton = !isEditing && (
+    <PostViewersButton
       post={post}
       readOnly={readOnly || screenshotModeEnabled}
       onPostUpdated={onPostUpdated}
-      className={className}
+      className="text-interactive-primary hover:text-interactive-primary-hover"
     />
   );
 
@@ -595,6 +599,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     </Button>
                   )}
                   {viewSourceButton}
+                  {viewersButton}
                 </div>
 
                 {/* Post content flows around the floating portrait */}
@@ -669,6 +674,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   </Button>
                 )}
                 {viewSourceButton}
+                {viewersButton}
               </div>
             </>
           )}

@@ -13,6 +13,13 @@ vi.mock('@/contexts/GameContext', async () => {
         { id: 1, name: 'Narrator' },
         { id: 2, name: 'The Wanderer' },
       ],
+      allGameCharacters: [
+        { id: 3, name: 'Brynn', user_id: 10, character_type: 'player_character' },
+      ],
+      participants: [
+        { id: 1, user_id: 10, username: 'amy', role: 'player', status: 'active' },
+        { id: 2, user_id: 11, username: 'zed', role: 'player', status: 'active' },
+      ],
     })),
   };
 });
@@ -480,6 +487,20 @@ describe('CreatePhaseModal', () => {
       expect(screen.queryByTestId('draft-post-toggle')).not.toBeInTheDocument();
     });
 
+    it('does not submit the form when the draft toggle is clicked', () => {
+      renderWithProviders(
+        <CreatePhaseModal
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('draft-post-toggle'));
+
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
     it('expands draft section when toggle is clicked', () => {
       renderWithProviders(
         <CreatePhaseModal
@@ -518,6 +539,49 @@ describe('CreatePhaseModal', () => {
         expect.objectContaining({ phase_type: 'common_room' }),
         { characterId: 1, content: 'The fog parts...' }
       );
+    });
+
+    it('includes the picked viewers when the draft is restricted', () => {
+      renderWithProviders(
+        <CreatePhaseModal
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('draft-post-toggle'));
+      fireEvent.change(screen.getByTestId('draft-character-select'), { target: { value: '1' } });
+      fireEvent.change(screen.getByTestId('draft-post-content'), { target: { value: 'For Brynn only' } });
+      fireEvent.click(screen.getByTestId('restrict-post-toggle'));
+      fireEvent.click(screen.getByLabelText('Brynn'));
+
+      fireEvent.click(screen.getByRole('button', { name: /Create Phase/i }));
+
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ phase_type: 'common_room' }),
+        { characterId: 1, content: 'For Brynn only', restrictedToUserIds: [10] }
+      );
+    });
+
+    it('blocks creating the phase while the draft is restricted to nobody', () => {
+      renderWithProviders(
+        <CreatePhaseModal
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('draft-post-toggle'));
+      fireEvent.change(screen.getByTestId('draft-character-select'), { target: { value: '1' } });
+      fireEvent.change(screen.getByTestId('draft-post-content'), { target: { value: 'For nobody' } });
+      fireEvent.click(screen.getByTestId('restrict-post-toggle'));
+
+      const create = screen.getByRole('button', { name: /Create Phase/i });
+      expect(create).toBeDisabled();
+      fireEvent.submit(create.closest('form')!);
+      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
     it('passes undefined draft when section is not expanded', () => {

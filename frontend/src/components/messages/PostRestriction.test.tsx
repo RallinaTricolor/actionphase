@@ -6,7 +6,7 @@ import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils/render';
 import { makeCharacter, makeMessage } from '@/test-utils/factories';
 import type { Message } from '@/types/messages';
-import { PostRestriction } from './PostRestriction';
+import { PostRestriction, PostViewersButton } from './PostRestriction';
 
 const GM = 1;
 const CO_GM = 2;
@@ -73,7 +73,13 @@ const restrictedPost: Message = makeMessage({ id: 51, game_id: 1, message_type: 
 const restrictedWithViewers: Message = { ...restrictedPost, viewer_user_ids: [AMY] };
 
 function renderRestriction(post: Message, onPostUpdated = vi.fn()) {
-  renderWithProviders(<PostRestriction post={post} onPostUpdated={onPostUpdated} />, { gameId: 1 });
+  renderWithProviders(
+    <>
+      <PostRestriction post={post} />
+      <PostViewersButton post={post} onPostUpdated={onPostUpdated} />
+    </>,
+    { gameId: 1 }
+  );
   return onPostUpdated;
 }
 
@@ -88,7 +94,7 @@ async function waitForContext() {
   await new Promise((r) => setTimeout(r, 50));
 }
 
-describe('PostRestriction', () => {
+describe('PostRestriction and PostViewersButton', () => {
   describe('what each viewer sees', () => {
     it('shows nothing on a public post to a player', async () => {
       setupGame({ userId: AMY });

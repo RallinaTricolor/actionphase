@@ -7,7 +7,7 @@ import { Button, Select } from '@/components/ui';
 import { Modal } from '@/components/common/modals/Modal';
 import { listPickablePlayers } from '@/lib/postViewers';
 import { PostViewerPicker } from './PostViewerPicker';
-import { PostRestriction } from './PostRestriction';
+import { PostRestriction, PostViewersButton } from './PostRestriction';
 
 interface DraftPostSectionProps {
   phaseId: number;
@@ -224,6 +224,7 @@ export function DraftPostSection({ phaseId, onCreateDraft }: DraftPostSectionPro
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-content-secondary uppercase tracking-wide">Draft Post</span>
             <div className="flex items-center gap-2">
+              <PostViewersButton post={draft} size="md" />
               <Button
                 variant="ghost"
                 onClick={() => setShowPreviewModal(true)}

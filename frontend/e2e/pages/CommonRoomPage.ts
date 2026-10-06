@@ -145,11 +145,16 @@ export class CommonRoomPage {
   }
 
   /**
-   * The visible copy of a post's restriction row (badge, viewer names, edit
-   * action). PostCard has a portrait and a standard header layout.
+   * The visible copy of a post's restriction row (badge, viewer names).
+   * PostCard has a portrait and a standard header layout.
    */
   getPostRestriction(postContent: string): Locator {
     return this.getPostCard(postContent).getByTestId('post-restriction').locator('visible=true').first();
+  }
+
+  /** The GM's "Restrict" / "Edit viewers" action, in the post's action row. */
+  getEditViewersButton(postContent: string): Locator {
+    return this.getPostCard(postContent).getByTestId('edit-post-viewers').locator('visible=true').first();
   }
 
   /**
