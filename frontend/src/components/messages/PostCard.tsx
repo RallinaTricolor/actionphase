@@ -24,6 +24,7 @@ import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { postCachingService } from '@/services/PostCachingService';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { ViewSourceModal } from './ViewSourceModal';
+import { PostRestriction } from './PostRestriction';
 
 interface PostCardProps {
   post: Message;
@@ -508,6 +509,15 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     </Button>
   );
 
+  const restriction = (className: string) => (
+    <PostRestriction
+      post={post}
+      readOnly={readOnly || screenshotModeEnabled}
+      onPostUpdated={onPostUpdated}
+      className={className}
+    />
+  );
+
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
 
@@ -555,6 +565,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     </span>
                   )}
                 </div>
+
+                {restriction('mb-2')}
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mb-2">
@@ -627,6 +639,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   </div>
                 </div>
               </div>
+
+              {restriction('mt-2')}
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 mt-2">

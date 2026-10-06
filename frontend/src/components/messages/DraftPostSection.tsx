@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDraftPost, useUpdateDraftPost, useDeleteDraftPost, useCreateDraftPost } from '@/hooks';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from './CommentEditor';
 import { Button, Select } from '@/components/ui';
 import { Modal } from '@/components/common/modals/Modal';
+import { listPickablePlayers } from '@/lib/postViewers';
+import { PostViewerPicker } from './PostViewerPicker';
+import { PostRestriction } from './PostRestriction';
 
 interface DraftPostSectionProps {
   phaseId: number;
@@ -22,17 +25,30 @@ function CreateDraftModal({
 }) {
   const gameContext = useOptionalGameContext();
   const userCharacters = gameContext?.userCharacters ?? [];
+  const participants = gameContext?.participants;
+  const allGameCharacters = gameContext?.allGameCharacters;
+  const players = useMemo(
+    () => listPickablePlayers(participants ?? [], allGameCharacters ?? []),
+    [participants, allGameCharacters]
+  );
 
   const [characterId, setCharacterId] = useState<number | ''>(
     userCharacters.length > 0 ? userCharacters[0].id : ''
   );
   const [content, setContent] = useState('');
+  const [restricted, setRestricted] = useState(false);
+  const [viewerIds, setViewerIds] = useState<number[]>([]);
+  const missingViewers = restricted && viewerIds.length === 0;
   const createMutation = useCreateDraftPost(phaseId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!characterId || !content.trim()) return;
-    await createMutation.mutateAsync({ characterId: characterId as number, content: content.trim() });
+    if (!characterId || !content.trim() || missingViewers) return;
+    await createMutation.mutateAsync({
+      characterId: characterId as number,
+      content: content.trim(),
+      restrictedToUserIds: restricted ? viewerIds : undefined,
+    });
     onSuccess();
   };
 
@@ -71,9 +87,18 @@ function CreateDraftModal({
           />
         </div>
 
+        <PostViewerPicker
+          players={players}
+          restricted={restricted}
+          onRestrictedChange={setRestricted}
+          selectedUserIds={viewerIds}
+          onSelectedChange={setViewerIds}
+          disabled={createMutation.isPending}
+        />
+
         <div className="flex justify-end gap-3">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={createMutation.isPending || !characterId || !content.trim()}>
+          <Button type="submit" variant="primary" disabled={createMutation.isPending || !characterId || !content.trim() || missingViewers}>
             {createMutation.isPending ? 'Saving...' : 'Save Draft'}
           </Button>
         </div>
@@ -240,6 +265,8 @@ export function DraftPostSection({ phaseId, onCreateDraft }: DraftPostSectionPro
               )}
             </div>
           </div>
+
+          <PostRestriction post={draft} />
 
           <div className="text-sm text-content-secondary line-clamp-2 italic">
             {draft.character_name && (

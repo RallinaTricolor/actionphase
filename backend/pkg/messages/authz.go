@@ -21,14 +21,22 @@ func getGameIDForPhase(ctx context.Context, app *core.App, phaseID int32) (int32
 	return phase.GameID, nil
 }
 
+// requireGMOrCoGM admits the game's GM, its co-GMs, and a site admin with
+// admin mode on -- the same rule as the is_gm flag GameMiddleware sets for
+// creating posts. The admin flag comes from the authenticated user, not the
+// header alone, so the header by itself grants nothing.
 func requireGMOrCoGM(ctx context.Context, app *core.App, gameID, userID int32) render.Renderer {
 	queries := models.New(app.Pool)
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
 		return core.ErrInternalError(err)
 	}
-	if game.GmUserID != userID && !core.IsUserCoGM(ctx, app.Pool, gameID, userID) {
-		return core.ErrForbidden("only the Game Master or co-GM can manage draft posts")
+	isAdmin := false
+	if user := core.GetAuthenticatedUser(ctx); user != nil && user.ID == userID {
+		isAdmin = user.IsAdmin
+	}
+	if !core.IsUserGameMasterCtx(ctx, userID, isAdmin, game, app.Pool) {
+		return core.ErrForbidden("only the Game Master or co-GM can do this")
 	}
 	return nil
 }

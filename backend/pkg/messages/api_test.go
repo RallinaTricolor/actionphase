@@ -62,6 +62,7 @@ func setupMessageAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mu
 				r.Use(jwtauth.Verifier(tokenAuth))
 				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
+				r.Use(core.AdminModeMiddleware)
 				r.Use(gameHandler.GameMiddleware())
 
 				RegisterHumaGameMessages(humaconfig.New(r, "ActionPhase API", "1.0.0"), &messageHandler)

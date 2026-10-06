@@ -2,7 +2,7 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
-**Last Verified**: 2026-09-21
+**Last Verified**: 2026-10-05
 
 ## Core Architectural Principles
 
@@ -583,6 +583,66 @@ they can see. Hiding conceals *which* characters are hidden, not that the
 mechanic exists — that is documented — so a flag on an already-visible row
 discloses nothing further. The field is optional in the schema, so consumers
 test `=== true`: an absent key reads as "not hidden".
+
+### Restricted Common Room Posts (added 2026-10-05)
+
+A GM or co-GM can restrict a top-level Common Room post to chosen players
+(`messages.is_restricted` plus `common_room_post_viewers`, keyed by **user**, not
+character). The list covers the whole thread. Everyone else gets nothing: not
+the post, its comments, its counts, its notifications, or a sign it exists.
+
+**Every message knows its thread.** `messages.root_post_id` is `NOT NULL` and is
+filled by the insert trigger (a post points at itself). Filters join on it;
+never walk `parent_id` recursively to find a root, and never trust a
+`root_post_id` or `postId` sent by the client.
+
+`core.CanSeeAllRestrictedPosts(userRole, isAdminMode)` is the ONLY definition of
+who bypasses the list: GM, co-GM, audience, or an admin in admin mode. Callers OR
+in `IsPublicArchive(game.State)`, so a completed or epilogue game shows every
+thread to everyone, as hidden NPCs do. Otherwise a viewer row grants access.
+
+| Path | How it applies the rule |
+|---|---|
+| One message by ID | `MessageService.CanUserViewMessage` resolves the message's **own** game and root. Never the URL's game or the `is_gm` context value: a GM of game X must not read game Y's threads through X's URL. Unknown or hidden → `requireMessageVisible` returns the **same 404 as a missing message** (not 403), on reads and writes alike |
+| Single-game listings | `ResolveViewerScope` builds a `core.ViewerScope{UserID, SeesAll}` once per request (fails closed); SQL takes `viewer_user_id` + `viewer_sees_all` |
+| Cross-game listings (favorites, dashboard) | The rule restated in SQL against `games` and `game_participants` (active co-GM/audience only); admin mode isn't in it |
+| Notifications | `recipientCanSee` runs the rule for the **recipient**, with the author's admin mode switched off. A restricted post notifies only those who can see it; taking someone off the list deletes their in-app notifications for the thread (Discord DMs can't be recalled) |
+
+The single-game predicate:
+
+```sql
+JOIN messages root ON root.id = m.root_post_id
+...
+AND (sqlc.arg(viewer_sees_all)::bool OR root.is_restricted = false
+     OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+```
+
+🔴 **Every new query that reads `messages` must apply it**, or be gated upstream,
+internal, or archive-only. On a paginated query it goes **inside** the
+paginating CTE, before `LIMIT`, and in the matching count; filtering afterwards
+gives short pages and totals that leak. A new cross-game SQL copy of the rule
+must be added to `TestRestrictedRuleAgreement` (`services/messages/visibility_test.go`),
+which checks every copy against the Go rule over every role and game state.
+
+Drafts: `CanUserViewMessage` hides a draft's thread from everyone but the GM,
+co-GMs and admin mode, and listings drop threads under an unpublished draft
+(`root.is_draft = false`).
+
+**Seeing the list is not permission to edit it.** `viewer_user_ids` is sent to
+anyone who passes the bypass (audience and public-archive viewers included), so
+the frontend shows "Edit viewers" from GameContext's `isGM` (`hasGMPowers`:
+GM, co-GM, or admin in admin mode), in `PostRestriction.tsx`. The endpoint
+agrees: `requireGMOrCoGM` (`messages/authz.go`, shared with the draft-post
+endpoints) goes through `IsUserGameMasterCtx`. Everyone else gets only
+`is_restricted`.
+
+Tests follow the hidden-NPC layout: one `*_restricted_test.go` per surface,
+built on the shared scenario `newRestrictedScenario`, each asserting the
+unlisted player gets neither the rows nor a count that includes them. The E2E
+spec `e2e/messaging/restricted-posts.spec.ts` runs on its own fixture
+(`33_restricted_posts.sql`, games 708 and 709) and logs each user in once, in
+their own browser context.
 
 ### Character Sheet Storage
 

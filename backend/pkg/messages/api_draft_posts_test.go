@@ -32,6 +32,7 @@ func setupDraftPostRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 		r.Use(jwtauth.Verifier(tokenAuth))
 		r.Use(jwtauth.Authenticator(tokenAuth))
 		r.Use(core.RequireAuthenticationMiddleware(userService))
+		r.Use(core.AdminModeMiddleware)
 
 		h := &Handler{
 			App:            app,
@@ -134,6 +135,27 @@ func TestDraftPostAPI_CreateAndGet(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("an admin gets the draft only with admin mode on", func(t *testing.T) {
+		admin := testDB.CreateTestUser(t, "admin_draft", "admin_draft@example.com")
+		_, err := testDB.Pool.Exec(context.Background(), "UPDATE users SET is_admin = true WHERE id = $1", admin.ID)
+		require.NoError(t, err)
+		adminToken, err := core.CreateTestJWTTokenForUser(app, admin)
+		require.NoError(t, err)
+
+		get := func(adminMode bool) int {
+			req := httptest.NewRequest(http.MethodGet, phaseURL, nil)
+			req.Header.Set("Authorization", "Bearer "+adminToken)
+			if adminMode {
+				req.Header.Set("X-Admin-Mode", "true")
+			}
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			return rec.Code
+		}
+		assert.Equal(t, http.StatusForbidden, get(false))
+		assert.Equal(t, http.StatusOK, get(true))
 	})
 
 	t.Run("duplicate create returns 409", func(t *testing.T) {

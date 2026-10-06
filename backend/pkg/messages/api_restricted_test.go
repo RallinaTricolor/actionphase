@@ -22,9 +22,10 @@ import (
 
 // apiClient sends JSON requests through a test router as one user.
 type apiClient struct {
-	t      *testing.T
-	router *chi.Mux
-	token  string
+	t         *testing.T
+	router    *chi.Mux
+	token     string
+	adminMode bool // sends X-Admin-Mode: true, as the frontend's admin toggle does
 }
 
 func (c apiClient) do(method, path string, body any) *httptest.ResponseRecorder {
@@ -42,6 +43,9 @@ func (c apiClient) do(method, path string, body any) *httptest.ResponseRecorder 
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.adminMode {
+		req.Header.Set("X-Admin-Mode", "true")
+	}
 	rec := httptest.NewRecorder()
 	c.router.ServeHTTP(rec, req)
 	return rec
@@ -428,6 +432,39 @@ func TestRestrictedPostsAPI_SetPostViewers(t *testing.T) {
 
 		assert.True(t, canSee(s.playerA))
 		assert.True(t, canSee(s.outsider))
+	})
+
+	// Admin mode is the user's is_admin flag AND the header. Either alone is
+	// a 403, so neither an admin browsing normally nor a forged header edits.
+	t.Run("an admin needs admin mode switched on", func(t *testing.T) {
+		app := core.NewTestApp(s.testDB.Pool)
+		newClient := func(name string, admin bool) apiClient {
+			u := s.testDB.CreateTestUser(t, "rapi_setviewers_"+name, "rapi_setviewers_"+name+"@example.com")
+			if admin {
+				_, err := s.testDB.Pool.Exec(context.Background(), "UPDATE users SET is_admin = true WHERE id = $1", u.ID)
+				require.NoError(t, err)
+			}
+			token, err := core.CreateTestJWTTokenForUser(app, u)
+			require.NoError(t, err)
+			return apiClient{t: t, router: s.router, token: token}
+		}
+		admin := newClient("admin", true)
+		forger := newClient("forger", false)
+		forger.adminMode = true
+		restrictToA := map[string]any{"restricted": true, "user_ids": []int32{s.aID}}
+
+		assert.Equal(t, http.StatusForbidden, admin.do(http.MethodPut, path, restrictToA).Code, "admin mode off")
+		assert.Equal(t, http.StatusForbidden, forger.do(http.MethodPut, path, restrictToA).Code, "header without is_admin")
+		assert.True(t, canSee(s.playerB), "still public")
+
+		admin.adminMode = true
+		rec := admin.do(http.MethodPut, path, restrictToA)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var resp MessageResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.True(t, resp.IsRestricted)
+		assert.True(t, canSee(s.playerA))
+		assert.False(t, canSee(s.playerB))
 	})
 }
 

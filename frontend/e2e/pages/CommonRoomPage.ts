@@ -87,8 +87,9 @@ export class CommonRoomPage {
    * Create a new GM post
    * @param content - Post content
    * @param characterName - Optional character name to post as (for GMs/co-GMs with multiple characters)
+   * @param options.visibleTo - Restrict the post to these players, by their picker labels (character names)
    */
-  async createPost(content: string, characterName?: string) {
+  async createPost(content: string, characterName?: string, options: { visibleTo?: string[] } = {}) {
     // Wait for either the expand button or the textarea to be visible,
     // then expand if needed. Using a race avoids a no-timeout isVisible() check
     // that races the page render and silently skips the expand click.
@@ -108,6 +109,9 @@ export class CommonRoomPage {
     // Ensure textarea is ready
     await waitForVisible(this.postTextarea);
     await this.postTextarea.fill(content);
+    if (options.visibleTo) {
+      await this.restrictTo(this.page.getByTestId('post-viewer-picker'), options.visibleTo);
+    }
     await this.page.waitForTimeout(500); // Allow form to process input
     await this.createPostButton.click();
 
@@ -119,6 +123,33 @@ export class CommonRoomPage {
 
     // Wait for form to fully collapse and reset before next operation
     await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Switch on "Restrict who can see this post" in a viewer picker and tick
+   * the named players. Works for the create form and the edit-viewers modal.
+   * @param picker - The picker, or a container holding exactly one
+   * @param playerLabels - Checkbox labels (character names) to tick
+   */
+  async restrictTo(picker: Locator, playerLabels: string[]) {
+    const toggle = picker.getByTestId('restrict-post-toggle');
+    if ((await toggle.getAttribute('aria-checked')) !== 'true') {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    }
+    for (const label of playerLabels) {
+      const checkbox = picker.getByLabel(label, { exact: true });
+      await checkbox.check();
+      await expect(checkbox).toBeChecked();
+    }
+  }
+
+  /**
+   * The visible copy of a post's restriction row (badge, viewer names, edit
+   * action). PostCard has a portrait and a standard header layout.
+   */
+  getPostRestriction(postContent: string): Locator {
+    return this.getPostCard(postContent).getByTestId('post-restriction').locator('visible=true').first();
   }
 
   /**
