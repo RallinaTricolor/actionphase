@@ -31,6 +31,7 @@ vi.mock('@/contexts/GameContext', async () => {
         { id: 2, user_id: 11, username: 'zed', role: 'player', status: 'active' },
       ],
       userRole: 'gm',
+      isGM: true,
       game: { state: 'in_progress' },
     })),
   };
