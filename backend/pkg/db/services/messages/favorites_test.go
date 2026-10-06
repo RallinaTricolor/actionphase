@@ -193,7 +193,7 @@ func TestMessageService_ListFavoriteComments(t *testing.T) {
 		// Every read path must agree on what "your favorites" contains: a star
 		// that fills on a comment absent from the listing is a bug. Both ID
 		// sets therefore apply the same deleted filter.
-		gameIDs, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.player, env.gameA.ID)
+		gameIDs, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.gameA.ID, core.ViewerScope{UserID: env.player})
 		require.NoError(t, err)
 		assert.NotContains(t, gameIDs, comment.ID, "per-game set must hide a deleted comment")
 
@@ -426,11 +426,11 @@ func TestMessageService_GetFavoriteCommentIDs(t *testing.T) {
 	require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, commentB.ID, true))
 
 	t.Run("per-game set contains only that game's favorites", func(t *testing.T) {
-		idsA, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.player, env.gameA.ID)
+		idsA, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.gameA.ID, core.ViewerScope{UserID: env.player})
 		require.NoError(t, err)
 		assert.Equal(t, []int32{commentA.ID}, idsA)
 
-		idsB, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.player, env.gameB.ID)
+		idsB, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.gameB.ID, core.ViewerScope{UserID: env.player})
 		require.NoError(t, err)
 		assert.Equal(t, []int32{commentB.ID}, idsB)
 	})
@@ -447,7 +447,7 @@ func TestMessageService_GetFavoriteCommentIDs(t *testing.T) {
 		assert.NotNil(t, ids, "handlers serialize this straight to JSON; nil would emit null")
 		assert.Empty(t, ids)
 
-		gameIDs, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.other, env.gameA.ID)
+		gameIDs, err := env.service.GetFavoriteCommentIDsForGame(ctx, env.gameA.ID, core.ViewerScope{UserID: env.other})
 		require.NoError(t, err)
 		assert.NotNil(t, gameIDs)
 		assert.Empty(t, gameIDs)

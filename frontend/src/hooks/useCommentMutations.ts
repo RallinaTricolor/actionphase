@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
-import type { UpdateCommentRequest, Message } from '../types/messages';
+import type { UpdateCommentRequest, Message, SetPostViewersRequest } from '../types/messages';
 
 /**
  * Hook to update a post
@@ -37,6 +37,47 @@ export function useUpdatePost() {
       await queryClient.invalidateQueries({
         queryKey: ['gamePosts', variables.gameId]
       });
+    },
+  });
+}
+
+/**
+ * Hook to replace a post's allowlist (GM or co-GM only).
+ *
+ * The caller can see every restricted post, so its own lists don't change;
+ * the invalidations cover everything the allowlist filters, in case they do
+ * (and for the draft panel's badge).
+ */
+export function useSetPostViewers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      gameId,
+      postId,
+      data,
+    }: {
+      gameId: number;
+      postId: number;
+      data: SetPostViewersRequest;
+    }) => {
+      const response = await apiClient.messages.setPostViewers(gameId, postId, data);
+      return response.data;
+    },
+    onSuccess: async (_updatedPost, { gameId, postId }) => {
+      const keys = [
+        ['gamePosts', gameId],
+        ['postsUnreadInfo', gameId],
+        ['unreadCommentIDs', gameId],
+        ['manualReadCommentIDs', gameId],
+        ['readMarkers', gameId],
+        ['games', gameId, 'recentComments'],
+        ['postComments', gameId, postId],
+        ['draftPost'],
+        ['dashboard'],
+        ['unread-inbox'],
+      ];
+      await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
     },
   });
 }

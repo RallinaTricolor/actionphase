@@ -142,6 +142,12 @@ type characterCommentsInput struct {
 	Offset int32 `query:"offset" default:"0" minimum:"0" doc:"Messages to skip"`
 }
 
+type setPostViewersInput struct {
+	GameID int32                  `path:"gameID" doc:"Game ID"`
+	PostID int32                  `path:"postId" doc:"Post ID"`
+	Body   *SetPostViewersRequest `required:"true"`
+}
+
 type phaseIDInput struct {
 	ID int32 `path:"id" doc:"Phase ID"`
 }
@@ -387,11 +393,17 @@ func (h *Handler) humaCreatePost(ctx context.Context, in *createPostInput) (*mes
 		CharacterID: in.Body.CharacterID,
 		Content:     in.Body.Content,
 		Visibility:  "game", // Common Room posts are always visible to game
+
+		RestrictedToUserIDs: in.Body.RestrictedToUserIDs,
 	})
 	if err != nil {
 		if core.IsArchivedGameError(err) {
 			h.App.ObsLogger.Warn(ctx, "Create post rejected: game is archived", "game_id", in.GameID, "user_id", userID)
 			return nil, humaErr(core.ErrGameArchived())
+		}
+		if errors.Is(err, core.ErrInvalidPostViewers) {
+			h.App.ObsLogger.Warn(ctx, "Create post rejected: invalid viewers", "error", err, "game_id", in.GameID, "user_id", userID)
+			return nil, huma.Error422UnprocessableEntity(err.Error())
 		}
 		h.App.ObsLogger.Error(ctx, "Failed to create post", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -407,7 +419,11 @@ func (h *Handler) humaCreatePost(ctx context.Context, in *createPostInput) (*mes
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
-	return &messageOutput{Body: messageWithDetailsToResponse(postDetails)}, nil
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(postDetails))
+	if err != nil {
+		return nil, err
+	}
+	return &messageOutput{Body: resp}, nil
 }
 
 // humaGetGamePosts lists the common room.
@@ -441,10 +457,20 @@ func (h *Handler) humaGetGamePosts(ctx context.Context, in *listPostsInput) (*po
 		return nil, err
 	}
 
-	posts, err := h.MessageService.GetGamePosts(ctx, in.GameID, phaseID, limit, offset)
+	scope := h.viewerScope(ctx, in.GameID)
+	posts, err := h.MessageService.GetGamePosts(ctx, in.GameID, phaseID, limit, offset, scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game posts", "error", err, "game_id", in.GameID)
 		return nil, huma.Error500InternalServerError(err.Error())
+	}
+
+	postIDs := make([]int32, len(posts))
+	for i := range posts {
+		postIDs[i] = posts[i].ID
+	}
+	viewers, err := h.postViewerIDs(ctx, scope, postIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	// Built as an empty slice rather than a nil one so a game with no posts
@@ -466,6 +492,8 @@ func (h *Handler) humaGetGamePosts(ctx context.Context, in *listPostsInput) (*po
 			IsEdited:           post.IsEdited,
 			IsDeleted:          post.IsDeleted,
 			CreatedAt:          post.CreatedAt.Time,
+			IsRestricted:       post.IsRestricted,
+			ViewerUserIDs:      viewerIDsField(viewers, post.ID),
 		}
 		if post.PhaseID.Valid {
 			id := post.PhaseID.Int32
@@ -486,6 +514,10 @@ func (h *Handler) humaUpdatePost(ctx context.Context, in *updatePostInput) (*mes
 
 	userID, err := h.authUser(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
 		return nil, err
 	}
 
@@ -513,7 +545,56 @@ func (h *Handler) humaUpdatePost(ctx context.Context, in *updatePostInput) (*mes
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
-	return &messageOutput{Body: messageWithDetailsToResponse(postDetails)}, nil
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(postDetails))
+	if err != nil {
+		return nil, err
+	}
+	return &messageOutput{Body: resp}, nil
+}
+
+// humaSetPostViewers replaces a post's allowlist, or makes it public.
+//
+// GM and co-GM only. The role check runs before the post is looked up, so a
+// player gets the same 403 whether or not the post exists. The post must be
+// in {gameID}: the GM check is for that game, so a post from another game
+// answers 404.
+func (h *Handler) humaSetPostViewers(ctx context.Context, in *setPostViewersInput) (*messageOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_set_post_viewers")()
+
+	userID, err := h.authUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if errResp := requireGMOrCoGM(ctx, h.App, in.GameID, userID); errResp != nil {
+		h.App.ObsLogger.Warn(ctx, "GM required to set post viewers", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
+		return nil, humaErr(errResp)
+	}
+
+	updated, viewerIDs, err := h.MessageService.SetPostViewers(ctx, in.GameID, in.PostID, in.Body.Restricted, in.Body.UserIDs)
+	if err != nil {
+		if errors.Is(err, core.ErrPostNotFound) {
+			return nil, huma.Error404NotFound("post not found")
+		}
+		if errors.Is(err, core.ErrInvalidPostViewers) {
+			h.App.ObsLogger.Warn(ctx, "Set post viewers rejected", "error", err, "post_id", in.PostID, "user_id", userID)
+			return nil, huma.Error422UnprocessableEntity(err.Error())
+		}
+		if core.IsArchivedGameError(err) {
+			return nil, humaErr(core.ErrGameArchived())
+		}
+		h.App.ObsLogger.Error(ctx, "Failed to set post viewers", "error", err, "post_id", in.PostID, "user_id", userID)
+		return nil, huma.Error500InternalServerError("failed to set post viewers")
+	}
+
+	h.App.ObsLogger.Info(ctx, "Post viewers set", "post_id", in.PostID, "game_id", in.GameID,
+		"restricted", in.Body.Restricted, "viewer_count", len(in.Body.UserIDs), "user_id", userID)
+
+	// The caller passed requireGMOrCoGM, so they bypass the allowlists and get
+	// the list back (D8).
+	resp := messageWithDetailsToResponse(updated)
+	resp.ViewerUserIDs = &viewerIDs
+	return &messageOutput{Body: resp}, nil
 }
 
 // Comments
@@ -531,12 +612,11 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		return nil, humaErr(errResp)
 	}
 
-	// {postId} in the path is the immediate parent (post or comment).
-	// root_post_id in the body is the top-level post, needed for read tracking.
-	// Replying directly to a post makes them the same, so postId is the fallback.
-	rootPostID := in.PostID
-	if in.Body.RootPostID != nil {
-		rootPostID = *in.Body.RootPostID
+	// {postId} in the path is the immediate parent (post or comment). The
+	// thread root is derived from it in the database; the body's root_post_id
+	// is ignored, and never gated on.
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
+		return nil, err
 	}
 
 	comment, err := h.MessageService.CreateComment(ctx, core.CreateCommentRequest{
@@ -546,10 +626,14 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		CharacterID: in.Body.CharacterID,
 		Content:     in.Body.Content,
 		ParentID:    in.PostID,
-		RootPostID:  rootPostID,
 		Visibility:  "game",
 	})
 	if err != nil {
+		// Same answer as an unknown or hidden {postId} from the gate above.
+		if errors.Is(err, core.ErrCommentParentNotFound) {
+			h.App.ObsLogger.Warn(ctx, "Create comment rejected: parent is in another game", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
+			return nil, huma.Error404NotFound("post not found")
+		}
 		if core.IsArchivedGameError(err) {
 			h.App.ObsLogger.Warn(ctx, "Create comment rejected: game is archived", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 			return nil, humaErr(core.ErrGameArchived())
@@ -571,6 +655,10 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 
 func (h *Handler) humaGetPostComments(ctx context.Context, in *postIDInput) (*commentListOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments")()
+
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
+		return nil, err
+	}
 
 	show, err := h.showUsernames(ctx, in.GameID)
 	if err != nil {
@@ -599,6 +687,10 @@ func (h *Handler) humaGetPostComments(ctx context.Context, in *postIDInput) (*co
 // replies is where the client shows "Continue thread".
 func (h *Handler) humaGetPostCommentsWithThreads(ctx context.Context, in *commentsWithThreadsInput) (*paginatedCommentsOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_post_comments_with_threads")()
+
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
+		return nil, err
+	}
 
 	maxDepth := int32(h.App.Config.App.CommentMaxDepth)
 	if in.MaxDepth >= 0 {
@@ -651,6 +743,12 @@ func (h *Handler) humaUpdateComment(ctx context.Context, in *updateCommentInput)
 		return nil, err
 	}
 
+	// Gate on the comment's own root, not {postId}: a visible post ID paired
+	// with a hidden comment ID must still 404.
+	if err := h.requireMessageVisible(ctx, in.CommentID, "comment"); err != nil {
+		return nil, err
+	}
+
 	canEdit, err := h.MessageService.CanUserEditComment(ctx, in.CommentID, userID)
 	if err != nil {
 		h.App.ObsLogger.Warn(ctx, "Failed to check edit permission", "error", err, "comment_id", in.CommentID, "user_id", userID)
@@ -689,6 +787,10 @@ func (h *Handler) humaDeleteComment(ctx context.Context, in *commentIDInput) (*d
 
 	userID, err := h.authUser(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := h.requireMessageVisible(ctx, in.CommentID, "comment"); err != nil {
 		return nil, err
 	}
 
@@ -733,6 +835,10 @@ func (h *Handler) humaDeleteComment(ctx context.Context, in *commentIDInput) (*d
 func (h *Handler) humaGetMessage(ctx context.Context, in *messageIDInput) (*messageOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_message")()
 
+	if err := h.requireMessageVisible(ctx, in.MessageID, "message"); err != nil {
+		return nil, err
+	}
+
 	show, err := h.showUsernames(ctx, in.GameID)
 	if err != nil {
 		return nil, err
@@ -744,7 +850,10 @@ func (h *Handler) humaGetMessage(ctx context.Context, in *messageIDInput) (*mess
 		return nil, core.NotFoundOr500(err, "message")
 	}
 
-	resp := messageWithDetailsToResponse(message)
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(message))
+	if err != nil {
+		return nil, err
+	}
 	resp.AuthorUsername = blankIfHidden(resp.AuthorUsername, show)
 
 	return &messageOutput{Body: resp}, nil
@@ -758,6 +867,10 @@ func (h *Handler) humaGetMessage(ctx context.Context, in *messageIDInput) (*mess
 // when the chain was trimmed short of it.
 func (h *Handler) humaGetMessageThreadContext(ctx context.Context, in *threadContextInput) (*threadContextOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_message_thread_context")()
+
+	if err := h.requireMessageVisible(ctx, in.MessageID, "message"); err != nil {
+		return nil, err
+	}
 
 	show, err := h.showUsernames(ctx, in.GameID)
 	if err != nil {
@@ -805,23 +918,29 @@ func (h *Handler) humaListRecentComments(ctx context.Context, in *recentComments
 		return nil, huma.Error401Unauthorized("authentication required for unread_only")
 	}
 
+	// An anonymous caller resolves as user 0, which sees only public threads.
+	if userIDErr != nil {
+		userID = 0
+	}
+	scope := h.MessageService.ResolveViewerScope(ctx, in.GameID, userID)
+
 	var comments []core.CommentWithParent
 	var totalCount int64
 	var svcErr error
 	if in.UnreadOnly {
-		comments, svcErr = h.MessageService.ListRecentUnreadCommentsWithParents(ctx, in.GameID, userID, int32(limit), int32(offset))
+		comments, svcErr = h.MessageService.ListRecentUnreadCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset), scope)
 		if svcErr != nil {
 			h.App.ObsLogger.Error(ctx, "Failed to list recent unread comments", "error", svcErr, "game_id", in.GameID, "user_id", userID)
 			return nil, huma.Error500InternalServerError(svcErr.Error())
 		}
-		totalCount, svcErr = h.MessageService.GetTotalUnreadCommentCount(ctx, in.GameID, userID)
+		totalCount, svcErr = h.MessageService.GetTotalUnreadCommentCount(ctx, in.GameID, scope)
 	} else {
-		comments, svcErr = h.MessageService.ListRecentCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset))
+		comments, svcErr = h.MessageService.ListRecentCommentsWithParents(ctx, in.GameID, int32(limit), int32(offset), scope)
 		if svcErr != nil {
 			h.App.ObsLogger.Error(ctx, "Failed to list recent comments", "error", svcErr, "game_id", in.GameID)
 			return nil, huma.Error500InternalServerError(svcErr.Error())
 		}
-		totalCount, svcErr = h.MessageService.GetTotalCommentCount(ctx, in.GameID)
+		totalCount, svcErr = h.MessageService.GetTotalCommentCount(ctx, in.GameID, scope)
 	}
 	if svcErr != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get total comment count", "error", svcErr, "game_id", in.GameID)
@@ -856,13 +975,17 @@ func (h *Handler) humaGetCharacterComments(ctx context.Context, in *characterCom
 		return nil, err
 	}
 
-	messages, err := h.MessageService.ListCharacterPostsAndComments(ctx, in.ID, int32(limit), int32(offset))
+	// No GameMiddleware on /characters: resolve the scope from the character's
+	// own game.
+	scope := h.viewerScope(ctx, character.GameID)
+
+	messages, err := h.MessageService.ListCharacterPostsAndComments(ctx, in.ID, int32(limit), int32(offset), scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to list character messages", "error", err, "character_id", in.ID)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
 
-	totalCount, err := h.MessageService.CountCharacterPostsAndComments(ctx, in.ID)
+	totalCount, err := h.MessageService.CountCharacterPostsAndComments(ctx, in.ID, scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to count character messages", "error", err, "character_id", in.ID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -934,11 +1057,27 @@ func (h *Handler) humaMarkPostRead(ctx context.Context, in *markPostReadInput) (
 		lastReadCommentID = in.Body.LastReadCommentID
 	}
 
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
+		return nil, err
+	}
+	// The marker is filed under {postId}, so a comment from another thread
+	// (visible or not) is rejected with the same answer as one that doesn't
+	// exist.
+	if lastReadCommentID != nil {
+		inThread, err := h.MessageService.IsMessageInThread(ctx, *lastReadCommentID, in.PostID)
+		if err != nil {
+			h.App.ObsLogger.Error(ctx, "Failed to check last read comment", "error", err, "post_id", in.PostID, "comment_id", *lastReadCommentID)
+			return nil, huma.Error500InternalServerError("failed to check last read comment")
+		}
+		if !inThread {
+			return nil, huma.Error422UnprocessableEntity("last_read_comment_id is not in this thread")
+		}
+	}
+
 	readMarker, err := h.MessageService.MarkPostAsRead(ctx, userID, in.GameID, in.PostID, lastReadCommentID)
 	if err != nil {
-		// A missing post surfaces here as a foreign-key violation, not
-		// pgx.ErrNoRows, so NotFoundOr500 would not catch it and this stays a
-		// 500.
+		// A missing post was turned away by the visibility gate above, so
+		// what reaches here is a real server fault.
 		h.App.ObsLogger.Error(ctx, "Failed to mark post as read", "error", err, "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
@@ -954,7 +1093,7 @@ func (h *Handler) humaGetGameReadMarkers(ctx context.Context, in *gameIDInput) (
 		return nil, err
 	}
 
-	readMarkers, err := h.MessageService.GetUserReadMarkersForGame(ctx, userID, in.GameID)
+	readMarkers, err := h.MessageService.GetUserReadMarkersForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get read markers", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -971,7 +1110,7 @@ func (h *Handler) humaGetGameReadMarkers(ctx context.Context, in *gameIDInput) (
 func (h *Handler) humaGetPostsUnreadInfo(ctx context.Context, in *gameIDInput) (*postsUnreadInfoOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_posts_unread_info")()
 
-	postsInfo, err := h.MessageService.GetPostsWithUnreadInfo(ctx, in.GameID)
+	postsInfo, err := h.MessageService.GetPostsWithUnreadInfo(ctx, in.GameID, h.viewerScope(ctx, in.GameID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get posts unread info", "error", err, "game_id", in.GameID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1000,7 +1139,7 @@ func (h *Handler) humaGetUnreadCommentIDs(ctx context.Context, in *gameIDInput) 
 		return nil, err
 	}
 
-	unreadComments, err := h.MessageService.GetUnreadCommentIDsForPosts(ctx, userID, in.GameID)
+	unreadComments, err := h.MessageService.GetUnreadCommentIDsForPosts(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get unread comment IDs", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1022,6 +1161,15 @@ func (h *Handler) humaToggleCommentRead(ctx context.Context, in *toggleCommentRe
 
 	userID, err := h.authUser(ctx)
 	if err != nil {
+		return nil, err
+	}
+
+	// Both IDs are gated: the read is filed under {postId}, so an unchecked
+	// hidden post ID would answer differently from a missing one.
+	if err := h.requireMessageVisible(ctx, in.PostID, "post"); err != nil {
+		return nil, err
+	}
+	if err := h.requireMessageVisible(ctx, in.CommentID, "comment"); err != nil {
 		return nil, err
 	}
 
@@ -1048,7 +1196,8 @@ func (h *Handler) humaMarkAllCommentsRead(ctx context.Context, in *markAllCommen
 		return nil, err
 	}
 
-	if err := h.MessageService.MarkAllCommentsReadForPhase(ctx, userID, in.GameID, in.PhaseID); err != nil {
+	scope := h.MessageService.ResolveViewerScope(ctx, in.GameID, userID)
+	if err := h.MessageService.MarkAllCommentsReadForPhase(ctx, in.GameID, in.PhaseID, scope); err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to mark all comments read for phase", "error", err,
 			"game_id", in.GameID, "phase_id", in.PhaseID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1065,7 +1214,7 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 		return nil, err
 	}
 
-	manualReads, err := h.MessageService.GetManualReadCommentIDsForGame(ctx, userID, in.GameID)
+	manualReads, err := h.MessageService.GetManualReadCommentIDsForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get manual read comment IDs", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1084,11 +1233,12 @@ func (h *Handler) humaGetManualReadCommentIDs(ctx context.Context, in *gameIDInp
 
 // Favorites
 //
-// These endpoints call authUser and nothing else. There is no per-game read
-// gate on comments anywhere on this path -- any authenticated user can already
-// read any game's common room -- so filtering favorites by game access would
-// make them stricter than the room they link back to, and a comment you
-// starred could vanish from your own list.
+// There is no per-game read gate on comments -- any authenticated user can
+// already read any game's common room -- so favorites aren't filtered by game
+// access, which would make them stricter than the room they link back to. The
+// one exception is restricted posts: starring needs the comment to be visible
+// (requireMessageVisible), and the lists leave out favorites in threads the
+// caller can no longer see.
 
 // encodeFavoriteCursor renders a keyset position as an opaque token. The
 // contents are the caller's own favorites, so the encoding is base64 for
@@ -1129,6 +1279,10 @@ func decodeFavoriteCursor(token string) (*core.FavoriteCursor, error) {
 	return &core.FavoriteCursor{FavoritedAt: time.Unix(0, ns).UTC(), CommentID: int32(cid)}, nil
 }
 
+// favoriteTargetInvalidMessage is the one answer for every target the caller
+// may not star: missing, not a comment, or in a thread hidden from them.
+const favoriteTargetInvalidMessage = "comment not found, or the target is not a comment"
+
 // humaSetCommentFavorite stars or unstars one comment for the caller.
 //
 // PUT with the target state in the body, rather than a toggle: a double-click
@@ -1145,6 +1299,22 @@ func (h *Handler) humaSetCommentFavorite(ctx context.Context, in *favoriteCommen
 		return nil, huma.Error422UnprocessableEntity("request body is required")
 	}
 
+	// Starring a hidden comment answers exactly like starring one that doesn't
+	// exist: this endpoint reports a missing target as 422, not 404, so the
+	// gate does too. The route isn't game-scoped; CanUserViewMessage resolves
+	// the comment's own game. Unstarring is not gated: it only deletes the
+	// caller's own row, and is a no-op either way.
+	if in.Body.Favorite {
+		visible, err := h.MessageService.CanUserViewMessage(ctx, in.CommentID, userID)
+		if err != nil {
+			h.App.ObsLogger.Warn(ctx, "Message visibility check failed; treating as hidden",
+				"error", err, "comment_id", in.CommentID, "user_id", userID)
+		}
+		if err != nil || !visible {
+			return nil, huma.Error422UnprocessableEntity(favoriteTargetInvalidMessage)
+		}
+	}
+
 	if err := h.MessageService.SetCommentFavorite(ctx, userID, in.CommentID, in.Body.Favorite); err != nil {
 		// Only a bad target is the caller's fault. Anything else (a failed
 		// lookup, a failed insert) is a server fault and must surface as a 500
@@ -1154,7 +1324,7 @@ func (h *Handler) humaSetCommentFavorite(ctx context.Context, in *favoriteCommen
 		if errors.Is(err, dbmessages.ErrFavoriteTargetInvalid) {
 			h.App.ObsLogger.Warn(ctx, "Rejected favorite for invalid target", "error", err,
 				"comment_id", in.CommentID, "user_id", userID)
-			return nil, huma.Error422UnprocessableEntity("comment not found, or the target is not a comment")
+			return nil, huma.Error422UnprocessableEntity(favoriteTargetInvalidMessage)
 		}
 		h.App.ObsLogger.Error(ctx, "Failed to set comment favorite", "error", err,
 			"comment_id", in.CommentID, "user_id", userID, "favorite", in.Body.Favorite)
@@ -1237,7 +1407,7 @@ func (h *Handler) humaGetGameFavoriteCommentIDs(ctx context.Context, in *gameIDI
 		return nil, err
 	}
 
-	ids, err := h.MessageService.GetFavoriteCommentIDsForGame(ctx, userID, in.GameID)
+	ids, err := h.MessageService.GetFavoriteCommentIDsForGame(ctx, in.GameID, h.MessageService.ResolveViewerScope(ctx, in.GameID, userID))
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game favorite comment IDs", "error", err,
 			"game_id", in.GameID, "user_id", userID)
@@ -1278,7 +1448,11 @@ func (h *Handler) humaGetDraftPost(ctx context.Context, in *phaseIDInput) (*draf
 		return &draftPostOutput{Body: nil}, nil
 	}
 
-	return &draftPostOutput{Body: messageWithDetailsToResponse(draft)}, nil
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(draft))
+	if err != nil {
+		return nil, err
+	}
+	return &draftPostOutput{Body: resp}, nil
 }
 
 func (h *Handler) humaCreateDraftPost(ctx context.Context, in *createDraftPostInput) (*messageOutput, error) {
@@ -1308,8 +1482,14 @@ func (h *Handler) humaCreateDraftPost(ctx context.Context, in *createDraftPostIn
 		CharacterID: in.Body.CharacterID,
 		Content:     in.Body.Content,
 		Visibility:  "game",
+
+		RestrictedToUserIDs: in.Body.RestrictedToUserIDs,
 	})
 	if err != nil {
+		if errors.Is(err, core.ErrInvalidPostViewers) {
+			h.App.ObsLogger.Warn(ctx, "Create draft post rejected: invalid viewers", "error", err, "phase_id", in.ID, "user_id", userID)
+			return nil, huma.Error422UnprocessableEntity(err.Error())
+		}
 		// One draft per phase, so a second create is a conflict rather than an
 		// overwrite.
 		if errors.Is(err, core.ErrDraftPostExists) {
@@ -1326,7 +1506,11 @@ func (h *Handler) humaCreateDraftPost(ctx context.Context, in *createDraftPostIn
 
 	h.App.ObsLogger.Info(ctx, "Draft post created", "phase_id", in.ID, "post_id", draft.ID, "author_id", userID)
 
-	return &messageOutput{Body: messageWithDetailsToResponse(draft)}, nil
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(draft))
+	if err != nil {
+		return nil, err
+	}
+	return &messageOutput{Body: resp}, nil
 }
 
 func (h *Handler) humaUpdateDraftPost(ctx context.Context, in *updateDraftPostInput) (*messageOutput, error) {
@@ -1361,7 +1545,11 @@ func (h *Handler) humaUpdateDraftPost(ctx context.Context, in *updateDraftPostIn
 
 	h.App.ObsLogger.Info(ctx, "Draft post updated", "phase_id", in.ID, "post_id", existing.ID, "user_id", userID)
 
-	return &messageOutput{Body: messageWithDetailsToResponse(updated)}, nil
+	resp, err := h.withPostViewers(ctx, messageWithDetailsToResponse(updated))
+	if err != nil {
+		return nil, err
+	}
+	return &messageOutput{Body: resp}, nil
 }
 
 func (h *Handler) humaDeleteDraftPost(ctx context.Context, in *phaseIDInput) (*deletedOutput, error) {
@@ -1453,18 +1641,38 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not the post's author"},
-			"404": {Description: "Post not found"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaUpdatePost)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "setPostViewers",
+		Method:      http.MethodPut,
+		Path:        "/posts/{postId}/viewers",
+		Summary:     "Set who can see a post",
+		Description: "Replaces a post's allowlist. restricted:true limits the post and its " +
+			"whole thread to the listed players (plus the GM, co-GMs and audience); " +
+			"restricted:false makes it public. Players who lose access also lose their " +
+			"in-app notifications from the thread. GM and co-GM only; works on drafts too.",
+		Tags:     commonRoom,
+		Security: bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Empty list, non-player IDs, or a list on a public post"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Not the GM or co-GM"},
+			"404": {Description: "No such post in this game"},
+			"409": {Description: "Game is archived"},
+		},
+	}, h.humaSetPostViewers)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "createComment",
 		Method:      http.MethodPost,
 		Path:        "/posts/{postId}/comments",
 		Summary:     "Comment on a post or another comment",
-		Description: "Adds a comment. The path's postId is the immediate parent; send " +
-			"root_post_id in the body when replying below a top-level post, or read " +
-			"tracking will key off the wrong thread. Requires a verified email.",
+		Description: "Adds a comment. The path's postId is the immediate parent, a post " +
+			"or another comment; the thread's root post is derived from it. Requires " +
+			"a verified email.",
 		Tags:          commonRoom,
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
@@ -1473,6 +1681,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Email not verified"},
+			"404": {Description: "Parent not found, or in a thread hidden from the caller"},
 			"409": {Description: "Game is archived"},
 		},
 	}, h.humaCreateComment)
@@ -1489,6 +1698,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaGetPostComments)
 
@@ -1506,6 +1716,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid limit, offset or max_depth"},
 			"401": {Description: "Not authenticated"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaGetPostCommentsWithThreads)
 
@@ -1519,7 +1730,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Tags:     commonRoom,
 		Security: bearer,
 		Responses: map[string]*huma.Response{
-			"404": {Description: "No such comment"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
@@ -1537,7 +1748,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Tags:     commonRoom,
 		Security: bearer,
 		Responses: map[string]*huma.Response{
-			"404": {Description: "No such comment"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Not allowed to delete this comment"},
@@ -1555,7 +1766,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
-			"404": {Description: "No such message"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaGetMessage)
 
@@ -1572,6 +1783,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid max_parents"},
 			"401": {Description: "Not authenticated"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaGetMessageThreadContext)
 
@@ -1604,6 +1816,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaMarkPostRead)
 
@@ -1659,6 +1872,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
+			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaToggleCommentRead)
 

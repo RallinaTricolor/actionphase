@@ -42,6 +42,13 @@ type PostSummaryResponse struct {
 	// Added by the chi handler only when the column was non-NULL.
 	PhaseID  *int32 `json:"phase_id,omitempty" required:"false" doc:"Phase the post belongs to, absent for phase-less posts"`
 	ParentID *int32 `json:"parent_id,omitempty" required:"false" doc:"Parent message, absent for top-level posts"`
+
+	// Restricted posts. is_restricted is always present so allowlisted
+	// players can show the badge; viewer_user_ids only for a caller who
+	// bypasses the allowlists (GM, co-GM, audience, admin mode, or anyone in
+	// a public archive), and then always a list, empty for a public post.
+	IsRestricted  bool     `json:"is_restricted" doc:"Whether the post is restricted to an allowlist of players"`
+	ViewerUserIDs *[]int32 `json:"viewer_user_ids,omitempty" required:"false" doc:"The post's allowlist. Present only for callers who can see every restricted post."`
 }
 
 // CommentSummaryResponse is one entry of the flat per-post comment list.

@@ -432,6 +432,8 @@ export const ThreadedComment = memo(function ThreadedComment({
       is_deleted: false,
       is_edited: false,
       is_draft: false,
+      // Always false on a comment: the restriction lives on the thread's post.
+      is_restricted: false,
     };
 
     try {

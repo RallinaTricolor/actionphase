@@ -139,7 +139,8 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
                 await apiClient.messages.createDraftPost(
                   response.data.id,
                   draftPost.characterId,
-                  draftPost.content
+                  draftPost.content,
+                  draftPost.restrictedToUserIds
                 );
               } catch {
                 showWarning('Phase created, but the draft post could not be saved. You can add it from the phase panel.');

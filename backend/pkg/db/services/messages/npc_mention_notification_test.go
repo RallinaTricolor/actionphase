@@ -69,11 +69,12 @@ func TestNotifyCharacterMentions_AudienceControlledNPC(t *testing.T) {
 	audienceNotifsBefore, err := notificationService.GetUserNotifications(ctx, int32(audienceMember.ID), 50, 0)
 	require.NoError(t, err)
 
-	// Create a fake message ID for the notification
-	fakeMessageID := int32(9999)
+	// A real, public message: a mention in a message the recipient can't see
+	// notifies nobody, and an unknown message ID counts as unseen.
+	post := testDB.CreateTestPost(t, game.ID, int32(player.ID), playerChar.ID, "Hello @Sauron")
 
 	// Call notifyCharacterMentions directly (synchronously, not in goroutine)
-	service.notifyCharacterMentions(ctx, []int32{npc.ID}, playerChar.ID, int32(player.ID), game.ID, fakeMessageID)
+	service.notifyCharacterMentions(ctx, []int32{npc.ID}, playerChar.ID, int32(player.ID), game.ID, post.ID)
 
 	// Check notifications after
 	gmNotifsAfter, err := notificationService.GetUserNotifications(ctx, int32(gm.ID), 50, 0)
@@ -141,8 +142,8 @@ func TestNotifyCharacterMentions_UnassignedNPC(t *testing.T) {
 	gmNotifsBefore, err := notificationService.GetUserNotifications(ctx, int32(gm.ID), 50, 0)
 	require.NoError(t, err)
 
-	fakeMessageID := int32(9998)
-	service.notifyCharacterMentions(ctx, []int32{npc.ID}, playerChar.ID, int32(player.ID), game.ID, fakeMessageID)
+	post := testDB.CreateTestPost(t, game.ID, int32(player.ID), playerChar.ID, "Hello @Orc")
+	service.notifyCharacterMentions(ctx, []int32{npc.ID}, playerChar.ID, int32(player.ID), game.ID, post.ID)
 
 	gmNotifsAfter, err := notificationService.GetUserNotifications(ctx, int32(gm.ID), 50, 0)
 	require.NoError(t, err)

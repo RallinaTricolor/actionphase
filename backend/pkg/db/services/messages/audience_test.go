@@ -476,7 +476,7 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 
 	t.Run("get_unread_comment_ids_for_posts_success", func(t *testing.T) {
 		// Player user has not marked anything as read, so all comments should be unread
-		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), int32(playerUser.ID), gameID)
+		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), gameID, core.ViewerScope{UserID: int32(playerUser.ID)})
 		core.AssertNoError(t, err, "Should retrieve unread comment IDs successfully")
 
 		core.AssertTrue(t, unreadInfo != nil, "Unread info should not be nil")
@@ -513,7 +513,7 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 		core.AssertNoError(t, err, "Failed to create new comment")
 
 		// Now check unread - post 2 should have the new comment as unread
-		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), int32(playerUser.ID), gameID)
+		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), gameID, core.ViewerScope{UserID: int32(playerUser.ID)})
 		core.AssertNoError(t, err, "Should retrieve unread comment IDs after marking read")
 
 		core.AssertTrue(t, unreadInfo != nil, "Unread info should not be nil")
@@ -532,14 +532,14 @@ func TestGetUnreadCommentIDsForPosts(t *testing.T) {
 	})
 
 	t.Run("get_unread_comment_ids_nonexistent_game", func(t *testing.T) {
-		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), int32(playerUser.ID), 99999)
+		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), 99999, core.ViewerScope{UserID: int32(playerUser.ID)})
 
 		core.AssertNoError(t, err, "Should not error on nonexistent game")
 		core.AssertEqual(t, 0, len(unreadInfo), "Should return empty list for nonexistent game")
 	})
 
 	t.Run("get_unread_comment_ids_nonexistent_user", func(t *testing.T) {
-		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), 99999, gameID)
+		unreadInfo, err := msgService.GetUnreadCommentIDsForPosts(context.Background(), gameID, core.ViewerScope{UserID: 99999})
 
 		core.AssertNoError(t, err, "Should not error on nonexistent user")
 		// Should return results but the user has no read markers, so all comments are unread

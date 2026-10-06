@@ -91,6 +91,10 @@ export const FIXTURE_GAMES = {
   // Private comment favorites test (707)
   FAVORITE_COMMENTS: 'E2E Test: Favorite Comments',                // Game #707 - favorite-comments.spec.ts
 
+  // Restricted Common Room posts (708, 709) — owned by restricted-posts.spec.ts
+  RESTRICTED_POSTS_GM: 'E2E Test: Restricted Posts - GM',                 // Game #708 - GM restricts a post (WRITES)
+  RESTRICTED_POSTS_VISIBILITY: 'E2E Test: Restricted Posts - Visibility', // Game #709 - who sees it (READ-ONLY)
+
   // Player multiple characters test (340-345, worker-specific)
   PLAYER_MULTIPLE_CHARACTERS: 'E2E Test: Player Multiple Characters', // Game #340 - "player-multiple-characters.spec.ts"
 

@@ -229,7 +229,7 @@ func TestMessageService_GetUserReadMarkersForGame(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("returns empty array when no markers exist", func(t *testing.T) {
-		markers, err := service.GetUserReadMarkersForGame(context.Background(), int32(player.ID), game.ID)
+		markers, err := service.GetUserReadMarkersForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 
 		require.NoError(t, err)
 		assert.NotNil(t, markers)
@@ -245,7 +245,7 @@ func TestMessageService_GetUserReadMarkersForGame(t *testing.T) {
 		require.NoError(t, err)
 
 		// Retrieve all markers
-		markers, err := service.GetUserReadMarkersForGame(context.Background(), int32(player.ID), game.ID)
+		markers, err := service.GetUserReadMarkersForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 
 		require.NoError(t, err)
 		assert.Len(t, markers, 2)
@@ -267,7 +267,7 @@ func TestMessageService_GetUserReadMarkersForGame(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get markers for player1 - should still only have 2
-		markers, err := service.GetUserReadMarkersForGame(context.Background(), int32(player.ID), game.ID)
+		markers, err := service.GetUserReadMarkersForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 
 		require.NoError(t, err)
 		assert.Len(t, markers, 2)
@@ -307,7 +307,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 	t.Run("returns empty array when no posts exist", func(t *testing.T) {
 		emptyGame := testDB.CreateTestGame(t, int32(player.ID), "Empty Game")
 
-		infos, err := service.GetPostsWithUnreadInfo(context.Background(), emptyGame.ID)
+		infos, err := service.GetPostsWithUnreadInfo(context.Background(), emptyGame.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.NotNil(t, infos)
@@ -324,7 +324,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID)
+		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.NotEmpty(t, infos)
@@ -375,7 +375,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID)
+		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.NotEmpty(t, infos)
@@ -414,7 +414,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should not appear in results
-		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID)
+		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		for _, info := range infos {
@@ -447,7 +447,7 @@ func TestMessageService_GetPostsWithUnreadInfo(t *testing.T) {
 		err = service.DeleteComment(context.Background(), comment.ID, int32(player.ID))
 		require.NoError(t, err)
 
-		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID)
+		infos, err := service.GetPostsWithUnreadInfo(context.Background(), game.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 
@@ -543,7 +543,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 
 		// User has NEVER visited (no entry in user_common_room_reads)
 		// Call GetUnreadCommentIDsForPosts
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player2.ID), game2.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game2.ID, core.ViewerScope{UserID: int32(player2.ID)})
 
 		// Assert: Should return EMPTY array (no "NEW" badges on first visit)
 		require.NoError(t, err)
@@ -581,7 +581,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get unread comment IDs
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 
 		require.NoError(t, err)
 
@@ -656,7 +656,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		}
 
 		// Player checks for unread comment IDs
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 
 		require.NoError(t, err)
 
@@ -742,7 +742,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Player 1 checks for unread comments
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 
 		// Find our post in results
@@ -823,7 +823,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Player 1 checks for unread comments
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 
 		// Find our post in results
@@ -898,7 +898,7 @@ func TestMessageService_GetUnreadCommentIDsForPosts(t *testing.T) {
 		require.NoError(t, err)
 
 		// Player 1 checks for unread comments
-		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), int32(player.ID), game.ID)
+		result, err := service.GetUnreadCommentIDsForPosts(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 
 		// Find our post in results
@@ -964,7 +964,7 @@ func TestMessageService_ToggleCommentRead(t *testing.T) {
 		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, true)
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		require.Len(t, reads, 1)
 		assert.Equal(t, post.ID, reads[0].PostID)
@@ -975,7 +975,7 @@ func TestMessageService_ToggleCommentRead(t *testing.T) {
 		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, true)
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		require.Len(t, reads, 1)
 		assert.Len(t, reads[0].ReadCommentIDs, 1, "should not duplicate the entry")
@@ -985,7 +985,7 @@ func TestMessageService_ToggleCommentRead(t *testing.T) {
 		err := service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post.ID, comment.ID, false)
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		assert.Empty(t, reads, "no reads should remain after unmarking")
 	})
@@ -1011,10 +1011,15 @@ func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
 	game := testDB.CreateTestGame(t, int32(player.ID), "GetManual Test Game")
 	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
 	require.NoError(t, err)
+	// Content is written by someone else: authors get their own comments
+	// auto-marked read, which would pollute the reader's read set.
+	author := testDB.CreateTestUser(t, "getmanual_author", "getmanual_author@example.com")
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(author.ID), "player")
+	require.NoError(t, err)
 
 	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
 		GameID:        game.ID,
-		UserID:        int32Ptr(int32(player.ID)),
+		UserID:        int32Ptr(int32(author.ID)),
 		Name:          "Manual Char",
 		CharacterType: "player_character",
 	})
@@ -1022,31 +1027,31 @@ func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
 
 	// Create two posts, each with a comment
 	post1, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Post 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	post2, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Post 2", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment1, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: post1.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, ParentID: post1.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Comment on post 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment2, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: post2.ID, AuthorID: int32(player.ID), CharacterID: char.ID,
+		GameID: game.ID, ParentID: post2.ID, AuthorID: int32(author.ID), CharacterID: char.ID,
 		Content: "Comment on post 2", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	t.Run("returns empty when no reads", func(t *testing.T) {
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		assert.Empty(t, reads)
 	})
@@ -1055,7 +1060,7 @@ func TestMessageService_GetManualReadCommentIDsForGame(t *testing.T) {
 		require.NoError(t, service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post1.ID, comment1.ID, true))
 		require.NoError(t, service.ToggleCommentRead(context.Background(), int32(player.ID), game.ID, post2.ID, comment2.ID, true))
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		assert.Len(t, reads, 2, "should return one entry per post")
 
@@ -1108,14 +1113,14 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 
 	// Two comments in phase 1, one in phase 2
 	comment1, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment 1 in phase 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	comment2, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: post1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment 2 in phase 1", Visibility: string(models.MessageVisibilityGame),
 	})
@@ -1125,14 +1130,14 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 	// is comment1.ID, not post1.ID, so grouping it under the right post
 	// requires resolving the full parent chain back to the root post.
 	nestedReply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase1.ID, ParentID: comment1.ID, RootPostID: post1.ID,
+		GameID: game.ID, PhaseID: &phase1.ID, ParentID: comment1.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Nested reply to comment 1", Visibility: string(models.MessageVisibilityGame),
 	})
 	require.NoError(t, err)
 
 	commentOtherPhase, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase2.ID, ParentID: post2.ID, RootPostID: post2.ID,
+		GameID: game.ID, PhaseID: &phase2.ID, ParentID: post2.ID,
 		AuthorID: int32(player.ID), CharacterID: char.ID,
 		Content: "Comment in phase 2", Visibility: string(models.MessageVisibilityGame),
 	})
@@ -1145,10 +1150,10 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("marks only comments in the given phase as read", func(t *testing.T) {
-		err := service.MarkAllCommentsReadForPhase(context.Background(), int32(reader.ID), game.ID, phase1.ID)
+		err := service.MarkAllCommentsReadForPhase(context.Background(), game.ID, phase1.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(reader.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 
 		readIDs := []int32{}
@@ -1174,10 +1179,10 @@ func TestMessageService_MarkAllCommentsReadForPhase(t *testing.T) {
 	})
 
 	t.Run("is idempotent when called again", func(t *testing.T) {
-		err := service.MarkAllCommentsReadForPhase(context.Background(), int32(reader.ID), game.ID, phase1.ID)
+		err := service.MarkAllCommentsReadForPhase(context.Background(), game.ID, phase1.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(reader.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(reader.ID)})
 		require.NoError(t, err)
 
 		readIDs := []int32{}
@@ -1223,11 +1228,10 @@ func TestCreateComment_AutoMarksAuthorAsRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("comment is auto-marked read for author when RootPostID is set", func(t *testing.T) {
+	t.Run("comment is auto-marked read for its author", func(t *testing.T) {
 		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			AuthorID:    int32(author.ID),
 			CharacterID: char.ID,
 			Content:     "Author's own comment",
@@ -1235,41 +1239,42 @@ func TestCreateComment_AutoMarksAuthorAsRead(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(author.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(author.ID)})
 		require.NoError(t, err)
 		require.Len(t, reads, 1)
 		assert.Contains(t, reads[0].ReadCommentIDs, comment.ID, "author's own comment should be auto-marked read")
 	})
 
 	t.Run("comment is NOT auto-marked read for other users", func(t *testing.T) {
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(other.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(other.ID)})
 		require.NoError(t, err)
 		assert.Empty(t, reads, "auto-mark should only apply to the author, not other users")
 	})
 
-	t.Run("comment is NOT auto-marked read when RootPostID is zero", func(t *testing.T) {
-		// Simulate old callers that don't set RootPostID
-		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+	t.Run("nested reply is auto-marked read under the root post", func(t *testing.T) {
+		parent, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			ParentID:    post.ID,
 			AuthorID:    int32(author.ID),
 			CharacterID: char.ID,
-			Content:     "Comment without root post ID",
+			Content:     "Parent comment",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
+		require.NoError(t, err)
+		reply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			ParentID:    parent.ID,
+			AuthorID:    int32(author.ID),
+			CharacterID: char.ID,
+			Content:     "Nested reply",
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(author.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(author.ID)})
 		require.NoError(t, err)
-		// Only the first comment (from the previous sub-test) should be in the list
-		found := false
-		for _, r := range reads {
-			for _, id := range r.ReadCommentIDs {
-				if id == comment.ID {
-					found = true
-				}
-			}
-		}
-		assert.False(t, found, "comment without RootPostID should not be auto-marked read")
+		require.Len(t, reads, 1, "every read in this thread must be keyed on the one root post")
+		assert.Equal(t, post.ID, reads[0].PostID)
+		assert.Contains(t, reads[0].ReadCommentIDs, reply.ID)
 	})
 }

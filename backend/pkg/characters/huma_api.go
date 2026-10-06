@@ -1154,7 +1154,13 @@ func (h *Handler) humaGetCharacterStats(ctx context.Context, in *characterIDInpu
 	gameLevelAccess := h.gameLevelPrivateStatsAccess(ctx, authUser, *game)
 	canSeePrivate := canSeeCharacterPrivateStats(gameLevelAccess, authUser, character.UserID)
 
-	stats, err := h.CharacterService.GetCharacterActivityStats(ctx, in.ID)
+	var callerID int32
+	if authUser != nil {
+		callerID = authUser.ID
+	}
+	scope := h.MessageService.ResolveViewerScope(ctx, character.GameID, callerID)
+
+	stats, err := h.CharacterService.GetCharacterActivityStats(ctx, in.ID, scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get character activity stats", "error", err, "character_id", in.ID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1190,7 +1196,9 @@ func (h *Handler) humaGetGameCharacterStats(ctx context.Context, in *gameIDInput
 	isGM := core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool)
 	userRole := h.resolveUserRole(ctx, in.GameID, authUser.ID, isGM)
 
-	statsByCharacterID, err := h.CharacterService.GetCharacterActivityStatsByGame(ctx, in.GameID)
+	scope := h.MessageService.ResolveViewerScope(ctx, in.GameID, authUser.ID)
+
+	statsByCharacterID, err := h.CharacterService.GetCharacterActivityStatsByGame(ctx, in.GameID, scope)
 	if err != nil {
 		h.App.ObsLogger.Error(ctx, "Failed to get game character activity stats", "error", err, "game_id", in.GameID)
 		return nil, huma.Error500InternalServerError(err.Error())

@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PHASE_TYPE_DESCRIPTIONS } from '@/types/phases';
 import type { CreatePhaseRequest } from '@/types/phases';
 import { Button, Select, Input, DateTimeInput } from '@/components/ui';
 import { Modal } from '@/components/common/modals/Modal';
 import { CommentEditor } from '@/components/messages/CommentEditor';
+import { PostViewerPicker } from '@/components/messages/PostViewerPicker';
+import { listPickablePlayers } from '@/lib/postViewers';
 import { localDateTimeToUTC } from '@/utils/timezone';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 
 export interface DraftPostData {
   characterId: number;
   content: string;
+  restrictedToUserIds?: number[];
 }
 
 interface CreatePhaseModalProps {
@@ -21,6 +24,12 @@ interface CreatePhaseModalProps {
 export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhaseModalProps) {
   const gameContext = useOptionalGameContext();
   const userCharacters = gameContext?.userCharacters ?? [];
+  const participants = gameContext?.participants;
+  const allGameCharacters = gameContext?.allGameCharacters;
+  const players = useMemo(
+    () => listPickablePlayers(participants ?? [], allGameCharacters ?? []),
+    [participants, allGameCharacters]
+  );
 
   const [formData, setFormData] = useState<CreatePhaseRequest>({
     phase_type: 'common_room',
@@ -30,6 +39,11 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
   const [showDraftSection, setShowDraftSection] = useState(false);
   const [draftCharacterId, setDraftCharacterId] = useState<number | ''>('');
   const [draftContent, setDraftContent] = useState('');
+  const [draftRestricted, setDraftRestricted] = useState(false);
+  const [draftViewerIds, setDraftViewerIds] = useState<number[]>([]);
+  // The backend rejects an empty allowlist, so block submit rather than
+  // create the phase and then fail on the draft.
+  const draftMissingViewers = showDraftSection && draftRestricted && draftViewerIds.length === 0;
 
   const handlePhaseTypeChange = (value: CreatePhaseRequest['phase_type']) => {
     setFormData(prev => ({ ...prev, phase_type: value }));
@@ -37,11 +51,14 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
       setShowDraftSection(false);
       setDraftCharacterId('');
       setDraftContent('');
+      setDraftRestricted(false);
+      setDraftViewerIds([]);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (draftMissingViewers) return;
     const phaseData = {
       ...formData,
       start_time: formData.start_time ? localDateTimeToUTC(formData.start_time) : undefined,
@@ -50,7 +67,11 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
 
     const hasDraft = showDraftSection && draftCharacterId !== '' && draftContent.trim();
     const draftPost: DraftPostData | undefined = hasDraft
-      ? { characterId: draftCharacterId as number, content: draftContent.trim() }
+      ? {
+          characterId: draftCharacterId as number,
+          content: draftContent.trim(),
+          ...(draftRestricted ? { restrictedToUserIds: draftViewerIds } : {}),
+        }
       : undefined;
 
     onSubmit(phaseData, draftPost);
@@ -137,6 +158,7 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
             {formData.phase_type === 'common_room' && (
               <div className="border border-theme-default rounded-lg overflow-hidden">
                 <Button
+                  type="button"
                   variant="ghost"
                   onClick={() => setShowDraftSection(prev => !prev)}
                   data-testid="draft-post-toggle"
@@ -180,6 +202,15 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
                         textareaTestId="draft-post-content"
                       />
                     </div>
+
+                    <PostViewerPicker
+                      players={players}
+                      restricted={draftRestricted}
+                      onRestrictedChange={setDraftRestricted}
+                      selectedUserIds={draftViewerIds}
+                      onSelectedChange={setDraftViewerIds}
+                      disabled={isSubmitting}
+                    />
                   </div>
                 )}
               </div>
@@ -197,7 +228,7 @@ export function CreatePhaseModal({ onClose, onSubmit, isSubmitting }: CreatePhas
           <Button
             type="submit"
             variant="primary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || draftMissingViewers}
             data-faro-user-action-name="create-phase"
           >
             {isSubmitting ? 'Creating...' : 'Create Phase'}

@@ -47,6 +47,7 @@ func (s *MessageService) GetDraftPostForPhase(ctx context.Context, phaseID int32
 			IsEdited:              row.IsEdited,
 			IsDeleted:             row.IsDeleted,
 			IsDraft:               row.IsDraft,
+			IsRestricted:          row.IsRestricted,
 			CreatedAt:             row.CreatedAt,
 			DeletedAt:             row.DeletedAt,
 			DeletedByUserID:       row.DeletedByUserID,
@@ -106,23 +107,38 @@ func (s *MessageService) CreateDraftPost(ctx context.Context, req core.CreatePos
 		return nil, core.ErrDraftPostExists
 	}
 
+	viewerIDs, err := resolveRequestedViewers(ctx, queries, req)
+	if err != nil {
+		return nil, err
+	}
+
 	// Extract character mentions
 	mentionedIDs, err := s.extractCharacterMentions(ctx, req.Content, req.GameID, req.AuthorID)
 	if err != nil {
 		mentionedIDs = []int32{}
 	}
 
-	_, err = queries.CreateDraftPost(ctx, models.CreateDraftPostParams{
-		GameID:                req.GameID,
-		PhaseID:               pgtype.Int4{Int32: *req.PhaseID, Valid: true},
-		AuthorID:              req.AuthorID,
-		CharacterID:           req.CharacterID,
-		Content:               req.Content,
-		Visibility:            models.MessageVisibility(req.Visibility),
-		MentionedCharacterIds: mentionedIDs,
+	// The allowlist is keyed by post ID, which publishing the draft doesn't
+	// change, so a restricted draft stays restricted once the phase activates.
+	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		q := models.New(tx)
+		draft, err := q.CreateDraftPost(ctx, models.CreateDraftPostParams{
+			GameID:                req.GameID,
+			PhaseID:               pgtype.Int4{Int32: *req.PhaseID, Valid: true},
+			AuthorID:              req.AuthorID,
+			CharacterID:           req.CharacterID,
+			Content:               req.Content,
+			Visibility:            models.MessageVisibility(req.Visibility),
+			MentionedCharacterIds: mentionedIDs,
+			IsRestricted:          viewerIDs != nil,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create draft post: %w", err)
+		}
+		return addInitialViewers(ctx, q, draft.ID, viewerIDs)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create draft post: %w", err)
+		return nil, err
 	}
 
 	return s.GetDraftPostForPhase(ctx, *req.PhaseID)

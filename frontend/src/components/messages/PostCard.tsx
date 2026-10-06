@@ -24,6 +24,7 @@ import { useScreenshotMode } from '@/hooks/useScreenshotMode';
 import { postCachingService } from '@/services/PostCachingService';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { ViewSourceModal } from './ViewSourceModal';
+import { PostRestriction, PostViewersButton } from './PostRestriction';
 
 interface PostCardProps {
   post: Message;
@@ -508,6 +509,19 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
     </Button>
   );
 
+  const restriction = (className: string) => (
+    <PostRestriction post={post} className={className} />
+  );
+
+  const viewersButton = !isEditing && (
+    <PostViewersButton
+      post={post}
+      readOnly={readOnly || screenshotModeEnabled}
+      onPostUpdated={onPostUpdated}
+      className="text-interactive-primary hover:text-interactive-primary-hover"
+    />
+  );
+
   // Determine if post content is long (more than 500 characters)
   const isLongContent = post.content.length > 500;
 
@@ -556,6 +570,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   )}
                 </div>
 
+                {restriction('mb-2')}
+
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mb-2">
                   {isLongContent && (
@@ -583,6 +599,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     </Button>
                   )}
                   {viewSourceButton}
+                  {viewersButton}
                 </div>
 
                 {/* Post content flows around the floating portrait */}
@@ -628,6 +645,8 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                 </div>
               </div>
 
+              {restriction('mt-2')}
+
               {/* Action Buttons */}
               <div className="flex items-center gap-2 mt-2">
                 {isLongContent && (
@@ -655,6 +674,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                   </Button>
                 )}
                 {viewSourceButton}
+                {viewersButton}
               </div>
             </>
           )}

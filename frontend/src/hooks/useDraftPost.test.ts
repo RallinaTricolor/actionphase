@@ -97,7 +97,7 @@ describe('useCreateDraftPost', () => {
     result.current.mutate({ characterId: 5, content: 'Hello world' });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(apiClient.messages.createDraftPost).toHaveBeenCalledWith(10, 5, 'Hello world');
+    expect(apiClient.messages.createDraftPost).toHaveBeenCalledWith(10, 5, 'Hello world', undefined);
   });
 });
 

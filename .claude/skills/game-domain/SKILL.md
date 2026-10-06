@@ -128,6 +128,32 @@ the roster, the profile (404, never 403), the stats/sheet batch maps,
 - ❌ NOT TRUE: "a hidden NPC cannot speak" / "hiding removes its posts"
 - GM-only to set (`PUT /api/v1/characters/{id}/hidden`), NPCs only (400 otherwise)
 
+### Restricted Common Room posts (added 2026-10-05)
+
+A GM or co-GM can restrict a Common Room post to chosen **players** (users, not
+characters). The list covers the whole thread, every comment however deep.
+Unlisted players and non-participants get nothing: not the post, its comments,
+counts, New Comments entries, profile entries, favorites, dashboard snippets or
+notifications, and a 404 identical to "missing" on any direct link.
+
+- Single rule: `core.CanSeeAllRestrictedPosts` — GM, co-GM, audience and admin
+  mode bypass the list; everyone else needs a row in `common_room_post_viewers`
+- Lifted by `IsPublicArchive`: a completed or epilogue game shows every thread
+- Set when creating a post or draft (`restricted_to_user_ids`), changed later
+  with `PUT /api/v1/games/{gameID}/posts/{postId}/viewers`. An empty list is
+  rejected (drafts exist for "nobody yet")
+- Taking a player off the list hides the thread from them again, **including
+  their own comments**, which also vanish from their character's profile for
+  unlisted viewers; their in-app notifications for it are deleted
+- A listed player who leaves the game keeps access until the GM edits the list
+- Only the GM, co-GMs and audience see who is on the list; listed players see a
+  "Restricted" badge
+- ❌ NOT TRUE: "restricted posts are a kind of private message" — they are
+  ordinary Common Room threads with threading, read tracking and New Comments
+
+**See**: `.claude/context/ARCHITECTURE.md` ("Restricted Common Room Posts") for
+the query rule every new `messages` query must follow
+
 
 
 ---

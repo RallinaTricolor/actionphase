@@ -105,6 +105,37 @@ describe('PostCard', () => {
     );
   });
 
+  describe('Restricted posts', () => {
+    // Who gets the list and the edit action is covered in PostRestriction.test.tsx.
+    it('shows the Restricted badge on a restricted post', () => {
+      renderWithProviders(
+        <PostCard
+          post={{ ...mockPost, is_restricted: true }}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+      expect(screen.getByTestId('restricted-badge')).toHaveTextContent('Restricted');
+    });
+
+    it('shows no badge on a public post', () => {
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+      expect(screen.queryByTestId('restricted-badge')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Post Header', () => {
     it('displays GM post heading with character name', () => {
       renderWithProviders(

@@ -62,6 +62,7 @@ func setupMessageAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mu
 				r.Use(jwtauth.Verifier(tokenAuth))
 				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
+				r.Use(core.AdminModeMiddleware)
 				r.Use(gameHandler.GameMiddleware())
 
 				RegisterHumaGameMessages(humaconfig.New(r, "ActionPhase API", "1.0.0"), &messageHandler)
@@ -532,6 +533,51 @@ func TestMessageAPI_CreateComment(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, rec.Code)
 	})
 
+	t.Run("ignores a client-supplied root_post_id for read tracking", func(t *testing.T) {
+		// The body's root_post_id is deprecated: the server derives the root from
+		// the parent. A wrong value must not file the read under another post.
+		otherPost, err := messageService.CreatePost(context.Background(), core.CreatePostRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(gm.ID),
+			CharacterID: gmChar.ID,
+			Content:     "An unrelated post.",
+			Visibility:  "game",
+		})
+		require.NoError(t, err)
+
+		body := CreateCommentRequest{
+			CharacterID: playerChar.ID,
+			Content:     "Filed under the right post.",
+			RootPostID:  &otherPost.ID,
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts/%d/comments", game.ID, post.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusCreated, rec.Code)
+
+		var response struct {
+			ID int32 `json:"id"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+
+		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
+		require.NoError(t, err)
+		var filedUnder []int32
+		for _, entry := range reads {
+			for _, id := range entry.ReadCommentIDs {
+				if id == response.ID {
+					filedUnder = append(filedUnder, entry.PostID)
+				}
+			}
+		}
+		assert.Equal(t, []int32{post.ID}, filedUnder, "the read must be keyed on the comment's real root post only")
+	})
+
 	t.Run("returns 404 for non-existent post", func(t *testing.T) {
 		body := CreateCommentRequest{
 			CharacterID: playerChar.ID,
@@ -784,15 +830,15 @@ func TestMessageAPI_GetMessageThreadContext(t *testing.T) {
 	})
 	require.NoError(t, err)
 	c1, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: post.ID, RootPostID: post.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID, Content: "Comment one.", Visibility: "game",
+		GameID: game.ID, ParentID: post.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID, Content: "Comment one.", Visibility: "game",
 	})
 	require.NoError(t, err)
 	c2, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: c1.ID, RootPostID: post.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Comment two.", Visibility: "game",
+		GameID: game.ID, ParentID: c1.ID, AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Comment two.", Visibility: "game",
 	})
 	require.NoError(t, err)
 	c3, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, ParentID: c2.ID, RootPostID: post.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID, Content: "Comment three.", Visibility: "game",
+		GameID: game.ID, ParentID: c2.ID, AuthorID: int32(player.ID), CharacterID: playerChar.ID, Content: "Comment three.", Visibility: "game",
 	})
 	require.NoError(t, err)
 
@@ -964,12 +1010,12 @@ func TestMessageAPI_MarkAllCommentsRead(t *testing.T) {
 	})
 	require.NoError(t, err)
 	comment1, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase.ID, ParentID: post.ID, RootPostID: post.ID,
+		GameID: game.ID, PhaseID: &phase.ID, ParentID: post.ID,
 		AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Response 1.", Visibility: "game",
 	})
 	require.NoError(t, err)
 	comment2, err := messageService.CreateComment(context.Background(), core.CreateCommentRequest{
-		GameID: game.ID, PhaseID: &phase.ID, ParentID: post.ID, RootPostID: post.ID,
+		GameID: game.ID, PhaseID: &phase.ID, ParentID: post.ID,
 		AuthorID: int32(gm.ID), CharacterID: gmChar.ID, Content: "Response 2.", Visibility: "game",
 	})
 	require.NoError(t, err)
@@ -984,7 +1030,7 @@ func TestMessageAPI_MarkAllCommentsRead(t *testing.T) {
 
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
-		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := messageService.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 		readIDs := []int32{}
 		for _, r := range reads {

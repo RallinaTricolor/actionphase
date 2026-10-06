@@ -2,6 +2,7 @@ import { BaseApiClient } from './client';
 import type {
   Message,
   CreatePostRequest,
+  SetPostViewersRequest,
   CreateCommentRequest,
   UpdateCommentRequest,
   GetPostsParams,
@@ -42,6 +43,12 @@ export class MessagesApi extends BaseApiClient {
 
   async updatePost(gameId: number, postId: number, content: string) {
     return this.client.patch<Message>(`/api/v1/games/${gameId}/posts/${postId}`, { content });
+  }
+
+  // Replaces a post's allowlist. GM or co-GM only. `restricted: false` makes
+  // the post public and must not carry user_ids.
+  async setPostViewers(gameId: number, postId: number, data: SetPostViewersRequest) {
+    return this.client.put<Message>(`/api/v1/games/${gameId}/posts/${postId}/viewers`, data);
   }
 
   // Comment endpoints
@@ -219,10 +226,12 @@ export class MessagesApi extends BaseApiClient {
     return this.client.get<Message | null>(`/api/v1/phases/${phaseId}/draft-post`);
   }
 
-  async createDraftPost(phaseId: number, characterId: number, content: string) {
+  // restrictedToUserIds: omit for a public post; never pass an empty array.
+  async createDraftPost(phaseId: number, characterId: number, content: string, restrictedToUserIds?: number[]) {
     return this.client.post<Message>(`/api/v1/phases/${phaseId}/draft-post`, {
       character_id: characterId,
       content,
+      ...(restrictedToUserIds ? { restricted_to_user_ids: restrictedToUserIds } : {}),
     });
   }
 

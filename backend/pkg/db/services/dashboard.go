@@ -65,7 +65,7 @@ func (s *DashboardService) GetUserDashboard(ctx context.Context, userID int32) (
 		dbMessages     []db.GetUserRecentMessagesRow
 		dbDeadlines    []db.GetUserUpcomingDeadlinesRow
 		notifByType    []db.GetUserUnreadNotificationsByTypeRow
-		unreadComments []unreadCommentCount
+		unreadComments []db.GetUnreadCommentCountsForDashboardRow
 
 		mu       sync.Mutex
 		firstErr error
@@ -102,7 +102,7 @@ func (s *DashboardService) GetUserDashboard(ctx context.Context, userID int32) (
 		defer wg.Done()
 		defer recoverFanOut(ctx, s.Logger, "dashboard-recent-messages", setErr)
 
-		res, err := q.GetUserRecentMessages(ctx, db.GetUserRecentMessagesParams{UserID: userID, Limit: 5})
+		res, err := q.GetUserRecentMessages(ctx, db.GetUserRecentMessagesParams{UserID: userID, RowLimit: 5})
 		if err != nil {
 			s.Logger.LogError(ctx, err, "Failed to get recent messages", "user_id", userID)
 			setErr(err)
@@ -141,7 +141,10 @@ func (s *DashboardService) GetUserDashboard(ctx context.Context, userID int32) (
 		defer wg.Done()
 		defer recoverFanOut(ctx, s.Logger, "dashboard-unread-comments", setErr)
 
-		res, err := getUnreadCommentCountsForDashboard(ctx, s.DB, userID, prefs.CommentReadMode)
+		res, err := q.GetUnreadCommentCountsForDashboard(ctx, db.GetUnreadCommentCountsForDashboardParams{
+			UserID:          userID,
+			CommentReadMode: prefs.CommentReadMode,
+		})
 		if err != nil {
 			s.Logger.LogError(ctx, err, "Failed to get unread comment counts", "user_id", userID)
 			setErr(err)
@@ -168,13 +171,8 @@ func (s *DashboardService) GetUserDashboard(ctx context.Context, userID int32) (
 	return dashboard, nil
 }
 
-type unreadCommentCount struct {
-	GameID      int32
-	UnreadCount int64
-}
-
 // applyUnreadCommentCounts sets UnreadComments on each game card from the query results.
-func applyUnreadCommentCounts(dashboard *core.DashboardData, rows []unreadCommentCount) {
+func applyUnreadCommentCounts(dashboard *core.DashboardData, rows []db.GetUnreadCommentCountsForDashboardRow) {
 	counts := make(map[int32]int, len(rows))
 	for _, row := range rows {
 		counts[row.GameID] = int(row.UnreadCount)
@@ -352,81 +350,6 @@ func transformDeadlines(dbDeadlines []db.GetUserUpcomingDeadlinesRow) []*core.Da
 	}
 
 	return deadlines
-}
-
-// getUnreadCommentCountsForDashboard counts unread comments at all nesting depths per game.
-// Uses a raw recursive CTE query — same pattern as GetPostCommentsWithThreads — because
-// sqlc cannot resolve aliases from recursive CTEs in aggregate FILTER clauses.
-func getUnreadCommentCountsForDashboard(ctx context.Context, pool *pgxpool.Pool, userID int32, commentReadMode string) ([]unreadCommentCount, error) {
-	query := `
-WITH RECURSIVE all_comments AS (
-  SELECT
-    c.id,
-    c.author_id,
-    c.created_at,
-    c.is_deleted,
-    posts.id AS root_post_id,
-    posts.game_id
-  FROM messages posts
-  INNER JOIN game_phases gp ON gp.id = posts.phase_id
-    AND gp.is_active = true
-    AND gp.phase_type = 'common_room'
-  INNER JOIN messages c ON c.parent_id = posts.id
-  WHERE posts.message_type = 'post'
-    AND posts.is_deleted = false
-    AND posts.is_draft = false
-
-  UNION ALL
-
-  SELECT
-    child.id,
-    child.author_id,
-    child.created_at,
-    child.is_deleted,
-    parent.root_post_id,
-    parent.game_id
-  FROM messages child
-  INNER JOIN all_comments parent ON child.parent_id = parent.id
-  WHERE child.message_type = 'comment'
-)
-SELECT
-  g.id AS game_id,
-  COALESCE(SUM(CASE
-    WHEN $2::text = 'auto'
-         AND ac.created_at > COALESCE(ucr.last_read_at, '1970-01-01'::timestamptz)
-         AND ac.author_id != $1
-         AND ac.is_deleted = false
-    THEN 1
-    WHEN $2::text != 'auto'
-         AND ucmr.comment_id IS NULL
-         AND ac.author_id != $1
-         AND ac.is_deleted = false
-    THEN 1
-    ELSE 0
-  END), 0)::bigint AS unread_count
-FROM games g
-LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = $1 AND part.status = 'active'
-LEFT JOIN all_comments ac ON ac.game_id = g.id
-LEFT JOIN user_common_room_reads ucr ON ucr.post_id = ac.root_post_id AND ucr.user_id = $1
-LEFT JOIN user_comment_reads ucmr ON ucmr.comment_id = ac.id AND ucmr.user_id = $1
-WHERE ((part.user_id = $1 AND part.status = 'active') OR g.gm_user_id = $1)
-GROUP BY g.id`
-
-	rows, err := pool.Query(ctx, query, userID, commentReadMode)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get unread comment counts: %w", err)
-	}
-	defer rows.Close()
-
-	var results []unreadCommentCount
-	for rows.Next() {
-		var r unreadCommentCount
-		if err := rows.Scan(&r.GameID, &r.UnreadCount); err != nil {
-			return nil, fmt.Errorf("failed to scan unread comment count: %w", err)
-		}
-		results = append(results, r)
-	}
-	return results, rows.Err()
 }
 
 // Helper functions for nullable fields
