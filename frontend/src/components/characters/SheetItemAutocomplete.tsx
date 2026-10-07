@@ -1,11 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import type { SheetItem } from '@/hooks/useCharacterSheetItems';
+import { sheetItemBadgeVariant, type SheetItem } from '@/hooks/useCharacterSheetItems';
 import { Badge } from '@/components/ui';
 
-const TYPE_BADGE_VARIANT: Record<SheetItem['type'], 'success' | 'warning'> = {
-  skill: 'success',
-  item: 'warning',
-};
 
 interface SheetItemAutocompleteProps {
   items: SheetItem[];
@@ -82,8 +78,8 @@ export function SheetItemAutocomplete({
               : 'hover:surface-raised text-content-primary'
           }`}
         >
-          <Badge variant={TYPE_BADGE_VARIANT[item.type]} size="sm" className="shrink-0 capitalize">
-            {item.type}
+          <Badge variant={sheetItemBadgeVariant(item.tabKey)} size="sm" className="shrink-0">
+            {item.tabLabel}
           </Badge>
           <span className="font-medium truncate">{item.name}</span>
         </li>

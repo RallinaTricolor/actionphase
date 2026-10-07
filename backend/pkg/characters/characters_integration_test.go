@@ -64,6 +64,7 @@ func TestCharacterAPI_CompleteCharacterLifecycle(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	gameHandler := games.Handler{
 		App:                     app,
@@ -305,6 +306,7 @@ func TestCharacterAPI_CompletedGamePlayersCanViewPrivateData(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 
 	r.Route("/api/v1/characters", func(r chi.Router) {
@@ -397,6 +399,7 @@ func TestCharacterAPI_NPCManagement(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	gameHandler := games.Handler{
 		App:                     app,
@@ -543,6 +546,7 @@ func TestCharacterAPI_Authorization(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	gameHandler := games.Handler{
 		App:                     app,
@@ -776,6 +780,7 @@ func TestCharacterAPI_ErrorHandling(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	gameHandler := games.Handler{
 		App:                     app,
@@ -922,6 +927,7 @@ func TestCharacterAPI_UnauthenticatedAccess(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	r.Route("/api/v1/characters", func(r chi.Router) {
 		r.Use(jwtauth.Verifier(tokenAuth))
@@ -1008,6 +1014,7 @@ func TestCharacterAPI_ControllableAndInactive(t *testing.T) {
 		CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 		GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 		NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+		MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 	}
 	gameHandler := games.Handler{
 		App:                     app,

@@ -734,11 +734,13 @@ describe('CommonRoom', () => {
         const getElementByIdSpy = vi.spyOn(document, 'getElementById');
         getElementByIdSpy.mockReturnValue(null);
 
-        // Mock API to return error (with delay so loading indicator is observable)
+        // Mock API to return error (with delay so loading indicator is observable).
+        // A 500, not a 404: a 404 gets a notice over the room instead
+        // (CommonRoom.deepLinkNotFound.test.tsx).
         server.use(
           http.get('/api/v1/games/:gameId/messages/:messageId/thread-context', async () => {
             await new Promise(resolve => setTimeout(resolve, 100));
-            return HttpResponse.json({ detail: 'Not found' }, { status: 404 });
+            return HttpResponse.json({ detail: 'Internal error' }, { status: 500 });
           })
         );
 

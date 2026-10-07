@@ -1658,6 +1658,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/character-sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Customise the character sheet
+         * @description Replaces the game's character sheet layout: which configurable tabs it has, in what order, and each tab's entry fields. An empty object restores the default layout. GM or co-GM; not allowed once the game is archived.
+         */
+        put: operations["updateGameCharacterSheet"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/characters": {
         parameters: {
             query?: never;
@@ -2697,7 +2717,7 @@ export interface paths {
         put?: never;
         /**
          * Comment on a post or another comment
-         * @description Adds a comment. The path's postId is the immediate parent; send root_post_id in the body when replying below a top-level post, or read tracking will key off the wrong thread. Requires a verified email.
+         * @description Adds a comment. The path's postId is the immediate parent, a post or another comment; the thread's root post is derived from it. Requires a verified email.
          */
         post: operations["createComment"];
         delete?: never;
@@ -2784,6 +2804,26 @@ export interface paths {
          * @description Records how far the caller has read in a thread. The body is optional: omit it to mark the post itself read without naming a comment.
          */
         post: operations["markPostRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/posts/{postId}/viewers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set who can see a post
+         * @description Replaces a post's allowlist. restricted:true limits the post and its whole thread to the listed players (plus the GM, co-GMs and audience); restricted:false makes it public. Players who lose access also lose their in-app notifications from the thread. GM and co-GM only; works on drafts too.
+         */
+        put: operations["setPostViewers"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4007,12 +4047,36 @@ export interface components {
             username?: string;
         };
         CharacterSheetConfig: {
+            /** @description Legacy tab label overrides, used only when tabs is absent */
             labels?: components["schemas"]["CharacterSheetLabels"];
+            /** @description Configurable tabs in display order. Absent means the default layout. Public Profile and Private Notes are always shown first and never listed. */
+            tabs?: components["schemas"]["CharacterSheetTab"][] | null;
+        };
+        CharacterSheetField: {
+            /** @description Stable identifier; the entry JSON key the value is stored under */
+            key: string;
+            /** @description Display name */
+            label: string;
+            /** @description Choices for a select field; only allowed on select */
+            options?: string[] | null;
+            /**
+             * @description Cannot change after creation
+             * @enum {string}
+             */
+            type: "text" | "number" | "markdown" | "select" | "checkbox" | "track";
         };
         CharacterSheetLabels: {
             inventory?: string;
             numbers?: string;
             skills?: string;
+        };
+        CharacterSheetTab: {
+            /** @description Entry fields in display order. Absent on a built-in tab means its default fields. Required on a custom tab. */
+            fields?: components["schemas"]["CharacterSheetField"][] | null;
+            /** @description Stable identifier: skills, inventory, numbers, or t_ plus six lower-case letters or digits for a custom tab */
+            key: string;
+            /** @description Display name. Absent on a built-in tab means its default label. */
+            label?: string;
         };
         CharacterStatsResponse: {
             /**
@@ -4458,7 +4522,8 @@ export interface components {
             phase_id?: number;
             /**
              * Format: int32
-             * @description Top-level post of this thread. Required for replies nested below a post; defaults to the path's postId.
+             * @deprecated
+             * @description Ignored. The server derives the thread root from the parent in the path.
              */
             root_post_id?: number;
         };
@@ -4505,6 +4570,8 @@ export interface components {
             character_id: number;
             /** @description Draft body, as markdown */
             content: string;
+            /** @description Restrict the post to these players (user IDs of active players). Omit for a public post. */
+            restricted_to_user_ids?: number[] | null;
         };
         CreateDraftUpdateBody: {
             /**
@@ -4516,8 +4583,8 @@ export interface components {
             /** @enum {string} */
             field_type: "text" | "number" | "boolean" | "json";
             field_value: string;
-            /** @enum {string} */
-            module_type: "skills" | "inventory" | "numbers";
+            /** @description Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout */
+            module_type: string;
             /** @enum {string} */
             operation: "upsert" | "delete";
         };
@@ -4536,7 +4603,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;
@@ -4646,6 +4712,8 @@ export interface components {
              * @description Phase to attach the post to
              */
             phase_id?: number;
+            /** @description Restrict the post to these players (user IDs of active players). Omit for a public post. */
+            restricted_to_user_ids?: number[] | null;
         };
         CreateStagedChainBody: {
             /** Format: int32 */
@@ -4837,8 +4905,8 @@ export interface components {
             field_value: string;
             /** Format: int32 */
             id: number;
-            /** @enum {string} */
-            module_type: "skills" | "inventory" | "numbers";
+            /** @description Tab key: skills, inventory, numbers, or a custom t_ key */
+            module_type: string;
             /** @enum {string} */
             operation: "upsert" | "delete";
             /** Format: date-time */
@@ -5093,6 +5161,8 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
+            /** @description Key of the character sheet tab this table rolls into */
+            target_tab: string;
             /** Format: date-time */
             updated_at: string;
         };
@@ -5466,6 +5536,8 @@ export interface components {
             is_deleted: boolean;
             is_draft: boolean;
             is_edited: boolean;
+            /** @description Whether the post is restricted to an allowlist of players; always false for comments */
+            is_restricted: boolean;
             mentioned_character_ids?: number[] | null;
             message_type: string;
             /** Format: int32 */
@@ -5478,6 +5550,8 @@ export interface components {
             thread_depth: number;
             /** Format: date-time */
             updated_at: string;
+            /** @description The post's allowlist. Present only on posts, for callers who can see every restricted post. */
+            viewer_user_ids?: number[];
         };
         MessageThreadContextResponse: {
             chain: components["schemas"]["MessageResponse"][];
@@ -5817,6 +5891,8 @@ export interface components {
             id: number;
             is_deleted: boolean;
             is_edited: boolean;
+            /** @description Whether the post is restricted to an allowlist of players */
+            is_restricted: boolean;
             /** @description Always "post" for this endpoint */
             message_type: string;
             /**
@@ -5834,6 +5910,8 @@ export interface components {
              * @description Always 0 for a top-level post
              */
             thread_depth: number;
+            /** @description The post's allowlist. Present only for callers who can see every restricted post. */
+            viewer_user_ids?: number[];
         };
         PostUnreadCommentsResponse: {
             /** Format: int32 */
@@ -6034,6 +6112,12 @@ export interface components {
             /** @description Whether regular players may discover this NPC */
             is_hidden: boolean;
         };
+        SetPostViewersRequest: {
+            /** @description true restricts the post to user_ids; false makes it public */
+            restricted: boolean;
+            /** @description Players who may see the post. Required and non-empty when restricted is true; must be empty or omitted when it is false. */
+            user_ids?: number[] | null;
+        };
         StagedPartBody: {
             /** @description Part content */
             content: string;
@@ -6214,7 +6298,6 @@ export interface components {
             allow_group_conversations?: boolean;
             auto_accept_audience?: boolean;
             banner_url?: string;
-            character_sheet?: components["schemas"]["CharacterSheetConfig"];
             /** Format: int32 */
             common_room_close_day?: number;
             common_room_close_time?: string;
@@ -6268,6 +6351,8 @@ export interface components {
         UpdateLootTableBody: {
             items?: components["schemas"]["LootTableItemBody"][] | null;
             name: string;
+            /** @description Key of the character sheet tab the table rolls into. Must be a tab on the game's sheet. Defaults to inventory on create; on update, can change only while the table is empty. */
+            target_tab?: string;
         };
         UpdateMessageRequest: {
             content: string;
@@ -11170,6 +11255,68 @@ export interface operations {
             };
         };
     };
+    updateGameCharacterSheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CharacterSheetConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM or a co-GM can customise the character sheet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The game is archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The layout failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listGameCharacters: {
         parameters: {
             query?: never;
@@ -13119,7 +13266,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such message */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -13170,6 +13317,13 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13976,7 +14130,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Post not found */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14017,6 +14171,13 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14074,6 +14235,13 @@ export interface operations {
             };
             /** @description Email not verified */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Parent not found, or in a thread hidden from the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14139,6 +14307,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
                 headers: {
@@ -14187,7 +14362,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such comment */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14253,7 +14428,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No such comment */
+            /** @description Not found, or in a thread hidden from the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -14303,6 +14478,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
                 headers: {
@@ -14346,7 +14528,78 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Not found, or in a thread hidden from the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setPostViewers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Post ID */
+                postId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPostViewersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM or co-GM */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such post in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Game is archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Empty list, non-player IDs, or a list on a public post */
             422: {
                 headers: {
                     [name: string]: unknown;

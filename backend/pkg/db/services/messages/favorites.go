@@ -70,14 +70,17 @@ func (s *MessageService) SetCommentFavorite(ctx context.Context, userID, comment
 	})
 }
 
-// GetFavoriteCommentIDsForGame returns the comment IDs a user has favorited
-// within one game. Powers star state in the common room and new-comments views.
-func (s *MessageService) GetFavoriteCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]int32, error) {
+// GetFavoriteCommentIDsForGame returns the comment IDs the viewer has
+// favorited within one game. Powers star state in the common room and
+// new-comments views. Favorites in restricted threads the viewer can no longer
+// see are left out, matching ListFavoriteComments.
+func (s *MessageService) GetFavoriteCommentIDsForGame(ctx context.Context, gameID int32, viewer core.ViewerScope) ([]int32, error) {
 	queries := models.New(s.DB)
 
 	ids, err := queries.GetFavoriteCommentIDsForGame(ctx, models.GetFavoriteCommentIDsForGameParams{
-		UserID: userID,
-		GameID: gameID,
+		GameID:        gameID,
+		ViewerUserID:  viewer.UserID,
+		ViewerSeesAll: viewer.SeesAll,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get favorite comment IDs for game: %w", err)
@@ -90,7 +93,8 @@ func (s *MessageService) GetFavoriteCommentIDsForGame(ctx context.Context, userI
 
 // GetFavoriteCommentIDsForUser returns every comment ID a user has favorited,
 // across all games. Powers star state on surfaces that are not game-scoped,
-// such as the character profile page.
+// such as the character profile page. Favorites in restricted threads the
+// user can no longer see are left out, matching ListFavoriteComments.
 func (s *MessageService) GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error) {
 	queries := models.New(s.DB)
 
@@ -107,10 +111,11 @@ func (s *MessageService) GetFavoriteCommentIDsForUser(ctx context.Context, userI
 // ListFavoriteComments returns a page of the user's favorited comments,
 // newest-favorited first, plus the cursor for the following page.
 //
-// The listing is deliberately cross-game and carries no permission filter:
-// any authenticated user can already read any game's common room, so filtering
-// here would make favorites stricter than the room they link back to and a
-// comment you starred could vanish from your own list.
+// The listing is deliberately cross-game. The only permission filter is the
+// restricted-post rule: any authenticated user can already read any game's
+// common room, so nothing else is filtered, but a favorite in a restricted
+// thread the user has since been taken off disappears with the thread. It
+// comes back if they are added again.
 //
 // Soft-deleted comments are excluded at read time (the favorite row survives,
 // matching every other comment read path).
@@ -128,8 +133,8 @@ func (s *MessageService) ListFavoriteComments(ctx context.Context, userID int32,
 	queries := models.New(s.DB)
 
 	params := models.ListFavoriteCommentsWithParentsParams{
-		UserID:    userID,
-		PageLimit: limit,
+		ViewerUserID: userID,
+		PageLimit:    limit,
 	}
 	if cursor != nil {
 		params.CursorFavoritedAt = pgtype.Timestamptz{Time: cursor.FavoritedAt, Valid: true}
@@ -175,7 +180,7 @@ func favoriteCommentRowToDomain(row models.ListFavoriteCommentsWithParentsRow) *
 			ID:                 row.ID,
 			GameID:             row.GameID,
 			ParentID:           pgInt4ToInt32Ptr(row.ParentID),
-			PostID:             pgInt4ToInt32Ptr(row.PostID),
+			PostID:             &row.PostID,
 			AuthorID:           row.AuthorID,
 			CharacterID:        row.CharacterID,
 			Content:            row.Content,

@@ -36,8 +36,17 @@ import type { components } from './api.gen';
  */
 export type Character = components['schemas']['CharacterResponse'];
 
-/** Per-game character sheet configuration, as sent by the backend — generated. */
+/**
+ * Per-game character sheet configuration, as sent by the backend — generated.
+ *
+ * Sparse: an absent `tabs` means the default layout, and an absent (or null)
+ * `fields` on a built-in tab means its default fields. Read it through
+ * `resolveSheetLayout`, never directly, so the defaults apply.
+ */
 export type CharacterSheetConfig = components['schemas']['CharacterSheetConfig'];
+
+/** One field of a tab's entries, as stored — generated. */
+export type CharacterSheetField = components['schemas']['CharacterSheetField'];
 
 /**
  * A controllable character from the cross-game endpoint, carrying the game
@@ -110,158 +119,47 @@ export type AssignNPCRequest = components['schemas']['AssignNPCRequest'];
  */
 export type CharacterActivityStats = components['schemas']['CharacterStatsResponse'];
 
-// Individual skill item structure for JSON fields.
+// Skills entries have no type of their own: they are generic sheet entries
+// (SheetEntry in lib/sheetEntries), laid out by the tab's schema.
+// normalizeEntry absorbs the `level` → `rank` rename that `skillRank` used to.
 //
-// CharacterAbility used to sit here. Abilities were retired in the Phase 4
-// refactor: they duplicated skills, which is strictly more featured (level,
-// category, markdown description), so every stat feature had to be built twice.
-// Verified against production before deletion — no character held ability
-// content. The rows remain in character_data and are simply never read again.
-export interface CharacterSkill {
-  id: string;
-  name: string;
-  /**
-   * Free text, e.g. "Expert" or "5".
-   *
-   * Replaces the old `level?: number | string`. The union was a fiction: the
-   * editor stringified on every save, so a numeric level round-tripped into a
-   * string the moment anyone touched it, and nothing in the app ever did
-   * arithmetic on it. Free text is what the field already was in practice.
-   *
-   * Read old rows through `skillRank()` rather than this field directly —
-   * `level` is still on disk and is NOT migrated.
-   */
-  rank?: string;
-  /**
-   * @deprecated Legacy key, read-only. Present on rows written before the
-   * rank rename; never written again. Use `skillRank()` instead of reading it.
-   */
-  level?: number | string;
-  description?: string;
-  category?: string; // e.g., "Combat", "Social", "Academic"
-}
+// CharacterAbility used to sit here too. Abilities were retired in the Phase 4
+// refactor: they duplicated skills, which is strictly more featured, so every
+// stat feature had to be built twice. Verified against production before
+// deletion — no character held ability content. The rows remain in
+// character_data and are simply never read again.
+
+// Inventory entries are generic entries too (SheetEntry in lib/sheetEntries).
+// `equipped`, `metadata` and `condition` are retired keys: old rows may carry
+// them and they survive an edit, but nothing reads or writes them. `condition`
+// was checked against production before the switch: no row held one.
+
+// Numbers entries are generic entries (see SheetEntry in lib/sheetEntries):
+// normalizeEntry absorbs the `type` → `name` rename and lifts the flat
+// `amount`/`max`/`display` into a track value.
+
+/** The tabs every game had before tab composition, and still has by default. */
+export type BuiltInSheetTabKey = 'skills' | 'inventory' | 'numbers';
 
 /**
- * Resolves a skill's rank across both storage shapes.
+ * A configurable tab with its label and fields resolved against the defaults.
  *
- * There is deliberately no migration for the `level` → `rank` rename: this key
- * lives inside a JSON blob, so a read-side fallback covers every old row,
- * archived payload, and rolled-back deploy at no coordination cost, where a
- * migration would need all three to line up. Old numeric values stringify here
- * rather than on write, so a row is only rewritten when a human edits it.
- *
- * Returns undefined when neither key is set, so callers can keep using the
- * `{rank && ...}` pattern to hide the field entirely.
+ * Client-side, not a wire shape: `resolveSheetLayout` builds it from the sparse
+ * stored config. Defined here rather than beside that function so the type
+ * layer has no dependency on the hook layer.
  */
-export function skillRank(skill: Pick<CharacterSkill, 'rank' | 'level'>): string | undefined {
-  if (skill.rank !== undefined && skill.rank !== '') return skill.rank;
-  if (skill.level === undefined || skill.level === '') return undefined;
-  return String(skill.level);
+export interface SheetTab {
+  /** Stable key: the storage `module_type`. Never changes, even on rename. */
+  key: string;
+  label: string;
+  fields: CharacterSheetField[];
+  isBuiltIn: boolean;
 }
 
-// Individual inventory item structures for JSON fields
-// `equipped` and `metadata` used to sit here and were dropped in the Phase 5
-// field pass. `equipped` rendered a badge but nothing could ever set it true —
-// AddItemModal hardcoded false and no edit path touched it — so the badge was
-// unreachable. `metadata` had no reader anywhere. Both keys are still tolerated
-// on read (old rows carry `equipped`); they are simply never written again.
-export interface InventoryItem {
-  id: string;
-  name: string;
-  description?: string;
-  quantity: number;
-  category?: string; // e.g., "Weapon", "Armor", "Consumable", "Tool"
-  condition?: string; // e.g., "Excellent", "Good", "Damaged"
-  /**
-   * Unused by any game today, kept deliberately: both feed the optional
-   * weight/value summary in ItemsManager, which stays hidden until a game sets
-   * them. Available as defaults rather than dead weight.
-   */
-  value?: number;
-  weight?: number;
+/** A game's configurable tabs, in display order. Public Profile and Private Notes are never in it. */
+export interface SheetLayout {
+  tabs: SheetTab[];
 }
-
-/**
- * One entry on the Numbers tab: a named quantity, optionally bounded.
- *
- * Renamed from `CurrencyEntry` in the Phase 5 field pass, along with the tab
- * itself. The tab holds arbitrary numeric tracks — stress, XP, clocks, heat —
- * and "currency" described only the narrowest case.
- */
-export interface NumberEntry {
-  id: string;
-  /**
-   * The entry's label, e.g. "Gold", "Stress", "XP".
-   *
-   * Was `type`, which read like a discriminant. Old rows still use that key —
-   * read through `numberEntryName()`, never this field directly. As with the
-   * skills rename there is deliberately no migration: the key lives inside a
-   * JSON blob, so a read-side fallback covers every old row, archived payload,
-   * and rolled-back deploy at no coordination cost.
-   */
-  name?: string;
-  /**
-   * @deprecated Legacy key, read-only. Use `numberEntryName()`.
-   */
-  type?: string;
-  amount: number;
-  /**
-   * Upper bound, which turns a bare count into a track: "Stress 4/9".
-   *
-   * Absent means an unbounded quantity (money, XP), which is why this is
-   * optional rather than defaulted — there is no sensible maximum for a purse.
-   */
-  max?: number;
-  /**
-   * How the entry renders. Only meaningful with `max` set; a bare quantity has
-   * nothing to draw a bar or boxes against, so it always renders as a number.
-   * Absent means 'number'.
-   */
-  display?: NumberEntryDisplay;
-  description?: string;
-}
-
-export type NumberEntryDisplay = 'number' | 'track' | 'boxes';
-
-/**
- * Resolves an entry's label across both storage shapes.
- *
- * Returns '' rather than undefined when neither key is set: the name is
- * required by the form, so an entry without one is corrupt data rather than a
- * meaningful absence, and callers render it as an empty heading rather than
- * branching.
- */
-export function numberEntryName(entry: Pick<NumberEntry, 'name' | 'type'>): string {
-  return entry.name || entry.type || '';
-}
-
-/**
- * Whether an entry should render as a bounded track rather than a bare number.
- *
- * `max` is what makes a track possible, so `display` alone is not enough — a
- * 'boxes' entry with no maximum has no box count to draw. Guards against a
- * non-positive max for the same reason: zero boxes is not a track.
- */
-export function isBoundedTrack(entry: NumberEntry): boolean {
-  // Requires an explicit track display rather than merely excluding 'number':
-  // absent means 'number' (see the field's doc), and the write path stores
-  // exactly that — NumberForm persists undefined for the Number option instead
-  // of the literal, so `display !== 'number'` admitted every saved Number entry
-  // that had a maximum and drew it as a bar.
-  return (
-    entry.max !== undefined &&
-    entry.max > 0 &&
-    (entry.display === 'track' || entry.display === 'boxes')
-  );
-}
-
-/**
- * Resolved labels for the three renameable character sheet tabs.
- *
- * Defined here rather than beside the hook that produces it so the type layer
- * has no dependency on the hook layer; `useSheetLabels` imports this.
- */
-export type SheetLabels = Record<'skills' | 'inventory' | 'numbers', string>;
 
 // Character module types for the modular character sheet system
 export interface CharacterModule {
@@ -281,22 +179,20 @@ interface CharacterModuleField {
 }
 
 /**
- * The character sheet's tabs, with the game's labels applied.
+ * The character sheet's tabs: the two fixed text tabs, then the game's layout.
  *
- * A function rather than a constant because two of the five tabs are
- * GM-renameable, so the list is a function of the game. `labels` comes from
- * `useSheetLabels`, which is the only place that knows the default names —
- * do not default them here.
+ * A function rather than a constant because everything after the first two tabs
+ * is per-game. `layout` comes from `useSheetLayout`, which is the only place
+ * that knows the default labels and fields — do not default them here.
  *
- * Bio and Private Notes are deliberately NOT renameable: they are platform
+ * Bio and Private Notes are deliberately NOT configurable: they are platform
  * concepts (a public description, private notes visible to GM and audience)
- * rather than game-system ones, so their names stay fixed.
+ * rather than game-system ones, so they are always present with fixed names.
  *
- * Per the refactor's invariant each renameable tab's `type` equals its storage
- * `module_type`, its field name, and its own default label. That is what keeps
- * this a straight substitution with no mapping table.
+ * Each configurable tab's `type` is its stable key, which is also its storage
+ * `module_type`. Its entries live under `storageFieldName(key)`.
  */
-export function buildCharacterModules(labels: SheetLabels): CharacterModule[] {
+export function buildCharacterModules(layout: SheetLayout): CharacterModule[] {
   return [
     {
       type: 'bio',
@@ -326,51 +222,29 @@ export function buildCharacterModules(labels: SheetLabels): CharacterModule[] {
         }
       ]
     },
-    {
-      type: 'skills',
-      name: labels.skills,
-      description: `Character ${labels.skills.toLowerCase()}`,
+    ...layout.tabs.map((tab): CharacterModule => ({
+      type: tab.key,
+      name: tab.label,
+      description: `Character ${tab.label.toLowerCase()}`,
       fields: [
         {
-          name: 'skills',
+          name: storageFieldName(tab.key),
           type: 'json',
-          label: labels.skills,
-          placeholder: `Manage your character ${labels.skills.toLowerCase()}...`,
-          isPublic: true
-        }
-      ]
-    },
-    {
-      type: 'inventory',
-      name: labels.inventory,
-      description: 'Character possessions and equipment',
-      fields: [
-        {
-          name: 'items',
-          type: 'json',
-          label: 'Items',
-          placeholder: 'Manage your character items...',
-          isPublic: true
-        }
-      ]
-    },
-    {
-      type: 'numbers',
-      name: labels.numbers,
-      description: 'Character resources and numeric tracks',
-      fields: [
-        {
-          // Storage key, not a label: renamed from `currency` in the Phase 4
-          // migration because this tab now holds arbitrary numeric tracks
-          // (stress, XP, clocks), not money. Unlike a label, an identifier
-          // cannot be overridden per game, so it had to stop saying "currency".
-          name: 'numbers',
-          type: 'json',
-          label: labels.numbers,
-          placeholder: `Track your character's ${labels.numbers.toLowerCase()}...`,
+          label: tab.label,
+          // Tab access is gated at the tab level by canViewPrivate, not by
+          // is_public; see CharacterSheet's saveJsonField.
           isPublic: false
         }
       ]
-    }
+    })),
   ];
+}
+
+/**
+ * The `field_name` a configurable tab's entries are stored under. Every tab
+ * uses its own key except Inventory, which predates that rule and stores under
+ * `items`. Mirrors `core.SheetStorageFieldName` on the backend.
+ */
+export function storageFieldName(tabKey: string): string {
+  return tabKey === 'inventory' ? 'items' : tabKey;
 }

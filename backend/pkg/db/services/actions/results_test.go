@@ -701,6 +701,41 @@ func TestActionSubmissionService_PublishCharacterUpdates(t *testing.T) {
 		assert.Contains(t, fieldValue, `"New Sword"`, "should contain the new item")
 		assert.NotContains(t, fieldValue, `"Old Item"`, "old item should be replaced, not preserved")
 	})
+
+	// A draft is a deferred write, so it is checked against the layout when it
+	// is staged, not when it is published. A GM who removes a custom tab after
+	// staging an update to it still gets that update: removing a tab hides its
+	// data, it never discards it, and restoring the tab shows the update.
+	// This game's layout is the default, which has no t_abc123 tab.
+	t.Run("publishes a custom tab's draft even after the tab left the layout", func(t *testing.T) {
+		result4, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID:      game.ID,
+			PhaseID:     phase.ID,
+			UserID:      int32(player.ID),
+			Content:     "You make a new contact.",
+			IsPublished: false,
+		})
+		require.NoError(t, err)
+
+		contactsJSON := `[{"id":"c-1","name":"Mira","f_loc001":"Harbor"}]`
+		_, err = testDB.Pool.Exec(context.Background(),
+			`INSERT INTO action_result_character_updates
+			(action_result_id, character_id, module_type, field_name, field_value, field_type, operation)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			result4.ID, character.ID, "t_abc123", "t_abc123", contactsJSON, "json", "upsert")
+		require.NoError(t, err)
+
+		err = actionService.PublishActionResult(context.Background(), result4.ID, int32(player.ID))
+		require.NoError(t, err)
+
+		var fieldValue string
+		err = testDB.Pool.QueryRow(context.Background(),
+			`SELECT field_value FROM character_data
+			WHERE character_id = $1 AND module_type = $2 AND field_name = $3`,
+			character.ID, "t_abc123", "t_abc123").Scan(&fieldValue)
+		require.NoError(t, err)
+		assert.JSONEq(t, contactsJSON, fieldValue)
+	})
 }
 
 // TestActionSubmissionService_NotificationCreation tests that notifications are created when results are published

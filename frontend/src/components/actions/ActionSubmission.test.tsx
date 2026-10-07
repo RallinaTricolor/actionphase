@@ -88,7 +88,7 @@ describe('ActionSubmission observability', () => {
   it('names the character-sheet toggle for Faro user-action attribution', () => {
     // The toggle only renders when the character has sheet items.
     vi.mocked(useCharacterSheetItems).mockReturnValue([
-      { id: 's1', name: 'Fire Bolt', type: 'skill' },
+      { id: 's1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
     ]);
     renderWithClient(<ActionSubmission gameId={1} currentPhase={baseActionPhase} />);
     expect(screen.getByTestId('sheet-toggle-button')).toHaveAttribute(
@@ -110,7 +110,7 @@ describe('ActionSubmission sheet drawer', () => {
 
   it('shows Sheet button when character has sheet items', () => {
     vi.mocked(useCharacterSheetItems).mockReturnValue([
-      { id: 's1', name: 'Fire Bolt', type: 'skill' },
+      { id: 's1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
     ]);
     renderWithClient(<ActionSubmission gameId={1} currentPhase={baseActionPhase} />);
     expect(screen.getByTestId('sheet-toggle-button')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('ActionSubmission sheet drawer', () => {
 
   it('opens drawer when Sheet button is clicked', async () => {
     vi.mocked(useCharacterSheetItems).mockReturnValue([
-      { id: 's1', name: 'Fire Bolt', type: 'skill' },
+      { id: 's1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
     ]);
     const user = userEvent.setup({ delay: null });
     renderWithClient(<ActionSubmission gameId={1} currentPhase={baseActionPhase} />);

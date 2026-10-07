@@ -77,7 +77,7 @@ export function FilterBar({
         {/* Top row: Quick filters */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {/* Participation quick filters */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={!participation || participation === null ? "primary" : "outline"}
               onClick={() => onParticipationChange(undefined)}

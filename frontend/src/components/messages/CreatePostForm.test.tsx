@@ -414,7 +414,7 @@ describe('CreatePostForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Test post content');
+        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Test post content', undefined);
       });
     });
 
@@ -438,7 +438,7 @@ describe('CreatePostForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Test content');
+        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Test content', undefined);
       });
     });
 
@@ -489,7 +489,7 @@ describe('CreatePostForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(2, 'Test content');
+        expect(mockOnSubmit).toHaveBeenCalledWith(2, 'Test content', undefined);
       });
     });
 
@@ -844,11 +844,85 @@ describe('CreatePostForm', () => {
 
       // Verify submission
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(2, '# Important Update\n\nThis is a test post');
+        expect(mockOnSubmit).toHaveBeenCalledWith(2, '# Important Update\n\nThis is a test post', undefined);
       });
 
       // Verify content cleared
       expect(textarea).toHaveValue('');
+    });
+  });
+
+  describe('Restricting the post', () => {
+    const players = [
+      { userId: 10, username: 'amy', characterNames: ['Brynn'] },
+      { userId: 11, username: 'zed', characterNames: ['Corvo'] },
+    ];
+
+    const renderForm = () =>
+      renderWithProviders(
+        <CreatePostForm
+          gameId={1}
+          characters={[mockCharacters[0]]}
+          players={players}
+          onSubmit={mockOnSubmit}
+          isSubmitting={false}
+        />
+      );
+
+    it('reveals the player picker when the toggle is turned on', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderForm();
+
+      expect(screen.queryByLabelText('Brynn')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('restrict-post-toggle'));
+      expect(screen.getByLabelText('Brynn')).toBeInTheDocument();
+    });
+
+    it('blocks submit while restricted to nobody', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderForm();
+
+      await user.type(screen.getByLabelText(/post content/i), 'Secret meeting');
+      const submit = screen.getByRole('button', { name: /create gm post/i });
+      expect(submit).toBeEnabled();
+
+      await user.click(screen.getByTestId('restrict-post-toggle'));
+      expect(submit).toBeDisabled();
+
+      await user.click(screen.getByLabelText('Brynn'));
+      expect(submit).toBeEnabled();
+    });
+
+    it('sends the picked players and resets the restriction afterwards', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockOnSubmit.mockResolvedValue(undefined);
+      renderForm();
+
+      await user.type(screen.getByLabelText(/post content/i), 'Secret meeting');
+      await user.click(screen.getByTestId('restrict-post-toggle'));
+      await user.click(screen.getByLabelText('Corvo'));
+      await user.click(screen.getByRole('button', { name: /create gm post/i }));
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Secret meeting', [11]);
+      });
+      expect(screen.getByTestId('restrict-post-toggle')).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('sends no list once the toggle is turned back off', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockOnSubmit.mockResolvedValue(undefined);
+      renderForm();
+
+      await user.type(screen.getByLabelText(/post content/i), 'Public after all');
+      await user.click(screen.getByTestId('restrict-post-toggle'));
+      await user.click(screen.getByLabelText('Corvo'));
+      await user.click(screen.getByTestId('restrict-post-toggle'));
+      await user.click(screen.getByRole('button', { name: /create gm post/i }));
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(1, 'Public after all', undefined);
+      });
     });
   });
 });

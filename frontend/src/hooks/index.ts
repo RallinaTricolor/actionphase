@@ -5,7 +5,7 @@
  */
 
 // Message mutation hooks (posts and comments)
-export { useUpdatePost } from './useCommentMutations';
+export { useUpdatePost, useSetPostViewers } from './useCommentMutations';
 
 // Draft character updates hooks
 export {

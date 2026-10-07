@@ -53,6 +53,7 @@ func setupCharacterManagementTestRouter(app *core.App, testDB *core.TestDatabase
 			CharacterService:    &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 			GameService:         &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 			NotificationService: db.NewNotificationService(testDB.Pool, app.ObsLogger),
+			MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 		}
 		RegisterHumaCharacters(humaconfig.New(r, "ActionPhase API", "1.0.0"), handler)
 	})
@@ -70,6 +71,7 @@ func setupCharacterManagementTestRouter(app *core.App, testDB *core.TestDatabase
 			CharacterService:    &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 			GameService:         &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 			NotificationService: db.NewNotificationService(testDB.Pool, app.ObsLogger),
+			MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 		}
 		RegisterHumaGameCharacters(humaconfig.New(r, "ActionPhase API", "1.0.0"), handler)
 	})
@@ -643,30 +645,107 @@ func TestCharacterAPI_SetCharacterData(t *testing.T) {
 
 	dataURL := fmt.Sprintf("/api/v1/characters/%d/data", playerChar.ID)
 
-	t.Run("character owner can set non-stat data", func(t *testing.T) {
-		body := CharacterDataRequest{
-			ModuleType: "biography",
-			FieldName:  "backstory",
-			FieldValue: "A long backstory.",
-			FieldType:  "text",
-			IsPublic:   true,
-		}
+	postData := func(t *testing.T, token string, body CharacterDataRequest) int {
+		t.Helper()
 		bodyJSON, _ := json.Marshal(body)
-
 		req := httptest.NewRequest("POST", dataURL, bytes.NewBuffer(bodyJSON))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+playerToken)
-
+		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
 
-		assert.Equal(t, http.StatusNoContent, rec.Code)
+	storedRows := func(t *testing.T, moduleType, fieldName string) int {
+		t.Helper()
+		var count int
+		err := testDB.Pool.QueryRow(context.Background(),
+			"SELECT COUNT(*) FROM character_data WHERE character_id = $1 AND module_type = $2 AND field_name = $3",
+			playerChar.ID, moduleType, fieldName).Scan(&count)
+		require.NoError(t, err)
+		return count
+	}
+
+	t.Run("character owner can set profile fields", func(t *testing.T) {
+		for _, pair := range [][2]string{{"bio", "background"}, {"notes", "private_notes"}} {
+			code := postData(t, playerToken, CharacterDataRequest{
+				ModuleType: pair[0],
+				FieldName:  pair[1],
+				FieldValue: "Written by the owner.",
+				FieldType:  "text",
+			})
+			assert.Equal(t, http.StatusNoContent, code, "%s/%s", pair[0], pair[1])
+			assert.Equal(t, 1, storedRows(t, pair[0], pair[1]), "%s/%s", pair[0], pair[1])
+		}
+	})
+
+	// Before the allowlist, any pair other than the three exact stat pairs was
+	// accepted from any editor, so a player could park arbitrary data on their
+	// own sheet -- including under a key a future custom tab would claim.
+	t.Run("pairs outside the layout are rejected for the owner", func(t *testing.T) {
+		for _, pair := range [][2]string{{"skills", "foo"}, {"custom", "x"}, {"t_abc123", "t_abc123"}} {
+			code := postData(t, playerToken, CharacterDataRequest{
+				ModuleType: pair[0],
+				FieldName:  pair[1],
+				FieldValue: `[]`,
+				FieldType:  "json",
+			})
+			assert.Equal(t, http.StatusUnprocessableEntity, code, "%s/%s", pair[0], pair[1])
+			assert.Equal(t, 0, storedRows(t, pair[0], pair[1]), "%s/%s must not be stored", pair[0], pair[1])
+		}
+	})
+
+	t.Run("pairs outside the layout are rejected for the GM too", func(t *testing.T) {
+		code := postData(t, gmToken, CharacterDataRequest{
+			ModuleType: "skills",
+			FieldName:  "foo",
+			FieldValue: `[]`,
+			FieldType:  "json",
+		})
+		assert.Equal(t, http.StatusUnprocessableEntity, code)
+		assert.Equal(t, 0, storedRows(t, "skills", "foo"))
+	})
+
+	// The allowed pairs follow the game's configured layout, not a fixed list.
+	t.Run("a composed layout decides which tabs are writable", func(t *testing.T) {
+		_, err := testDB.Pool.Exec(context.Background(),
+			`UPDATE games SET character_sheet = $2 WHERE id = $1`, game.ID,
+			`{"tabs":[{"key":"skills"},{"key":"t_abc123","label":"Contacts","fields":[]}]}`)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, err := testDB.Pool.Exec(context.Background(),
+				`UPDATE games SET character_sheet = '{}' WHERE id = $1`, game.ID)
+			require.NoError(t, err)
+		})
+
+		custom := CharacterDataRequest{ModuleType: "t_abc123", FieldName: "t_abc123", FieldValue: `[]`, FieldType: "json"}
+		assert.Equal(t, http.StatusNoContent, postData(t, gmToken, custom), "GM writes the custom tab")
+		assert.Equal(t, http.StatusForbidden, postData(t, playerToken, custom), "custom tabs are GM-only like any stat tab")
+
+		// Removing a tab hides its data and stops it being written until the
+		// tab is restored.
+		removed := CharacterDataRequest{ModuleType: "inventory", FieldName: "items", FieldValue: `[]`, FieldType: "json"}
+		assert.Equal(t, http.StatusUnprocessableEntity, postData(t, gmToken, removed), "GM cannot write a removed tab")
+
+		// The profile fields are never part of the layout and stay writable.
+		profile := CharacterDataRequest{ModuleType: "bio", FieldName: "background", FieldValue: "Still mine.", FieldType: "text"}
+		assert.Equal(t, http.StatusNoContent, postData(t, playerToken, profile))
+	})
+
+	t.Run("player cannot set stat fields (inventory)", func(t *testing.T) {
+		code := postData(t, playerToken, CharacterDataRequest{
+			ModuleType: "inventory",
+			FieldName:  "items",
+			FieldValue: `[]`,
+			FieldType:  "json",
+		})
+		assert.Equal(t, http.StatusForbidden, code)
 	})
 
 	t.Run("non-owner cannot set character data", func(t *testing.T) {
 		body := CharacterDataRequest{
-			ModuleType: "biography",
-			FieldName:  "backstory",
+			ModuleType: "bio",
+			FieldName:  "background",
 			FieldValue: "Sneaky edit.",
 			FieldType:  "text",
 			IsPublic:   true,

@@ -267,7 +267,8 @@ func TestNotifyCharacterMentions_HiddenNPCNotifiesNobody(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, ids, f.hiddenNPC.ID, "Precondition: the GM's mention resolves")
 
-		service.notifyCharacterMentions(ctx, ids, f.gmChar.ID, int32(f.gm.ID), f.game.ID, 9999)
+		post := testDB.CreateTestPost(t, f.game.ID, int32(f.gm.ID), f.gmChar.ID, "Speaking to @Masked Informant.")
+		service.notifyCharacterMentions(ctx, ids, f.gmChar.ID, int32(f.gm.ID), f.game.ID, post.ID)
 
 		assert.Equal(t, before+1, countFor(t, int32(controller.ID)),
 			"The NPC's controller should be notified when the mention resolves")
@@ -281,7 +282,8 @@ func TestNotifyCharacterMentions_HiddenNPCNotifiesNobody(t *testing.T) {
 		require.NoError(t, err)
 		require.NotContains(t, ids, f.hiddenNPC.ID, "Precondition: the player's mention does not resolve")
 
-		service.notifyCharacterMentions(ctx, ids, f.playerChar.ID, int32(f.player.ID), f.game.ID, 9998)
+		post := testDB.CreateTestPost(t, f.game.ID, int32(f.player.ID), f.playerChar.ID, "I hear @Masked Informant is about.")
+		service.notifyCharacterMentions(ctx, ids, f.playerChar.ID, int32(f.player.ID), f.game.ID, post.ID)
 
 		assert.Equal(t, before, countFor(t, int32(controller.ID)),
 			"No notification may fire, or it would confirm the hidden NPC exists")
@@ -325,7 +327,7 @@ func TestGetGamePosts_HiddenNPCContentStaysVisible(t *testing.T) {
 	require.NoError(t, err, "The GM must be able to post as a hidden NPC")
 	require.NotNil(t, post)
 
-	posts, err := service.GetGamePosts(ctx, f.game.ID, nil, 50, 0)
+	posts, err := service.GetGamePosts(ctx, f.game.ID, nil, 50, 0, core.ViewerScope{})
 	require.NoError(t, err)
 
 	var found *core.MessageWithDetails

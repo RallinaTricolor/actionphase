@@ -341,6 +341,10 @@ type GameServiceInterface interface {
 	// UpdateGame updates game details
 	UpdateGame(ctx context.Context, req UpdateGameRequest) (*models.Game, error)
 
+	// UpdateGameCharacterSheet validates and stores a game's whole character
+	// sheet layout. Returns an error wrapping ErrGameReadOnly for an archived game.
+	UpdateGameCharacterSheet(ctx context.Context, gameID int32, config CharacterSheetConfig) (*models.Game, error)
+
 	// DeleteGame removes a game from the system (only allowed for GMs on cancelled games)
 	DeleteGame(ctx context.Context, gameID, userID int32) error
 
@@ -433,11 +437,18 @@ type GameServiceInterface interface {
 	// update/delete queries are keyed on the table ID alone and are not game-scoped.
 	IsLootTableInGame(ctx context.Context, lootTableID, gameID int32) (bool, error)
 
-	// CreateLootTable creates a new named loot table for a game
-	CreateLootTable(ctx context.Context, gameID int32, name string) (*models.GameLootTable, error)
+	// GetGameLootTable retrieves one loot table, scoped to its game: a table
+	// from another game is pgx.ErrNoRows.
+	GetGameLootTable(ctx context.Context, gameID, lootTableID int32) (*models.GameLootTable, error)
 
-	// UpdateLootTable renames an existing loot table
-	UpdateLootTable(ctx context.Context, lootTableID int32, name string) (*models.GameLootTable, error)
+	// CreateLootTable creates a new named loot table for a game, rolling into
+	// the character sheet tab targetTab.
+	CreateLootTable(ctx context.Context, gameID int32, name, targetTab string) (*models.GameLootTable, error)
+
+	// UpdateLootTable renames a loot table and, when targetTab is non-nil,
+	// retargets it. Retargeting a table with contents returns
+	// ErrLootTableTargetLocked.
+	UpdateLootTable(ctx context.Context, lootTableID int32, name string, targetTab *string) (*models.GameLootTable, error)
 
 	// DeleteLootTable removes a loot table and (via cascade) its contents
 	DeleteLootTable(ctx context.Context, lootTableID int32) error
@@ -561,7 +572,6 @@ type CreateGameRequest struct {
 	CommonRoomCloseDay      *int16
 	CommonRoomCloseTime     *string // "HH:MM"
 	ScheduleTimezone        *string // IANA timezone name, e.g. "America/New_York"
-	CharacterSheet          CharacterSheetConfig
 }
 
 // UpdateGameRequest represents the parameters needed to update an existing game
@@ -589,7 +599,6 @@ type UpdateGameRequest struct {
 	CommonRoomCloseDay      *int16
 	CommonRoomCloseTime     *string // "HH:MM"
 	ScheduleTimezone        *string // IANA timezone name, e.g. "America/New_York"
-	CharacterSheet          CharacterSheetConfig
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.
@@ -873,11 +882,12 @@ type MessageServiceInterface interface {
 	// GetPost retrieves a specific post by ID with metadata
 	GetPost(ctx context.Context, postID int32) (*MessageWithDetails, error)
 
-	// GetGamePosts retrieves posts for a game, optionally filtered by phase
-	GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32) ([]MessageWithDetails, error)
+	// GetGamePosts retrieves posts for a game, optionally filtered by phase,
+	// leaving out restricted posts the viewer may not see
+	GetGamePosts(ctx context.Context, gameID int32, phaseID *int32, limit, offset int32, viewer ViewerScope) ([]MessageWithDetails, error)
 
-	// GetPhasePosts retrieves all posts for a specific phase
-	GetPhasePosts(ctx context.Context, phaseID int32) ([]MessageWithDetails, error)
+	// GetPhasePosts retrieves all posts for a specific phase that the viewer may see
+	GetPhasePosts(ctx context.Context, phaseID int32, viewer ViewerScope) ([]MessageWithDetails, error)
 
 	// UpdatePost updates the content of an existing post
 	UpdatePost(ctx context.Context, postID int32, content string) (*models.Message, error)
@@ -907,26 +917,14 @@ type MessageServiceInterface interface {
 	// CanUserDeleteComment checks if a user can delete a comment (author, GM, or admin in admin mode)
 	CanUserDeleteComment(ctx context.Context, commentID int32, userID int32, isAdmin bool) (bool, error)
 
-	// GetGamePostCount returns total post count for a game
-	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32) (int64, error)
+	// GetGamePostCount returns the number of posts in a game the viewer may see
+	GetGamePostCount(ctx context.Context, gameID int32, phaseID *int32, viewer ViewerScope) (int64, error)
 
 	// GetPostCommentCount returns total comment count for a post
 	GetPostCommentCount(ctx context.Context, postID int32) (int64, error)
 
 	// GetUserPostsInGame retrieves all posts by a user in a game
 	GetUserPostsInGame(ctx context.Context, gameID, userID int32) ([]MessageWithDetails, error)
-
-	// AddReaction adds a reaction to a message
-	AddReaction(ctx context.Context, messageID, userID int32, reactionType string) (*models.MessageReaction, error)
-
-	// RemoveReaction removes a reaction from a message
-	RemoveReaction(ctx context.Context, messageID, userID int32, reactionType string) error
-
-	// GetMessageReactions retrieves all reactions for a message
-	GetMessageReactions(ctx context.Context, messageID int32) ([]models.GetMessageReactionsRow, error)
-
-	// GetReactionCounts retrieves reaction counts grouped by type
-	GetReactionCounts(ctx context.Context, messageID int32) ([]models.GetReactionCountsRow, error)
 
 	// ValidateCharacterOwnership verifies character belongs to author and game
 	ValidateCharacterOwnership(ctx context.Context, characterID, authorID, gameID int32) error
@@ -950,20 +948,20 @@ type MessageServiceInterface interface {
 	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
 
 	// ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
-	// for the "New Comments" view. Supports pagination via limit/offset.
-	ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32) ([]CommentWithParent, error)
+	// for the "New Comments" view. Supports pagination via limit/offset. Comments in
+	// restricted threads the viewer can't see are left out before paginating.
+	ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer ViewerScope) ([]CommentWithParent, error)
 
 	// ListRecentUnreadCommentsWithParents behaves like ListRecentCommentsWithParents but
-	// omits comments the user has manually marked as read. Backs the "New Comments"
+	// omits comments the viewer has manually marked as read. Backs the "New Comments"
 	// view's unread-only filter in manual read mode.
-	ListRecentUnreadCommentsWithParents(ctx context.Context, gameID, userID int32, limit, offset int32) ([]CommentWithParent, error)
+	ListRecentUnreadCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer ViewerScope) ([]CommentWithParent, error)
 
-	// GetTotalCommentCount returns the total count of non-deleted comments in a game
-	GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error)
+	// GetTotalCommentCount returns the total for ListRecentCommentsWithParents
+	GetTotalCommentCount(ctx context.Context, gameID int32, viewer ViewerScope) (int64, error)
 
-	// GetTotalUnreadCommentCount returns the count of non-deleted comments in a game
-	// that the user has not manually marked as read
-	GetTotalUnreadCommentCount(ctx context.Context, gameID, userID int32) (int64, error)
+	// GetTotalUnreadCommentCount returns the total for ListRecentUnreadCommentsWithParents
+	GetTotalUnreadCommentCount(ctx context.Context, gameID int32, viewer ViewerScope) (int64, error)
 
 	// GetPostCommentsWithThreads retrieves paginated top-level comments with all nested replies
 	// Uses a recursive CTE to load entire comment trees in a single query (eliminates N+1 pattern)
@@ -975,23 +973,24 @@ type MessageServiceInterface interface {
 	CountTopLevelComments(ctx context.Context, postID int32) (int64, error)
 
 	// ListCharacterPostsAndComments retrieves paginated public messages by a specific character
-	// Returns posts and comments with parent context for the Character Page
-	ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32) ([]CharacterMessage, error)
+	// Returns posts and comments with parent context for the Character Page. viewer
+	// must be resolved for the character's game.
+	ListCharacterPostsAndComments(ctx context.Context, characterID int32, limit, offset int32, viewer ViewerScope) ([]CharacterMessage, error)
 
-	// CountCharacterPostsAndComments returns the total count of public messages by a character
-	CountCharacterPostsAndComments(ctx context.Context, characterID int32) (int64, error)
+	// CountCharacterPostsAndComments returns the total for ListCharacterPostsAndComments
+	CountCharacterPostsAndComments(ctx context.Context, characterID int32, viewer ViewerScope) (int64, error)
 
 	// ToggleCommentRead marks or unmarks a single comment as manually read by the current user
 	ToggleCommentRead(ctx context.Context, userID, gameID, postID, commentID int32, markAsRead bool) error
 
-	// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read by a user in a game
-	GetManualReadCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]*ManualCommentReads, error)
+	// GetManualReadCommentIDsForGame retrieves all comment IDs manually marked as read by the viewer in a game
+	GetManualReadCommentIDsForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]*ManualCommentReads, error)
 
 	// DeleteManualCommentReadsForGame removes all manual comment read records for a game (e.g. on game reset)
 	DeleteManualCommentReadsForGame(ctx context.Context, gameID int32) error
 
-	// MarkAllCommentsReadForPhase marks every comment in a phase as manually read by the current user
-	MarkAllCommentsReadForPhase(ctx context.Context, userID, gameID, phaseID int32) error
+	// MarkAllCommentsReadForPhase marks every comment in a phase the viewer can see as manually read by them
+	MarkAllCommentsReadForPhase(ctx context.Context, gameID, phaseID int32, viewer ViewerScope) error
 
 	// Favorite methods — private, per-user starred comments spanning all games.
 	// Unlike read tracking these are not game-scoped: the comment ID is the
@@ -1000,8 +999,8 @@ type MessageServiceInterface interface {
 	// SetCommentFavorite stars or unstars one comment for the current user (idempotent)
 	SetCommentFavorite(ctx context.Context, userID, commentID int32, favorite bool) error
 
-	// GetFavoriteCommentIDsForGame retrieves the user's favorited comment IDs within one game
-	GetFavoriteCommentIDsForGame(ctx context.Context, userID, gameID int32) ([]int32, error)
+	// GetFavoriteCommentIDsForGame retrieves the viewer's favorited comment IDs within one game
+	GetFavoriteCommentIDsForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]int32, error)
 
 	// GetFavoriteCommentIDsForUser retrieves all of the user's favorited comment IDs across games
 	GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error)
@@ -1045,14 +1044,43 @@ type MessageServiceInterface interface {
 	// MarkPostAsRead marks a post as read by a user, recording the last read comment
 	MarkPostAsRead(ctx context.Context, userID, gameID, postID int32, lastReadCommentID *int32) (*ReadMarker, error)
 
-	// GetUserReadMarkersForGame retrieves all read markers for a user in a game
-	GetUserReadMarkersForGame(ctx context.Context, userID, gameID int32) ([]*ReadMarker, error)
+	// GetUserReadMarkersForGame retrieves all of the viewer's read markers in a game
+	GetUserReadMarkersForGame(ctx context.Context, gameID int32, viewer ViewerScope) ([]*ReadMarker, error)
 
-	// GetPostsWithUnreadInfo retrieves posts with unread status for the authenticated user
-	GetPostsWithUnreadInfo(ctx context.Context, gameID int32) ([]*PostUnreadInfo, error)
+	// GetPostsWithUnreadInfo retrieves comment counts for the posts the viewer can see
+	GetPostsWithUnreadInfo(ctx context.Context, gameID int32, viewer ViewerScope) ([]*PostUnreadInfo, error)
 
-	// GetUnreadCommentIDsForPosts retrieves unread comment IDs for posts a user has read markers for
-	GetUnreadCommentIDsForPosts(ctx context.Context, userID, gameID int32) ([]*PostUnreadComments, error)
+	// GetUnreadCommentIDsForPosts retrieves the viewer's unread comment IDs per post
+	GetUnreadCommentIDsForPosts(ctx context.Context, gameID int32, viewer ViewerScope) ([]*PostUnreadComments, error)
+
+	// Restricted posts (Common Room allowlists). See CanSeeAllRestrictedPosts
+	// for the rule.
+
+	// ResolveViewerScope works out once per request whether userID bypasses
+	// the allowlists in gameID. Any lookup failure resolves to SeesAll=false:
+	// a failed check never grants access.
+	ResolveViewerScope(ctx context.Context, gameID, userID int32) ViewerScope
+
+	// CanUserViewMessage reports whether userID may see messageID (a post or any
+	// comment under it). It resolves the message's own game and root post, and
+	// never trusts IDs from the URL. Unknown message → (false, nil).
+	CanUserViewMessage(ctx context.Context, messageID, userID int32) (bool, error)
+
+	// SetPostViewers replaces a post's allowlist. restricted=false makes the
+	// post public and requires userIDs to be empty; restricted=true requires at
+	// least one active player. Users who lose access also lose their in-app
+	// notifications pointing into the thread, in the same transaction. A
+	// postID that isn't a post in gameID is ErrPostNotFound. Returns the
+	// updated post and its sorted allowlist (empty when public).
+	SetPostViewers(ctx context.Context, gameID, postID int32, restricted bool, userIDs []int32) (*MessageWithDetails, []int32, error)
+
+	// IsMessageInThread reports whether messageID belongs to the thread rooted
+	// at postID. Unknown message → (false, nil).
+	IsMessageInThread(ctx context.Context, messageID, postID int32) (bool, error)
+
+	// ListPostViewers returns the allowlist of each given post, keyed by post
+	// ID. Posts with no rows are absent from the map.
+	ListPostViewers(ctx context.Context, postIDs []int32) (map[int32][]int32, error)
 }
 
 // CreatePhaseRequest represents the parameters needed to create a new game phase
@@ -1213,6 +1241,21 @@ type CreatePostRequest struct {
 	CharacterID int32
 	Content     string
 	Visibility  string // "game" or "private"
+
+	// RestrictedToUserIDs restricts the post to these players. nil means a
+	// public post. A non-nil empty slice is rejected: "restricted to nobody"
+	// is what drafts are for.
+	RestrictedToUserIDs []int32
+}
+
+// ViewerScope carries who is reading, for Common Room allowlist filtering.
+//
+// SeesAll already folds in the public-archive exemption and admin mode, so a
+// listing query takes it as-is and never re-checks the game state. UserID 0
+// means no identified caller, which no allowlist row ever matches.
+type ViewerScope struct {
+	UserID  int32
+	SeesAll bool
 }
 
 // CreateCommentRequest represents the parameters needed to create a comment
@@ -1223,7 +1266,6 @@ type CreateCommentRequest struct {
 	CharacterID int32
 	Content     string
 	ParentID    int32  // Required - the post or comment being replied to
-	RootPostID  int32  // Required - the top-level post this comment belongs to (for read tracking)
 	Visibility  string // "game" or "private"
 }
 
@@ -1473,6 +1515,10 @@ type NotificationServiceInterface interface {
 
 	// NotifyCommonRoomPost creates notifications for all game participants about new post
 	NotifyCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32) error
+
+	// NotifyRestrictedCommonRoomPost notifies only the participants who can see
+	// a restricted post: the listed players, co-GMs and audience
+	NotifyRestrictedCommonRoomPost(ctx context.Context, gameID int32, postID int32, postTitle string, excludeUserID int32, allowedUserIDs []int32) error
 
 	// NotifyPhaseCreated creates notifications for all participants when phase created
 	NotifyPhaseCreated(ctx context.Context, gameID int32, phaseID int32, phaseTitle string, excludeUserID int32) error
@@ -2107,8 +2153,9 @@ type CharacterServiceInterface interface {
 	DeactivatePlayerCharacters(ctx context.Context, gameID, userID int32) error
 	DeleteCharacter(ctx context.Context, characterID int32) error
 	ListAudienceNPCs(ctx context.Context, gameID int32) ([]models.ListAudienceNPCsRow, error)
-	GetCharacterActivityStats(ctx context.Context, characterID int32) (*CharacterActivityStats, error)
-	GetCharacterActivityStatsByGame(ctx context.Context, gameID int32) (map[int32]*CharacterActivityStats, error)
+	// The public counts leave out restricted threads the viewer can't see.
+	GetCharacterActivityStats(ctx context.Context, characterID int32, viewer ViewerScope) (*CharacterActivityStats, error)
+	GetCharacterActivityStatsByGame(ctx context.Context, gameID int32, viewer ViewerScope) (map[int32]*CharacterActivityStats, error)
 	AssignNPCToAudience(ctx context.Context, characterID, assignedUserID, assignedByUserID int32) (*models.NpcAssignment, error)
 }
 

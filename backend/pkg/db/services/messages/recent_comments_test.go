@@ -65,7 +65,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// List recent comments
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Len(t, comments, 1)
@@ -105,7 +105,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		}
 
 		// List recent comments
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 50, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 50, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		var found *core.CommentWithParent
@@ -155,7 +155,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// List recent comments
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(comments), 2)
@@ -203,12 +203,12 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		}
 
 		// Get first page (limit 10)
-		page1, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		page1, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(page1), 10)
 
 		// Get second page (offset 10)
-		page2, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 10)
+		page2, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 10, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(page2), 5) // At least the 5 new comments we created
 
@@ -246,7 +246,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify comment appears
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		found := false
@@ -263,7 +263,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify comment is excluded
-		commentsAfterDelete, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		commentsAfterDelete, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		for _, c := range commentsAfterDelete {
@@ -310,7 +310,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// List comments from first game
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		// Verify game 2 comment is not in results
@@ -348,7 +348,7 @@ func TestMessageService_ListRecentCommentsWithParents(t *testing.T) {
 		require.NoError(t, err)
 
 		// List comments - child comment should still appear
-		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0)
+		comments, err := service.ListRecentCommentsWithParents(context.Background(), game.ID, 10, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		// Find our comment
@@ -406,7 +406,7 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 		require.NoError(t, err)
 
 		// Initial count (just from any existing comments in other tests)
-		initialCount, err := service.GetTotalCommentCount(context.Background(), game.ID)
+		initialCount, err := service.GetTotalCommentCount(context.Background(), game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 
 		// Create 5 comments
@@ -423,7 +423,7 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 		}
 
 		// Get count
-		count, err := service.GetTotalCommentCount(context.Background(), game.ID)
+		count, err := service.GetTotalCommentCount(context.Background(), game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Equal(t, initialCount+5, count)
 	})
@@ -440,7 +440,7 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get count before
-		countBefore, err := service.GetTotalCommentCount(context.Background(), game.ID)
+		countBefore, err := service.GetTotalCommentCount(context.Background(), game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 
 		// Create comment
@@ -455,7 +455,7 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify count increased
-		countAfterCreate, err := service.GetTotalCommentCount(context.Background(), game.ID)
+		countAfterCreate, err := service.GetTotalCommentCount(context.Background(), game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Equal(t, countBefore+1, countAfterCreate)
 
@@ -464,7 +464,7 @@ func TestMessageService_GetTotalCommentCount(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify count decreased
-		countAfterDelete, err := service.GetTotalCommentCount(context.Background(), game.ID)
+		countAfterDelete, err := service.GetTotalCommentCount(context.Background(), game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Equal(t, countBefore, countAfterDelete)
 	})

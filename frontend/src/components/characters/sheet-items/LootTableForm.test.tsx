@@ -1,12 +1,14 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LootTableForm } from './LootTableForm';
+import type { CharacterSheetConfig } from '@/types/characters';
 
 // The form only needs the game id from context; the real provider pulls in the
 // whole game fetch chain.
+const mockGame = vi.hoisted(() => ({ current: undefined as { character_sheet?: CharacterSheetConfig } | undefined }));
 vi.mock('@/contexts/GameContext', () => ({
-  useOptionalGameContext: () => ({ gameId: 1 }),
+  useOptionalGameContext: () => ({ gameId: 1, game: mockGame.current }),
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -183,10 +185,9 @@ describe('LootTableForm CSV import', () => {
     expect(screen.getByText(/row 2 has no name/i)).toBeInTheDocument();
   });
 
-  // `equipped` is written as a hardcoded false by AddItemModal and has no control
-  // anywhere in the inventory UI. It must not round-trip through CSV: values parse
-  // as strings, so an exported `false` would come back as the truthy string
-  // "false" and light up ItemCard's equipped badge.
+  // `equipped` is a retired key with no control anywhere in the inventory UI. It
+  // must not round-trip through CSV: values parse as strings, so an exported
+  // `false` would come back as the truthy string "false".
   it('drops the equipped field from imported items', async () => {
     const { onSubmit } = renderForm();
     nameTable();
@@ -273,9 +274,8 @@ describe('LootTableForm CSV export', () => {
     fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
     fireEvent.change(await screen.findByLabelText(/^Name/), { target: { value: item.name } });
     if (item.description !== undefined) {
-      // Target the textarea by id: /description/i also matches CommentEditor's
-      // preview toggle, so getByLabelText is ambiguous here.
-      const descriptionField = document.getElementById('item-description')!;
+      // By role: /description/i alone also matches CommentEditor's preview toggle.
+      const descriptionField = screen.getByRole('textbox', { name: /^Description/ });
       fireEvent.change(descriptionField, { target: { value: item.description } });
     }
     fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
@@ -284,9 +284,8 @@ describe('LootTableForm CSV export', () => {
     return () => captured;
   };
 
-  // AddItemModal stamps `equipped: false` onto every item it creates, so without
-  // filtering it surfaces as a column in the exported CSV — a field the GM has no
-  // way to set and should not be editing by hand.
+  // The add form writes only the schema's fields, so no `equipped` column can
+  // appear in an export of items it created.
   it('omits the equipped column when exporting items added through the form', async () => {
     const captured = await captureExport({ name: 'Iron Sword' });
 
@@ -314,6 +313,29 @@ describe('LootTableForm CSV export', () => {
     expect(captured()).not.toContain('"**Cursed** blade"');
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe('LootTableForm adding an item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // A roll writes this data to the sheet verbatim, so it must be exactly an
+  // Inventory entry in the stored shape: typed values, no empty fields, no id
+  // (each roll or pick gets its own).
+  it('stores the item as an Inventory entry, minus its id', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'Chest' } });
+    fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Name *' }), { target: { value: 'Rope' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Quantity' }), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create loot table/i }));
+
+    const [item] = onSubmit.mock.calls[0][0].items;
+    expect(item.name).toBe('Rope');
+    expect(JSON.parse(item.data)).toEqual({ name: 'Rope', quantity: 3 });
   });
 });
 
@@ -355,5 +377,79 @@ describe('LootTableForm item removal', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const submitted = onSubmit.mock.calls[0][0];
     expect(submitted.items.map((i: { name: string }) => i.name)).toEqual(['Potion']);
+  });
+});
+
+describe('LootTableForm target tab', () => {
+  const CONTACTS: CharacterSheetConfig = {
+    tabs: [
+      { key: 'inventory' },
+      { key: 't_abc123', label: 'Contacts', fields: [{ key: 'f_rel001', label: 'Relationship', type: 'select', options: ['Ally', 'Rival'] }] },
+    ],
+  };
+  const targetSelect = () => screen.getByRole('combobox', { name: 'Rolls into' });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGame.current = { character_sheet: CONTACTS };
+  });
+  afterEach(() => {
+    mockGame.current = undefined;
+  });
+
+  it('offers the sheet\'s tabs, defaulting a new table to Inventory', () => {
+    renderForm();
+    expect(targetSelect()).toHaveValue('inventory');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Inventory', 'Contacts']);
+  });
+
+  it('writes items with the target tab\'s fields and submits the target', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'Townsfolk' } });
+    fireEvent.change(targetSelect(), { target: { value: 't_abc123' } });
+    fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Name *' }), { target: { value: 'Old Zadok' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Relationship' }), { target: { value: 'Ally' } });
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    fireEvent.click(submitButton());
+
+    const submitted = onSubmit.mock.calls[0][0];
+    expect(submitted.targetTab).toBe('t_abc123');
+    expect(JSON.parse(submitted.items[0].data)).toEqual({ name: 'Old Zadok', f_rel001: 'Ally' });
+  });
+
+  it('locks the target once the table has items', async () => {
+    renderForm();
+    fireEvent.click(screen.getByRole('button', { name: /add loot table content/i }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Name *' }), { target: { value: 'Rope' } });
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    expect(targetSelect()).toBeDisabled();
+    expect(screen.getByText(/remove this table's items to choose a different tab/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Rope' }));
+    expect(targetSelect()).toBeEnabled();
+  });
+
+  it('keeps an existing table\'s target, even one the sheet no longer has', () => {
+    renderForm({
+      lootTable: { id: 5, game_id: 1, name: 'Old', target_tab: 'skills', created_at: '', updated_at: '' },
+    });
+    expect(targetSelect()).toHaveValue('skills');
+    expect(screen.getByRole('option', { name: 'Removed tab' })).toBeInTheDocument();
+  });
+
+  it('blocks creating a table when the sheet has no tabs to roll into', () => {
+    mockGame.current = { character_sheet: { tabs: [] } };
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/table name/i), { target: { value: 'Orphans' } });
+    expect(screen.getByText(/no tabs for a loot table to roll into/i)).toBeInTheDocument();
+    expect(submitButton()).toBeDisabled();
+  });
+
+  it('describes the target tab\'s columns in the CSV help', () => {
+    renderForm();
+    fireEvent.change(targetSelect(), { target: { value: 't_abc123' } });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Optional columns: Relationship');
   });
 });

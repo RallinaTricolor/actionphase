@@ -11,6 +11,21 @@ var ErrCharacterNotControlled = errors.New("you do not control this character")
 // ErrDraftPostExists is returned when attempting to create a draft post for a phase that already has one
 var ErrDraftPostExists = errors.New("a draft post already exists for this phase")
 
+// ErrInvalidPostViewers is returned when a restricted post's allowlist is
+// empty or names someone who is not an active player in the game. It is the
+// caller's mistake, so handlers answer 422 rather than letting it surface as a
+// 500.
+var ErrInvalidPostViewers = errors.New("invalid post viewers")
+
+// ErrPostNotFound is returned when a post ID doesn't name a top-level post in
+// the expected game: it is missing, a comment, or in another game.
+var ErrPostNotFound = errors.New("post not found")
+
+// ErrCommentParentNotFound is returned when a comment's parent doesn't exist
+// or belongs to a different game than the comment. Handlers answer 404, the
+// same as for a parent the caller can't see.
+var ErrCommentParentNotFound = errors.New("comment parent not found")
+
 // ErrInvalidStagedChain is returned when a staged result chain violates its
 // shape rules: too few parts, too many, a delay out of range, or a head
 // carrying a delay. Wrapped so handlers can answer 400 rather than 500 — these
@@ -69,6 +84,16 @@ var ErrCommunityDocumentNotFound = errors.New("community document not found")
 // ErrInvalidDocumentStatus is returned when a document status is neither
 // "draft" nor "published". Handlers translate it to 400.
 var ErrInvalidDocumentStatus = errors.New("document status must be draft or published")
+
+// ErrGameReadOnly is wrapped by ValidateGameNotCompleted for a completed or
+// cancelled game, so a handler can map it to a 4xx with errors.Is instead of
+// matching the message.
+var ErrGameReadOnly = errors.New("game is archived and read-only")
+
+// ErrLootTableTargetLocked is returned when a GM retargets a loot table that
+// has contents. The contents were authored against the old tab's fields, so
+// the GM makes a new table instead. Handlers translate it to 409.
+var ErrLootTableTargetLocked = errors.New("a loot table's target tab can only change while it is empty")
 
 // ErrGameCommunityLocked is returned when a GM tries to move a game between
 // communities after it has left `setup` (decision 4).

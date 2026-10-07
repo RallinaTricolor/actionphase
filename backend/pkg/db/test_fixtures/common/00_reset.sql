@@ -14,8 +14,6 @@ CREATE TEMP TABLE test_user_ids AS
 -- Delete in reverse dependency order
 
 -- Clean up messaging and notification tables
-DELETE FROM message_reactions WHERE message_id IN (SELECT id FROM messages WHERE game_id IN (SELECT id FROM games WHERE gm_user_id IN (SELECT id FROM test_user_ids)));
-DELETE FROM message_recipients WHERE message_id IN (SELECT id FROM messages WHERE game_id IN (SELECT id FROM games WHERE gm_user_id IN (SELECT id FROM test_user_ids)));
 DELETE FROM messages WHERE game_id IN (SELECT id FROM games WHERE gm_user_id IN (SELECT id FROM test_user_ids));
 DELETE FROM private_messages WHERE conversation_id IN (SELECT id FROM conversations WHERE game_id IN (SELECT id FROM games WHERE gm_user_id IN (SELECT id FROM test_user_ids)));
 DELETE FROM conversation_participants WHERE conversation_id IN (SELECT id FROM conversations WHERE game_id IN (SELECT id FROM games WHERE gm_user_id IN (SELECT id FROM test_user_ids)));

@@ -720,10 +720,16 @@ func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) 
 	return npcs, nil
 }
 
-// GetCharacterActivityStats returns public and private message counts for a character.
-func (cs *CharacterService) GetCharacterActivityStats(ctx context.Context, characterID int32) (*core.CharacterActivityStats, error) {
+// GetCharacterActivityStats returns public and private message counts for a
+// character. The public count leaves out restricted threads the viewer can't
+// see; viewer must be resolved for the character's game.
+func (cs *CharacterService) GetCharacterActivityStats(ctx context.Context, characterID int32, viewer core.ViewerScope) (*core.CharacterActivityStats, error) {
 	queries := models.New(cs.DB)
-	row, err := queries.GetCharacterActivityStats(ctx, characterID)
+	row, err := queries.GetCharacterActivityStats(ctx, models.GetCharacterActivityStatsParams{
+		CharacterID:   characterID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+	})
 	if err != nil {
 		cs.Logger.LogError(ctx, err, "Failed to get character activity stats", "character_id", characterID)
 		return nil, err
@@ -736,10 +742,15 @@ func (cs *CharacterService) GetCharacterActivityStats(ctx context.Context, chara
 
 // GetCharacterActivityStatsByGame returns activity stats for every character in a
 // game, keyed by character ID, in a single query. Characters with no messages of
-// either kind are still present in the result with zero counts.
-func (cs *CharacterService) GetCharacterActivityStatsByGame(ctx context.Context, gameID int32) (map[int32]*core.CharacterActivityStats, error) {
+// either kind are still present in the result with zero counts. Public counts
+// leave out restricted threads the viewer can't see.
+func (cs *CharacterService) GetCharacterActivityStatsByGame(ctx context.Context, gameID int32, viewer core.ViewerScope) (map[int32]*core.CharacterActivityStats, error) {
 	queries := models.New(cs.DB)
-	rows, err := queries.GetCharacterActivityStatsByGame(ctx, gameID)
+	rows, err := queries.GetCharacterActivityStatsByGame(ctx, models.GetCharacterActivityStatsByGameParams{
+		GameID:        gameID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+	})
 	if err != nil {
 		cs.Logger.LogError(ctx, err, "Failed to get character activity stats by game", "game_id", gameID)
 		return nil, err

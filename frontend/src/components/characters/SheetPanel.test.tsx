@@ -5,9 +5,9 @@ import { SheetPanel } from './SheetPanel';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 
 const items: SheetItem[] = [
-  { id: 's1', name: 'Stealth', type: 'skill', metadata: 'Combat · Level 2' },
-  { id: 'i1', name: 'Elvish Longbow', type: 'item', description: 'A fine bow', metadata: 'Weapon' },
-  { id: 's2', name: 'Fire Bolt', type: 'skill', description: 'Deals fire damage', metadata: 'Evocation' },
+  { id: 's1', name: 'Stealth', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills', metadata: 'Combat · Level 2' },
+  { id: 'i1', name: 'Elvish Longbow', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory', description: 'A fine bow', metadata: 'Weapon' },
+  { id: 's2', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills', description: 'Deals fire damage', metadata: 'Evocation' },
 ];
 
 describe('SheetPanel', () => {
@@ -58,8 +58,16 @@ describe('SheetPanel', () => {
     expect(screen.getByText('Aria the Swift')).toBeInTheDocument();
   });
 
+  it("groups a custom tab's entries under the tab's name, in the order they arrive", () => {
+    const contacts = { id: 'c1', name: 'Old Zadok', refKind: 't_abc123', tabKey: 't_abc123', tabLabel: 'Contacts', metadata: 'Ally' };
+    render(<SheetPanel items={[contacts, ...items]} onInsert={vi.fn()} />);
+    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+    expect(headings).toEqual(['Contacts', 'Skills', 'Inventory']);
+    expect(screen.getByText('Ally')).toBeInTheDocument();
+  });
+
   it('hides groups that have no items', () => {
-    const skillsOnly = items.filter((i) => i.type === 'skill');
+    const skillsOnly = items.filter((i) => i.tabKey === 'skills');
     render(<SheetPanel items={skillsOnly} onInsert={vi.fn()} />);
     expect(screen.getByText('Skills')).toBeInTheDocument();
     expect(screen.queryByText('Inventory')).not.toBeInTheDocument();

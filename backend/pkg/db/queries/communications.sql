@@ -338,11 +338,17 @@ WHERE id = $1;
 -- Avatars are pinned at authoring time (messages.character_avatar_url_at_post),
 -- so both the comment and its parent COALESCE to the live characters.avatar_url
 -- only for rows predating that column.
-WITH RECURSIVE recent_comments AS (
+-- Restricted threads (common_room_post_viewers) are filtered inside the
+-- paginating CTE, before LIMIT/OFFSET, so pages stay full and the total
+-- matches. viewer_sees_all comes from ResolveViewerScope and already includes
+-- the public-archive check. Comments under an unpublished draft are left out
+-- for everyone, as the post list leaves out the draft itself.
+WITH recent_comments AS (
     SELECT
         m.id,
         m.game_id,
         m.parent_id,
+        m.root_post_id,
         m.author_id,
         m.character_id,
         m.content,
@@ -355,33 +361,20 @@ WITH RECURSIVE recent_comments AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
-    WHERE m.game_id = $1
+    WHERE m.game_id = sqlc.arg(game_id)
       AND m.message_type = 'comment'
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
+      AND root.is_draft = false
+      AND (sqlc.arg(viewer_sees_all)::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
-),
--- Walk up the message tree recursively to find the root post for each comment
-root_posts AS (
-    -- Base: walk up from each recent comment, tracking the original comment's id
-    SELECT rc.id AS comment_id, rc.parent_id AS current_id
-    FROM recent_comments rc
-    WHERE rc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
--- Pick the post at the top of each comment's chain
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
 ),
 parent_messages AS (
     SELECT
@@ -406,7 +399,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
-    rp.post_id,
+    rc.root_post_id AS post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -427,29 +420,41 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
-LEFT JOIN root_post_ids rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC;
 
 -- name: GetTotalCommentCount :one
--- Get total count of comments in a game
+-- Total for ListRecentCommentsWithParents: the same filters, so it never
+-- counts a comment the viewer can't be shown.
 SELECT COUNT(*) as total
-FROM messages
-WHERE game_id = $1
-  AND message_type = 'comment'
-  AND is_deleted = false
-  AND deleted_at IS NULL;
+FROM messages m
+JOIN messages root ON root.id = m.root_post_id
+WHERE m.game_id = sqlc.arg(game_id)
+  AND m.message_type = 'comment'
+  AND m.is_deleted = false
+  AND m.deleted_at IS NULL
+  AND root.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int));
 
 -- name: ListRecentUnreadCommentsWithParents :many
--- Same as ListRecentCommentsWithParents, but excludes comments the user has
+-- Same as ListRecentCommentsWithParents, but excludes comments the viewer has
 -- manually marked as read. Used by the "New Comments" view's unread-only filter
 -- in manual read mode. Filtering happens before LIMIT/OFFSET so pagination
 -- counts stay accurate.
-WITH RECURSIVE recent_comments AS (
+-- Restricted threads (common_room_post_viewers) are filtered inside the
+-- paginating CTE, before LIMIT/OFFSET, so pages stay full and the total
+-- matches. viewer_sees_all comes from ResolveViewerScope and already includes
+-- the public-archive check. Comments under an unpublished draft are left out
+-- for everyone, as the post list leaves out the draft itself.
+WITH recent_comments AS (
     SELECT
         m.id,
         m.game_id,
         m.parent_id,
+        m.root_post_id,
         m.author_id,
         m.character_id,
         m.content,
@@ -462,37 +467,24 @@ WITH RECURSIVE recent_comments AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
-    WHERE m.game_id = $1
+    WHERE m.game_id = sqlc.arg(game_id)
       AND m.message_type = 'comment'
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
       AND NOT EXISTS (
           SELECT 1 FROM user_comment_reads ucr
-          WHERE ucr.comment_id = m.id AND ucr.user_id = $4
+          WHERE ucr.comment_id = m.id AND ucr.user_id = sqlc.arg(viewer_user_id)::int
       )
+      AND root.is_draft = false
+      AND (sqlc.arg(viewer_sees_all)::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
-),
--- Walk up the message tree recursively to find the root post for each comment
-root_posts AS (
-    -- Base: walk up from each recent comment, tracking the original comment's id
-    SELECT rc.id AS comment_id, rc.parent_id AS current_id
-    FROM recent_comments rc
-    WHERE rc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
--- Pick the post at the top of each comment's chain
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
 ),
 parent_messages AS (
     SELECT
@@ -517,7 +509,7 @@ SELECT
     rc.id,
     rc.game_id,
     rc.parent_id,
-    rp.post_id,
+    rc.root_post_id AS post_id,
     rc.author_id,
     rc.character_id,
     rc.content,
@@ -538,22 +530,27 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM recent_comments rc
-LEFT JOIN root_post_ids rp ON rp.comment_id = rc.id
 LEFT JOIN parent_messages pm ON rc.parent_id = pm.id
 ORDER BY rc.created_at DESC;
 
 -- name: GetTotalUnreadCommentCount :one
--- Count of comments in a game the user has not manually marked as read
+-- Total for ListRecentUnreadCommentsWithParents, with the same filters.
 SELECT COUNT(*) as total
 FROM messages m
-WHERE m.game_id = $1
+JOIN messages root ON root.id = m.root_post_id
+WHERE m.game_id = sqlc.arg(game_id)
   AND m.message_type = 'comment'
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
   AND NOT EXISTS (
       SELECT 1 FROM user_comment_reads ucr
-      WHERE ucr.comment_id = m.id AND ucr.user_id = $2
-  );
+      WHERE ucr.comment_id = m.id AND ucr.user_id = sqlc.arg(viewer_user_id)::int
+  )
+  AND root.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int));
 
 -- name: ListCharacterPostsAndComments :many
 -- Get all posts and comments by a specific character (for Character Page)
@@ -562,6 +559,9 @@ WHERE m.game_id = $1
 -- Returns both posts and comments with parent context for comments
 -- Only returns public (game-visibility) messages, not deleted ones
 -- NPCs only show comments (not top-level posts)
+-- Leaves out unpublished drafts and their comments, and threads under a
+-- restricted post the viewer isn't on (filtered before LIMIT, so pages stay
+-- full). viewer_sees_all comes from ResolveViewerScope for the character's game.
 WITH character_messages AS (
     SELECT
         m.id,
@@ -580,15 +580,21 @@ WITH character_messages AS (
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url
     FROM messages m
+    JOIN messages root ON root.id = m.root_post_id
     JOIN users u ON m.author_id = u.id
     JOIN characters c ON m.character_id = c.id
-    WHERE m.character_id = $1
+    WHERE m.character_id = sqlc.arg(character_id)
       AND m.visibility = 'game'
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
       AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+      AND root.is_draft = false
+      AND (sqlc.arg(viewer_sees_all)::bool
+           OR root.is_restricted = false
+           OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                      WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int))
     ORDER BY m.created_at DESC
-    LIMIT $2 OFFSET $3
+    LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
 ),
 parent_messages AS (
     SELECT
@@ -638,13 +644,18 @@ LEFT JOIN parent_messages pm ON cm.parent_id = pm.id
 ORDER BY cm.created_at DESC;
 
 -- name: CountCharacterPostsAndComments :one
--- Count all public non-deleted posts and comments by a character
--- NPCs only count comments (not top-level posts)
+-- Total for ListCharacterPostsAndComments, with the same filters.
 SELECT COUNT(*) as total
 FROM messages m
+JOIN messages root ON root.id = m.root_post_id
 JOIN characters c ON m.character_id = c.id
-WHERE m.character_id = $1
+WHERE m.character_id = sqlc.arg(character_id)
   AND m.visibility = 'game'
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
-  AND NOT (c.character_type = 'npc' AND m.message_type = 'post');
+  AND NOT (c.character_type = 'npc' AND m.message_type = 'post')
+  AND root.is_draft = false
+  AND (sqlc.arg(viewer_sees_all)::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int));

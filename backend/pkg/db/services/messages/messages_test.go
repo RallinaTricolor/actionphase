@@ -201,20 +201,19 @@ func TestMessageService_CreateComment(t *testing.T) {
 		assert.Equal(t, post.ID, comment.ParentID.Int32)
 	})
 
-	t.Run("auto-marks the author's own comment as read when RootPostID is set", func(t *testing.T) {
+	t.Run("auto-marks the author's own comment as read", func(t *testing.T) {
 		// The author just wrote it, so CreateComment records it as read for them.
 		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
 			AuthorID:    int32(player.ID),
 			CharacterID: char.ID,
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			Content:     "Auto-read comment",
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(player.ID), game.ID)
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(player.ID)})
 		require.NoError(t, err)
 
 		var found bool
@@ -230,9 +229,9 @@ func TestMessageService_CreateComment(t *testing.T) {
 		assert.True(t, found, "the author's own comment should be auto-marked read")
 	})
 
-	t.Run("does not auto-mark as read when RootPostID is omitted", func(t *testing.T) {
-		// Without RootPostID the read-tracking write is skipped (read tracking is
-		// keyed on the root post), so the comment must not appear in the read set.
+	t.Run("auto-marks a nested reply as read under the thread's root post", func(t *testing.T) {
+		// Read tracking is keyed on the top-level post. A reply to a comment must
+		// be recorded under the post, not under the comment it replies to.
 		freshPlayer := testDB.CreateTestUser(t, "freshreader", "freshreader@example.com")
 		_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(freshPlayer.ID), "player")
 		require.NoError(t, err)
@@ -244,25 +243,31 @@ func TestMessageService_CreateComment(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		comment, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+		parent, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
 			GameID:      game.ID,
-			AuthorID:    int32(freshPlayer.ID),
-			CharacterID: freshChar.ID,
+			AuthorID:    int32(player.ID),
+			CharacterID: char.ID,
 			ParentID:    post.ID,
-			// RootPostID intentionally omitted (zero)
-			Content:    "No-root comment",
-			Visibility: string(models.MessageVisibilityGame),
+			Content:     "Parent comment",
+			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
 
-		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), int32(freshPlayer.ID), game.ID)
+		reply, err := service.CreateComment(context.Background(), core.CreateCommentRequest{
+			GameID:      game.ID,
+			AuthorID:    int32(freshPlayer.ID),
+			CharacterID: freshChar.ID,
+			ParentID:    parent.ID,
+			Content:     "Nested reply",
+			Visibility:  string(models.MessageVisibilityGame),
+		})
 		require.NoError(t, err)
 
-		for _, entry := range reads {
-			for _, id := range entry.ReadCommentIDs {
-				assert.NotEqual(t, comment.ID, id, "comment must not be auto-marked read without RootPostID")
-			}
-		}
+		reads, err := service.GetManualReadCommentIDsForGame(context.Background(), game.ID, core.ViewerScope{UserID: int32(freshPlayer.ID)})
+		require.NoError(t, err)
+		require.Len(t, reads, 1)
+		assert.Equal(t, post.ID, reads[0].PostID, "read must be keyed on the root post, not the parent comment")
+		assert.Contains(t, reads[0].ReadCommentIDs, reply.ID)
 	})
 
 	t.Run("maintains thread depth", func(t *testing.T) {
@@ -397,7 +402,7 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 	}
 
 	t.Run("retrieves all game posts", func(t *testing.T) {
-		posts, err := service.GetGamePosts(context.Background(), game.ID, nil, 10, 0)
+		posts, err := service.GetGamePosts(context.Background(), game.ID, nil, 10, 0, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Len(t, posts, 3)
@@ -408,12 +413,12 @@ func TestMessageService_GetGamePosts(t *testing.T) {
 
 	t.Run("respects pagination", func(t *testing.T) {
 		// Get first page
-		posts1, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 0)
+		posts1, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, posts1, 2)
 
 		// Get second page
-		posts2, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 2)
+		posts2, err := service.GetGamePosts(context.Background(), game.ID, nil, 2, 2, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, posts2, 1)
 	})
@@ -470,82 +475,6 @@ func TestMessageService_UpdateAndDelete(t *testing.T) {
 		deletedPost, err := service.GetPost(context.Background(), post.ID)
 		require.NoError(t, err)
 		assert.True(t, deletedPost.Message.IsDeleted)
-	})
-}
-
-func TestMessageService_Reactions(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-
-	app := core.NewTestApp(testDB.Pool)
-
-	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
-	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-
-	// Setup
-	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
-	user2 := testDB.CreateTestUser(t, "user2", "user2@example.com")
-	game := testDB.CreateTestGame(t, int32(user1.ID), "Test Game")
-
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(user1.ID), "player")
-	require.NoError(t, err)
-
-	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
-		GameID:        game.ID,
-		UserID:        int32Ptr(int32(user1.ID)),
-		Name:          "Test Character",
-		CharacterType: "player_character",
-	})
-	require.NoError(t, err)
-
-	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID:      game.ID,
-		AuthorID:    int32(user1.ID),
-		CharacterID: char.ID,
-		Content:     "Test post",
-		Visibility:  string(models.MessageVisibilityGame),
-	})
-	require.NoError(t, err)
-
-	t.Run("adds reaction to post", func(t *testing.T) {
-		reaction, err := service.AddReaction(context.Background(), post.ID, int32(user2.ID), "👍")
-
-		require.NoError(t, err)
-		assert.NotNil(t, reaction)
-		assert.Equal(t, post.ID, reaction.MessageID)
-		assert.Equal(t, int32(user2.ID), reaction.UserID)
-		assert.Equal(t, "👍", reaction.ReactionType)
-	})
-
-	t.Run("retrieves reaction counts", func(t *testing.T) {
-		// Add multiple reactions
-		_, err := service.AddReaction(context.Background(), post.ID, int32(user1.ID), "❤️")
-		require.NoError(t, err)
-		_, err = service.AddReaction(context.Background(), post.ID, int32(user2.ID), "❤️")
-		require.NoError(t, err)
-
-		counts, err := service.GetReactionCounts(context.Background(), post.ID)
-
-		require.NoError(t, err)
-		assert.NotEmpty(t, counts)
-
-		// Verify reaction count structure
-		for _, count := range counts {
-			assert.NotEmpty(t, count.ReactionType)
-			assert.Greater(t, count.Count, int64(0))
-		}
-	})
-
-	t.Run("removes reaction", func(t *testing.T) {
-		// Add reaction first
-		_, err := service.AddReaction(context.Background(), post.ID, int32(user1.ID), "🎉")
-		require.NoError(t, err)
-
-		// Remove it
-		err = service.RemoveReaction(context.Background(), post.ID, int32(user1.ID), "🎉")
-
-		require.NoError(t, err)
 	})
 }
 
@@ -908,7 +837,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		posts, err := service.GetPhasePosts(context.Background(), phase.ID)
+		posts, err := service.GetPhasePosts(context.Background(), phase.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Len(t, posts, 3)
@@ -929,7 +858,7 @@ func TestMessageService_GetPhasePosts(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		posts, err := service.GetPhasePosts(context.Background(), newPhase.ID)
+		posts, err := service.GetPhasePosts(context.Background(), newPhase.ID, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Empty(t, posts)
@@ -981,7 +910,7 @@ func TestMessageService_PostCounts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("GetGamePostCount returns correct total", func(t *testing.T) {
-		count, err := service.GetGamePostCount(context.Background(), game.ID, nil)
+		count, err := service.GetGamePostCount(context.Background(), game.ID, nil, core.ViewerScope{})
 
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), count)
@@ -1091,80 +1020,6 @@ func TestMessageService_GetUserPostsInGame(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Empty(t, posts)
-	})
-}
-
-func TestMessageService_GetMessageReactions(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-
-	app := core.NewTestApp(testDB.Pool)
-
-	service := &MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
-	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-
-	// Setup
-	user1 := testDB.CreateTestUser(t, "user1", "user1@example.com")
-	user2 := testDB.CreateTestUser(t, "user2", "user2@example.com")
-	game := testDB.CreateTestGame(t, int32(user1.ID), "Test Game")
-
-	_, err := gameService.AddGameParticipant(context.Background(), game.ID, int32(user1.ID), "player")
-	require.NoError(t, err)
-
-	char, err := characterService.CreateCharacter(context.Background(), db.CreateCharacterRequest{
-		GameID:        game.ID,
-		UserID:        int32Ptr(int32(user1.ID)),
-		Name:          "Test Character",
-		CharacterType: "player_character",
-	})
-	require.NoError(t, err)
-
-	post, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-		GameID:      game.ID,
-		AuthorID:    int32(user1.ID),
-		CharacterID: char.ID,
-		Content:     "Test post",
-		Visibility:  string(models.MessageVisibilityGame),
-	})
-	require.NoError(t, err)
-
-	t.Run("retrieves all reactions for a message", func(t *testing.T) {
-		// Add multiple reactions
-		_, err := service.AddReaction(context.Background(), post.ID, int32(user1.ID), "👍")
-		require.NoError(t, err)
-		_, err = service.AddReaction(context.Background(), post.ID, int32(user2.ID), "❤️")
-		require.NoError(t, err)
-		_, err = service.AddReaction(context.Background(), post.ID, int32(user1.ID), "🎉")
-		require.NoError(t, err)
-
-		reactions, err := service.GetMessageReactions(context.Background(), post.ID)
-
-		require.NoError(t, err)
-		assert.Len(t, reactions, 3)
-
-		// Verify reaction details
-		for _, reaction := range reactions {
-			assert.NotEmpty(t, reaction.ReactionType)
-			assert.NotEmpty(t, reaction.Username)
-		}
-	})
-
-	t.Run("returns empty list when message has no reactions", func(t *testing.T) {
-		// Create a new post with no reactions
-		newPost, err := service.CreatePost(context.Background(), core.CreatePostRequest{
-			GameID:      game.ID,
-			AuthorID:    int32(user1.ID),
-			CharacterID: char.ID,
-			Content:     "Post with no reactions",
-			Visibility:  string(models.MessageVisibilityGame),
-		})
-		require.NoError(t, err)
-
-		reactions, err := service.GetMessageReactions(context.Background(), newPost.ID)
-
-		require.NoError(t, err)
-		assert.Empty(t, reactions)
 	})
 }
 

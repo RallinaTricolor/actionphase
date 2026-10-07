@@ -37,6 +37,7 @@ func setupStatsTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 			CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 			GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 			NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+			MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 		}
 		RegisterHumaCharacters(humaconfig.New(r, "ActionPhase API", "1.0.0"), handler)
 	})
@@ -71,6 +72,7 @@ func setupGameStatsTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux
 			CharacterService:    &services.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger},
 			GameService:         &services.GameService{DB: testDB.Pool, Logger: app.ObsLogger},
 			NotificationService: services.NewNotificationService(testDB.Pool, app.ObsLogger),
+			MessageService:      &dbmessages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger},
 		}
 		RegisterHumaGameCharacters(humaconfig.New(r, "ActionPhase API", "1.0.0"), handler)
 	})

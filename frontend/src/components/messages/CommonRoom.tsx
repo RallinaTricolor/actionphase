@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { isGameWritable } from '@/lib/gamePermissions';
 import { apiClient } from '@/lib/api';
@@ -23,6 +24,7 @@ import { useGameFavoriteCommentIDs, useSetCommentFavorite } from '@/hooks/useFav
 import { useCommentReadMode } from '@/hooks/useUserPreferences';
 import { logger } from '@/services/LoggingService';
 import { parentContextForViewport } from '@/config/comments';
+import { listPickablePlayers } from '@/lib/postViewers';
 
 // Lazy load PollsTab component
 const PollsTab = lazy(() => import('@/components/polls/PollsTab').then(m => ({ default: m.PollsTab })));
@@ -84,7 +86,11 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const toggleCommentReadMutation = useToggleCommentRead();
 
   // Read character data and game settings from GameContext — single source of truth
-  const { userCharacters, allGameCharacters, userRole, game } = useGameContext();
+  const { userCharacters, allGameCharacters, userRole, game, participants } = useGameContext();
+  const pickablePlayers = useMemo(
+    () => listPickablePlayers(participants, allGameCharacters),
+    [participants, allGameCharacters]
+  );
   const gameState = game?.state ?? '';
 
   // Read-tracking is pointless once a game is frozen, but an epilogue game is
@@ -102,6 +108,10 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
   const [posts, setPosts] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // A deep link to a comment that is missing, or in a thread hidden from the
+  // viewer (the API answers both with the same 404), gets a dismissible notice
+  // over the room rather than the error screen.
+  const [deepLinkNotFound, setDeepLinkNotFound] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [threadModalComment, setThreadModalComment] = useState<Message | null>(null);
   const [threadModalContext, setThreadModalContext] = useState<{
@@ -304,12 +314,17 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
               newParams.delete('comment');
               setSearchParams(newParams, { replace: true });
             } catch (_err) {
-              logger.error('Failed to fetch comment', { error: _err, commentId: commentIdParam, gameId });
               // If fetch fails, clear the comment parameter and show error
               const newParams = new URLSearchParams(searchParams);
               newParams.delete('comment');
               setSearchParams(newParams, { replace: true });
-              setError('Failed to load comment. The comment may have been deleted.');
+              if (isAxiosError(_err) && _err.response?.status === 404) {
+                logger.debug('Deep-linked comment not found', { commentId: commentIdParam, gameId });
+                setDeepLinkNotFound(true);
+              } else {
+                logger.error('Failed to fetch comment', { error: _err, commentId: commentIdParam, gameId });
+                setError('Failed to load comment. The comment may have been deleted.');
+              }
             } finally {
               setFetchingComment(false);
             }
@@ -348,13 +363,14 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     loadData();
   }, [loadData]);
 
-  const handleCreatePost = async (characterId: number, content: string) => {
+  const handleCreatePost = async (characterId: number, content: string, restrictedToUserIds?: number[]) => {
     try {
       setIsCreatingPost(true);
       await apiClient.messages.createPost(gameId, {
         character_id: characterId,
         content,
-        phase_id: phaseId
+        phase_id: phaseId,
+        ...(restrictedToUserIds ? { restricted_to_user_ids: restrictedToUserIds } : {}),
       });
       // Reload posts to show the new one
       await loadData();
@@ -446,6 +462,18 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
 
   return (
     <div className="max-w-full" data-testid="common-room-container">
+      {deepLinkNotFound && (
+        <Alert
+          variant="warning"
+          dismissible
+          onDismiss={() => setDeepLinkNotFound(false)}
+          className="mb-4"
+          data-testid="deep-link-not-found"
+        >
+          That comment couldn't be found. It may have been deleted.
+        </Alert>
+      )}
+
       <div className="mb-4">
         <h2 className="text-xl md:text-2xl font-bold text-content-primary truncate">
           Common Room{phaseTitle && ` - ${phaseTitle}`}
@@ -554,6 +582,7 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
               phaseId={phaseId}
               characters={userCharacters}
               allCharacters={allGameCharacters}
+              players={pickablePlayers}
               onSubmit={handleCreatePost}
               isSubmitting={isCreatingPost}
               shouldStartCollapsed={posts.length > 0}

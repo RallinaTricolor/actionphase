@@ -1843,7 +1843,7 @@ func TestCharacterService_GetCharacterActivityStats(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("returns zero counts for character with no messages", func(t *testing.T) {
-		stats, err := svc.GetCharacterActivityStats(ctx, char.ID)
+		stats, err := svc.GetCharacterActivityStats(ctx, char.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		require.NotNil(t, stats)
 		assert.Equal(t, int64(0), stats.PublicMessages)
@@ -1864,7 +1864,7 @@ func TestCharacterService_GetCharacterActivityStats(t *testing.T) {
 		`, game.ID, gm.ID, char.ID)
 		require.NoError(t, err)
 
-		stats, err := svc.GetCharacterActivityStats(ctx, char.ID)
+		stats, err := svc.GetCharacterActivityStats(ctx, char.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), stats.PublicMessages, "must count all non-deleted public messages for the character")
 	})
@@ -1884,7 +1884,7 @@ func TestCharacterService_GetCharacterActivityStats(t *testing.T) {
 		`, convID, gm.ID, char.ID)
 		require.NoError(t, err)
 
-		stats, err := svc.GetCharacterActivityStats(ctx, char.ID)
+		stats, err := svc.GetCharacterActivityStats(ctx, char.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		require.NotNil(t, stats.PrivateMessages)
 		assert.Equal(t, int64(1), *stats.PrivateMessages, "must count non-deleted private messages sent as the character")
@@ -1899,7 +1899,7 @@ func TestCharacterService_GetCharacterActivityStats(t *testing.T) {
 			"UPDATE private_messages SET is_deleted = TRUE WHERE sender_character_id = $1", char.ID)
 		require.NoError(t, err)
 
-		stats, err := svc.GetCharacterActivityStats(ctx, char.ID)
+		stats, err := svc.GetCharacterActivityStats(ctx, char.ID, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), stats.PublicMessages, "deleted public messages must not be counted")
 		require.NotNil(t, stats.PrivateMessages)
@@ -1936,7 +1936,7 @@ func TestCharacterService_GetCharacterActivityStatsByGame(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("returns zero counts for a character with no messages, keyed by ID", func(t *testing.T) {
-		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID)
+		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 
 		require.Contains(t, statsByID, silent.ID, "characters with no messages must still appear in the map")
@@ -1965,7 +1965,7 @@ func TestCharacterService_GetCharacterActivityStatsByGame(t *testing.T) {
 		`, convID, gm.ID, active.ID)
 		require.NoError(t, err)
 
-		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID)
+		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 
 		require.Contains(t, statsByID, active.ID)
@@ -1985,7 +1985,7 @@ func TestCharacterService_GetCharacterActivityStatsByGame(t *testing.T) {
 			"UPDATE private_messages SET is_deleted = TRUE WHERE sender_character_id = $1", active.ID)
 		require.NoError(t, err)
 
-		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID)
+		statsByID, err := svc.GetCharacterActivityStatsByGame(ctx, game.ID, core.ViewerScope{})
 		require.NoError(t, err)
 
 		assert.Equal(t, int64(0), statsByID[active.ID].PublicMessages, "deleted public messages must not be counted")

@@ -43,6 +43,12 @@ type MessageResponse struct {
 	DeletedByUserID       *int32     `json:"deleted_by_user_id,omitempty"`
 	EditedAt              *time.Time `json:"edited_at,omitempty"`
 	EditCount             int32      `json:"edit_count"`
+
+	// Restricted posts. Always false on a comment: the allowlist lives on the
+	// thread's post. viewer_user_ids is present only for a caller who bypasses
+	// the allowlists, and only on posts.
+	IsRestricted  bool     `json:"is_restricted" doc:"Whether the post is restricted to an allowlist of players; always false for comments"`
+	ViewerUserIDs *[]int32 `json:"viewer_user_ids,omitempty" required:"false" doc:"The post's allowlist. Present only on posts, for callers who can see every restricted post."`
 }
 
 // MessageThreadContextResponse is the payload for deep-linking to a nested comment:
@@ -76,6 +82,7 @@ func messageWithDetailsToResponse(msg *core.MessageWithDetails) *MessageResponse
 		IsEdited:              msg.IsEdited,
 		IsDeleted:             msg.IsDeleted,
 		IsDraft:               msg.IsDraft,
+		IsRestricted:          msg.IsRestricted,
 		MentionedCharacterIds: msg.MentionedCharacterIds,
 		CreatedAt:             msg.CreatedAt.Time,
 		EditCount:             msg.EditCount,

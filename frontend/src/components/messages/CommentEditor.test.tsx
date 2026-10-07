@@ -831,9 +831,9 @@ describe('Tab Layout', () => {
 
   describe('Sheet Item Autocomplete (%% trigger)', () => {
     const mockSheetItems: SheetItem[] = [
-      { id: 'a1', name: 'Fire Bolt', type: 'skill', description: 'Deals fire damage' },
-      { id: 's1', name: 'Stealth', type: 'skill' },
-      { id: 'i1', name: 'Longbow', type: 'item' },
+      { id: 'a1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills', description: 'Deals fire damage' },
+      { id: 's1', name: 'Stealth', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
+      { id: 'i1', name: 'Longbow', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory' },
     ];
 
     it('shows sheet autocomplete when %% is typed', () => {
@@ -873,6 +873,16 @@ describe('Tab Layout', () => {
       const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
       expect(lastCall).toContain('[[Fire Bolt|skill:a1]]');
       expect(lastCall).not.toContain('%%');
+    });
+
+    it("inserts a custom tab's entry with the tab key as its kind", () => {
+      const onChange = vi.fn();
+      const contacts: SheetItem = { id: 'c1', name: 'Old Zadok', refKind: 't_abc123', tabKey: 't_abc123', tabLabel: 'Contacts' };
+      render(<CommentEditor {...defaultProps} sheetItems={[contacts]} onChange={onChange} />);
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: '%%', selectionStart: 2 } });
+      fireEvent.click(screen.getByText('Old Zadok'));
+
+      expect(onChange.mock.calls.at(-1)?.[0]).toContain('[[Old Zadok|t_abc123:c1]]');
     });
 
     it('closes sheet autocomplete when space is typed after %%', () => {

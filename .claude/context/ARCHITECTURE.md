@@ -2,7 +2,7 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
-**Last Verified**: 2026-09-21
+**Last Verified**: 2026-10-05
 
 ## Core Architectural Principles
 
@@ -584,49 +584,131 @@ mechanic exists — that is documented — so a flag on an already-visible row
 discloses nothing further. The field is optional in the schema, so consumers
 test `=== true`: an absent key reads as "not hidden".
 
+### Restricted Common Room Posts (added 2026-10-05)
+
+A GM or co-GM can restrict a top-level Common Room post to chosen players
+(`messages.is_restricted` plus `common_room_post_viewers`, keyed by **user**, not
+character). The list covers the whole thread. Everyone else gets nothing: not
+the post, its comments, its counts, its notifications, or a sign it exists.
+
+**Every message knows its thread.** `messages.root_post_id` is `NOT NULL` and is
+filled by the insert trigger (a post points at itself). Filters join on it;
+never walk `parent_id` recursively to find a root, and never trust a
+`root_post_id` or `postId` sent by the client.
+
+`core.CanSeeAllRestrictedPosts(userRole, isAdminMode)` is the ONLY definition of
+who bypasses the list: GM, co-GM, audience, or an admin in admin mode. Callers OR
+in `IsPublicArchive(game.State)`, so a completed or epilogue game shows every
+thread to everyone, as hidden NPCs do. Otherwise a viewer row grants access.
+
+| Path | How it applies the rule |
+|---|---|
+| One message by ID | `MessageService.CanUserViewMessage` resolves the message's **root post** and that post's game. Never the URL's game, the `is_gm` context value, or a comment's own `game_id`: a GM of game X must not read game Y's threads through X's URL, or through a comment filed under X. `CreateComment` rejects a parent from another game (`ErrCommentParentNotFound` → 404). Unknown or hidden → `requireMessageVisible` returns the **same 404 as a missing message** (not 403), on reads and writes alike |
+| Single-game listings | `ResolveViewerScope` builds a `core.ViewerScope{UserID, SeesAll}` once per request (fails closed); SQL takes `viewer_user_id` + `viewer_sees_all` |
+| Cross-game listings (favorites, dashboard) | `root.is_restricted = false OR restricted_thread_visible_to_user(root.id, viewer)`: the one SQL restatement of the rule, against the root post's game (active co-GM/audience only); admin mode isn't in it. Keep the inline guard: the function can't be inlined and costs ~9µs a call |
+| Notifications | `recipientCanSee` runs the rule for the **recipient**, with the author's admin mode switched off. A restricted post notifies only those who can see it; taking someone off the list deletes their in-app notifications for the thread (Discord DMs can't be recalled) |
+
+The single-game predicate:
+
+```sql
+JOIN messages root ON root.id = m.root_post_id
+...
+AND (sqlc.arg(viewer_sees_all)::bool OR root.is_restricted = false
+     OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                WHERE v.post_id = root.id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+```
+
+🔴 **Every new query that reads `messages` must apply it**, or be gated upstream,
+internal, or archive-only. On a paginated query it goes **inside** the
+paginating CTE, before `LIMIT`, and in the matching count; filtering afterwards
+gives short pages and totals that leak. A new cross-game query calls
+`restricted_thread_visible_to_user` rather than restating the rule, and goes in
+`TestRestrictedRuleAgreement` (`services/messages/visibility_test.go`), which
+checks every caller against the Go rule over every role and game state.
+
+Keep the single-game predicate inline; don't wrap it in a SQL function.
+Postgres never inlines a SQL function containing a subquery, and inline the
+planner runs the allowlist `EXISTS` once as a hashed subplan; inside a function
+it runs per row (measured 6.5x slower on 15k comments, every thread restricted).
+
+Drafts: `CanUserViewMessage` hides a draft's thread from everyone but the GM,
+co-GMs and admin mode, and listings drop threads under an unpublished draft
+(`root.is_draft = false`).
+
+**Seeing the list is not permission to edit it.** `viewer_user_ids` is sent to
+anyone who passes the bypass (audience and public-archive viewers included), so
+the frontend shows "Edit viewers" from GameContext's `isGM` (`hasGMPowers`:
+GM, co-GM, or admin in admin mode), in `PostRestriction.tsx`. The endpoint
+agrees: `requireGMOrCoGM` (`messages/authz.go`, shared with the draft-post
+endpoints) goes through `IsUserGameMasterCtx`. Everyone else gets only
+`is_restricted`.
+
+Tests follow the hidden-NPC layout: one `*_restricted_test.go` per surface,
+built on the shared scenario `newRestrictedScenario`, each asserting the
+unlisted player gets neither the rows nor a count that includes them. The E2E
+spec `e2e/messaging/restricted-posts.spec.ts` runs on its own fixture
+(`33_restricted_posts.sql`, games 708 and 709) and logs each user in once, in
+their own browser context.
+
 ### Character Sheet Storage
 
-The sheet is **five flat tabs**, each one `module_type` in `character_data`.
-There is no second level — an earlier design nested sub-tabs under two parent
-modules, and code or docs still describing that is stale.
+*(Rewritten 2026-09-30 for GM-composed sheets. The decision and its
+alternatives: ADR-009.)*
 
-`character_data.module_type` is **not** constrained in the database; the
-allowlist lives in application code (`api_data.go`). The `check_module_type`
-constraint is on `action_result_character_updates` and covers only the three
-stat modules, since a draft update never targets bio or notes.
+A sheet is **Public Profile and Private Notes, then the game's configurable
+tabs**. Every configurable tab is the same thing: a list of entries, each with a
+fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
 
-| `module_type` | Holds | Renameable |
-|---|---|---|
-| `bio` | Public description (one text row) | No — platform concept |
-| `notes` | Private notes (one text row) | No — platform concept |
-| `skills` | JSON array of skills | Yes |
-| `inventory` | JSON array of items | Yes |
-| `numbers` | JSON array of named quantities/tracks | Yes |
+- **Layout**: `games.character_sheet` (JSONB, `core.CharacterSheetConfig`).
+  Stored **sparse**: absent `tabs` means the default layout (Skills, Inventory,
+  Numbers); a built-in tab without `label`/`fields` uses its defaults. Default
+  labels and fields live only in `DEFAULT_SHEET_LAYOUT`
+  (`frontend/src/hooks/useSheetLayout.ts`), except that server-written text
+  (game log, exports) takes default labels from `core.SheetTabLabel`; read a layout through
+  `resolveSheetLayout`/`useSheetLayout`, never the raw config. Legacy `labels`
+  apply only when `tabs` is absent.
+- **Written only by** `PUT /games/{id}/character-sheet` (GM or co-GM; 409 once
+  archived), from the Character Sheet editor at `/games/:gameId/character-sheet`
+  (`components/characters/sheet-editor/`). The game create/update bodies have no
+  `character_sheet`, so a settings save can never reset the layout.
+- **Keys never change**: custom tabs are `t_` + 6 `[a-z0-9]`, new fields
+  `f_` + 6; built-in fields keep their historic JSON keys (`rank`, `quantity`,
+  `amount`, ...), so existing data lines up. Field types can't change.
+- **Entries**: one `character_data` row per tab holding a JSON array, at
+  `(tab key, storageFieldName(tab key))`. Every tab stores under its own key
+  except Inventory (`items`). Mirrored by `core.SheetStorageFieldName`.
+- **Removing a tab or field only edits the layout.** Stored values stay in the
+  blobs, hidden; restoring a built-in tab or default field shows them again.
+  Edits merge onto the stored entry, so unknown keys survive a save.
+- **Writes**: `core.ClassifySheetWrite` allowlists `bio/background` and
+  `notes/private_notes` for any editor; every layout tab is GM/co-GM only, and
+  any other pair is 422. Draft updates on action results get the same check;
+  publishing copies drafts verbatim, even for a tab removed since.
+- **Rendering**: `EntryManager` → `EntryCard`/`EntryForm`, driven by the
+  field-type registry in `sheet-items/fieldTypes.tsx`. `normalizeEntry`
+  (`lib/sheetEntries.ts`) absorbs legacy shapes on read (skill `level` → `rank`,
+  number `type` → `name`, flat `amount`/`max`/`display` → a track); writes
+  always use the new shape, and only the edited entry is rewritten.
+- **Loot tables** (added 2026-09-30): each table has a `target_tab` (default
+  `inventory`), validated against the game's layout; it can change only while
+  the table is empty (409 otherwise). A roll writes into
+  `(target_tab, storageFieldName(target_tab))`, giving the entry a fresh `id`
+  (`rolledEntry`) and returning it as written; item data that isn't a JSON
+  object is refused (422), not written. The sheet PUT refuses (422,
+  naming the tables) a layout that removes a targeted tab, and the editor
+  disables Remove on it. Loot entries use the target tab's schema, and CSV
+  import maps columns by field label or key, coercing by field type, because a
+  server-side roll writes the data verbatim.
+- **Mentions**: `useCharacterSheetItems` offers every entry on every layout tab.
+  The token is `[[Name|kind:id]]`, where kind is `skill`/`item` for
+  Skills/Inventory (historic) and the tab key otherwise; the pattern lives in
+  `MarkdownPreview.tsx` and `exports/markdown.go`, and both must agree.
+- **Exports**: `RenderCharacter` takes the game's config, so tabs appear in
+  layout order under their labels (`core.SheetTabLabel`); data on removed tabs
+  is still archived.
 
-Two invariants worth knowing before touching this:
-
-1. **Each stat tab is ONE row holding a JSON array**, not a row per entry. The
-   `field_name` equals the `module_type` for skills and numbers (`items` for
-   inventory).
-2. **`module_type` == React symbol == default label.** That equality is what
-   keeps the renaming feature a straight substitution with no mapping table.
-   Preserve it when adding a tab.
-
-GM-supplied labels live in `games.character_sheet` (JSONB), stored **sparse** —
-only genuine overrides, never defaults. An absent key means "use the frontend's
-default", so defaults have exactly one home (`useSheetLabels.ts`) and changing
-one later does not silently skip games that already stored it.
-
-Three renames shipped with the refactor and behave differently on purpose:
-
-- `currency` → `numbers` (module_type): a **real migration**, because reads are
-  keyed by `module_type` and a missed row renders an empty tab.
-- skill `level` → `rank`, number `type` → `name` (keys *inside* the JSON):
-  **no migration**, resolved on read via `skillRank()` / `numberEntryName()`. A
-  fallback covers every old row, archived payload, and rolled-back deploy at no
-  coordination cost, where a migration would need all three to line up.
-
-**See**: `/docs-site/developer/architecture/adrs/002-database-design-approach.md`
+**See**: `/docs-site/developer/architecture/adrs/009-character-sheet-tab-composition.md`,
+`/docs-site/developer/architecture/adrs/002-database-design-approach.md`
 
 ## Observability Pattern
 
@@ -683,7 +765,7 @@ committed, and `just verify` fails when either is stale. Never hand-edit a
   - `phases/` - Phase service (service, crud, transitions, validation, history, scheduler)
   - `actions/` - Action submission service (service, submissions, results, validation, queries,
     draft_updates, staged, staged_worker)
-  - `messages/` - Message service (service, posts, draft_posts, comments, reactions, validation,
+  - `messages/` - Message service (service, posts, draft_posts, comments, validation,
     read_tracking, audience, character_messages)
   - `*.go` - Other services (games, characters, users, sessions, notifications, conversations, handouts, dashboard, deadlines, polls, user_preferences)
 - `backend/pkg/db/queries/*.sql` - SQL queries (generates models/)
@@ -763,6 +845,7 @@ committed, and `just verify` fails when either is stale. Never hand-edit a
 - ADR-006: Observability Approach
 - ADR-007: Testing Strategy
 - ADR-008: Community Scoping, Grandfathered Games, and Best-Effort Webhooks
+- ADR-009: Character Sheet Tabs as Generic Entries with GM-Defined Schemas
 
 ### System Design
 **Location**: `/docs-site/developer/architecture/`

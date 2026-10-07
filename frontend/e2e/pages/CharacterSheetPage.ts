@@ -37,9 +37,9 @@ export class CharacterSheetPage {
     this.cancelButton = page.locator('[data-testid="cancel-edit"]');
     this.deleteButton = page.locator('[data-testid="delete-character"]');
     this.avatarUploadButton = page.locator('input[type="file"]');
-    this.inventorySection = page.locator('[data-testid="items-section"]');
+    this.inventorySection = page.locator('[data-testid="inventory-section"]');
     this.skillsSection = page.locator('[data-testid="skills-section"]');
-    this.itemsSection = page.locator('[data-testid="items-section"]');
+    this.itemsSection = page.locator('[data-testid="inventory-section"]');
     this.numbersSection = page.locator('[data-testid="numbers-section"]');
   }
 
@@ -167,7 +167,7 @@ export class CharacterSheetPage {
    * Get all inventory items
    */
   async getInventoryItems(): Promise<string[]> {
-    const items = await this.inventorySection.locator('[data-testid="inventory-item"]').all();
+    const items = await this.inventorySection.locator('[data-testid="sheet-entry"]').all();
     return Promise.all(items.map(i => i.textContent())).then(texts =>
       texts.filter((t): t is string => t !== null)
     );
@@ -183,8 +183,8 @@ export class CharacterSheetPage {
   // one method per tab is the whole API.
   //
   // Stat tab labels are GM-renameable per game, so every stat method takes an
-  // optional label. The defaults match DEFAULT_SHEET_LABELS in
-  // frontend/src/hooks/useSheetLabels.ts — the single source of those defaults.
+  // optional label. The defaults match DEFAULT_SHEET_LAYOUT in
+  // frontend/src/hooks/useSheetLayout.ts — the single source of those defaults.
 
   /**
    * Get the character sheet tab select dropdown (mobile).
@@ -206,7 +206,7 @@ export class CharacterSheetPage {
    * viewport pushes the last ones out of the strip, where getByRole('tab') can
    * still find them but a plain click would miss.
    */
-  private async goToTab(tabId: string, label: string) {
+  private async goToTab(tabId: string | { label: string }, label: string) {
     const isMobile = await this.waitForModuleTabsReady();
     if (isMobile) {
       await this.moduleSelect.scrollIntoViewIfNeeded();
@@ -267,6 +267,14 @@ export class CharacterSheetPage {
   }
 
   /**
+   * Navigate to a GM-composed tab. Its key is generated when the GM adds it, so
+   * it is found by its label on mobile too.
+   */
+  async goToCustomTab(label: string) {
+    await this.goToTab({ label }, label);
+  }
+
+  /**
    * Wait for the character sheet tab container to appear in the DOM, then
    * report whether we are on a mobile viewport (select visible vs tabs visible).
    */
@@ -293,7 +301,7 @@ export class CharacterSheetPage {
    * @param description - Skill description
    */
   async addSkill(name: string, description: string) {
-    await this.page.getByTestId('add-skill').click();
+    await this.page.getByTestId('add-skills').click();
     await this.page.waitForTimeout(500);
 
     await this.page.getByRole('textbox', { name: 'Name *' }).fill(name);
@@ -308,14 +316,14 @@ export class CharacterSheetPage {
    * Check if the Skills add trigger is visible (GM/owner permission check).
    */
   async canAddSkill(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-skill');
+    return await this.isAddTriggerVisible('add-skills');
   }
 
   /**
    * Check if the Inventory add trigger is visible (GM/owner permission check).
    */
   async canAddItem(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-item');
+    return await this.isAddTriggerVisible('add-inventory');
   }
 
   /**
@@ -325,7 +333,7 @@ export class CharacterSheetPage {
    * a renamed tab needs no argument here.
    */
   async canAddNumber(): Promise<boolean> {
-    return await this.isAddTriggerVisible('add-number');
+    return await this.isAddTriggerVisible('add-numbers');
   }
 
   private async isAddTriggerVisible(testId: string): Promise<boolean> {

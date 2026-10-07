@@ -2,24 +2,19 @@ package db
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"reflect"
 	"testing"
 
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 )
 
-// TestCreateGameNilCharacterSheet pins the NOT NULL trap that broke every
-// DB-backed test when games.character_sheet was first added.
-//
-// The column is NOT NULL DEFAULT '{}', but naming it in the INSERT column list
-// disables that default — so a caller who builds CreateGameParams directly and
-// leaves CharacterSheet nil sends a SQL NULL and trips the constraint. The
-// service always supplies a validated value, but the test factories and several
-// tests build the params struct themselves, and they are the ones that broke.
-//
-// The fix is COALESCE in the query rather than defaulting in Go, so nil is safe
-// no matter which caller sends it. This test drives the raw query on purpose.
-func TestCreateGameNilCharacterSheet(t *testing.T) {
+// TestCreateGameStartsWithDefaultSheet pins that a new game gets the default
+// layout. Create takes no sheet config (the GM customises it afterwards), so
+// the column must fall to its '{}' default rather than NULL.
+func TestCreateGameStartsWithDefaultSheet(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "games", "sessions", "users")
@@ -29,86 +24,29 @@ func TestCreateGameNilCharacterSheet(t *testing.T) {
 
 	game, err := queries.CreateGame(context.Background(), models.CreateGameParams{
 		Title:       "Game Without A Sheet Config",
-		Description: "Built without setting CharacterSheet.",
+		Description: "Created with the default sheet.",
 		GmUserID:    int32(fixtures.TestUser.ID),
-		// CharacterSheet deliberately left nil.
 	})
 	if err != nil {
-		t.Fatalf("creating a game without a character sheet config must not fail: %v", err)
+		t.Fatalf("creating a game must not fail: %v", err)
 	}
 
 	if string(game.CharacterSheet) != "{}" {
 		t.Errorf("character_sheet = %q, want %q", game.CharacterSheet, "{}")
 	}
-
-	// And the stored value must parse as an empty config, not merely be non-null.
-	config, err := core.UnmarshalCharacterSheetConfig(game.CharacterSheet)
-	if err != nil {
-		t.Fatalf("stored default does not parse: %v", err)
-	}
-	if config.Labels != nil {
-		t.Errorf("expected no labels, got %+v", config.Labels)
+	if got := core.CharacterSheetConfigForResponse(game.CharacterSheet); got != nil {
+		t.Errorf("a new game must render the default layout, got %+v", got)
 	}
 }
 
-// TestUpdateGameNilCharacterSheetKeepsRawQuerySafe covers the raw query's nil
-// guard, which exists only for a caller that builds UpdateGameParams by hand.
+// TestGameService_UpdateGameLeavesCharacterSheetAlone pins that a game
+// settings save never touches the sheet layout.
 //
-// This is NOT the API's contract. The service can never send nil (see
-// TestGameService_UpdateGameUnsetsCharacterSheetLabels below) -- it marshals an
-// empty config to '{}'. The COALESCE is here so a hand-built params struct does
-// not trip the NOT NULL constraint, nothing more.
-func TestUpdateGameNilCharacterSheetKeepsRawQuerySafe(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "sessions", "users")
-
-	fixtures := testDB.SetupFixtures(t)
-	queries := models.New(testDB.Pool)
-	ctx := context.Background()
-
-	game, err := queries.CreateGame(ctx, models.CreateGameParams{
-		Title:          "Game With Renamed Tabs",
-		Description:    "Has GM label overrides.",
-		GmUserID:       int32(fixtures.TestUser.ID),
-		CharacterSheet: []byte(`{"labels":{"skills":"Approaches"}}`),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error creating game: %v", err)
-	}
-
-	updated, err := queries.UpdateGame(ctx, models.UpdateGameParams{
-		ID:          game.ID,
-		Title:       "Game With Renamed Tabs",
-		Description: "Updated, but not for the sheet.",
-		// CharacterSheet deliberately left nil.
-	})
-	if err != nil {
-		t.Fatalf("unexpected error updating game: %v", err)
-	}
-
-	config, err := core.UnmarshalCharacterSheetConfig(updated.CharacterSheet)
-	if err != nil {
-		t.Fatalf("stored config does not parse: %v", err)
-	}
-	if config.Labels == nil || config.Labels.Skills != "Approaches" {
-		t.Errorf("raw query with nil params must leave the column alone, got: %s", updated.CharacterSheet)
-	}
-}
-
-// TestGameService_UpdateGameUnsetsCharacterSheetLabels pins how a GM clears tab
-// labels back to the defaults.
-//
-// UpdateGame is a full replace, not a patch: an omitted `character_sheet` RESETS
-// the labels. That is the unset path, and it is the only one -- the edit form
-// clears all three boxes, buildCharacterSheetConfig returns undefined, and the
-// key never reaches the wire. There is no separate "reset" verb, so if this
-// starts preserving instead, the GM can rename a tab but never undo it.
-//
-// Driven through the service rather than the raw query on purpose. The query
-// takes a nullable param and the service cannot produce nil for it, so a
-// raw-query test proves nothing about what the API actually does.
-func TestGameService_UpdateGameUnsetsCharacterSheetLabels(t *testing.T) {
+// UpdateGame is a full replace of every other setting. The layout used to ride
+// along with it, so a settings save that omitted it reset the GM's tab names;
+// it is now written only by UpdateGameCharacterSheet. Both stored shapes are
+// covered: legacy labels (from before tab composition) and composed tabs.
+func TestGameService_UpdateGameLeavesCharacterSheetAlone(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
@@ -118,44 +56,53 @@ func TestGameService_UpdateGameUnsetsCharacterSheetLabels(t *testing.T) {
 	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	ctx := context.Background()
 
-	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
-		Title:       "Game With Renamed Tabs",
-		Description: "Starts with GM label overrides.",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		CommunityID: int32(fixtures.TestCommunity.ID),
-		CharacterSheet: core.CharacterSheetConfig{
-			Labels: &core.CharacterSheetLabels{Skills: "Approaches", Numbers: "Stress"},
+	cases := []struct {
+		name   string
+		config core.CharacterSheetConfig
+		stored string
+	}{
+		{
+			name:   "legacy labels",
+			config: core.CharacterSheetConfig{Labels: &core.CharacterSheetLabels{Skills: "Approaches", Numbers: "Stress"}},
+			stored: `{"labels":{"skills":"Approaches","numbers":"Stress"}}`,
 		},
-	})
-	core.AssertNoError(t, err, "Failed to create game")
-
-	stored := core.CharacterSheetConfigForResponse(game.CharacterSheet)
-	if stored == nil || stored.Labels == nil || stored.Labels.Skills != "Approaches" {
-		t.Fatalf("setup did not persist the labels, got: %s", game.CharacterSheet)
+		{
+			name: "composed tabs",
+			config: core.CharacterSheetConfig{
+				Tabs: []core.CharacterSheetTab{{Key: "t_abc123", Label: "Contacts", Fields: []core.CharacterSheetField{}}},
+			},
+			stored: `{"tabs":[{"key":"t_abc123","label":"Contacts","fields":[]}]}`,
+		},
 	}
 
-	// An update carrying no config -- exactly what the edit form sends once the
-	// GM has emptied every label box.
-	updated, err := gameService.UpdateGame(ctx, core.UpdateGameRequest{
-		ID:          game.ID,
-		Title:       "Game With Renamed Tabs",
-		Description: "The GM cleared every label box.",
-		// CharacterSheet left as its zero value: no overrides.
-	})
-	core.AssertNoError(t, err, "Failed to update game")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+				Title:       "Game With A Customised Sheet",
+				Description: "The GM customises the sheet after creation.",
+				GMUserID:    int32(fixtures.TestUser.ID),
+				CommunityID: int32(fixtures.TestCommunity.ID),
+			})
+			core.AssertNoError(t, err, "Failed to create game")
 
-	if string(updated.CharacterSheet) != "{}" {
-		t.Errorf("clearing every label must store %q, got %q -- the GM cannot unset a renamed tab", "{}", updated.CharacterSheet)
-	}
-	if got := core.CharacterSheetConfigForResponse(updated.CharacterSheet); got != nil {
-		t.Errorf("a cleared config must render as an absent key, got %+v", got)
+			_, err = gameService.UpdateGameCharacterSheet(ctx, game.ID, tc.config)
+			core.AssertNoError(t, err, "Failed to customise sheet")
+
+			updated, err := gameService.UpdateGame(ctx, core.UpdateGameRequest{
+				ID:          game.ID,
+				Title:       "Game With A Customised Sheet",
+				Description: "Edited through the settings form.",
+			})
+			core.AssertNoError(t, err, "Failed to update game")
+
+			assertSameJSON(t, updated.CharacterSheet, tc.stored)
+		})
 	}
 }
 
-// TestGameService_UpdateGameReplacesCharacterSheetLabels pins the partial-replace
-// half: supplying a config overwrites the stored one wholesale rather than
-// merging into it, so dropping one label of two removes it.
-func TestGameService_UpdateGameReplacesCharacterSheetLabels(t *testing.T) {
+// TestGameService_UpdateGameCharacterSheet covers the dedicated sheet write the
+// Character Sheet editor uses.
+func TestGameService_UpdateGameCharacterSheet(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	app := core.NewTestApp(testDB.Pool)
 	defer testDB.Close()
@@ -165,36 +112,84 @@ func TestGameService_UpdateGameReplacesCharacterSheetLabels(t *testing.T) {
 	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
 	ctx := context.Background()
 
-	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
-		Title:       "Game With Two Renamed Tabs",
-		Description: "Starts with two GM label overrides.",
-		GMUserID:    int32(fixtures.TestUser.ID),
-		CommunityID: int32(fixtures.TestCommunity.ID),
-		CharacterSheet: core.CharacterSheetConfig{
-			Labels: &core.CharacterSheetLabels{Skills: "Approaches", Numbers: "Stress"},
-		},
-	})
-	core.AssertNoError(t, err, "Failed to create game")
-
-	// Only Skills survives: Numbers was cleared in the form.
-	updated, err := gameService.UpdateGame(ctx, core.UpdateGameRequest{
-		ID:          game.ID,
-		Title:       "Game With Two Renamed Tabs",
-		Description: "The GM cleared only the Numbers label.",
-		CharacterSheet: core.CharacterSheetConfig{
-			Labels: &core.CharacterSheetLabels{Skills: "Approaches"},
-		},
-	})
-	core.AssertNoError(t, err, "Failed to update game")
-
-	got := core.CharacterSheetConfigForResponse(updated.CharacterSheet)
-	if got == nil || got.Labels == nil {
-		t.Fatalf("expected the surviving label to persist, got: %s", updated.CharacterSheet)
+	newGame := func(t *testing.T) *models.Game {
+		t.Helper()
+		game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+			Title:       "Game With A Composed Sheet",
+			Description: "The GM customises the sheet after creation.",
+			GMUserID:    int32(fixtures.TestUser.ID),
+			CommunityID: int32(fixtures.TestCommunity.ID),
+		})
+		core.AssertNoError(t, err, "Failed to create game")
+		// A game from before tab composition, with a legacy label override.
+		_, err = gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+			Labels: &core.CharacterSheetLabels{Inventory: "Gear"},
+		})
+		core.AssertNoError(t, err, "Failed to set legacy labels")
+		return game
 	}
-	if got.Labels.Skills != "Approaches" {
-		t.Errorf("Skills = %q, want %q", got.Labels.Skills, "Approaches")
+
+	t.Run("stores the normalized layout and drops legacy labels", func(t *testing.T) {
+		game := newGame(t)
+		updated, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+			Labels: &core.CharacterSheetLabels{Inventory: "Gear"},
+			Tabs: []core.CharacterSheetTab{
+				{Key: "inventory", Label: " Gear "},
+				{Key: "t_abc123", Label: "Contacts", Fields: []core.CharacterSheetField{}},
+			},
+		})
+		core.AssertNoError(t, err, "Failed to update character sheet")
+
+		assertSameJSON(t, updated.CharacterSheet,
+			`{"tabs":[{"key":"inventory","label":"Gear"},{"key":"t_abc123","label":"Contacts","fields":[]}]}`)
+	})
+
+	t.Run("an empty config resets to the default layout", func(t *testing.T) {
+		game := newGame(t)
+		updated, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{})
+		core.AssertNoError(t, err, "Failed to reset character sheet")
+		if string(updated.CharacterSheet) != "{}" {
+			t.Errorf("stored %s, want {}", updated.CharacterSheet)
+		}
+	})
+
+	t.Run("rejects an invalid layout without writing it", func(t *testing.T) {
+		game := newGame(t)
+		_, err := gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{
+			Tabs: []core.CharacterSheetTab{{Key: "bio"}},
+		})
+		if err == nil {
+			t.Fatal("expected a validation error")
+		}
+		stored, err := models.New(testDB.Pool).GetGame(ctx, game.ID)
+		core.AssertNoError(t, err, "Failed to reload game")
+		assertSameJSON(t, stored.CharacterSheet, `{"labels":{"inventory":"Gear"}}`)
+	})
+
+	t.Run("rejects an archived game", func(t *testing.T) {
+		game := newGame(t)
+		_, err := testDB.Pool.Exec(ctx, `UPDATE games SET state = 'completed' WHERE id = $1`, game.ID)
+		core.AssertNoError(t, err, "Failed to complete game")
+
+		_, err = gameService.UpdateGameCharacterSheet(ctx, game.ID, core.CharacterSheetConfig{})
+		if !errors.Is(err, core.ErrGameReadOnly) {
+			t.Errorf("err = %v, want ErrGameReadOnly", err)
+		}
+	})
+}
+
+// assertSameJSON compares semantically: JSONB re-renders whitespace on the way
+// out, so the stored bytes never match what was marshalled.
+func assertSameJSON(t *testing.T, got []byte, want string) {
+	t.Helper()
+	var g, w any
+	if err := json.Unmarshal(got, &g); err != nil {
+		t.Fatalf("stored value is not JSON: %v", err)
 	}
-	if got.Labels.Numbers != "" {
-		t.Errorf("Numbers = %q, want it cleared -- the update replaces rather than merges", got.Labels.Numbers)
+	if err := json.Unmarshal([]byte(want), &w); err != nil {
+		t.Fatalf("want is not JSON: %v", err)
+	}
+	if !reflect.DeepEqual(g, w) {
+		t.Errorf("stored %s, want %s", got, want)
 	}
 }

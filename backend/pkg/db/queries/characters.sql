@@ -303,15 +303,26 @@ RETURNING *;
 
 -- name: GetCharacterActivityStats :one
 -- Returns public message count and private message count for a character.
--- public_messages: all non-deleted messages (posts + comments) in the common room
+-- public_messages: all non-deleted messages (posts + comments) in the common
+--   room the viewer can see. Unpublished drafts and their comments are left
+--   out, and so are threads under a restricted post the viewer isn't on.
+--   viewer_sees_all comes from ResolveViewerScope for the character's game.
 -- private_messages: all non-deleted private messages sent as this character
 SELECT
-    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT m.id) FILTER (
+        WHERE m.is_deleted = false
+          AND root.is_draft = false
+          AND (sqlc.arg(viewer_sees_all)::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+    ) AS public_messages,
     COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
 FROM characters c
 LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
-WHERE c.id = $1;
+WHERE c.id = sqlc.arg(character_id);
 
 -- name: GetCharacterActivityStatsByGame :many
 -- Same as GetCharacterActivityStats, but for every character in a game in one
@@ -320,12 +331,20 @@ WHERE c.id = $1;
 -- characters.
 SELECT
     c.id AS character_id,
-    COUNT(DISTINCT m.id) FILTER (WHERE m.is_deleted = false) AS public_messages,
+    COUNT(DISTINCT m.id) FILTER (
+        WHERE m.is_deleted = false
+          AND root.is_draft = false
+          AND (sqlc.arg(viewer_sees_all)::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = m.root_post_id AND v.user_id = sqlc.arg(viewer_user_id)::int))
+    ) AS public_messages,
     COUNT(DISTINCT pm.id) FILTER (WHERE pm.is_deleted = false) AS private_messages
 FROM characters c
 LEFT JOIN messages m ON m.character_id = c.id
+LEFT JOIN messages root ON root.id = m.root_post_id
 LEFT JOIN private_messages pm ON pm.sender_character_id = c.id
-WHERE c.game_id = $1
+WHERE c.game_id = sqlc.arg(game_id)
 GROUP BY c.id;
 
 -- Hidden NPCs. Whether the caller may SEE a hidden character is decided by

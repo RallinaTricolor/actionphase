@@ -188,6 +188,12 @@ type CommonRoomPoll struct {
 	ShowRunningTotalsToPlayers bool               `json:"show_running_totals_to_players"`
 }
 
+type CommonRoomPostViewer struct {
+	PostID    int32              `json:"post_id"`
+	UserID    int32              `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Community struct {
 	ID          int32              `json:"id"`
 	Name        string             `json:"name"`
@@ -390,6 +396,7 @@ type GameLootTable struct {
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	TargetTab string             `json:"target_tab"`
 }
 
 type GameLootTableContent struct {
@@ -486,23 +493,8 @@ type Message struct {
 	IsDraft               bool        `json:"is_draft"`
 	// Character avatar URL captured when this message was created. Written once at insert and never updated (editing a message does not repaint its avatar). NULL for messages authored before this column existed, or when the character had no avatar; readers COALESCE to characters.avatar_url.
 	CharacterAvatarUrlAtPost pgtype.Text `json:"character_avatar_url_at_post"`
-}
-
-type MessageReaction struct {
-	ID           int32              `json:"id"`
-	MessageID    int32              `json:"message_id"`
-	UserID       int32              `json:"user_id"`
-	ReactionType string             `json:"reaction_type"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-}
-
-type MessageRecipient struct {
-	ID          int32              `json:"id"`
-	MessageID   int32              `json:"message_id"`
-	RecipientID int32              `json:"recipient_id"`
-	IsRead      bool               `json:"is_read"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	RootPostID               int32       `json:"root_post_id"`
+	IsRestricted             bool        `json:"is_restricted"`
 }
 
 type Notification struct {

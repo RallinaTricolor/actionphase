@@ -25,8 +25,16 @@ export function useCreateDraftPost(phaseId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ characterId, content }: { characterId: number; content: string }) => {
-      const response = await apiClient.messages.createDraftPost(phaseId, characterId, content);
+    mutationFn: async ({
+      characterId,
+      content,
+      restrictedToUserIds,
+    }: {
+      characterId: number;
+      content: string;
+      restrictedToUserIds?: number[];
+    }) => {
+      const response = await apiClient.messages.createDraftPost(phaseId, characterId, content, restrictedToUserIds);
       return response.data;
     },
     onSuccess: () => {

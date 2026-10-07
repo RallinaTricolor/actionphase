@@ -53,7 +53,7 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
   return (
     <div className={`surface-base rounded-lg border border-theme-default ${className}`}>
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h2 className="text-xl font-semibold text-content-primary">Phase Management</h2>
             <p className="text-sm text-content-secondary mt-1">
@@ -139,7 +139,8 @@ export function PhaseManagement({ gameId, className = '' }: PhaseManagementProps
                 await apiClient.messages.createDraftPost(
                   response.data.id,
                   draftPost.characterId,
-                  draftPost.content
+                  draftPost.content,
+                  draftPost.restrictedToUserIds
                 );
               } catch {
                 showWarning('Phase created, but the draft post could not be saved. You can add it from the phase panel.');

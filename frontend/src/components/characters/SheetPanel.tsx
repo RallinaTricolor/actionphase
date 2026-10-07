@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { SheetItem } from '@/hooks/useCharacterSheetItems';
+import { sheetItemBadgeVariant, type SheetItem } from '@/hooks/useCharacterSheetItems';
 import { Badge, Input } from '@/components/ui';
 
 interface SheetPanelProps {
@@ -7,18 +7,6 @@ interface SheetPanelProps {
   onInsert: (item: SheetItem) => void;
   characterName?: string;
 }
-
-const TYPE_LABELS: Record<SheetItem['type'], string> = {
-  skill: 'Skills',
-  item: 'Inventory',
-};
-
-const TYPE_ORDER: SheetItem['type'][] = ['skill', 'item'];
-
-const TYPE_BADGE_VARIANT: Record<SheetItem['type'], 'success' | 'warning'> = {
-  skill: 'success',
-  item: 'warning',
-};
 
 export function SheetPanel({ items, onInsert, characterName }: SheetPanelProps) {
   const [filter, setFilter] = useState('');
@@ -28,13 +16,15 @@ export function SheetPanel({ items, onInsert, characterName }: SheetPanelProps) 
     return q ? items.filter((i) => i.name.toLowerCase().includes(q)) : items;
   }, [items, filter]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<SheetItem['type'], SheetItem[]>();
-    for (const type of TYPE_ORDER) map.set(type, []);
+  // One group per tab, in the sheet's tab order (the order items arrive in).
+  const groups = useMemo(() => {
+    const map = new Map<string, { label: string; items: SheetItem[] }>();
     for (const item of filtered) {
-      map.get(item.type)?.push(item);
+      const group = map.get(item.tabKey) ?? { label: item.tabLabel, items: [] };
+      group.items.push(item);
+      map.set(item.tabKey, group);
     }
-    return map;
+    return [...map.entries()];
   }, [filtered]);
 
   const hasAny = filtered.length > 0;
@@ -60,16 +50,14 @@ export function SheetPanel({ items, onInsert, characterName }: SheetPanelProps) 
           </p>
         )}
 
-        {TYPE_ORDER.map((type) => {
-          const group = grouped.get(type) ?? [];
-          if (group.length === 0) return null;
+        {groups.map(([tabKey, group]) => {
           return (
-            <section key={type} className="mb-4">
+            <section key={tabKey} className="mb-4">
               <h3 className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-content-secondary">
-                {TYPE_LABELS[type]}
+                {group.label}
               </h3>
               <ul className="space-y-1">
-                {group.map((item) => (
+                {group.items.map((item) => (
                   <li key={item.id}>
                     <button
                       type="button"
@@ -83,7 +71,7 @@ export function SheetPanel({ items, onInsert, characterName }: SheetPanelProps) 
                               {item.name}
                             </span>
                             {item.metadata && (
-                              <Badge variant={TYPE_BADGE_VARIANT[type]} size="sm">
+                              <Badge variant={sheetItemBadgeVariant(tabKey)} size="sm">
                                 {item.metadata}
                               </Badge>
                             )}

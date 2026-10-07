@@ -32,7 +32,7 @@ test_fixtures/
 │   ├── 08_e2e_dedicated_games.sql # State-modifying test games
 │   ├── 09_action_results.sql
 │   ├── 10_lifecycle_game.sql
-│   ├── 11_character_sheets.sql
+│   ├── 11_character_sheets.sql   # Default-layout sheets (skills/inventory/numbers data)
 │   ├── 12_game_applications.sql
 │   ├── 13_game_lifecycle.sql
 │   ├── 14_character_workflows.sql
@@ -46,7 +46,10 @@ test_fixtures/
 │   ├── 22_manual_read_tracking.sql
 │   ├── 23_private_message_editing_w{0-5}.sql
 │   ├── 24_unread_tracking.sql
-│   └── 25_notification_*.sql
+│   ├── 25_notification_*.sql
+│   └── 32_custom_character_sheet.sql # Game 343: default layout for the GM's
+│                                     # Character Sheet editor to reshape, plus an
+│                                     # unpublished result to stage a sheet update on
 ├── perf/                 # Performance test fixtures
 ├── apply_all.sh          # Apply common + demo fixtures
 ├── apply_e2e.sh          # Apply common + e2e fixtures

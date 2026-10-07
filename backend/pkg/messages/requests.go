@@ -39,6 +39,11 @@ type CreatePostRequest struct {
 	PhaseID     *int32 `json:"phase_id,omitempty" required:"false" doc:"Phase to attach the post to"`
 	CharacterID int32  `json:"character_id" minimum:"1" doc:"Character to attribute the post to"`
 	Content     string `json:"content" minLength:"1" doc:"Post body, as markdown"`
+	// Present (and non-empty, which the schema enforces) to restrict the post
+	// to these players; omitted or null for a public post. "Restricted to
+	// nobody" is what drafts are for. The service checks each ID is an active
+	// player and answers 422 otherwise.
+	RestrictedToUserIDs []int32 `json:"restricted_to_user_ids,omitempty" required:"false" minItems:"1" maxItems:"100" uniqueItems:"true" doc:"Restrict the post to these players (user IDs of active players). Omit for a public post."`
 }
 
 func (r *CreatePostRequest) Resolve(huma.Context) []error {
@@ -49,12 +54,10 @@ type CreateCommentRequest struct {
 	PhaseID     *int32 `json:"phase_id,omitempty" required:"false" doc:"Phase to attach the comment to"`
 	CharacterID int32  `json:"character_id" minimum:"1" doc:"Character to attribute the comment to"`
 	Content     string `json:"content" minLength:"1" doc:"Comment body, as markdown"`
-	// The path's {postId} is the immediate parent, which for a nested reply is
-	// another comment rather than the post. Read tracking keys off the top-level
-	// post, so clients must send it explicitly once they reply below depth 0.
-	// Omitting it falls back to {postId}, which is correct only for a direct
-	// reply to a post.
-	RootPostID *int32 `json:"root_post_id,omitempty" required:"false" doc:"Top-level post of this thread. Required for replies nested below a post; defaults to the path's postId."`
+	// Deprecated and ignored: the server derives the thread root from the
+	// parent in {postId}. Kept so existing clients that still send it aren't
+	// rejected; remove once the frontend stops sending it.
+	RootPostID *int32 `json:"root_post_id,omitempty" required:"false" deprecated:"true" doc:"Ignored. The server derives the thread root from the parent in the path."`
 }
 
 func (r *CreateCommentRequest) Resolve(huma.Context) []error {
@@ -82,6 +85,11 @@ func (r *UpdatePostRequest) Resolve(huma.Context) []error {
 type CreateDraftPostRequest struct {
 	CharacterID int32  `json:"character_id" minimum:"1" doc:"Character to attribute the draft to"`
 	Content     string `json:"content" minLength:"1" maxLength:"50000" doc:"Draft body, as markdown"`
+	// Present (and non-empty, which the schema enforces) to restrict the post
+	// to these players; omitted or null for a public post. "Restricted to
+	// nobody" is what drafts are for. The service checks each ID is an active
+	// player and answers 422 otherwise.
+	RestrictedToUserIDs []int32 `json:"restricted_to_user_ids,omitempty" required:"false" minItems:"1" maxItems:"100" uniqueItems:"true" doc:"Restrict the post to these players (user IDs of active players). Omit for a public post."`
 }
 
 func (r *CreateDraftPostRequest) Resolve(huma.Context) []error {
@@ -94,6 +102,32 @@ type UpdateDraftPostRequest struct {
 
 func (r *UpdateDraftPostRequest) Resolve(huma.Context) []error {
 	return requiredContent(&r.Content)
+}
+
+// SetPostViewersRequest replaces a post's allowlist.
+//
+// One endpoint covers every change: restricted:true with user_ids sets or
+// replaces the list, restricted:false makes the post public and clears it.
+type SetPostViewersRequest struct {
+	Restricted bool    `json:"restricted" doc:"true restricts the post to user_ids; false makes it public"`
+	UserIDs    []int32 `json:"user_ids,omitempty" required:"false" maxItems:"100" uniqueItems:"true" doc:"Players who may see the post. Required and non-empty when restricted is true; must be empty or omitted when it is false."`
+}
+
+// Resolve checks the one cross-field rule the schema can't express.
+func (r *SetPostViewersRequest) Resolve(huma.Context) []error {
+	switch {
+	case r.Restricted && len(r.UserIDs) == 0:
+		return []error{&huma.ErrorDetail{
+			Message:  "a restricted post needs at least one player",
+			Location: "body.user_ids",
+		}}
+	case !r.Restricted && len(r.UserIDs) > 0:
+		return []error{&huma.ErrorDetail{
+			Message:  "a public post has no viewer list",
+			Location: "body.user_ids",
+		}}
+	}
+	return nil
 }
 
 // MarkPostReadRequest records how far the caller has read in a thread.

@@ -40,12 +40,12 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
-    await page.getByTestId('add-skill').click();
-    await expect(page.getByPlaceholder('e.g., Sword Fighting, Lockpicking')).toBeVisible({ timeout: 5000 });
+    await page.getByTestId('add-skills').click();
+    await expect(page.getByRole('textbox', { name: 'Name *' })).toBeVisible({ timeout: 5000 });
 
     const skillName = `Persist Test ${Date.now()}`;
-    await page.getByPlaceholder('e.g., Sword Fighting, Lockpicking').fill(skillName);
-    await page.getByPlaceholder('Describe this skill...').fill('You can see in darkness within 60 feet');
+    await page.getByRole('textbox', { name: 'Name *' }).fill(skillName);
+    await page.getByRole('textbox', { name: 'Description' }).fill('You can see in darkness within 60 feet');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: skillName })).toBeVisible({ timeout: 5000 });
 
@@ -73,15 +73,15 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
-    await page.getByTestId('add-skill').click();
+    await page.getByTestId('add-skills').click();
     const uniqueSkillName = `Remove Test ${Date.now()}`;
-    await page.getByPlaceholder('e.g., Sword Fighting, Lockpicking').fill(uniqueSkillName);
-    await page.getByPlaceholder('Describe this skill...').fill('Test removal');
+    await page.getByRole('textbox', { name: 'Name *' }).fill(uniqueSkillName);
+    await page.getByRole('textbox', { name: 'Description' }).fill('Test removal');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: uniqueSkillName })).toBeVisible({ timeout: 5000 });
 
     // Scoped to the card holding this skill's heading: every card renders a
-    // "Remove skill" button and only this one may be clicked. Filtered on both
+    // "Remove entry" button and only this one may be clicked. Filtered on both
     // the heading and the button rather than picking a div by position —
     // `.locator('div')` matches nested wrappers, so .first()/.last() lands on
     // whichever nesting depth happens to win rather than on the card.
@@ -89,9 +89,9 @@ test.describe('Draft Character Updates - Core Workflow', () => {
       .getByTestId('skills-section')
       .locator('div')
       .filter({ has: page.getByRole('heading', { name: uniqueSkillName }) })
-      .filter({ has: page.getByRole('button', { name: 'Remove skill' }) })
+      .filter({ has: page.getByRole('button', { name: 'Remove entry' }) })
       .last();
-    await skillCard.getByRole('button', { name: 'Remove skill' }).click();
+    await skillCard.getByRole('button', { name: 'Remove entry' }).click();
 
     await expect(page.getByRole('heading', { name: uniqueSkillName })).not.toBeVisible();
   });
@@ -108,10 +108,10 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
 
-    await page.getByTestId('add-skill').click();
+    await page.getByTestId('add-skills').click();
     const skillName = `Badge Test ${Date.now()}`;
-    await page.getByPlaceholder('e.g., Sword Fighting, Lockpicking').fill(skillName);
-    await page.getByPlaceholder('Describe this skill...').fill('Description');
+    await page.getByRole('textbox', { name: 'Name *' }).fill(skillName);
+    await page.getByRole('textbox', { name: 'Description' }).fill('Description');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: skillName })).toBeVisible({ timeout: 5000 });
 
@@ -136,10 +136,10 @@ test.describe('Draft Character Updates - Core Workflow', () => {
 
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByTestId('add-skill').click();
+    await page.getByTestId('add-skills').click();
     const skillName = `Publish Dialog Test ${Date.now()}`;
-    await page.getByPlaceholder('e.g., Sword Fighting, Lockpicking').fill(skillName);
-    await page.getByPlaceholder('Describe this skill...').fill('This will be published');
+    await page.getByRole('textbox', { name: 'Name *' }).fill(skillName);
+    await page.getByRole('textbox', { name: 'Description' }).fill('This will be published');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: skillName })).toBeVisible({ timeout: 5000 });
     await Promise.all([
@@ -168,10 +168,10 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     // Add the skill that will be published to the player's sheet
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });
-    await page.getByTestId('add-skill').click();
+    await page.getByTestId('add-skills').click();
     const skillName = `Final Skill ${Date.now()}`;
-    await page.getByPlaceholder('e.g., Sword Fighting, Lockpicking').fill(skillName);
-    await page.getByPlaceholder('Describe this skill...').fill('Granted by GM on publish');
+    await page.getByRole('textbox', { name: 'Name *' }).fill(skillName);
+    await page.getByRole('textbox', { name: 'Description' }).fill('Granted by GM on publish');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: skillName })).toBeVisible({ timeout: 5000 });
     await Promise.all([

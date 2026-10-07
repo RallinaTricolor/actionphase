@@ -207,6 +207,31 @@ func CanSeeHiddenCharacter(userRole string, isOwnerOrAssigned bool) bool {
 	return userRole == "gm" || userRole == "co_gm" || userRole == "audience"
 }
 
+// CanSeeAllRestrictedPosts reports whether a viewer bypasses Common Room post
+// allowlists entirely, seeing every restricted post and every comment under it.
+//
+// A restricted post is readable by the players on its allowlist
+// (common_room_post_viewers) and by whoever this returns true for: the primary
+// GM, co-GMs, audience members, and a site admin WITH ADMIN MODE ENABLED.
+// Audience inclusion matches CanSeeHiddenCharacter -- they already read every
+// private conversation, so hiding a scene from them would be the anomaly.
+//
+// isAdminMode must be the pair "user.is_admin AND the X-Admin-Mode header",
+// never the header alone: the header is just a request flag anyone can send.
+//
+// Like CanSeeHiddenCharacter, the public-archive exemption stays at the call
+// site: callers OR in IsPublicArchive(game.State), so a completed or epilogue
+// game lifts every restriction and this stays a pure role check.
+//
+// This is the ONLY definition of the rule in Go. Cross-game SQL that cannot
+// take a precomputed boolean restates it, and a test runs both over every role
+// and state so the copies cannot drift unnoticed. Anything else that needs the
+// answer calls this, because a second copy is how a restricted thread leaks
+// through whichever path was forgotten.
+func CanSeeAllRestrictedPosts(userRole string, isAdminMode bool) bool {
+	return isAdminMode || userRole == "gm" || userRole == "co_gm" || userRole == "audience"
+}
+
 // CanUserControlNPC checks if a user can control an NPC character.
 // This includes:
 // 1. The NPC is assigned to the user (via npc_assignments table)

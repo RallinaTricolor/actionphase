@@ -29,6 +29,7 @@ export const FIXTURE_GAMES = {
   E2E_PM: 'E2E Test: Private Messages',           // Alias for E2E_MESSAGES
   E2E_CHARACTER_SHEETS: 'E2E Test: Character Sheets', // For testing character sheet management
   E2E_LOOT_TABLES: 'E2E Test: Loot Tables',       // For testing loot tables and rolling loot onto a character
+  E2E_CUSTOM_SHEET: 'E2E Test: Custom Character Sheet', // For the GM's Character Sheet editor (rewrites the game's layout)
   E2E_GAME_SETTINGS: 'E2E Test: Game Settings',   // For testing game settings modifications
   CO_GM_MANAGEMENT: 'E2E Test: Co-GM Management',  // For testing co-GM promotion/demotion
   CO_GM_ACTION_RESULTS: 'E2E Test: Co-GM Action Results',  // Co-GM game with active action phase for action result editing
@@ -89,6 +90,10 @@ export const FIXTURE_GAMES = {
 
   // Private comment favorites test (707)
   FAVORITE_COMMENTS: 'E2E Test: Favorite Comments',                // Game #707 - favorite-comments.spec.ts
+
+  // Restricted Common Room posts (708, 709) — owned by restricted-posts.spec.ts
+  RESTRICTED_POSTS_GM: 'E2E Test: Restricted Posts - GM',                 // Game #708 - GM restricts a post (WRITES)
+  RESTRICTED_POSTS_VISIBILITY: 'E2E Test: Restricted Posts - Visibility', // Game #709 - who sees it (READ-ONLY)
 
   // Player multiple characters test (340-345, worker-specific)
   PLAYER_MULTIPLE_CHARACTERS: 'E2E Test: Player Multiple Characters', // Game #340 - "player-multiple-characters.spec.ts"
