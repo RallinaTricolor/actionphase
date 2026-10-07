@@ -2,6 +2,7 @@ package messages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	core "actionphase/pkg/core"
@@ -9,6 +10,7 @@ import (
 	"actionphase/pkg/observability"
 	"actionphase/pkg/validation"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -60,6 +62,19 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 		mentionedIDs = []int32{}
 	}
 
+	// A comment belongs to its parent's game. Filed under another game, that
+	// game's roles would decide who sees the thread through it.
+	parent, err := queries.GetCommentParent(ctx, req.ParentID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, core.ErrCommentParentNotFound
+		}
+		return nil, fmt.Errorf("failed to get comment parent: %w", err)
+	}
+	if parent.GameID != req.GameID {
+		return nil, core.ErrCommentParentNotFound
+	}
+
 	// A comment always belongs to the same phase as what it replies to, so the
 	// phase is derived here rather than trusted from the client. Reply surfaces
 	// that render flat, cross-phase comment lists (the Dashboard unread inbox and
@@ -69,17 +84,7 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	// response, so HistoryView cannot tell which phase to open.
 	phaseID := int32ToPgInt4(req.PhaseID)
 	if !phaseID.Valid {
-		inherited, perr := queries.GetMessagePhaseID(ctx, req.ParentID)
-		if perr != nil {
-			// Non-fatal: a comment with no phase is still a valid comment (legacy
-			// rows predate phase tracking), so don't fail the write over it.
-			s.Logger.LogError(ctx, perr, "Failed to inherit phase from parent message",
-				"game_id", req.GameID,
-				"parent_id", req.ParentID,
-			)
-		} else {
-			phaseID = inherited
-		}
+		phaseID = parent.PhaseID
 	}
 
 	// Create the comment using sqlc-generated query
@@ -110,22 +115,21 @@ func (s *MessageService) CreateComment(ctx context.Context, req core.CreateComme
 	s.Metrics.RecordCommentCreated(ctx)
 
 	// Auto-mark the comment as read for its author — they just wrote it.
-	// Requires RootPostID to be set (zero means caller didn't provide it; skip silently).
-	// ON CONFLICT DO NOTHING makes this idempotent.
-	if req.RootPostID != 0 {
-		if err := queries.MarkCommentRead(ctx, models.MarkCommentReadParams{
-			UserID:    req.AuthorID,
-			CommentID: message.ID,
-			PostID:    req.RootPostID,
-			GameID:    req.GameID,
-		}); err != nil {
-			// Non-fatal: log and continue. The comment was created successfully.
-			s.Logger.LogError(ctx, err, "Failed to auto-mark own comment as read",
-				"comment_id", message.ID,
-				"author_id", req.AuthorID,
-				"post_id", req.RootPostID,
-			)
-		}
+	// The thread root comes from the inserted row (the insert trigger derives it
+	// from parent_id), never from the client. ON CONFLICT DO NOTHING makes this
+	// idempotent.
+	if err := queries.MarkCommentRead(ctx, models.MarkCommentReadParams{
+		UserID:    req.AuthorID,
+		CommentID: message.ID,
+		PostID:    message.RootPostID,
+		GameID:    req.GameID,
+	}); err != nil {
+		// Non-fatal: log and continue. The comment was created successfully.
+		s.Logger.LogError(ctx, err, "Failed to auto-mark own comment as read",
+			"comment_id", message.ID,
+			"author_id", req.AuthorID,
+			"post_id", message.RootPostID,
+		)
 	}
 
 	// Preserve context values (correlation_id, trace_id) without inheriting cancellation
@@ -217,6 +221,7 @@ func (s *MessageService) GetMessage(ctx context.Context, messageID int32) (*core
 			MentionedCharacterIds: message.MentionedCharacterIds,
 			IsEdited:              message.IsEdited,
 			IsDeleted:             message.IsDeleted,
+			IsRestricted:          message.IsRestricted,
 			CreatedAt:             message.CreatedAt,
 			DeletedAt:             message.DeletedAt,
 		},
@@ -750,7 +755,7 @@ func recentCommentRowToDomain(row recentCommentRow) core.CommentWithParent {
 		ID:                 row.ID,
 		GameID:             row.GameID,
 		ParentID:           pgInt4ToInt32Ptr(row.ParentID),
-		PostID:             pgInt4ToInt32Ptr(row.PostID),
+		PostID:             &row.PostID,
 		AuthorID:           row.AuthorID,
 		CharacterID:        row.CharacterID,
 		Content:            row.Content,
@@ -777,14 +782,15 @@ func recentCommentRowToDomain(row recentCommentRow) core.CommentWithParent {
 
 // ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
 // for the "New Comments" view. Supports pagination via limit/offset.
-func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32) ([]core.CommentWithParent, error) {
+func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer core.ViewerScope) ([]core.CommentWithParent, error) {
 	queries := models.New(s.DB)
 
-	// Call the generated sqlc method
 	rows, err := queries.ListRecentCommentsWithParents(ctx, models.ListRecentCommentsWithParentsParams{
-		GameID: gameID,
-		Limit:  limit,
-		Offset: offset,
+		GameID:        gameID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+		RowLimit:      limit,
+		RowOffset:     offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list recent comments with parents: %w", err)
@@ -806,16 +812,17 @@ func (s *MessageService) ListRecentCommentsWithParents(ctx context.Context, game
 }
 
 // ListRecentUnreadCommentsWithParents retrieves recent comments with their parent
-// messages/posts, omitting comments the user has manually marked as read.
+// messages/posts, omitting comments the viewer has manually marked as read.
 // Backs the "New Comments" view's unread-only filter in manual read mode.
-func (s *MessageService) ListRecentUnreadCommentsWithParents(ctx context.Context, gameID, userID int32, limit, offset int32) ([]core.CommentWithParent, error) {
+func (s *MessageService) ListRecentUnreadCommentsWithParents(ctx context.Context, gameID int32, limit, offset int32, viewer core.ViewerScope) ([]core.CommentWithParent, error) {
 	queries := models.New(s.DB)
 
 	rows, err := queries.ListRecentUnreadCommentsWithParents(ctx, models.ListRecentUnreadCommentsWithParentsParams{
-		GameID: gameID,
-		UserID: userID,
-		Limit:  limit,
-		Offset: offset,
+		GameID:        gameID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+		RowLimit:      limit,
+		RowOffset:     offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list recent unread comments with parents: %w", err)
@@ -852,7 +859,7 @@ func (s *MessageService) ListRecentUnreadCommentsWithParents(ctx context.Context
 
 	s.Logger.Info(ctx, "Listed recent unread comments with parents",
 		"game_id", gameID,
-		"user_id", userID,
+		"user_id", viewer.UserID,
 		"limit", limit,
 		"offset", offset,
 		"count", len(comments),
@@ -861,11 +868,16 @@ func (s *MessageService) ListRecentUnreadCommentsWithParents(ctx context.Context
 	return comments, nil
 }
 
-// GetTotalCommentCount returns the total count of non-deleted comments in a game
-func (s *MessageService) GetTotalCommentCount(ctx context.Context, gameID int32) (int64, error) {
+// GetTotalCommentCount returns the total for ListRecentCommentsWithParents: the
+// non-deleted comments in a game that the viewer can see
+func (s *MessageService) GetTotalCommentCount(ctx context.Context, gameID int32, viewer core.ViewerScope) (int64, error) {
 	queries := models.New(s.DB)
 
-	count, err := queries.GetTotalCommentCount(ctx, gameID)
+	count, err := queries.GetTotalCommentCount(ctx, models.GetTotalCommentCountParams{
+		GameID:        gameID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get total comment count: %w", err)
 	}
@@ -873,14 +885,16 @@ func (s *MessageService) GetTotalCommentCount(ctx context.Context, gameID int32)
 	return count, nil
 }
 
-// GetTotalUnreadCommentCount returns the count of non-deleted comments in a game
-// that the user has not manually marked as read
-func (s *MessageService) GetTotalUnreadCommentCount(ctx context.Context, gameID, userID int32) (int64, error) {
+// GetTotalUnreadCommentCount returns the total for
+// ListRecentUnreadCommentsWithParents: the visible comments in a game that the
+// viewer has not manually marked as read
+func (s *MessageService) GetTotalUnreadCommentCount(ctx context.Context, gameID int32, viewer core.ViewerScope) (int64, error) {
 	queries := models.New(s.DB)
 
 	count, err := queries.GetTotalUnreadCommentCount(ctx, models.GetTotalUnreadCommentCountParams{
-		GameID: gameID,
-		UserID: userID,
+		GameID:        gameID,
+		ViewerSeesAll: viewer.SeesAll,
+		ViewerUserID:  viewer.UserID,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get total unread comment count: %w", err)

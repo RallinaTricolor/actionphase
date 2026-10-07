@@ -59,7 +59,7 @@ func TestMessageService_ListCharacterPostsAndComments(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		result, err := service.ListCharacterPostsAndComments(context.Background(), char.ID, 20, 0)
+		result, err := service.ListCharacterPostsAndComments(context.Background(), char.ID, 20, 0, core.ViewerScope{})
 		require.NoError(t, err)
 
 		// Should have both post and comment
@@ -96,7 +96,7 @@ func TestMessageService_ListCharacterPostsAndComments(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		result, err := service.ListCharacterPostsAndComments(context.Background(), otherChar.ID, 20, 0)
+		result, err := service.ListCharacterPostsAndComments(context.Background(), otherChar.ID, 20, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Empty(t, result)
 	})
@@ -123,12 +123,12 @@ func TestMessageService_ListCharacterPostsAndComments(t *testing.T) {
 		}
 
 		// First page: 2 items
-		page1, err := service.ListCharacterPostsAndComments(context.Background(), paginatedChar.ID, 2, 0)
+		page1, err := service.ListCharacterPostsAndComments(context.Background(), paginatedChar.ID, 2, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, page1, 2)
 
 		// Second page: 1 item
-		page2, err := service.ListCharacterPostsAndComments(context.Background(), paginatedChar.ID, 2, 2)
+		page2, err := service.ListCharacterPostsAndComments(context.Background(), paginatedChar.ID, 2, 2, core.ViewerScope{})
 		require.NoError(t, err)
 		assert.Len(t, page2, 1)
 	})
@@ -154,11 +154,11 @@ func TestMessageService_ListCharacterPostsAndComments(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		page1, err := service.ListCharacterPostsAndComments(context.Background(), orderedChar.ID, 2, 0)
+		page1, err := service.ListCharacterPostsAndComments(context.Background(), orderedChar.ID, 2, 0, core.ViewerScope{})
 		require.NoError(t, err)
 		require.Len(t, page1, 2)
 
-		page2, err := service.ListCharacterPostsAndComments(context.Background(), orderedChar.ID, 2, 2)
+		page2, err := service.ListCharacterPostsAndComments(context.Background(), orderedChar.ID, 2, 2, core.ViewerScope{})
 		require.NoError(t, err)
 		require.Len(t, page2, 2)
 
@@ -218,7 +218,7 @@ func TestMessageService_ListCharacterPostsAndComments_NPCFilter(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	result, err := service.ListCharacterPostsAndComments(context.Background(), npc.ID, 20, 0)
+	result, err := service.ListCharacterPostsAndComments(context.Background(), npc.ID, 20, 0, core.ViewerScope{})
 	require.NoError(t, err)
 
 	// Only the comment should be returned, not the post
@@ -252,7 +252,7 @@ func TestMessageService_CountCharacterPostsAndComments(t *testing.T) {
 	require.NoError(t, err)
 
 	// Initially 0
-	count, err := service.CountCharacterPostsAndComments(context.Background(), char.ID)
+	count, err := service.CountCharacterPostsAndComments(context.Background(), char.ID, core.ViewerScope{})
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), count)
 
@@ -268,7 +268,7 @@ func TestMessageService_CountCharacterPostsAndComments(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	count, err = service.CountCharacterPostsAndComments(context.Background(), char.ID)
+	count, err = service.CountCharacterPostsAndComments(context.Background(), char.ID, core.ViewerScope{})
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), count)
 }
@@ -313,7 +313,7 @@ func TestMessageService_CountCharacterPostsAndComments_NPCFilter(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	count, err := service.CountCharacterPostsAndComments(context.Background(), npc.ID)
+	count, err := service.CountCharacterPostsAndComments(context.Background(), npc.ID, core.ViewerScope{})
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), count, "NPC posts should not be counted, only comments")
 }

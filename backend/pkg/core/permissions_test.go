@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -802,6 +803,27 @@ func TestIsPublicArchive(t *testing.T) {
 // Deliberately takes no database: the rule is a pure role comparison, and the
 // archive exemption is applied by callers (IsPublicArchive) rather than folded
 // in here.
+func TestCanSeeAllRestrictedPosts(t *testing.T) {
+	for _, role := range []string{"gm", "co_gm", "audience", "player", ""} {
+		for _, adminMode := range []bool{false, true} {
+			want := adminMode || role == "gm" || role == "co_gm" || role == "audience"
+			t.Run(fmt.Sprintf("role=%q admin_mode=%v", role, adminMode), func(t *testing.T) {
+				if got := CanSeeAllRestrictedPosts(role, adminMode); got != want {
+					t.Errorf("CanSeeAllRestrictedPosts(%q, %v) = %v, want %v", role, adminMode, got, want)
+				}
+			})
+		}
+	}
+
+	// The two cases the feature exists for, spelled out rather than derived.
+	if CanSeeAllRestrictedPosts("player", false) {
+		t.Error("a player must not bypass the allowlist")
+	}
+	if CanSeeAllRestrictedPosts("", false) {
+		t.Error("a non-participant must not bypass the allowlist")
+	}
+}
+
 func TestCanSeeHiddenCharacter(t *testing.T) {
 	tests := []struct {
 		name              string

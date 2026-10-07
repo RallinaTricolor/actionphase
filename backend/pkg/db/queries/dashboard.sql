@@ -76,6 +76,11 @@ LIMIT 15;
 
 -- name: GetUserRecentMessages :many
 -- Get recent messages from games user participates in OR is GM of (excluding their own messages)
+--
+-- Messages in a restricted thread the user can't see are left out, and so is
+-- anything under an unpublished draft. This is cross-game, so it uses
+-- restricted_thread_visible_to_user; TestRestrictedRuleAgreement keeps that in step with
+-- the Go rule.
 SELECT
   m.id as message_id,
   m.game_id,
@@ -89,17 +94,20 @@ SELECT
   m.message_type,
   m.phase_id
 FROM messages m
+INNER JOIN messages root ON root.id = m.root_post_id
 INNER JOIN games g ON m.game_id = g.id
-LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
+LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = sqlc.arg(user_id)::int AND gp.status = 'active'
 INNER JOIN users author ON m.author_id = author.id
 LEFT JOIN characters character ON m.character_id = character.id
-WHERE ((gp.user_id = $1 AND gp.status = 'active' AND gp.role != 'audience') OR g.gm_user_id = $1)
+WHERE ((gp.user_id = sqlc.arg(user_id)::int AND gp.status = 'active' AND gp.role != 'audience') OR g.gm_user_id = sqlc.arg(user_id)::int)
   AND m.created_at > NOW() - INTERVAL '7 days'
-  AND m.author_id != $1
+  AND m.author_id != sqlc.arg(user_id)::int
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND root.is_draft = false
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(user_id)::int))
 ORDER BY m.created_at DESC
-LIMIT $2;
+LIMIT sqlc.arg(row_limit);
 
 -- name: GetUserUpcomingDeadlines :many
 -- Get upcoming deadlines across all user's games: phase, arbitrary, and poll deadlines.
@@ -189,9 +197,48 @@ FROM games g
 LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
 WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1;
 
--- GetUnreadCommentCountsForDashboard is implemented as a raw query in dashboard.go
--- due to sqlc limitations with recursive CTEs (same pattern as GetPostCommentsWithThreads).
--- See getUnreadCommentCountsForDashboard() in backend/pkg/db/services/dashboard.go.
+-- name: GetUnreadCommentCountsForDashboard :many
+-- Unread comments at every nesting depth, per game, in each game's active
+-- Common Room phase. comment_read_mode is the user's preference: 'auto' counts
+-- comments newer than the user's last visit to the post; anything else counts
+-- comments not manually marked read. The user's own comments never count.
+--
+-- Comments in a restricted thread the user can't see are left out. This is
+-- cross-game, so it uses restricted_thread_visible_to_user; TestRestrictedRuleAgreement
+-- keeps that in step with the Go rule.
+SELECT
+  g.id AS game_id,
+  COALESCE(SUM(CASE
+    WHEN sqlc.arg(comment_read_mode)::text = 'auto'
+         AND ac.created_at > COALESCE(ucr.last_read_at, '1970-01-01'::timestamptz)
+         AND ac.author_id != sqlc.arg(user_id)::int
+         AND ac.is_deleted = false
+    THEN 1
+    WHEN sqlc.arg(comment_read_mode)::text != 'auto'
+         AND ucmr.comment_id IS NULL
+         AND ac.author_id != sqlc.arg(user_id)::int
+         AND ac.is_deleted = false
+    THEN 1
+    ELSE 0
+  END), 0)::bigint AS unread_count
+FROM games g
+LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = sqlc.arg(user_id)::int AND part.status = 'active'
+LEFT JOIN (
+  SELECT c.id, c.author_id, c.created_at, c.is_deleted, c.root_post_id, c.game_id
+  FROM messages c
+  JOIN messages root ON root.id = c.root_post_id
+  JOIN game_phases ph ON ph.id = root.phase_id
+    AND ph.is_active = true
+    AND ph.phase_type = 'common_room'
+  WHERE c.message_type = 'comment'
+    AND root.is_deleted = false
+    AND root.is_draft = false
+    AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(user_id)::int))
+) ac ON ac.game_id = g.id
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = ac.root_post_id AND ucr.user_id = sqlc.arg(user_id)::int
+LEFT JOIN user_comment_reads ucmr ON ucmr.comment_id = ac.id AND ucmr.user_id = sqlc.arg(user_id)::int
+WHERE ((part.user_id = sqlc.arg(user_id)::int AND part.status = 'active') OR g.gm_user_id = sqlc.arg(user_id)::int)
+GROUP BY g.id;
 
 -- name: GetDashboardUnreadCount :one
 -- Get count of all unread notifications for user (dashboard-specific)

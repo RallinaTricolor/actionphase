@@ -4,20 +4,27 @@ import { CommentEditor } from './CommentEditor';
 import { Button, Select, Alert } from '@/components/ui';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { postCachingService } from '@/services/PostCachingService';
+import type { PickablePlayer } from '@/lib/postViewers';
+import { PostViewerPicker } from './PostViewerPicker';
 
 interface CreatePostFormProps {
   gameId: number;
   phaseId?: number;
   characters: Character[]; // Characters the user can post as
   allCharacters?: Character[]; // All characters for autocomplete mentions
-  onSubmit: (characterId: number, content: string) => Promise<void>;
+  players?: PickablePlayer[]; // Players the post can be restricted to
+  // restrictedToUserIds is absent for a public post, and never empty.
+  onSubmit: (characterId: number, content: string, restrictedToUserIds?: number[]) => Promise<void>;
   isSubmitting: boolean;
   shouldStartCollapsed?: boolean; // Start collapsed when posts already exist
 }
 
-export function CreatePostForm({ gameId: _gameId, phaseId = undefined, characters, allCharacters, onSubmit, isSubmitting, shouldStartCollapsed = false }: CreatePostFormProps) {
+export function CreatePostForm({ gameId: _gameId, phaseId = undefined, characters, allCharacters, players = [], onSubmit, isSubmitting, shouldStartCollapsed = false }: CreatePostFormProps) {
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
   const [content, setContent] = useState('');
+  const [restricted, setRestricted] = useState(false);
+  const [viewerIds, setViewerIds] = useState<number[]>([]);
+  const missingViewers = restricted && viewerIds.length === 0;
   const [error, setError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(shouldStartCollapsed);
   
@@ -45,9 +52,16 @@ export function CreatePostForm({ gameId: _gameId, phaseId = undefined, character
       return;
     }
 
+    if (missingViewers) {
+      setError('Pick at least one player who can see this post');
+      return;
+    }
+
     try {
-      await onSubmit(selectedCharacterId, content.trim());
+      await onSubmit(selectedCharacterId, content.trim(), restricted ? viewerIds : undefined);
       setContent('');
+      setRestricted(false);
+      setViewerIds([]);
       if (autosaveRefId) {
         postCachingService.remove(autosaveRefId);
       }
@@ -156,10 +170,21 @@ export function CreatePostForm({ gameId: _gameId, phaseId = undefined, character
         </p>
       </div>
 
+      <div className="mb-4">
+        <PostViewerPicker
+          players={players}
+          restricted={restricted}
+          onRestrictedChange={setRestricted}
+          selectedUserIds={viewerIds}
+          onSelectedChange={setViewerIds}
+          disabled={isSubmitting}
+        />
+      </div>
+
       <Button
         type="submit"
         variant="primary"
-        disabled={isSubmitting || !content.trim()}
+        disabled={isSubmitting || !content.trim() || missingViewers}
         className="w-full text-lg py-3"
         data-faro-user-action-name="create-post"
       >

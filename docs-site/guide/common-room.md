@@ -30,6 +30,16 @@ The **Polls** tab shows all polls for the current phase. Polls you haven't voted
 
 Click **Create New GM Post** at the top of the Posts tab. Write your message (Markdown supported) and submit. If you have more than one character in the game, a selector appears so you can choose which character the post is attributed to.
 
+## GM: Restricting a Post
+
+A restricted post is a Common Room thread only some players can read, such as a secret meeting or a split party. Turn on **Restrict who can see this post** when creating a post (or a draft post on a pending phase) and tick the players who should see it. Players are listed by their characters.
+
+- **Who sees it:** the players you pick, plus the GM, co-GMs and audience. Everyone else sees nothing: not the post, its comments, or any sign that it exists. A link to one of its comments shows "That comment couldn't be found".
+- **The whole thread is covered.** Comments and replies inherit the post's restriction.
+- **Players see a Restricted badge.** Only the GM, co-GMs and audience see who is on the list.
+- **Changing the list:** click **Edit viewers** on the post (or **Restrict** on a public post) to add or remove players, or to make the post public again. Someone you take off the list loses the whole thread, including their own comments in it, and those comments also disappear from their character's page for anyone not on the list. Their in-app notifications about the thread are deleted, but Discord messages already sent can't be recalled.
+- **When the game ends:** once a game reaches its epilogue or is completed, restrictions lift and every thread is visible in the archive.
+
 ## GM: Creating Polls
 
 Go to the **Polls** tab and click **Create Poll**:

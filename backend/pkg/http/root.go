@@ -296,6 +296,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 					CharacterService:    &db.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 					GameService:         &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 					NotificationService: db.NewNotificationService(h.App.Pool, h.App.ObsLogger),
+					MessageService:      &dbmessages.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger, Metrics: h.App.Observability.OTELMetrics},
 				}
 				// huma / type-first -- shares gameScopedAPI with the other
 				// packages registering on this same /{gameID} subrouter. The
@@ -421,6 +422,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			CharacterService:    &db.CharacterService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 			GameService:         &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 			NotificationService: db.NewNotificationService(h.App.Pool, h.App.ObsLogger),
+			MessageService:      &dbmessages.MessageService{DB: h.App.Pool, Logger: h.App.ObsLogger, Metrics: h.App.Observability.OTELMetrics},
 		}
 		avatarHandler := avatars.Handler{
 			App:              h.App,

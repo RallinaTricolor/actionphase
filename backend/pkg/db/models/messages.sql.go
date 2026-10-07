@@ -30,9 +30,31 @@ type AddCommentFavoriteParams struct {
 // Favorites are private to the favoriting user and span every game. Unlike
 // manual read tracking, the listing is NOT game-scoped -- do not add a game
 // filter to ListFavoriteCommentsWithParents.
+//
+// A favorite in a restricted thread the user can no longer see is left out of
+// every read below. The cross-game queries can't take one precomputed
+// viewer_sees_all, so they use restricted_thread_visible_to_user, which restates
+// core.CanSeeAllRestrictedPosts against the root post's game (admin mode
+// aside: admins see their own favorites as a normal user would).
+// TestRestrictedRuleAgreement keeps it in step with the Go rule.
 // Insert a favorite record; ignore if already exists (idempotent)
 func (q *Queries) AddCommentFavorite(ctx context.Context, arg AddCommentFavoriteParams) error {
 	_, err := q.db.Exec(ctx, addCommentFavorite, arg.UserID, arg.CommentID, arg.GameID)
+	return err
+}
+
+const addPostViewers = `-- name: AddPostViewers :exec
+INSERT INTO common_room_post_viewers (post_id, user_id)
+SELECT $1::int, unnest($2::int[])
+`
+
+type AddPostViewersParams struct {
+	PostID  int32   `json:"post_id"`
+	UserIds []int32 `json:"user_ids"`
+}
+
+func (q *Queries) AddPostViewers(ctx context.Context, arg AddPostViewersParams) error {
+	_, err := q.db.Exec(ctx, addPostViewers, arg.PostID, arg.UserIds)
 	return err
 }
 
@@ -70,6 +92,29 @@ func (q *Queries) CheckPostOwnership(ctx context.Context, id int32) (CheckPostOw
 	var i CheckPostOwnershipRow
 	err := row.Scan(&i.AuthorID, &i.DeletedAt)
 	return i, err
+}
+
+const countActivePlayersAmong = `-- name: CountActivePlayersAmong :one
+SELECT COUNT(*)
+FROM game_participants
+WHERE game_id = $1
+  AND user_id = ANY($2::int[])
+  AND role = 'player'
+  AND status = 'active'
+`
+
+type CountActivePlayersAmongParams struct {
+	GameID  int32   `json:"game_id"`
+	UserIds []int32 `json:"user_ids"`
+}
+
+// How many of user_ids are active players in the game. Allowlists may only
+// name active players: GMs, co-GMs and audience already see everything.
+func (q *Queries) CountActivePlayersAmong(ctx context.Context, arg CountActivePlayersAmongParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countActivePlayersAmong, arg.GameID, arg.UserIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countAllPrivateConversations = `-- name: CountAllPrivateConversations :one
@@ -211,7 +256,7 @@ INSERT INTO messages (
     $1, $2, $3, $4, $5, 'comment', $6, $7, $8,
     (SELECT avatar_url FROM characters WHERE id = $4)
 )
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 type CreateCommentParams struct {
@@ -262,6 +307,8 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (M
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
 }
@@ -278,12 +325,14 @@ INSERT INTO messages (
     visibility,
     mentioned_character_ids,
     is_draft,
-    character_avatar_url_at_post
+    character_avatar_url_at_post,
+    is_restricted
 ) VALUES (
     $1, $2, $3, $4, $5, 'post', $6, $7, true,
-    (SELECT avatar_url FROM characters WHERE id = $4)
+    (SELECT avatar_url FROM characters WHERE id = $4),
+    $8
 )
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 type CreateDraftPostParams struct {
@@ -294,6 +343,7 @@ type CreateDraftPostParams struct {
 	Content               string            `json:"content"`
 	Visibility            MessageVisibility `json:"visibility"`
 	MentionedCharacterIds []int32           `json:"mentioned_character_ids"`
+	IsRestricted          bool              `json:"is_restricted"`
 }
 
 // ============================================================================
@@ -311,6 +361,7 @@ func (q *Queries) CreateDraftPost(ctx context.Context, arg CreateDraftPostParams
 		arg.Content,
 		arg.Visibility,
 		arg.MentionedCharacterIds,
+		arg.IsRestricted,
 	)
 	var i Message
 	err := row.Scan(
@@ -334,6 +385,8 @@ func (q *Queries) CreateDraftPost(ctx context.Context, arg CreateDraftPostParams
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
 }
@@ -350,12 +403,14 @@ INSERT INTO messages (
     message_type,
     visibility,
     mentioned_character_ids,
-    character_avatar_url_at_post
+    character_avatar_url_at_post,
+    is_restricted
 ) VALUES (
     $1, $2, $3, $4, $5, 'post', $6, $7,
-    (SELECT avatar_url FROM characters WHERE id = $4)
+    (SELECT avatar_url FROM characters WHERE id = $4),
+    $8
 )
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 type CreatePostParams struct {
@@ -366,6 +421,7 @@ type CreatePostParams struct {
 	Content               string            `json:"content"`
 	Visibility            MessageVisibility `json:"visibility"`
 	MentionedCharacterIds []int32           `json:"mentioned_character_ids"`
+	IsRestricted          bool              `json:"is_restricted"`
 }
 
 // Messages Queries (Common Room posts and future private messages)
@@ -384,6 +440,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Message
 		arg.Content,
 		arg.Visibility,
 		arg.MentionedCharacterIds,
+		arg.IsRestricted,
 	)
 	var i Message
 	err := row.Scan(
@@ -407,6 +464,8 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Message
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
 }
@@ -472,7 +531,7 @@ UPDATE messages
 SET is_deleted = true
 WHERE id = $1
   AND message_type = 'post'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 func (q *Queries) DeletePost(ctx context.Context, id int32) (Message, error) {
@@ -499,8 +558,19 @@ func (q *Queries) DeletePost(ctx context.Context, id int32) (Message, error) {
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
+}
+
+const deletePostViewers = `-- name: DeletePostViewers :exec
+DELETE FROM common_room_post_viewers WHERE post_id = $1
+`
+
+func (q *Queries) DeletePostViewers(ctx context.Context, postID int32) error {
+	_, err := q.db.Exec(ctx, deletePostViewers, postID)
+	return err
 }
 
 const deleteReadMarkersForGame = `-- name: DeleteReadMarkersForGame :exec
@@ -533,6 +603,25 @@ WHERE user_id = $1
 // Delete all read markers for a user (e.g., when user account is deleted)
 func (q *Queries) DeleteReadMarkersForUser(ctx context.Context, userID int32) error {
 	_, err := q.db.Exec(ctx, deleteReadMarkersForUser, userID)
+	return err
+}
+
+const deleteThreadNotificationsForHiddenUsers = `-- name: DeleteThreadNotificationsForHiddenUsers :exec
+DELETE FROM notifications n
+WHERE n.related_type IN ('post', 'comment')
+  AND n.related_id IN (SELECT id FROM messages WHERE root_post_id = $1::int)
+  AND NOT restricted_thread_visible_to_user($1::int, n.user_id)
+`
+
+// Removes in-app notifications pointing into a restricted thread from every
+// user who can no longer see it. A common_room_post notification's title holds
+// the start of the post, so leaving it would be a leak.
+//
+// Who can still see it is restricted_thread_visible_to_user (the bypass
+// roles plus the allowlist). Callers run it only for a restricted post that
+// is not in a public archive.
+func (q *Queries) DeleteThreadNotificationsForHiddenUsers(ctx context.Context, postID int32) error {
+	_, err := q.db.Exec(ctx, deleteThreadNotificationsForHiddenUsers, postID)
 	return err
 }
 
@@ -638,7 +727,7 @@ func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversat
 }
 
 const getComment = `-- name: GetComment :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -670,6 +759,8 @@ type GetCommentRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -700,11 +791,34 @@ func (q *Queries) GetComment(ctx context.Context, id int32) (GetCommentRow, erro
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 		&i.AuthorUsername,
 		&i.CharacterName,
 		&i.CharacterAvatarUrl,
 		&i.ReplyCount,
 	)
+	return i, err
+}
+
+const getCommentParent = `-- name: GetCommentParent :one
+SELECT game_id, phase_id
+FROM messages
+WHERE id = $1
+`
+
+type GetCommentParentRow struct {
+	GameID  int32       `json:"game_id"`
+	PhaseID pgtype.Int4 `json:"phase_id"`
+}
+
+// The game and phase of the message a new comment replies to: the comment must
+// be in the same game, and inherits the phase. Deliberately does NOT filter on
+// is_deleted: a reply to a soft-deleted parent still belongs to that phase.
+func (q *Queries) GetCommentParent(ctx context.Context, id int32) (GetCommentParentRow, error) {
+	row := q.db.QueryRow(ctx, getCommentParent, id)
+	var i GetCommentParentRow
+	err := row.Scan(&i.GameID, &i.PhaseID)
 	return i, err
 }
 
@@ -774,7 +888,7 @@ func (q *Queries) GetConversationParticipantCharacters(ctx context.Context, arg 
 }
 
 const getDraftPostForPhase = `-- name: GetDraftPostForPhase :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -810,6 +924,8 @@ type GetDraftPostForPhaseRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -841,6 +957,8 @@ func (q *Queries) GetDraftPostForPhase(ctx context.Context, phaseID pgtype.Int4)
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 		&i.AuthorUsername,
 		&i.CharacterName,
 		&i.CharacterAvatarUrl,
@@ -853,15 +971,21 @@ const getFavoriteCommentIDsForGame = `-- name: GetFavoriteCommentIDsForGame :man
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
+JOIN messages root ON root.id = m.root_post_id
+WHERE f.user_id = $1::int
   AND f.game_id = $2
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
 `
 
 type GetFavoriteCommentIDsForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 // Returns favorited comment IDs for one user within one game.
@@ -872,7 +996,7 @@ type GetFavoriteCommentIDsForGameParams struct {
 // "your favorites" contains: a star that fills on a comment absent from
 // /favorites is a bug wherever it surfaces.
 func (q *Queries) GetFavoriteCommentIDsForGame(ctx context.Context, arg GetFavoriteCommentIDsForGameParams) ([]int32, error) {
-	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -895,16 +1019,18 @@ const getFavoriteCommentIDsForUser = `-- name: GetFavoriteCommentIDsForUser :man
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
-WHERE f.user_id = $1
+JOIN messages root ON root.id = m.root_post_id
+WHERE f.user_id = $1::int
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
+  AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
 `
 
 // Returns every favorited comment ID for a user, across all games.
 // Powers star state on non-game-scoped surfaces (e.g. character profile).
 // Excludes soft-deleted comments for the same reason as the per-game set.
-func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, userID int32) ([]int32, error) {
-	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, userID)
+func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, viewerUserID int32) ([]int32, error) {
+	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, viewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -926,24 +1052,36 @@ func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, userID int32
 const getGamePostCount = `-- name: GetGamePostCount :one
 
 SELECT COUNT(*)
-FROM messages
-WHERE game_id = $1
-  AND message_type = 'post'
-  AND is_deleted = false
-  AND is_draft = false
-  AND (CASE WHEN $2 = 0 THEN TRUE ELSE phase_id = $2 END)
+FROM messages m
+WHERE m.game_id = $1
+  AND m.message_type = 'post'
+  AND m.is_deleted = false
+  AND m.is_draft = false
+  AND ($2::int = 0 OR m.phase_id = $2::int)
+  AND ($3::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = $4::int))
 `
 
 type GetGamePostCountParams struct {
-	GameID  int32       `json:"game_id"`
-	Column2 interface{} `json:"column_2"`
+	GameID        int32 `json:"game_id"`
+	PhaseID       int32 `json:"phase_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
 }
 
 // ============================================================================
 // STATISTICS & COUNTS
 // ============================================================================
+// Same filter as GetGamePosts, so the count never includes a hidden post.
 func (q *Queries) GetGamePostCount(ctx context.Context, arg GetGamePostCountParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getGamePostCount, arg.GameID, arg.Column2)
+	row := q.db.QueryRow(ctx, getGamePostCount,
+		arg.GameID,
+		arg.PhaseID,
+		arg.ViewerSeesAll,
+		arg.ViewerUserID,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -951,7 +1089,7 @@ func (q *Queries) GetGamePostCount(ctx context.Context, arg GetGamePostCountPara
 
 const getGamePosts = `-- name: GetGamePosts :many
 
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -963,16 +1101,22 @@ WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
-  AND (CASE WHEN $2 = 0 THEN TRUE ELSE m.phase_id = $2 END)
+  AND ($2::int = 0 OR m.phase_id = $2::int)
+  AND ($3::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = $4::int))
 ORDER BY m.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type GetGamePostsParams struct {
-	GameID  int32       `json:"game_id"`
-	Column2 interface{} `json:"column_2"`
-	Limit   int32       `json:"limit"`
-	Offset  int32       `json:"offset"`
+	GameID        int32 `json:"game_id"`
+	PhaseID       int32 `json:"phase_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	RowOffset     int32 `json:"row_offset"`
+	RowLimit      int32 `json:"row_limit"`
 }
 
 type GetGamePostsRow struct {
@@ -996,6 +1140,8 @@ type GetGamePostsRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -1003,12 +1149,18 @@ type GetGamePostsRow struct {
 }
 
 // Return in parent-to-child order
+// Restricted posts the viewer may not see are left out. viewer_sees_all is
+// computed in Go (ResolveViewerScope) and already covers the public archive,
+// so no state check here. For a post root_post_id = id, so the allowlist is
+// keyed by m.id directly.
 func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]GetGamePostsRow, error) {
 	rows, err := q.db.Query(ctx, getGamePosts,
 		arg.GameID,
-		arg.Column2,
-		arg.Limit,
-		arg.Offset,
+		arg.PhaseID,
+		arg.ViewerSeesAll,
+		arg.ViewerUserID,
+		arg.RowOffset,
+		arg.RowLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -1038,6 +1190,8 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 			&i.EditCount,
 			&i.IsDraft,
 			&i.CharacterAvatarUrlAtPost,
+			&i.RootPostID,
+			&i.IsRestricted,
 			&i.AuthorUsername,
 			&i.CharacterName,
 			&i.CharacterAvatarUrl,
@@ -1054,15 +1208,23 @@ func (q *Queries) GetGamePosts(ctx context.Context, arg GetGamePostsParams) ([]G
 }
 
 const getManualReadCommentIDsForGame = `-- name: GetManualReadCommentIDsForGame :many
-SELECT post_id, comment_id
-FROM user_comment_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY post_id, comment_id
+SELECT r.post_id, r.comment_id
+FROM user_comment_reads r
+JOIN messages c ON c.id = r.comment_id
+JOIN messages root ON root.id = c.root_post_id
+WHERE r.user_id = $1::int
+  AND r.game_id = $2
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+ORDER BY r.post_id, r.comment_id
 `
 
 type GetManualReadCommentIDsForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 type GetManualReadCommentIDsForGameRow struct {
@@ -1071,9 +1233,12 @@ type GetManualReadCommentIDsForGameRow struct {
 }
 
 // Returns (post_id, comment_id) pairs for all manually read comments in a game
-// Used to batch-load read state for the entire common room view
+// Used to batch-load read state for the entire common room view.
+// Rows in a restricted thread the viewer can no longer see are dropped. The
+// check uses the comment's own root, not the stored post_id, which came from
+// the request URL.
 func (q *Queries) GetManualReadCommentIDsForGame(ctx context.Context, arg GetManualReadCommentIDsForGameParams) ([]GetManualReadCommentIDsForGameRow, error) {
-	rows, err := q.db.Query(ctx, getManualReadCommentIDsForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getManualReadCommentIDsForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -1125,7 +1290,7 @@ func (q *Queries) GetManualReadCommentIDsForPost(ctx context.Context, arg GetMan
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -1158,6 +1323,8 @@ type GetMessageRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -1189,6 +1356,8 @@ func (q *Queries) GetMessage(ctx context.Context, id int32) (GetMessageRow, erro
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 		&i.AuthorUsername,
 		&i.CharacterName,
 		&i.CharacterAvatarUrl,
@@ -1197,20 +1366,69 @@ func (q *Queries) GetMessage(ctx context.Context, id int32) (GetMessageRow, erro
 	return i, err
 }
 
-const getMessagePhaseID = `-- name: GetMessagePhaseID :one
-SELECT phase_id
-FROM messages
-WHERE id = $1
+const getMessageRootPostID = `-- name: GetMessageRootPostID :one
+SELECT root_post_id FROM messages WHERE id = $1
 `
 
-// Get just the phase_id of a message, used when a new comment inherits its
-// phase from the message it replies to. Deliberately does NOT filter on
-// is_deleted: a reply to a soft-deleted parent still belongs to that phase.
-func (q *Queries) GetMessagePhaseID(ctx context.Context, id int32) (pgtype.Int4, error) {
-	row := q.db.QueryRow(ctx, getMessagePhaseID, id)
-	var phase_id pgtype.Int4
-	err := row.Scan(&phase_id)
-	return phase_id, err
+func (q *Queries) GetMessageRootPostID(ctx context.Context, id int32) (int32, error) {
+	row := q.db.QueryRow(ctx, getMessageRootPostID, id)
+	var root_post_id int32
+	err := row.Scan(&root_post_id)
+	return root_post_id, err
+}
+
+const getMessageVisibilityContext = `-- name: GetMessageVisibilityContext :one
+SELECT root.game_id,
+       root.is_restricted AS root_is_restricted,
+       root.is_draft AS root_is_draft,
+       g.state,
+       g.gm_user_id,
+       COALESCE((SELECT gp.role FROM game_participants gp
+                 WHERE gp.game_id = root.game_id AND gp.user_id = $1::int
+                   AND gp.status = 'active'), '')::text AS viewer_role,
+       COALESCE((SELECT u.is_admin FROM users u WHERE u.id = $1::int), false)::bool AS viewer_is_admin,
+       EXISTS (SELECT 1 FROM common_room_post_viewers v
+               WHERE v.post_id = m.root_post_id AND v.user_id = $1::int) AS is_listed_viewer
+FROM messages m
+JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = root.game_id
+WHERE m.id = $2
+`
+
+type GetMessageVisibilityContextParams struct {
+	UserID    int32 `json:"user_id"`
+	MessageID int32 `json:"message_id"`
+}
+
+type GetMessageVisibilityContextRow struct {
+	GameID           int32  `json:"game_id"`
+	RootIsRestricted bool   `json:"root_is_restricted"`
+	RootIsDraft      bool   `json:"root_is_draft"`
+	State            string `json:"state"`
+	GmUserID         int32  `json:"gm_user_id"`
+	ViewerRole       string `json:"viewer_role"`
+	ViewerIsAdmin    bool   `json:"viewer_is_admin"`
+	IsListedViewer   bool   `json:"is_listed_viewer"`
+}
+
+// Everything CanUserViewMessage needs for one message, resolved from the
+// message's OWN root post and that post's game -- never from IDs in the URL.
+// The root's game, not m.game_id: a comment filed under another game (rows
+// from before CreateComment checked) must not let that game's role decide.
+func (q *Queries) GetMessageVisibilityContext(ctx context.Context, arg GetMessageVisibilityContextParams) (GetMessageVisibilityContextRow, error) {
+	row := q.db.QueryRow(ctx, getMessageVisibilityContext, arg.UserID, arg.MessageID)
+	var i GetMessageVisibilityContextRow
+	err := row.Scan(
+		&i.GameID,
+		&i.RootIsRestricted,
+		&i.RootIsDraft,
+		&i.State,
+		&i.GmUserID,
+		&i.ViewerRole,
+		&i.ViewerIsAdmin,
+		&i.IsListedViewer,
+	)
+	return i, err
 }
 
 const getMessageWithParentContext = `-- name: GetMessageWithParentContext :many
@@ -1393,7 +1611,7 @@ func (q *Queries) GetMessageWithParentContext(ctx context.Context, arg GetMessag
 }
 
 const getPhasePosts = `-- name: GetPhasePosts :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -1405,8 +1623,18 @@ WHERE m.phase_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND ($2::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = $3::int))
 ORDER BY m.created_at DESC
 `
+
+type GetPhasePostsParams struct {
+	PhaseID       pgtype.Int4 `json:"phase_id"`
+	ViewerSeesAll bool        `json:"viewer_sees_all"`
+	ViewerUserID  int32       `json:"viewer_user_id"`
+}
 
 type GetPhasePostsRow struct {
 	ID                       int32              `json:"id"`
@@ -1429,14 +1657,20 @@ type GetPhasePostsRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
 	CommentCount             int64              `json:"comment_count"`
 }
 
-func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]GetPhasePostsRow, error) {
-	rows, err := q.db.Query(ctx, getPhasePosts, phaseID)
+// Restricted posts the viewer may not see are left out. viewer_sees_all is
+// computed in Go (ResolveViewerScope) and already covers the public archive,
+// so no state check here. For a post root_post_id = id, so the allowlist is
+// keyed by m.id directly.
+func (q *Queries) GetPhasePosts(ctx context.Context, arg GetPhasePostsParams) ([]GetPhasePostsRow, error) {
+	rows, err := q.db.Query(ctx, getPhasePosts, arg.PhaseID, arg.ViewerSeesAll, arg.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1465,6 +1699,8 @@ func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]Get
 			&i.EditCount,
 			&i.IsDraft,
 			&i.CharacterAvatarUrlAtPost,
+			&i.RootPostID,
+			&i.IsRestricted,
 			&i.AuthorUsername,
 			&i.CharacterName,
 			&i.CharacterAvatarUrl,
@@ -1481,7 +1717,7 @@ func (q *Queries) GetPhasePosts(ctx context.Context, phaseID pgtype.Int4) ([]Get
 }
 
 const getPost = `-- name: GetPost :one
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -1513,6 +1749,8 @@ type GetPostRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -1543,6 +1781,8 @@ func (q *Queries) GetPost(ctx context.Context, id int32) (GetPostRow, error) {
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 		&i.AuthorUsername,
 		&i.CharacterName,
 		&i.CharacterAvatarUrl,
@@ -1587,7 +1827,7 @@ descendant_counts AS (
     FROM descendants
     GROUP BY root_id
 )
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -1622,6 +1862,8 @@ type GetPostCommentsRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -1671,6 +1913,8 @@ func (q *Queries) GetPostComments(ctx context.Context, parentID pgtype.Int4) ([]
 			&i.EditCount,
 			&i.IsDraft,
 			&i.CharacterAvatarUrlAtPost,
+			&i.RootPostID,
+			&i.IsRestricted,
 			&i.AuthorUsername,
 			&i.CharacterName,
 			&i.CharacterAvatarUrl,
@@ -1698,9 +1942,19 @@ WHERE m.game_id = $1
   AND m.message_type = 'post'
   AND m.is_deleted = false
   AND m.is_draft = false
+  AND ($2::bool
+       OR m.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = m.id AND v.user_id = $3::int))
 GROUP BY m.id, m.created_at
 ORDER BY m.created_at DESC
 `
+
+type GetPostsWithUnreadCountParams struct {
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+}
 
 type GetPostsWithUnreadCountRow struct {
 	PostID          int32              `json:"post_id"`
@@ -1710,9 +1964,10 @@ type GetPostsWithUnreadCountRow struct {
 }
 
 // Get posts with their total comment count and last comment timestamp
-// Frontend will compare these with read markers to determine unread status
-func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, gameID int32) ([]GetPostsWithUnreadCountRow, error) {
-	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, gameID)
+// Frontend will compare these with read markers to determine unread status.
+// Restricted posts the viewer can't see are left out.
+func (q *Queries) GetPostsWithUnreadCount(ctx context.Context, arg GetPostsWithUnreadCountParams) ([]GetPostsWithUnreadCountRow, error) {
+	rows, err := q.db.Query(ctx, getPostsWithUnreadCount, arg.GameID, arg.ViewerSeesAll, arg.ViewerUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -1773,18 +2028,24 @@ SELECT
         '{}'::integer[]
     ) as unread_comment_ids
 FROM messages posts
-LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1
-LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1
+LEFT JOIN user_common_room_reads ucr ON ucr.post_id = posts.id AND ucr.user_id = $1::int
+LEFT JOIN comment_threads ct ON ct.post_id = posts.id AND ct.author_id != $1::int
 WHERE posts.game_id = $2
   AND posts.message_type = 'post'
   AND posts.is_deleted = false
+  AND posts.is_draft = false
+  AND ($3::bool
+       OR posts.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = posts.id AND v.user_id = $1::int))
 GROUP BY posts.id
 ORDER BY posts.created_at DESC
 `
 
 type GetUnreadCommentIDsForPostsParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 type GetUnreadCommentIDsForPostsRow struct {
@@ -1800,8 +2061,11 @@ type GetUnreadCommentIDsForPostsRow struct {
 //
 // NOTE: If user has never visited (ucr.last_read_at IS NULL), returns empty array
 // This prevents overwhelming users with "NEW" badges on their first visit
+//
+// The outer query decides which post IDs come back, so it carries the draft
+// check and the restricted-post predicate; comment_threads only feeds it.
 func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnreadCommentIDsForPostsParams) ([]GetUnreadCommentIDsForPostsRow, error) {
-	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getUnreadCommentIDsForPosts, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -1821,7 +2085,7 @@ func (q *Queries) GetUnreadCommentIDsForPosts(ctx context.Context, arg GetUnread
 }
 
 const getUserPostsInGame = `-- name: GetUserPostsInGame :many
-SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+SELECT m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
        u.username as author_username,
        c.name as character_name,
        COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
@@ -1863,6 +2127,8 @@ type GetUserPostsInGameRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -1899,6 +2165,8 @@ func (q *Queries) GetUserPostsInGame(ctx context.Context, arg GetUserPostsInGame
 			&i.EditCount,
 			&i.IsDraft,
 			&i.CharacterAvatarUrlAtPost,
+			&i.RootPostID,
+			&i.IsRestricted,
 			&i.AuthorUsername,
 			&i.CharacterName,
 			&i.CharacterAvatarUrl,
@@ -1942,20 +2210,29 @@ func (q *Queries) GetUserReadMarker(ctx context.Context, arg GetUserReadMarkerPa
 }
 
 const getUserReadMarkersForGame = `-- name: GetUserReadMarkersForGame :many
-SELECT id, user_id, game_id, post_id, last_read_comment_id, last_read_at, created_at, updated_at FROM user_common_room_reads
-WHERE user_id = $1 AND game_id = $2
-ORDER BY last_read_at DESC
+SELECT ucr.id, ucr.user_id, ucr.game_id, ucr.post_id, ucr.last_read_comment_id, ucr.last_read_at, ucr.created_at, ucr.updated_at FROM user_common_room_reads ucr
+JOIN messages root ON root.id = ucr.post_id
+WHERE ucr.user_id = $1::int
+  AND ucr.game_id = $2
+  AND ($3::bool
+       OR root.is_restricted = false
+       OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                  WHERE v.post_id = root.id AND v.user_id = $1::int))
+ORDER BY ucr.last_read_at DESC
 `
 
 type GetUserReadMarkersForGameParams struct {
-	UserID int32 `json:"user_id"`
-	GameID int32 `json:"game_id"`
+	ViewerUserID  int32 `json:"viewer_user_id"`
+	GameID        int32 `json:"game_id"`
+	ViewerSeesAll bool  `json:"viewer_sees_all"`
 }
 
 // Get all read markers for a user in a specific game
-// Used to batch-check which posts have unread content
+// Used to batch-check which posts have unread content.
+// Markers left over from before the viewer lost access to a restricted post
+// are dropped, so the post's ID doesn't surface here.
 func (q *Queries) GetUserReadMarkersForGame(ctx context.Context, arg GetUserReadMarkersForGameParams) ([]UserCommonRoomRead, error) {
-	rows, err := q.db.Query(ctx, getUserReadMarkersForGame, arg.UserID, arg.GameID)
+	rows, err := q.db.Query(ctx, getUserReadMarkersForGame, arg.ViewerUserID, arg.GameID, arg.ViewerSeesAll)
 	if err != nil {
 		return nil, err
 	}
@@ -1981,6 +2258,53 @@ func (q *Queries) GetUserReadMarkersForGame(ctx context.Context, arg GetUserRead
 		return nil, err
 	}
 	return items, nil
+}
+
+const getViewerRestrictedPostContext = `-- name: GetViewerRestrictedPostContext :one
+
+SELECT g.state,
+       g.gm_user_id,
+       COALESCE((SELECT gp.role FROM game_participants gp
+                 WHERE gp.game_id = g.id AND gp.user_id = $1::int
+                   AND gp.status = 'active'), '')::text AS viewer_role,
+       COALESCE((SELECT u.is_admin FROM users u WHERE u.id = $1::int), false)::bool AS viewer_is_admin
+FROM games g
+WHERE g.id = $2
+`
+
+type GetViewerRestrictedPostContextParams struct {
+	UserID int32 `json:"user_id"`
+	GameID int32 `json:"game_id"`
+}
+
+type GetViewerRestrictedPostContextRow struct {
+	State         string `json:"state"`
+	GmUserID      int32  `json:"gm_user_id"`
+	ViewerRole    string `json:"viewer_role"`
+	ViewerIsAdmin bool   `json:"viewer_is_admin"`
+}
+
+// ============================================================================
+// RESTRICTED POSTS (Common Room allowlists)
+// ============================================================================
+// The rule lives in core.CanSeeAllRestrictedPosts. These queries return the
+// facts it needs; Go applies it. Single-game read queries take the resolved
+// scope as viewer_sees_all; cross-game ones call the SQL function
+// restricted_thread_visible_to_user (migration
+// 20261006184500_add_thread_visibility_functions).
+// Everything ResolveViewerScope needs to decide whether a viewer bypasses the
+// allowlists in one game. viewer_role is ” for a non-participant; the primary
+// GM is not a game_participants row, so Go compares gm_user_id itself.
+func (q *Queries) GetViewerRestrictedPostContext(ctx context.Context, arg GetViewerRestrictedPostContextParams) (GetViewerRestrictedPostContextRow, error) {
+	row := q.db.QueryRow(ctx, getViewerRestrictedPostContext, arg.UserID, arg.GameID)
+	var i GetViewerRestrictedPostContextRow
+	err := row.Scan(
+		&i.State,
+		&i.GmUserID,
+		&i.ViewerRole,
+		&i.ViewerIsAdmin,
+	)
+	return i, err
 }
 
 const listAllPrivateConversations = `-- name: ListAllPrivateConversations :many
@@ -2134,7 +2458,7 @@ func (q *Queries) ListAllPrivateConversations(ctx context.Context, arg ListAllPr
 }
 
 const listFavoriteCommentsWithParents = `-- name: ListFavoriteCommentsWithParents :many
-WITH RECURSIVE favorite_comments AS (
+WITH favorite_comments AS (
     SELECT
         m.id,
         m.game_id,
@@ -2150,39 +2474,25 @@ WITH RECURSIVE favorite_comments AS (
         u.username as author_username,
         c.name as character_name,
         COALESCE(m.character_avatar_url_at_post, c.avatar_url) as character_avatar_url,
+        m.root_post_id,
         f.created_at as favorited_at,
         g.title as game_title
     FROM user_comment_favorites f
     JOIN messages m ON m.id = f.comment_id
+    JOIN messages root ON root.id = m.root_post_id
     JOIN games g ON g.id = m.game_id
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
-    WHERE f.user_id = $1
+    WHERE f.user_id = $1::int
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
+      AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
       AND (
           $2::timestamptz IS NULL
           OR (f.created_at, f.comment_id) < ($2::timestamptz, $3::integer)
       )
     ORDER BY f.created_at DESC, f.comment_id DESC
     LIMIT $4
-),
-root_posts AS (
-    -- Base: walk up from each favorited comment, tracking the original comment's id
-    SELECT fc.id AS comment_id, fc.parent_id AS current_id
-    FROM favorite_comments fc
-    WHERE fc.parent_id IS NOT NULL
-    UNION ALL
-    -- Recursive step: keep walking up until we hit a post
-    SELECT rp.comment_id, m.parent_id AS current_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'comment'
-    WHERE m.parent_id IS NOT NULL
-),
-root_post_ids AS (
-    SELECT rp.comment_id, rp.current_id AS post_id
-    FROM root_posts rp
-    JOIN messages m ON m.id = rp.current_id AND m.message_type = 'post'
 ),
 parent_messages AS (
     SELECT
@@ -2208,7 +2518,7 @@ SELECT
     fc.game_id,
     fc.game_title,
     fc.parent_id,
-    rp.post_id,
+    fc.root_post_id AS post_id,
     fc.author_id,
     fc.character_id,
     fc.content,
@@ -2230,13 +2540,12 @@ SELECT
     pm.character_name as parent_character_name,
     pm.character_avatar_url as parent_character_avatar_url
 FROM favorite_comments fc
-LEFT JOIN root_post_ids rp ON rp.comment_id = fc.id
 LEFT JOIN parent_messages pm ON fc.parent_id = pm.id
 ORDER BY fc.favorited_at DESC, fc.id DESC
 `
 
 type ListFavoriteCommentsWithParentsParams struct {
-	UserID            int32              `json:"user_id"`
+	ViewerUserID      int32              `json:"viewer_user_id"`
 	CursorFavoritedAt pgtype.Timestamptz `json:"cursor_favorited_at"`
 	CursorCommentID   pgtype.Int4        `json:"cursor_comment_id"`
 	PageLimit         int32              `json:"page_limit"`
@@ -2247,7 +2556,7 @@ type ListFavoriteCommentsWithParentsRow struct {
 	GameID                   int32              `json:"game_id"`
 	GameTitle                string             `json:"game_title"`
 	ParentID                 pgtype.Int4        `json:"parent_id"`
-	PostID                   pgtype.Int4        `json:"post_id"`
+	PostID                   int32              `json:"post_id"`
 	AuthorID                 int32              `json:"author_id"`
 	CharacterID              int32              `json:"character_id"`
 	Content                  string             `json:"content"`
@@ -2290,16 +2599,17 @@ type ListFavoriteCommentsWithParentsRow struct {
 // rows up to the planner and lets a row repeat on one page and vanish from the
 // next. The tie-break is also what makes the cursor comparison total.
 //
-// $2/$3 are the cursor. Passing NULL for both starts at the newest favorite;
-// the row comparison is skipped in that case rather than compared against
-// NULL (which would match nothing).
-// Walk up the message tree recursively to find the root post for each comment
-// Pick the post at the top of each comment's chain
+// The cursor args are nullable. Passing NULL for both starts at the newest
+// favorite; the row comparison is skipped in that case rather than compared
+// against NULL (which would match nothing).
+//
+// The restricted-post predicate sits inside favorite_comments, before the
+// LIMIT, so a hidden favorite can't leave a page short.
 // Immediate parent preview. Deliberately NOT filtered on is_deleted: the card
 // renders a deleted parent as a stub.
 func (q *Queries) ListFavoriteCommentsWithParents(ctx context.Context, arg ListFavoriteCommentsWithParentsParams) ([]ListFavoriteCommentsWithParentsRow, error) {
 	rows, err := q.db.Query(ctx, listFavoriteCommentsWithParents,
-		arg.UserID,
+		arg.ViewerUserID,
 		arg.CursorFavoritedAt,
 		arg.CursorCommentID,
 		arg.PageLimit,
@@ -2348,6 +2658,38 @@ func (q *Queries) ListFavoriteCommentsWithParents(ctx context.Context, arg ListF
 	return items, nil
 }
 
+const listPostViewers = `-- name: ListPostViewers :many
+SELECT post_id, user_id
+FROM common_room_post_viewers
+WHERE post_id = ANY($1::int[])
+ORDER BY post_id, user_id
+`
+
+type ListPostViewersRow struct {
+	PostID int32 `json:"post_id"`
+	UserID int32 `json:"user_id"`
+}
+
+func (q *Queries) ListPostViewers(ctx context.Context, postIds []int32) ([]ListPostViewersRow, error) {
+	rows, err := q.db.Query(ctx, listPostViewers, postIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPostViewersRow
+	for rows.Next() {
+		var i ListPostViewersRow
+		if err := rows.Scan(&i.PostID, &i.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markAllCommentsReadForPhase = `-- name: MarkAllCommentsReadForPhase :exec
 WITH RECURSIVE comment_threads AS (
     SELECT
@@ -2355,8 +2697,13 @@ WITH RECURSIVE comment_threads AS (
         c.parent_id as post_id
     FROM messages c
     WHERE c.parent_id IN (
-        SELECT p.id FROM messages p
-        WHERE p.game_id = $2 AND p.phase_id = $3 AND p.message_type = 'post' AND p.is_deleted = false
+        SELECT root.id FROM messages root
+        WHERE root.game_id = $2 AND root.phase_id = $3
+          AND root.message_type = 'post' AND root.is_deleted = false
+          AND ($4::bool
+               OR root.is_restricted = false
+               OR EXISTS (SELECT 1 FROM common_room_post_viewers v
+                          WHERE v.post_id = root.id AND v.user_id = $1::int))
     )
     AND c.is_deleted = false
 
@@ -2370,15 +2717,16 @@ WITH RECURSIVE comment_threads AS (
     WHERE m.is_deleted = false
 )
 INSERT INTO user_comment_reads (user_id, comment_id, post_id, game_id)
-SELECT $1, ct.comment_id, ct.post_id, $2
+SELECT $1::int, ct.comment_id, ct.post_id, $2
 FROM comment_threads ct
 ON CONFLICT (user_id, comment_id) DO NOTHING
 `
 
 type MarkAllCommentsReadForPhaseParams struct {
-	UserID  int32       `json:"user_id"`
-	GameID  int32       `json:"game_id"`
-	PhaseID pgtype.Int4 `json:"phase_id"`
+	ViewerUserID  int32       `json:"viewer_user_id"`
+	GameID        int32       `json:"game_id"`
+	PhaseID       pgtype.Int4 `json:"phase_id"`
+	ViewerSeesAll bool        `json:"viewer_sees_all"`
 }
 
 // Bulk-insert manual read records for every comment in a phase, for one user.
@@ -2386,8 +2734,15 @@ type MarkAllCommentsReadForPhaseParams struct {
 // comment's root post_id is resolved by walking up parent_id, mirroring the
 // comment_threads CTE used by GetUnreadCommentIDsForPosts.
 // Idempotent: existing records are left untouched.
+// Restricted posts the viewer can't see are skipped. Otherwise their comments
+// would already read as read if the viewer were added to the list later.
 func (q *Queries) MarkAllCommentsReadForPhase(ctx context.Context, arg MarkAllCommentsReadForPhaseParams) error {
-	_, err := q.db.Exec(ctx, markAllCommentsReadForPhase, arg.UserID, arg.GameID, arg.PhaseID)
+	_, err := q.db.Exec(ctx, markAllCommentsReadForPhase,
+		arg.ViewerUserID,
+		arg.GameID,
+		arg.PhaseID,
+		arg.ViewerSeesAll,
+	)
 	return err
 }
 
@@ -2503,6 +2858,22 @@ func (q *Queries) RemoveCommentFavorite(ctx context.Context, arg RemoveCommentFa
 	return err
 }
 
+const setPostRestricted = `-- name: SetPostRestricted :exec
+UPDATE messages
+SET is_restricted = $1
+WHERE id = $2 AND message_type = 'post'
+`
+
+type SetPostRestrictedParams struct {
+	IsRestricted bool  `json:"is_restricted"`
+	PostID       int32 `json:"post_id"`
+}
+
+func (q *Queries) SetPostRestricted(ctx context.Context, arg SetPostRestrictedParams) error {
+	_, err := q.db.Exec(ctx, setPostRestricted, arg.IsRestricted, arg.PostID)
+	return err
+}
+
 const unmarkCommentRead = `-- name: UnmarkCommentRead :exec
 DELETE FROM user_comment_reads
 WHERE user_id = $1 AND comment_id = $2
@@ -2530,7 +2901,7 @@ SET content = $2,
 WHERE id = $1
   AND deleted_at IS NULL
   AND message_type = 'comment'
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 type UpdateCommentParams struct {
@@ -2569,6 +2940,8 @@ func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) (M
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
 }
@@ -2581,7 +2954,7 @@ WHERE id = $1
   AND message_type = 'post'
   AND is_draft = true
   AND is_deleted = false
-RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 `
 
 type UpdateDraftPostParams struct {
@@ -2614,6 +2987,8 @@ func (q *Queries) UpdateDraftPost(ctx context.Context, arg UpdateDraftPostParams
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 	)
 	return i, err
 }
@@ -2628,10 +3003,10 @@ WITH updated AS (
   WHERE messages.id = $1
     AND messages.is_deleted = false
     AND messages.message_type = 'post'
-  RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post
+  RETURNING id, game_id, phase_id, author_id, character_id, content, message_type, parent_id, thread_depth, visibility, is_edited, is_deleted, created_at, edited_at, deleted_at, mentioned_character_ids, deleted_by_user_id, edit_count, is_draft, character_avatar_url_at_post, root_post_id, is_restricted
 )
 SELECT
-  m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post,
+  m.id, m.game_id, m.phase_id, m.author_id, m.character_id, m.content, m.message_type, m.parent_id, m.thread_depth, m.visibility, m.is_edited, m.is_deleted, m.created_at, m.edited_at, m.deleted_at, m.mentioned_character_ids, m.deleted_by_user_id, m.edit_count, m.is_draft, m.character_avatar_url_at_post, m.root_post_id, m.is_restricted,
   u.username as author_username,
   c.name as character_name,
   -- Editing a post never repaints its avatar, so return the pinned value.
@@ -2668,6 +3043,8 @@ type UpdatePostRow struct {
 	EditCount                int32              `json:"edit_count"`
 	IsDraft                  bool               `json:"is_draft"`
 	CharacterAvatarUrlAtPost pgtype.Text        `json:"character_avatar_url_at_post"`
+	RootPostID               int32              `json:"root_post_id"`
+	IsRestricted             bool               `json:"is_restricted"`
 	AuthorUsername           string             `json:"author_username"`
 	CharacterName            pgtype.Text        `json:"character_name"`
 	CharacterAvatarUrl       pgtype.Text        `json:"character_avatar_url"`
@@ -2698,6 +3075,8 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (UpdateP
 		&i.EditCount,
 		&i.IsDraft,
 		&i.CharacterAvatarUrlAtPost,
+		&i.RootPostID,
+		&i.IsRestricted,
 		&i.AuthorUsername,
 		&i.CharacterName,
 		&i.CharacterAvatarUrl,

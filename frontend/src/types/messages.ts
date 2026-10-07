@@ -23,6 +23,9 @@ export type Message = components['schemas']['MessageResponse'];
 /** POST /games/{gameID}/posts */
 export type CreatePostRequest = components['schemas']['CreatePostRequest'];
 
+/** PUT /games/{gameID}/posts/{postId}/viewers */
+export type SetPostViewersRequest = components['schemas']['SetPostViewersRequest'];
+
 /** POST /games/{gameID}/posts/{postId}/comments */
 export type CreateCommentRequest = components['schemas']['CreateCommentRequest'];
 

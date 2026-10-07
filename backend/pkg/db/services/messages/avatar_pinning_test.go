@@ -120,7 +120,6 @@ func TestCommentAvatarPinnedAtCreation(t *testing.T) {
 		CharacterID: character.ID,
 		Content:     "In daylight I appear as I always have.",
 		ParentID:    post.ID,
-		RootPostID:  post.ID,
 		Visibility:  "game",
 	})
 	core.AssertNoError(t, err, "Failed to create comment")

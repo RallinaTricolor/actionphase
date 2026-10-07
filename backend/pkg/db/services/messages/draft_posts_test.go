@@ -143,7 +143,7 @@ func TestMessageService_PublishDraftPostsForPhase(t *testing.T) {
 		assert.Nil(t, draft, "published post should no longer appear as a draft")
 
 		// Published post appears in GetGamePosts
-		posts, err := service.GetGamePosts(context.Background(), gameID, int32Ptr(phaseID), 10, 0)
+		posts, err := service.GetGamePosts(context.Background(), gameID, int32Ptr(phaseID), 10, 0, core.ViewerScope{SeesAll: true})
 		require.NoError(t, err)
 		require.Len(t, posts, 1)
 		assert.Equal(t, "Draft to publish", posts[0].Content)
@@ -236,7 +236,7 @@ func TestMessageService_GetGamePosts_ExcludesDrafts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("GetGamePosts excludes draft posts", func(t *testing.T) {
-		posts, err := service.GetGamePosts(context.Background(), gameID, int32Ptr(phaseID), 10, 0)
+		posts, err := service.GetGamePosts(context.Background(), gameID, int32Ptr(phaseID), 10, 0, core.ViewerScope{SeesAll: true})
 		require.NoError(t, err)
 		assert.Empty(t, posts, "draft posts should not appear in GetGamePosts")
 	})

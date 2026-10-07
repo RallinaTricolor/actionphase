@@ -93,6 +93,12 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 			continue
 		}
 
+		// A mention inside a restricted thread must not reach someone who
+		// can't read it: the notification links to the message.
+		if !s.recipientCanSee(ctx, messageID, characterOwnerID) {
+			continue
+		}
+
 		// Trigger notification
 		err = notificationService.NotifyCharacterMention(
 			ctx,
@@ -119,6 +125,21 @@ func (s *MessageService) notifyCharacterMentions(ctx context.Context, mentionedC
 	}
 }
 
+// recipientCanSee reports whether a notification about messageID may go to
+// userID. It fails closed: a failed check skips the notification.
+//
+// Admin mode belongs to the request that wrote the message, not to the
+// recipient, so it is switched off for the check.
+func (s *MessageService) recipientCanSee(ctx context.Context, messageID, userID int32) bool {
+	visible, err := s.CanUserViewMessage(core.WithAdminMode(ctx, false), messageID, userID)
+	if err != nil {
+		s.Logger.Warn(ctx, "Notification visibility check failed; skipping notification",
+			"error", err, "message_id", messageID, "user_id", userID)
+		return false
+	}
+	return visible
+}
+
 // notifyCommentReply triggers a notification when someone replies to a comment
 // This runs in a goroutine and should not fail the parent operation
 func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID, replierCharacterID, replierUserID, gameID, replyMessageID int32) {
@@ -137,6 +158,12 @@ func (s *MessageService) notifyCommentReply(ctx context.Context, parentMessageID
 
 	// Don't notify if replying to own comment
 	if parentMessage.AuthorID == replierUserID {
+		return
+	}
+
+	// The parent's author may have been taken off a restricted thread since
+	// writing it; a reply notification would tell them the thread goes on.
+	if !s.recipientCanSee(ctx, replyMessageID, parentMessage.AuthorID) {
 		return
 	}
 

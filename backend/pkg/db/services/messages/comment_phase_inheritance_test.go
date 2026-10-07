@@ -81,7 +81,6 @@ func TestMessageService_CreateComment_InheritsPhaseFromParent(t *testing.T) {
 			CharacterID: char.ID,
 			Content:     "Reply posted from the unread inbox",
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
@@ -99,7 +98,6 @@ func TestMessageService_CreateComment_InheritsPhaseFromParent(t *testing.T) {
 			CharacterID: char.ID,
 			Content:     "Parent comment",
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
@@ -111,7 +109,6 @@ func TestMessageService_CreateComment_InheritsPhaseFromParent(t *testing.T) {
 			CharacterID: char.ID,
 			Content:     "Nested reply posted from the New Comments view",
 			ParentID:    parent.ID,
-			RootPostID:  post.ID,
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
@@ -130,7 +127,6 @@ func TestMessageService_CreateComment_InheritsPhaseFromParent(t *testing.T) {
 			CharacterID: char.ID,
 			Content:     "Comment with an explicit phase",
 			ParentID:    post.ID,
-			RootPostID:  post.ID,
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)
@@ -158,7 +154,6 @@ func TestMessageService_CreateComment_InheritsPhaseFromParent(t *testing.T) {
 			CharacterID: char.ID,
 			Content:     "Reply to a phaseless post",
 			ParentID:    phaselessPost.ID,
-			RootPostID:  phaselessPost.ID,
 			Visibility:  string(models.MessageVisibilityGame),
 		})
 		require.NoError(t, err)

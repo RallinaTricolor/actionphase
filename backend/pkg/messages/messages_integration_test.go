@@ -637,11 +637,10 @@ func TestMessageAPI_MarkPostRead(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
-		// Still 500: MarkPostAsRead is an upsert, so a missing post fails as a
-		// foreign-key violation rather than pgx.ErrNoRows, which is what
-		// core.NotFoundOr500 keys on. Mapping SQLSTATE 23503 to 404 would be a
-		// separate change.
-		core.AssertEqual(t, 500, w.Code, "Should return error for not found")
+		// The visibility gate runs first and answers a missing post the same
+		// way it answers a hidden one. (Before the gate this was a 500 from
+		// the upsert's foreign-key violation.)
+		core.AssertEqual(t, 404, w.Code, "Should return 404 for not found")
 	})
 
 	t.Run("mark_post_read_unauthorized", func(t *testing.T) {

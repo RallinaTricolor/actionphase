@@ -22,7 +22,17 @@ vi.mock('@/contexts/GameContext', async () => {
     ...actual,
     useOptionalGameContext: vi.fn(() => ({
       userCharacters: [{ id: 1, name: 'Narrator' }],
-      allGameCharacters: [{ id: 1, name: 'Narrator' }],
+      allGameCharacters: [
+        { id: 1, name: 'Narrator' },
+        { id: 2, name: 'Brynn', user_id: 10, character_type: 'player_character' },
+      ],
+      participants: [
+        { id: 1, user_id: 10, username: 'amy', role: 'player', status: 'active' },
+        { id: 2, user_id: 11, username: 'zed', role: 'player', status: 'active' },
+      ],
+      userRole: 'gm',
+      isGM: true,
+      game: { state: 'in_progress' },
     })),
   };
 });
@@ -176,5 +186,75 @@ describe('DraftPostSection', () => {
 
     fireEvent.click(screen.getByTestId('preview-draft-btn'));
     expect(screen.getByText('Draft Post Preview')).toBeInTheDocument();
+  });
+
+  describe('restricted drafts', () => {
+    const openCreateModal = () => {
+      vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+        data: null,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+      }));
+      renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
+      fireEvent.click(screen.getByTestId('add-draft-post-btn'));
+      fireEvent.change(screen.getByTestId('create-draft-content'), { target: { value: 'Behind closed doors' } });
+    };
+
+    it('creates a draft restricted to the picked players', async () => {
+      const mockCreate = makeMutationResult<Message, { characterId: number; content: string; restrictedToUserIds?: number[] }>();
+      vi.mocked(useCreateDraftPost).mockReturnValue(mockCreate);
+      openCreateModal();
+
+      fireEvent.click(screen.getByTestId('restrict-post-toggle'));
+      fireEvent.click(screen.getByLabelText('Brynn'));
+      fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
+
+      await waitFor(() =>
+        expect(mockCreate.mutateAsync).toHaveBeenCalledWith({
+          characterId: 1,
+          content: 'Behind closed doors',
+          restrictedToUserIds: [10],
+        })
+      );
+    });
+
+    it('blocks saving while restricted to nobody', () => {
+      openCreateModal();
+      const save = screen.getByRole('button', { name: 'Save Draft' });
+      expect(save).toBeEnabled();
+
+      fireEvent.click(screen.getByTestId('restrict-post-toggle'));
+      expect(save).toBeDisabled();
+    });
+
+    it('shows the badge, the viewers and the edit action on a restricted draft', () => {
+      vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+        data: { ...mockDraft, is_restricted: true, viewer_user_ids: [10, 11] },
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+      }));
+
+      renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
+
+      expect(screen.getByTestId('restricted-badge')).toBeInTheDocument();
+      expect(screen.getByTestId('post-viewer-names')).toHaveTextContent('Visible to Brynn, zed');
+      expect(screen.getByTestId('edit-post-viewers')).toHaveTextContent('Edit viewers');
+    });
+
+    it('offers to restrict a public draft', () => {
+      vi.mocked(useDraftPost).mockReturnValue(makeQueryResult<Message | null>({
+        data: mockDraft,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+      }));
+
+      renderWithProviders(<DraftPostSection phaseId={10} onCreateDraft={mockOnCreateDraft} />);
+
+      expect(screen.queryByTestId('restricted-badge')).not.toBeInTheDocument();
+      expect(screen.getByTestId('edit-post-viewers')).toHaveTextContent('Restrict');
+    });
   });
 });
