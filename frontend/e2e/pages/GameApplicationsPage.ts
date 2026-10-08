@@ -1,5 +1,6 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameTab } from '../utils/navigation';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for Game Applications
@@ -14,7 +15,6 @@ export class GameApplicationsPage {
   // Locators
   readonly applicationsList: Locator;
   readonly applicationsPendingSection: Locator;
-  readonly applicationsReviewedSection: Locator;
   readonly applyButton: Locator;
 
   constructor(page: Page, gameId: number) {
@@ -24,7 +24,6 @@ export class GameApplicationsPage {
     // Define locators using data-testid
     this.applicationsList = page.getByTestId('applications-list');
     this.applicationsPendingSection = page.getByTestId('applications-pending-section');
-    this.applicationsReviewedSection = page.getByTestId('applications-reviewed-section');
     this.applyButton = page.getByTestId(`apply-button-${gameId}`).locator('visible=true');
   }
 
@@ -64,21 +63,27 @@ export class GameApplicationsPage {
 
     // Submit application
     const submitButton = this.page.getByTestId('submit-application');
-    await submitButton.click();
+    await clickAndWaitForMutation(this.page, submitButton, API.applyToGame);
 
     // Wait for modal to close by checking that the form is hidden
     await applicationForm.waitFor({ state: 'hidden', timeout: 5000 });
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
-   * Withdraw a pending application
+   * Withdraw a pending application, confirming in the dialog it opens.
    */
   async withdrawApplication() {
     const withdrawButton = this.page.getByTestId('withdraw-application-button').locator('visible=true');
     await withdrawButton.waitFor({ state: 'visible', timeout: 5000 });
     await withdrawButton.click();
-    await this.page.waitForLoadState('networkidle');
+
+    const dialog = this.page.getByRole('dialog', { name: 'Withdraw Application' });
+    await clickAndWaitForMutation(
+      this.page,
+      dialog.getByRole('button', { name: 'Withdraw Application', exact: true }),
+      API.withdrawApplication
+    );
+    await expect(dialog).toBeHidden();
   }
 
   /**
@@ -124,47 +129,7 @@ export class GameApplicationsPage {
     // Click the approve button within the card
     const approveButton = card.getByTestId('approve-application-button');
     await approveButton.waitFor({ state: 'visible', timeout: 3000 });
-    await approveButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
-  }
-
-  /**
-   * Reject a specific application by username
-   *
-   * @param username - Username of applicant to reject
-   */
-  async rejectApplication(username: string) {
-    // Find the application card containing this username
-    const card = await this.findApplicationCard(username);
-
-    // Click the reject button within the card
-    const rejectButton = card.getByTestId('reject-application-button');
-    await rejectButton.waitFor({ state: 'visible', timeout: 3000 });
-    await rejectButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
-  }
-
-  /**
-   * Get the status of a specific application
-   *
-   * @param username - Username to check
-   * @returns 'pending' | 'approved' | 'rejected' | null
-   */
-  async getApplicationStatus(username: string): Promise<string | null> {
-    try {
-      const card = await this.findApplicationCard(username);
-      const statusBadge = card.getByTestId('application-status-badge');
-      const statusText = await statusBadge.textContent();
-      return statusText?.trim().toLowerCase() || null;
-    } catch {
-      return null;
-    }
+    await clickAndWaitForMutation(this.page, approveButton, API.reviewApplication);
   }
 
   /**
@@ -173,20 +138,6 @@ export class GameApplicationsPage {
   async hasApplyButton(): Promise<boolean> {
     try {
       await this.applyButton.waitFor({ state: 'visible', timeout: 3000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Check if application exists for a specific user
-   *
-   * @param username - Username to check
-   */
-  async hasApplication(username: string): Promise<boolean> {
-    try {
-      await this.findApplicationCard(username);
       return true;
     } catch {
       return false;

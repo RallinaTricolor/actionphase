@@ -113,7 +113,11 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
   const [showComments, setShowComments] = useState(true);
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentTree, setCommentTree] = useState<CommentTreeNode[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
+  // Starts true: comments are shown by default and their load begins on mount,
+  // so the first render is "loading", not an empty thread. Starting false
+  // flashed "No comments yet" on posts that have comments, and left a deep
+  // link (CommonRoom) unable to tell "still loading" from "not here".
+  const [loadingComments, setLoadingComments] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [selectedCharacterId, setSelectedCharacterId] = useState<number | null>(null);
@@ -782,7 +786,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
         {/* Threaded Comments */}
         {showComments && (
           loadingComments ? (
-            <div className="text-sm text-content-secondary text-center py-4">Loading comments...</div>
+            <div className="text-sm text-content-secondary text-center py-4" data-testid="comments-loading">Loading comments...</div>
           ) : initialLoadFailed ? (
             <div className="flex flex-col items-center gap-2 py-4">
               <span className="text-sm text-content-secondary">Failed to load comments.</span>

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId, getDeepLinkingCommentIds } from '../fixtures/game-helpers';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * Deep Linking Regression Tests
@@ -70,8 +71,7 @@ test.describe('@mobile Deep Linking in Common Room', () => {
 
     // Mobile renders fewer nesting levels — deepCommentId (depth 5) is beyond mobile's
     // render cutoff and never appears in the DOM, so only test shallowCommentId on mobile.
-    const mobileSelect = page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(page);
     // bulkyCommentId is the one that matters for the scroll-position assertion
     // below: it is the only fixture comment whose subtree dwarfs the comment.
     const commentIds = isMobile

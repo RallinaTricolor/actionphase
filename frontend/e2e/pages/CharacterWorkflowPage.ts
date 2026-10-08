@@ -1,5 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 import { navigateToGameTab } from '../utils/navigation';
+import { isMobileViewport } from '../utils/viewport';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for Character Workflow
@@ -29,36 +31,37 @@ export class CharacterWorkflowPage {
    */
   async goto() {
     await this.page.goto(`/games/${this.gameId}`);
-    await this.page.waitForLoadState('networkidle');
 
     // Try "People" tab first (character_creation and in_progress states).
     // Fall back to standalone "Characters" tab (legacy/other states).
-    // navigateToGameTab handles mobile select vs desktop tab automatically.
-    const mobileSelect = this.page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    //
+    // Wait for the tab control to render BEFORE asking which tabs exist. This
+    // used instant isVisible() checks: on a page still loading they reported
+    // "no People tab", the fallback tab didn't exist either, that error was
+    // swallowed, and the test went on without ever opening the character list.
+    const tabControl = isMobileViewport(this.page)
+      ? this.page.locator('select#tab-select').first()
+      : this.page.getByRole('tab').locator('visible=true').first();
+    await tabControl.waitFor({ state: 'visible', timeout: 15000 });
 
-    const hasPeopleTab = isMobile
-      ? await mobileSelect.locator('option', { hasText: 'People' }).count() > 0
-      : await this.page.getByTestId('tab-people').isVisible({ timeout: 2000 }).catch(() => false);
+    const hasPeopleTab = isMobileViewport(this.page)
+      ? await this.page.locator('select#tab-select').first().locator('option', { hasText: 'People' }).count() > 0
+      : await this.page.getByTestId('tab-people').count() > 0;
 
-    if (hasPeopleTab) {
-      await navigateToGameTab(this.page, 'People');
-      // Within People tab, click on the "Characters" sub-tab
-      const charactersSubTab = this.page.getByRole('button', { name: 'Characters', exact: false });
-      try {
-        await charactersSubTab.waitFor({ state: 'visible', timeout: 2000 });
-        await charactersSubTab.click();
-        await this.page.waitForLoadState('networkidle');
-      } catch {
-        // Characters sub-tab not found - might already be on it or in a different state
-      }
-    } else {
-      // Fallback: standalone Characters tab (legacy/other states)
-      try {
-        await navigateToGameTab(this.page, 'Characters');
-      } catch {
-        // Neither tab found - let the test fail with a descriptive error
-      }
+    if (!hasPeopleTab) {
+      // Standalone Characters tab (legacy/other states). Throws if absent.
+      await navigateToGameTab(this.page, 'Characters');
+      return;
+    }
+
+    await navigateToGameTab(this.page, 'People');
+    // People has a Characters sub-tab in some states and opens straight onto
+    // the list in others. Wait for whichever renders, then select the sub-tab
+    // only if it is there.
+    const charactersSubTab = this.page.getByRole('button', { name: 'Characters', exact: false }).locator('visible=true').first();
+    await charactersSubTab.or(this.charactersList).first().waitFor({ state: 'visible', timeout: 10000 });
+    if (await charactersSubTab.isVisible()) {
+      await charactersSubTab.click();
     }
   }
 
@@ -89,11 +92,10 @@ export class CharacterWorkflowPage {
 
     // Submit character
     const submitButton = this.page.getByTestId('character-submit-button');
-    await submitButton.click();
+    await clickAndWaitForMutation(this.page, submitButton, API.createCharacter);
 
     // Wait for modal to close by checking that the form is hidden
     await characterForm.waitFor({ state: 'hidden', timeout: 5000 });
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -125,11 +127,7 @@ export class CharacterWorkflowPage {
     // Click the approve button
     // Filter to only visible elements - works for both mobile and desktop viewports
     const approveButton = card.getByTestId('approve-character-button').locator('visible=true').first();
-    await approveButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
+    await clickAndWaitForMutation(this.page, approveButton, API.approveCharacter);
   }
 
   /**
@@ -166,33 +164,10 @@ export class CharacterWorkflowPage {
    * Get list of all character names
    */
   async getCharactersList(): Promise<string[]> {
-    // Try to find within characters-list container first (character_creation state)
-    // Fall back to searching entire page (in_progress state)
-    let characterCards: Locator[];
-
-    try {
-      await this.charactersList.waitFor({ state: 'visible', timeout: 2000 });
-      characterCards = await this.charactersList
-        .getByTestId('character-card')
-        .all();
-    } catch {
-      // characters-list not found, search entire page (in_progress games)
-      characterCards = await this.page
-        .getByTestId('character-card')
-        .all();
-    }
-
-    const names: string[] = [];
-    for (const card of characterCards) {
-      // Get only visible h4 - works for both mobile and desktop viewports
-      const nameElement = card.locator('h4').locator('visible=true').first();
-      const name = await nameElement.textContent();
-      if (name) {
-        names.push(name.trim());
-      }
-    }
-
-    return names;
+    const cards = await this.loadedCharacterCards();
+    // One visible <h4> per card (cards render desktop and mobile copies).
+    const names = await cards.locator('h4').locator('visible=true').allTextContents();
+    return names.map((name) => name.trim()).filter(Boolean);
   }
 
   /**
@@ -225,25 +200,6 @@ export class CharacterWorkflowPage {
   }
 
   /**
-   * Get count of characters with a specific status
-   *
-   * @param status - Status to count ('pending', 'approved', 'rejected', etc.)
-   */
-  async getCharactersCountByStatus(status: string): Promise<number> {
-    const allCharacters = await this.getCharactersList();
-    let count = 0;
-
-    for (const characterName of allCharacters) {
-      const charStatus = await this.getCharacterStatus(characterName);
-      if (charStatus === status.toLowerCase()) {
-        count++;
-      }
-    }
-
-    return count;
-  }
-
-  /**
    * Open character sheet (alias for editCharacter for semantic clarity)
    *
    * @param characterName - Name of character to view
@@ -257,32 +213,30 @@ export class CharacterWorkflowPage {
    * @private
    */
   private async findCharacterCard(characterName: string): Promise<Locator> {
-    // Try to find within characters-list container first (character_creation state)
-    // Fall back to searching entire page (in_progress state)
-    let allCards: Locator[];
+    const cards = await this.loadedCharacterCards();
+    const card = cards
+      .filter({ has: this.page.getByRole('heading', { level: 4, name: characterName, exact: true }) })
+      .first();
+    await card.waitFor({ state: 'visible', timeout: 10000 });
+    return card;
+  }
 
-    try {
-      await this.charactersList.waitFor({ state: 'visible', timeout: 2000 });
-      allCards = await this.charactersList
-        .getByTestId('character-card')
-        .all();
-    } catch {
-      // characters-list not found, search entire page (in_progress games)
-      allCards = await this.page
-        .getByTestId('character-card')
-        .all();
-    }
-
-    // Find the card containing the character name
-    for (const card of allCards) {
-      // Get only visible h4 - works for both mobile and desktop viewports
-      const nameElement = card.locator('h4').locator('visible=true').first();
-      const name = await nameElement.textContent();
-      if (name?.trim() === characterName) {
-        return card;
-      }
-    }
-
-    throw new Error(`Character card for "${characterName}" not found`);
+  /**
+   * Character cards, once the list has actually loaded.
+   *
+   * These helpers used to take an instant .all() snapshot: on a list still
+   * loading that returned no cards (so a present character read as missing),
+   * and textContent() on a card that re-rendered waited out the whole test.
+   *
+   * character_creation games render cards inside characters-list, which only
+   * mounts after the characters have loaded; in_progress games render cards
+   * without that container.
+   */
+  private async loadedCharacterCards(): Promise<Locator> {
+    const anyCard = this.page.getByTestId('character-card').locator('visible=true').first();
+    await this.charactersList.or(anyCard).first().waitFor({ state: 'visible', timeout: 10000 });
+    return (await this.charactersList.isVisible())
+      ? this.charactersList.getByTestId('character-card')
+      : this.page.getByTestId('character-card');
   }
 }

@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { navigateToGame, navigateToGameTab, assertTabNotVisible } from '../utils/navigation';
 import { MessagingPage } from '../pages/MessagingPage';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * E2E Tests for Permissions & Access Control
@@ -102,7 +103,7 @@ test.describe('@mobile Permissions & Access Control', () => {
       // If the Actions tab is present, opening it must not show a submit button.
       // NPCs cannot submit actions — only player characters can.
       const mobileSelect = page.locator('select#tab-select');
-      const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+      const isMobile = isMobileViewport(page);
       const hasActionsTab = isMobile
         ? await mobileSelect.locator('option', { hasText: 'Actions' }).count() > 0
         : await page.getByRole('tab', { name: 'Actions' }).isVisible();

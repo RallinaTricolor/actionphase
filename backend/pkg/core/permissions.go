@@ -258,12 +258,16 @@ func CanUserControlNPC(ctx context.Context, db *pgxpool.Pool, characterID int32,
 		return false
 	}
 
-	// If it's not an NPC (has a user_id), only that user can control it
-	if char.UserID.Valid {
-		return char.UserID.Int32 == userID
+	// A player character is controlled by its owner alone. Decided by
+	// character_type, not by user_id being NULL: an NPC can carry a user_id
+	// (reassignment sets one, and older rows have one), and reading that as a
+	// personal character locked out the co-GM whom
+	// GetUserControllableCharacters offers every NPC to.
+	if char.CharacterType != "npc" {
+		return char.UserID.Valid && char.UserID.Int32 == userID
 	}
 
-	// It's an NPC (user_id is NULL) - check assignment, GM, or co-GM status
+	// It's an NPC - check assignment, GM, or co-GM status
 
 	// Check if NPC is assigned to this user
 	assignment, err := queries.GetNPCAssignment(ctx, characterID)

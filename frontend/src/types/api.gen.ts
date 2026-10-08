@@ -5754,7 +5754,7 @@ export interface components {
         PollOptionRequest: {
             /**
              * Format: int32
-             * @description Sort order within the poll
+             * @description Sort order within the poll. Omit on every option to keep submission order; when given, values must be distinct.
              */
             display_order?: number;
             /** @description Option label */

@@ -11,6 +11,7 @@
 // Test tag definitions
 export const tags = {
   SMOKE: '@smoke',        // 5-min health check
+  REGRESSION: '@regression', // Guards a specific bug fix
   CRITICAL: '@critical',  // Must pass for deploy
   AUTH: '@auth',         // Authentication tests
   GAME: '@game',         // Game management
@@ -36,19 +37,4 @@ export const tags = {
  */
 export function tagTest(testTags: string[], name: string): string {
   return `${testTags.join(' ')} ${name}`;
-}
-
-/**
- * Check if a test has a specific tag
- */
-export function hasTag(testName: string, tag: string): boolean {
-  return testName.includes(tag);
-}
-
-/**
- * Get all tags from a test name
- */
-export function getTags(testName: string): string[] {
-  const tagPattern = /@\w+/g;
-  return testName.match(tagPattern) || [];
 }

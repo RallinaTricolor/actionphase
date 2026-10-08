@@ -175,11 +175,17 @@ func (h *Handler) createPoll(ctx context.Context, in *createPollInput) (*pollOut
 		return nil, huma.Error403Forbidden(err.Error())
 	}
 
+	// Omitted display_order means submission order (0-based, as the UI sends).
+	useSubmissionOrder := displayOrdersOmitted(in.Body.Options)
 	options := make([]core.PollOptionInput, len(in.Body.Options))
 	for i, opt := range in.Body.Options {
+		order := opt.DisplayOrder
+		if useSubmissionOrder {
+			order = int32(i)
+		}
 		options[i] = core.PollOptionInput{
 			Text:         opt.Text,
-			DisplayOrder: opt.DisplayOrder,
+			DisplayOrder: order,
 		}
 	}
 
