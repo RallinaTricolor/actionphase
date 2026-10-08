@@ -1,7 +1,8 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGame, navigateToGameTab } from '../utils/navigation';
-import { waitForVisible } from '../utils/waits';
-import { assertTextVisible, assertUrl } from '../utils/assertions';
+import { clickAndWaitForMutation, performAndWaitForMutation, API } from '../utils/waits';
+import { assertUrl } from '../utils/assertions';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * Page Object Model for Game Details Page
@@ -30,25 +31,6 @@ export class GameDetailsPage {
   }
 
   /**
-   * Get the game title heading
-   */
-  get gameTitle(): Locator {
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    return this.page.getByRole('heading', { level: 1 })
-      .or(this.page.getByRole('heading', { level: 2 }))
-      .locator('visible=true').first();
-  }
-
-  /**
-   * Get the game state badge
-   */
-  get stateBadge(): Locator {
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    return this.page.getByTestId('game-state-badge')
-      .or(this.page.locator('[role="status"]').locator('visible=true').first());
-  }
-
-  /**
    * Get a button by its text (viewport-agnostic)
    */
   getButton(text: string): Locator {
@@ -64,13 +46,6 @@ export class GameDetailsPage {
   }
 
   /**
-   * Open the game actions kebab menu
-   */
-  async openGameActionsMenu() {
-    await this.page.getByLabel('Game actions').click();
-  }
-
-  /**
    * Click a menu item from the game actions dropdown
    */
   async clickMenuButton(text: string) {
@@ -83,15 +58,14 @@ export class GameDetailsPage {
     const menuButton = this.page.getByRole('button', { name: text }).locator('visible=true').first();
     await expect(menuButton).toBeVisible({ timeout: 5000 });
     await menuButton.click();
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
-   * Apply to join the game
+   * A game-actions menu item that changes the game's state immediately (no
+   * confirmation), waiting for the change to be saved.
    */
-  async applyToJoin() {
-    await this.clickButton('Apply to Join');
-    await assertTextVisible(this.page, 'Application Submitted');
+  private async changeStateFromMenu(text: string) {
+    await performAndWaitForMutation(this.page, () => this.clickMenuButton(text), API.updateGameState);
   }
 
   /**
@@ -103,32 +77,17 @@ export class GameDetailsPage {
   }
 
   /**
-   * Leave the game
-   */
-  async leaveGame() {
-    await this.clickButton('Leave Game');
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
    * Start game recruitment (GM only)
    */
   async startRecruitment() {
-    await this.clickMenuButton('Start Recruitment');
+    await this.changeStateFromMenu('Start Recruitment');
   }
 
   /**
    * Start the game (GM only)
    */
   async startGame() {
-    await this.clickMenuButton('Start Game');
-  }
-
-  /**
-   * End the game (GM only)
-   */
-  async endGame() {
-    await this.clickMenuButton('End Game');
+    await this.changeStateFromMenu('Start Game');
   }
 
   /**
@@ -142,7 +101,7 @@ export class GameDetailsPage {
     // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('pause-game-confirm-button');
     await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
-    await confirmButton.click();
+    await clickAndWaitForMutation(this.page, confirmButton, API.updateGameState);
     // Wait for the modal to close — confirms the API call completed
     await confirmButton.waitFor({ state: 'hidden', timeout: 10000 });
   }
@@ -151,7 +110,7 @@ export class GameDetailsPage {
    * Resume the game (GM only)
    */
   async resumeGame() {
-    await this.clickMenuButton('Resume Game');
+    await this.changeStateFromMenu('Resume Game');
   }
 
   /**
@@ -169,7 +128,7 @@ export class GameDetailsPage {
 
     // Click confirm button in modal using testid (avoids ambiguity with initial button)
     const confirmButton = this.page.getByTestId('complete-game-confirm-button');
-    await confirmButton.click();
+    await clickAndWaitForMutation(this.page, confirmButton, API.updateGameState);
     // Wait for the modal to close — confirms the API call completed and onClose() was called
     await confirmInput.waitFor({ state: 'hidden', timeout: 10000 });
   }
@@ -188,7 +147,7 @@ export class GameDetailsPage {
     await confirmInput.fill('epilogue');
 
     const confirmButton = this.page.getByTestId('epilogue-game-confirm-button');
-    await confirmButton.click();
+    await clickAndWaitForMutation(this.page, confirmButton, API.updateGameState);
     // Wait for the modal to close — confirms the API call completed
     await confirmInput.waitFor({ state: 'hidden', timeout: 10000 });
   }
@@ -204,7 +163,7 @@ export class GameDetailsPage {
     // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('cancel-game-confirm-button');
     await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
-    await confirmButton.click();
+    await clickAndWaitForMutation(this.page, confirmButton, API.updateGameState);
     // Wait for the modal to close — confirms the API call completed
     await confirmButton.waitFor({ state: 'hidden', timeout: 10000 });
   }
@@ -227,8 +186,7 @@ export class GameDetailsPage {
     // Wait for confirm button to be visible before clicking
     const confirmButton = this.page.getByTestId('delete-game-confirm-button');
     await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
-    await confirmButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, confirmButton, API.deleteGame);
   }
 
   /**
@@ -236,20 +194,6 @@ export class GameDetailsPage {
    */
   async goToApplications() {
     await this.goToTab('Applications');
-  }
-
-  /**
-   * Navigate to Participants tab
-   */
-  async goToParticipants() {
-    await this.goToTab('Participants');
-  }
-
-  /**
-   * Navigate to People tab (in_progress games)
-   */
-  async goToPeople() {
-    await this.goToTab('People');
   }
 
   /**
@@ -261,7 +205,7 @@ export class GameDetailsPage {
    */
   async goToCharacters() {
     const mobileSelect = this.page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(this.page);
 
     if (isMobile) {
       // Check if "Characters" option exists in the select
@@ -296,13 +240,6 @@ export class GameDetailsPage {
   }
 
   /**
-   * Navigate to Phase Management tab
-   */
-  async goToPhaseManagement() {
-    await this.goToTab('Phase Management');
-  }
-
-  /**
    * Navigate to Actions tab (GM view)
    */
   async goToActions() {
@@ -310,68 +247,10 @@ export class GameDetailsPage {
   }
 
   /**
-   * Navigate to Phases tab (GM view)
-   */
-  async goToPhases() {
-    await this.goToTab('Phases');
-  }
-
-  /**
-   * Navigate to Submit Action tab (Player view)
-   */
-  async goToSubmitAction() {
-    await this.goToTab('Submit Action');
-  }
-
-  /**
-   * Navigate to Messages tab
-   */
-  async goToMessages() {
-    await this.goToTab('Messages');
-  }
-
-  /**
-   * Navigate to History tab
-   */
-  async goToHistory() {
-    await this.goToTab('History');
-  }
-
-  /**
-   * Navigate to Common Room tab
-   */
-  async goToCommonRoom() {
-    await this.goToTab('Common Room');
-  }
-
-  /**
-   * Navigate to Handouts tab
-   */
-  async goToHandouts() {
-    await this.goToTab('Handouts');
-  }
-
-  /**
    * Navigate to Audience tab
    */
   async goToAudience() {
     await this.goToTab('Audience');
-  }
-
-  /**
-   * Navigate to Game Info tab
-   */
-  async goToGameInfo() {
-    await this.goToTab('Game Info');
-  }
-
-  /**
-   * Navigate to Settings (button, not tab)
-   */
-  async goToSettings() {
-    const settingsButton = this.page.getByRole('button', { name: 'Settings' });
-    await settingsButton.click();
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -388,76 +267,10 @@ export class GameDetailsPage {
   }
 
   /**
-   * Reject an application (GM only)
-   * @param playerUsername - Username of the player to reject
-   */
-  async rejectApplication(playerUsername: string) {
-    await this.goToApplications();
-
-    const applicationRow = this.page.getByRole('row').filter({ hasText: playerUsername });
-    await applicationRow.getByRole('button', { name: 'Reject' }).click();
-
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
    * Verify user is on the game details page
    */
   async verifyOnPage(gameId: number) {
     await assertUrl(this.page, new RegExp(`/games/${gameId}`));
   }
 
-  /**
-   * Verify game state is displayed
-   */
-  async verifyGameState(state: string) {
-    await assertTextVisible(this.page, state);
-  }
-
-  /**
-   * Verify a specific tab is active
-   * Handles mobile (select#tab-select) and desktop (role="tab" with selected state).
-   */
-  async verifyActiveTab(tabName: string) {
-    const mobileSelect = this.page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
-
-    if (isMobile) {
-      const checkedOption = mobileSelect.locator('option:checked');
-      const optionText = await checkedOption.textContent();
-      if (!optionText?.includes(tabName)) {
-        throw new Error(`Expected active tab "${tabName}" but selected option text is "${optionText}"`);
-      }
-    } else {
-      const activeTab = this.page.getByRole('tab', { name: tabName, selected: true });
-      await waitForVisible(activeTab);
-    }
-  }
-
-  /**
-   * Get participant count
-   */
-  async getParticipantCount(): Promise<number> {
-    await this.goToParticipants();
-    const rows = this.page.getByRole('table').getByRole('row');
-    return await rows.count() - 1; // Subtract header row
-  }
-
-  /**
-   * Verify participant exists in list
-   */
-  async verifyParticipantExists(username: string) {
-    await this.goToParticipants();
-    const row = this.page.getByRole('row').filter({ hasText: username });
-    await waitForVisible(row);
-  }
-
-  /**
-   * Verify application exists with specific status
-   */
-  async verifyApplicationStatus(username: string, status: string) {
-    await this.goToApplications();
-    const row = this.page.getByRole('row').filter({ hasText: username }).filter({ hasText: status });
-    await waitForVisible(row);
-  }
 }

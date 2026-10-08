@@ -103,9 +103,6 @@ export const FIXTURE_GAMES = {
   E2E_CHARACTER_PENDING_STATE: 'E2E Test: Character Approval - Pending State',  // For "character starts in pending state" test
   E2E_CHARACTER_VIEW_PENDING: 'E2E Test: Character Approval - View Pending',   // For "GM can view pending characters" test
   E2E_CHARACTER_APPROVE: 'E2E Test: Character Approval - Approve',             // For "GM can approve character" test
-  E2E_CHARACTER_REJECT: 'E2E Test: Character Approval - Reject',               // For "GM can reject character" test
-  E2E_CHARACTER_RESUBMIT: 'E2E Test: Character Approval - Resubmit',           // For "rejected character can be resubmitted" test
-  E2E_CHARACTER_IN_GAME: 'E2E Test: Character Approval - In Game',             // For "approved characters appear in active game" test
   E2E_CHARACTER_APPROVAL: 'E2E Test: Character Approval - Pending State',      // Deprecated alias - use specific fixtures instead
   E2E_GM_MESSAGING: 'E2E Test: GM Messaging',              // in_progress with GM having multiple NPCs for messaging tests
   E2E_AUDIENCE_PM: 'E2E Test: Audience Private Messages',  // Game #360 - audience view of all private messages
@@ -285,26 +282,6 @@ export async function setCommentReadMode(page: Page, mode: 'auto' | 'manual'): P
   if (status !== 200) {
     throw new Error(`setCommentReadMode failed: PUT /api/v1/me/preferences returned ${status}`);
   }
-}
-
-/**
- * Fetch the ID of the first post whose content matches a given string.
- * Used to get the post ID needed for API-level comment creation.
- *
- * @param page - Playwright page (must be logged in)
- * @param gameId - Worker-adjusted game ID
- * @param content - Exact post content to match
- */
-export async function getPostIdByContent(page: Page, gameId: number, content: string): Promise<number> {
-  const postId = await page.evaluate(async (args: { gameId: number; content: string }) => {
-    const resp = await fetch(`/api/v1/games/${args.gameId}/posts`, { credentials: 'include' });
-    if (!resp.ok) throw new Error(`Failed to fetch posts: ${resp.status}`);
-    const posts: Array<{ id: number; content: string }> = await resp.json();
-    const match = posts.find(p => p.content === args.content);
-    if (!match) throw new Error(`Post not found: "${args.content}"`);
-    return match.id;
-  }, { gameId, content });
-  return postId;
 }
 
 /**
@@ -532,41 +509,6 @@ export async function approveApplication(
 }
 
 /**
- * Navigate to game details page
- * @param page - Playwright page object
- * @param gameId - Game ID
- */
-export async function goToGame(page: Page, gameId: number) {
-  await page.goto(`/games/${gameId}`);
-  await page.waitForLoadState('networkidle');
-}
-
-/**
- * Navigate to games list page
- * @param page - Playwright page object
- */
-export async function goToGamesList(page: Page) {
-  await page.goto('/games');
-  await page.waitForLoadState('networkidle');
-}
-
-/**
- * Check if game is visible in games list
- * @param page - Playwright page object
- * @param gameTitle - Title of the game to find
- */
-export async function isGameVisible(page: Page, gameTitle: string): Promise<boolean> {
-  await goToGamesList(page);
-
-  try {
-    await page.waitForSelector(`text=${gameTitle}`, { timeout: 2000 });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Create a phase for a game
  * @param page - Playwright page object (must be logged in as GM)
  * @param gameId - Game ID
@@ -738,4 +680,84 @@ export async function transitionPlayerToAudience(page: Page, gameId: number, use
   if (result.status !== 200 && result.status !== 204) {
     throw new Error(`transitionPlayerToAudience failed with status ${result.status}: ${result.body}`);
   }
+}
+
+/**
+ * Create a two-option poll via the API, for tests that vote.
+ *
+ * A vote can't be undone, so a test that votes on a shared fixture poll is
+ * single-use: a retry finds the vote already cast and fails for a reason that
+ * has nothing to do with voting. Voting tests create their own poll instead.
+ *
+ * The page must be logged in as a GM of the game. The poll is attached to the
+ * game's current phase, as the create form does: the Common Room only lists
+ * polls of the phase it is showing. Omitting display_order keeps the options in
+ * the order given.
+ */
+export async function createPollViaApi(
+  page: Page,
+  gameId: number,
+  question: string,
+  options: [string, string, ...string[]]
+): Promise<void> {
+  const phaseResponse = await page.request.get(`/api/v1/games/${gameId}/current-phase`);
+  const phaseId: number | undefined = phaseResponse.ok() ? (await phaseResponse.json()).phase?.id : undefined;
+  if (phaseId === undefined) {
+    throw new Error(`createPollViaApi: game ${gameId} has no current phase (${phaseResponse.status()})`);
+  }
+
+  const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const response = await page.request.post(`/api/v1/games/${gameId}/polls`, {
+    data: { question, deadline, phase_id: phaseId, options: options.map((text) => ({ text })) },
+  });
+  if (!response.ok()) {
+    throw new Error(`createPollViaApi: ${response.status()} ${await response.text()}`);
+  }
+}
+
+/**
+ * Create a fresh game in character_creation, with one player whose character
+ * the GM has approved -- the state "Start Game" acts on. Returns the game id.
+ *
+ * For tests that start a game. Starting is one-way, so a test that started a
+ * shared fixture game could run once per fixture load: a retry found it already
+ * in progress. A game per run makes the test repeatable.
+ *
+ * gmPage must be logged in as the GM and playerPage as the player.
+ */
+export async function createGameReadyToStart(
+  gmPage: Page,
+  playerPage: Page,
+  characterName: string
+): Promise<number> {
+  const call = async (page: Page, method: string, path: string, data?: unknown) => {
+    const response = await page.request.fetch(path, { method, data });
+    if (!response.ok()) {
+      throw new Error(`createGameReadyToStart: ${method} ${path} -> ${response.status()} ${await response.text()}`);
+    }
+    return response.status() === 204 ? null : response.json();
+  };
+
+  const communities: Array<{ id: number }> = await call(gmPage, 'GET', '/api/v1/communities');
+  if (!communities.length) throw new Error('createGameReadyToStart: no active community -- are fixtures loaded?');
+
+  const game: { id: number } = await call(gmPage, 'POST', '/api/v1/games', {
+    title: `E2E Start Game ${Date.now()}`,
+    description: 'Created per run by createGameReadyToStart.',
+    community_id: communities[0].id,
+    max_players: 4,
+  });
+  await call(gmPage, 'PUT', `/api/v1/games/${game.id}/state`, { state: 'recruitment' });
+
+  const player: { id: number } = await call(playerPage, 'GET', '/api/v1/auth/me');
+  await call(gmPage, 'POST', `/api/v1/games/${game.id}/participants/direct-add`, { user_id: player.id, role: 'player' });
+  await call(gmPage, 'PUT', `/api/v1/games/${game.id}/state`, { state: 'character_creation' });
+
+  const character: { id: number } = await call(playerPage, 'POST', `/api/v1/games/${game.id}/characters`, {
+    name: characterName,
+    character_type: 'player_character',
+  });
+  await call(gmPage, 'POST', `/api/v1/characters/${character.id}/approve`, { status: 'approved' });
+
+  return game.id;
 }

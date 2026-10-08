@@ -8,6 +8,8 @@ import {
 } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { navigateToGameTab } from '../utils/navigation';
+import { isMobileViewport } from '../utils/viewport';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Player to Audience Transition E2E Tests (Permadeath)
@@ -129,9 +131,7 @@ test.describe.serial('Player to Audience — UI Lifecycle', () => {
 
     const submitButton = page.getByRole('button', { name: 'Move to Former Players' }).last();
     await expect(submitButton).toBeEnabled();
-    await submitButton.click();
-
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, submitButton, API.moveToAudience);
 
     // Modal must close
     await expect(page.getByRole('heading', { name: 'Move Player to Audience?' })).not.toBeVisible({ timeout: 10000 });
@@ -282,7 +282,7 @@ test.describe('Player to Audience — Post-Transition Consequences', () => {
 
     // The "Submit Action" and "Actions" tab must not be visible
     const mobileSelect = page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(page);
 
     if (isMobile) {
       const actionOption = mobileSelect.locator('option', { hasText: 'Submit Action' });

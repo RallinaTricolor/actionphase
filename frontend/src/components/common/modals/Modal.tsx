@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface ModalProps {
@@ -65,6 +65,7 @@ export const Modal = ({ isOpen, onClose, title, children, zIndexClass = 'z-50', 
   // Called before the isOpen early-return, since hooks cannot run conditionally;
   // the hook itself no-ops when inactive.
   useBodyScrollLock(isOpen);
+  const titleId = useId();
 
   if (!isOpen) return null;
 
@@ -83,11 +84,14 @@ export const Modal = ({ isOpen, onClose, title, children, zIndexClass = 'z-50', 
         <div
           className={`relative z-10 surface-raised rounded-lg shadow-2xl ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto border border-theme-default`}
           data-testid={testId}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
         >
           {title && (
             <div className="px-3 py-2 sm:px-6 sm:py-4 border-b border-theme-default">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-semibold text-content-primary">{title}</h2>
+                <h2 id={titleId} className="text-lg sm:text-xl font-semibold text-content-primary">{title}</h2>
                 <button
                   onClick={onClose}
                   className="text-content-secondary hover:text-content-primary transition-colors"

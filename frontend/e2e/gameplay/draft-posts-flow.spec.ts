@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * E2E Tests for Draft Posts Feature
@@ -119,8 +120,7 @@ test('GM can create a phase with an inline draft post via CreatePhaseModal', asy
   await page.getByTestId('draft-post-content').fill(inlineDraftContent);
 
   // Submit
-  await page.locator('button:has-text("Create Phase")').click();
-  await page.waitForLoadState('networkidle');
+  await clickAndWaitForMutation(page, page.locator('button:has-text("Create Phase")'), API.createPhase);
 
   // New phase card should appear with a draft preview
   await expect(phasePage.getPhaseCard(phaseTitle).locator('visible=true').first()).toBeVisible({ timeout: 10000 });

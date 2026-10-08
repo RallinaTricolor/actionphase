@@ -2,7 +2,6 @@ package messages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 
@@ -16,19 +15,22 @@ func (s *MessageService) ValidateCharacterOwnership(ctx context.Context, charact
 	queries := models.New(s.DB)
 
 	// Get the character to verify it belongs to the game
+	// Every rejection here is the caller asking to write as a character they
+	// may not use, so each wraps core.ErrCharacterNotControlled and handlers
+	// answer 403 rather than 500.
 	character, err := queries.GetCharacter(ctx, characterID)
 	if err != nil {
-		return fmt.Errorf("character not found: %w", err)
+		return fmt.Errorf("%w: character not found: %v", core.ErrCharacterNotControlled, err)
 	}
 
 	// Verify character belongs to the game
 	if character.GameID != gameID {
-		return errors.New("character does not belong to this game")
+		return fmt.Errorf("%w: character does not belong to this game", core.ErrCharacterNotControlled)
 	}
 
 	// Use centralized NPC control check (handles player characters, NPCs, GM, co-GM, and assignments)
 	if !core.CanUserControlNPC(ctx, s.DB, characterID, authorID) {
-		return errors.New("character does not belong to this user")
+		return fmt.Errorf("%w: character does not belong to this user", core.ErrCharacterNotControlled)
 	}
 
 	return nil

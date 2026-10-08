@@ -28,18 +28,6 @@ export class HistoryPage {
   }
 
   /**
-   * Get list of all phase titles in history
-   */
-  async getPhaseHistory(): Promise<string[]> {
-    // Wait for history list to load
-    await this.page.waitForLoadState('networkidle');
-
-    // Get all phase title headings (level 4)
-    const phaseTitles = await this.page.getByRole('heading', { level: 4 }).allTextContents();
-    return phaseTitles;
-  }
-
-  /**
    * Get list of phase numbers displayed
    */
   async getPhaseNumbers(): Promise<string[]> {
@@ -73,16 +61,6 @@ export class HistoryPage {
   }
 
   /**
-   * Check if phase has published results
-   */
-  async hasPublishedResults(): Promise<boolean> {
-    // Check for any content indicating published results
-    const resultsHeading = this.page.getByRole('heading', { name: /Results|Outcomes|Resolution/ });
-    const hasResults = await resultsHeading.count() > 0;
-    return hasResults;
-  }
-
-  /**
    * Check if a phase is marked as active
    */
   async hasActivePhase(): Promise<boolean> {
@@ -103,17 +81,6 @@ export class HistoryPage {
   async verifyPhaseExists(phaseTitle: string) {
     const heading = this.page.getByRole('heading', { name: phaseTitle, level: 4 });
     await waitForVisible(heading);
-  }
-
-  /**
-   * Get phase status badge text for a specific phase
-   */
-  async getPhaseStatus(phaseTitle: string): Promise<string> {
-    // Find the phase row and get its status badge
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    const phaseRow = this.page.locator('div').filter({ hasText: phaseTitle }).locator('visible=true').first();
-    const statusBadge = phaseRow.locator('[role="status"]').or(phaseRow.locator('span')).locator('visible=true').first();
-    return await statusBadge.textContent() || '';
   }
 
   /**

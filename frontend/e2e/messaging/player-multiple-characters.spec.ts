@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Journey: Player with Multiple Characters
@@ -94,8 +95,7 @@ test.describe('Player with Multiple Characters', () => {
     await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
     await characterSelect.selectOption({ label: 'Edit as Kael Shadowblade' });
 
-    await commentContainer.getByRole('button', { name: 'Save' }).locator('visible=true').first().click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, commentContainer.getByRole('button', { name: 'Save' }).locator('visible=true').first(), API.editComment);
 
     await expect(commentContainer.getByText('Kael Shadowblade').locator('visible=true').first()).toBeVisible({ timeout: 5000 });
     await expect(commentContainer.getByText('Aria Moonwhisper').first()).not.toBeVisible();

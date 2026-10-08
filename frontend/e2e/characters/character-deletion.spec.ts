@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
+import { clickAndWaitForMutation } from '../utils/waits';
 
 /**
  * Character Deletion E2E Tests
@@ -44,12 +45,18 @@ test.describe('Character Deletion', () => {
     await expect(page.getByText(/This action cannot be undone/)).toBeVisible();
 
     const confirmButton = page.getByTestId('confirm-delete-character-button');
-    await confirmButton.click();
+    await clickAndWaitForMutation(page, confirmButton, {
+      method: 'DELETE',
+      path: /^\/api\/v1\/characters\/\d+$/,
+    });
 
     await expect(confirmationModal).toBeHidden({ timeout: 5000 });
-    await page.waitForLoadState('networkidle');
 
-    expect(await characterWorkflowPage.hasCharacter(characterName)).toBe(false);
+    // A retrying absence check: passes as soon as the card is gone, where
+    // hasCharacter(...) === false always spent its full timeout looking.
+    await expect(
+      page.getByTestId('character-card').filter({ has: page.getByRole('heading', { level: 4, name: characterName, exact: true }) })
+    ).toHaveCount(0);
   });
 
   test('should show error when trying to delete character with messages', async ({ page }) => {

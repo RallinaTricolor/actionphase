@@ -352,6 +352,26 @@ func TestMessageAPI_CreatePost(t *testing.T) {
 		assert.Equal(t, "post", response["message_type"])
 	})
 
+	// Posting as a character you may not use is the caller's error, not the
+	// server's. It surfaced as a 500, which also kept it out of view: the E2E
+	// helper only checked that the typed text was on screen.
+	t.Run("GM posting as a player's character is forbidden, not a server error", func(t *testing.T) {
+		body := CreatePostRequest{
+			CharacterID: playerChar.ID,
+			Content:     "GM trying to post as the player.",
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/posts", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+	})
+
 	t.Run("non-GM player cannot create post", func(t *testing.T) {
 		body := CreatePostRequest{
 			CharacterID: playerChar.ID,

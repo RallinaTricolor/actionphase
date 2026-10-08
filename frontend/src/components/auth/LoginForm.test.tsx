@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { LoginForm } from './LoginForm'
-import { renderWithProviders } from '@/test-utils/render'
+import { renderWithProviders, createTestQueryClient } from '@/test-utils/render'
 import { server } from '@/mocks/server'
 
 describe('LoginForm', () => {
@@ -70,6 +70,46 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(mockOnSuccess).toHaveBeenCalled()
     }, { timeout: 3000 })
+  })
+
+  // onSuccess is where LoginPage navigates to the protected destination. If the
+  // currentUser cache still says "logged out" at that moment, ProtectedRoute
+  // bounces to /login and AuthGatedLogin bounces back once /auth/me lands -- a
+  // /dashboard -> /login -> /dashboard ping-pong that reset the nav menus and
+  // was the root of the E2E logout flakes.
+  it('does not call onSuccess until the session is in the currentUser cache', async () => {
+    let loggedIn = false
+    server.use(
+      http.post('http://localhost:3000/api/v1/auth/login', async () => {
+        loggedIn = true
+        return HttpResponse.json({ Token: 'mock-jwt-token-from-test' })
+      }),
+      http.get('http://localhost:3000/api/v1/auth/me', async () => {
+        if (!loggedIn) return HttpResponse.json({ user: null })
+        // Slow enough that an un-awaited refetch is still in flight when the
+        // login mutation resolves.
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return HttpResponse.json({ id: 1, username: 'testuser', email: 'test@example.com' })
+      })
+    )
+
+    const queryClient = createTestQueryClient()
+    let userAtSuccess: unknown = 'onSuccess never called'
+    const onSuccess = () => {
+      userAtSuccess = queryClient.getQueryData(['currentUser'])
+    }
+
+    renderWithProviders(<LoginForm onSuccess={onSuccess} />, { queryClient })
+
+    // Let the initial logged-out /auth/me settle first.
+    await waitFor(() => expect(queryClient.getQueryState(['currentUser'])?.status).toBe('success'))
+
+    fireEvent.change(screen.getByLabelText('Username or Email'), { target: { value: 'testuser' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+    await waitFor(() => expect(userAtSuccess).not.toBe('onSuccess never called'), { timeout: 3000 })
+    expect(userAtSuccess).toMatchObject({ id: 1, username: 'testuser' })
   })
 
   it('prevents form submission with empty fields', () => {

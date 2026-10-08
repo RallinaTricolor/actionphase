@@ -76,6 +76,62 @@ function ThreadViewModalWithReadTracking(props: React.ComponentProps<typeof Thre
   );
 }
 
+/**
+ * Find a deep-linked comment's element once it renders, or settle on null once
+ * it is clear it won't: no post is still loading its comments. Comments are
+ * fetched per post, after the posts themselves, so "not in the DOM yet" and
+ * "not on this page" look the same until those loads finish. Capped so a post
+ * stuck loading can't hold the deep link forever.
+ */
+function waitForDeepLinkTarget(
+  commentId: string,
+  timeoutMs = 10000
+): { promise: Promise<HTMLElement | null>; cancel: () => void } {
+  let observer: MutationObserver | null = null;
+  let settle: (element: HTMLElement | null) => void = () => {};
+  const promise = new Promise<HTMLElement | null>((resolve) => {
+    settle = resolve;
+  });
+
+  const stop = () => {
+    observer?.disconnect();
+    observer = null;
+    clearTimeout(timer);
+  };
+
+  // Root comments use the base id; nested ones carry a -desktop/-mobile suffix.
+  // Prefer the visible copy so scrollIntoView works (hidden elements don't scroll).
+  const find = (): HTMLElement | null => {
+    const baseEl = document.getElementById(`comment-${commentId}`);
+    const desktopEl = document.getElementById(`comment-${commentId}-desktop`);
+    const mobileEl = document.getElementById(`comment-${commentId}-mobile`);
+    return [baseEl, mobileEl, desktopEl].find((el) => el && el.offsetParent !== null)
+      || baseEl || desktopEl || mobileEl;
+  };
+
+  const check = () => {
+    const element = find();
+    if (element) {
+      stop();
+      settle(element);
+    } else if (!document.querySelector('[data-testid="comments-loading"]')) {
+      stop();
+      settle(null);
+    }
+  };
+
+  // Declared before anything can call stop(), which clears it.
+  const timer = setTimeout(() => {
+    stop();
+    settle(find());
+  }, timeoutMs);
+  observer = new MutationObserver(check);
+  observer.observe(document.body, { childList: true, subtree: true });
+  check();
+
+  return { promise, cancel: stop };
+}
+
 export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, currentPhase, isCurrentPhase = true, isGM = false, isAudience = false }: CommonRoomProps) {
   // Get current user from AuthContext
   const { currentUser } = useAuth();
@@ -223,122 +279,116 @@ export function CommonRoom({ gameId, phaseId, phaseTitle, phaseDescription, curr
     // Mark this comment as having been attempted
     scrollAttemptedRef.current = commentIdParam;
 
-    // Use requestAnimationFrame to ensure DOM has rendered
-    requestAnimationFrame(() => {
-      // Shorter timeout since we know data is loaded (loading=false)
-      const timer = setTimeout(async () => {
-        // Try to find comment with various ID patterns (base, -desktop, -mobile)
-        // Root comments use base ID, nested comments may have -desktop/-mobile suffix
-        const baseEl = document.getElementById(`comment-${commentIdParam}`);
-        const desktopEl = document.getElementById(`comment-${commentIdParam}-desktop`);
-        const mobileEl = document.getElementById(`comment-${commentIdParam}-mobile`);
-        // Prefer the visible element so scrollIntoView works (hidden elements don't scroll)
-        const element = [baseEl, mobileEl, desktopEl].find(
-          el => el && el.offsetParent !== null
-        ) || baseEl || desktopEl || mobileEl;
+    // Wait for the comment to render rather than looking once: `loading` only
+    // covers the posts, and each post fetches its comments separately after
+    // that. Looking 100ms after the posts loaded missed comments on a slow
+    // connection, fell back to the thread fetch, and never scrolled the page.
+    let cancelled = false;
+    const target = waitForDeepLinkTarget(commentIdParam);
+    target.promise.then((element) => {
+      if (cancelled) return;
 
-        if (element) {
-          // Comment is visible in the DOM - scroll to it
-          element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      if (element) {
+        // Comment is visible in the DOM - scroll to it
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
-          // Add bordered box styling to match modal appearance
-          element.classList.add('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+        // Add bordered box styling to match modal appearance
+        element.classList.add('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
 
-          // Remove after 5 seconds
-          setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
-          }, 5000);
+        // Remove after 5 seconds
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-interactive-primary', 'rounded-lg', 'p-1');
+        }, 5000);
 
-          // Clear the comment parameter from URL after scrolling
-          const newParams = new URLSearchParams(searchParams);
-          newParams.delete('comment');
-          setSearchParams(newParams, { replace: true });
-        } else {
-          // Comment not found in DOM - fetch it to determine where it lives
-          logger.debug('Comment not found in DOM, fetching comment metadata', { commentId: commentIdParam, gameId });
+        // Clear the comment parameter from URL after scrolling
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('comment');
+        setSearchParams(newParams, { replace: true });
+      } else {
+        // Comment not found in DOM - fetch it to determine where it lives
+        logger.debug('Comment not found in DOM, fetching comment metadata', { commentId: commentIdParam, gameId });
 
-          const fetchAndShowComment = async () => {
-            setFetchingComment(true);
-            try {
-              // Fetch the target comment plus a bounded slice of its ancestor
-              // chain and the true root post ID, in a single request. chain is
-              // ordered parent-to-child (ancestor → target).
-              //
-              // The parent count depends on the viewport: the modal renders the
-              // chain nested from depth 0, so requesting more parents than the
-              // deepest visible level pushes the target behind a "Continue this
-              // thread" button. Mobile's shallower max depth means fewer parents.
-              const isMobile = typeof window !== 'undefined'
-                && typeof window.matchMedia === 'function'
-                && window.matchMedia('(max-width: 767px)').matches;
-              const contextResponse = await apiClient.messages.getMessageThreadContext(
-                gameId,
-                parseInt(commentIdParam),
-                parentContextForViewport(isMobile)
-              );
-              const { chain, root_post_id, has_full_thread } = contextResponse.data;
+        const fetchAndShowComment = async () => {
+          setFetchingComment(true);
+          try {
+            // Fetch the target comment plus a bounded slice of its ancestor
+            // chain and the true root post ID, in a single request. chain is
+            // ordered parent-to-child (ancestor → target).
+            //
+            // The parent count depends on the viewport: the modal renders the
+            // chain nested from depth 0, so requesting more parents than the
+            // deepest visible level pushes the target behind a "Continue this
+            // thread" button. Mobile's shallower max depth means fewer parents.
+            const isMobile = typeof window !== 'undefined'
+              && typeof window.matchMedia === 'function'
+              && window.matchMedia('(max-width: 767px)').matches;
+            const contextResponse = await apiClient.messages.getMessageThreadContext(
+              gameId,
+              parseInt(commentIdParam),
+              parentContextForViewport(isMobile)
+            );
+            const { chain, root_post_id, has_full_thread } = contextResponse.data;
 
-              if (chain.length === 0) {
-                throw new Error('No messages fetched');
-              }
-
-              // The target comment is the last one in the chain.
-              const targetComment = chain[chain.length - 1];
-
-              // If the comment belongs to a different phase, redirect to History.
-              // Only redirect when phaseId is known (defined) — if CommonRoom has no phase
-              // context, we can't know whether the comment is "elsewhere", so fall through
-              // to the thread modal as before.
-              if (phaseId !== undefined && targetComment.phase_id && targetComment.phase_id !== phaseId) {
-                logger.debug('Comment is in a different phase, redirecting to History', {
-                  commentId: commentIdParam,
-                  commentPhaseId: targetComment.phase_id,
-                  currentPhaseId: phaseId,
-                });
-                navigate(`/games/${gameId}?tab=history&phase=${targetComment.phase_id}&comment=${commentIdParam}`, { replace: true });
-                return;
-              }
-
-              // Store the comment and its context for the modal. root_post_id is the
-              // true top-level post even if the chain was trimmed above the target.
-              setThreadModalComment(targetComment);
-              setThreadModalContext({
-                parentChain: chain,
-                hasFullThread: has_full_thread,
-                targetCommentId: parseInt(commentIdParam),
-                postId: root_post_id,
-              });
-
-              // Clear the comment parameter from URL
-              const newParams = new URLSearchParams(searchParams);
-              newParams.delete('comment');
-              setSearchParams(newParams, { replace: true });
-            } catch (_err) {
-              // If fetch fails, clear the comment parameter and show error
-              const newParams = new URLSearchParams(searchParams);
-              newParams.delete('comment');
-              setSearchParams(newParams, { replace: true });
-              if (isAxiosError(_err) && _err.response?.status === 404) {
-                logger.debug('Deep-linked comment not found', { commentId: commentIdParam, gameId });
-                setDeepLinkNotFound(true);
-              } else {
-                logger.error('Failed to fetch comment', { error: _err, commentId: commentIdParam, gameId });
-                setError('Failed to load comment. The comment may have been deleted.');
-              }
-            } finally {
-              setFetchingComment(false);
+            if (chain.length === 0) {
+              throw new Error('No messages fetched');
             }
-          };
 
-          fetchAndShowComment();
-        }
-      }, 100); // Shorter timeout - DOM should be ready since loading=false
+            // The target comment is the last one in the chain.
+            const targetComment = chain[chain.length - 1];
 
-      return () => clearTimeout(timer);
+            // If the comment belongs to a different phase, redirect to History.
+            // Only redirect when phaseId is known (defined) — if CommonRoom has no phase
+            // context, we can't know whether the comment is "elsewhere", so fall through
+            // to the thread modal as before.
+            if (phaseId !== undefined && targetComment.phase_id && targetComment.phase_id !== phaseId) {
+              logger.debug('Comment is in a different phase, redirecting to History', {
+                commentId: commentIdParam,
+                commentPhaseId: targetComment.phase_id,
+                currentPhaseId: phaseId,
+              });
+              navigate(`/games/${gameId}?tab=history&phase=${targetComment.phase_id}&comment=${commentIdParam}`, { replace: true });
+              return;
+            }
+
+            // Store the comment and its context for the modal. root_post_id is the
+            // true top-level post even if the chain was trimmed above the target.
+            setThreadModalComment(targetComment);
+            setThreadModalContext({
+              parentChain: chain,
+              hasFullThread: has_full_thread,
+              targetCommentId: parseInt(commentIdParam),
+              postId: root_post_id,
+            });
+
+            // Clear the comment parameter from URL
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('comment');
+            setSearchParams(newParams, { replace: true });
+          } catch (_err) {
+            // If fetch fails, clear the comment parameter and show error
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('comment');
+            setSearchParams(newParams, { replace: true });
+            if (isAxiosError(_err) && _err.response?.status === 404) {
+              logger.debug('Deep-linked comment not found', { commentId: commentIdParam, gameId });
+              setDeepLinkNotFound(true);
+            } else {
+              logger.error('Failed to fetch comment', { error: _err, commentId: commentIdParam, gameId });
+              setError('Failed to load comment. The comment may have been deleted.');
+            }
+          } finally {
+            setFetchingComment(false);
+          }
+        };
+
+        fetchAndShowComment();
+      }
     });
 
     // Cleanup: Reset scroll attempt tracking on unmount or when comment changes
     return () => {
+      cancelled = true;
+      target.cancel();
       scrollAttemptedRef.current = null;
     };
   }, [commentIdParam, loading, searchParams, setSearchParams, gameId, navigate, activeTab, phaseId]);

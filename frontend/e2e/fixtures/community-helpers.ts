@@ -85,20 +85,6 @@ export async function getCommunityBySlug(
 }
 
 /**
- * Resolve a fixture community's numeric id for the current worker.
- *
- * The manage UI keys its rows by user id, and the games list filters by
- * community id, so specs need the number rather than the slug.
- */
-export async function getCommunityId(
-  page: Page,
-  key: keyof typeof COMMUNITY_SLUGS
-): Promise<number> {
-  const community = await getCommunityBySlug(page, getCommunitySlug(key));
-  return community.id;
-}
-
-/**
  * Look up a user's id by username, through the browser's cookie session.
  *
  * Moderator and ban rows carry data-testid values keyed by user id

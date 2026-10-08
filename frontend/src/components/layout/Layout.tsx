@@ -28,8 +28,10 @@ export const Layout = ({ children }: LayoutProps) => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    logout();
+  // Navigate only after logout has cleared the session: while it is still
+  // cached, /login (AuthGatedLogin) redirects straight back to /dashboard.
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -45,7 +47,11 @@ export const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen surface-sunken" data-root-layout="true">
+    // data-route is the route React has actually committed. React Router applies
+    // navigations in a transition, so while a lazy page loads, the URL already
+    // shows the destination but this tree still renders the old route. E2E
+    // helpers wait for the two to agree before interacting with the page.
+    <div className="min-h-screen surface-sunken" data-root-layout="true" data-route={location.pathname}>
       {/* Navigation Bar */}
       {isAuthenticated && (
         <nav className="bg-interactive-primary shadow-lg sticky top-0 z-50">

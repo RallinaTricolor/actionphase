@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
-import { waitForVisible } from '../utils/waits';
+import { waitForVisible, clickAndWaitForMutation, API } from '../utils/waits';
 import { getFixtureGameId } from '../fixtures/game-helpers';
 
 /**
@@ -135,8 +135,7 @@ test.describe('Character Mentions', () => {
     // Submit the post and verify mention renders
     const postContent = `Mention Regression ${Date.now()}: @Test Player 1 Character, north gate.`;
     await commonRoom.postTextarea.fill(postContent);
-    await commonRoom.createPostButton.click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, commonRoom.createPostButton, API.createPost);
 
     await commonRoom.verifyPostExists('north gate');
     await expect(page.getByText('@Test Player 1 Character').locator('visible=true').first()).toBeVisible({ timeout: 5000 });

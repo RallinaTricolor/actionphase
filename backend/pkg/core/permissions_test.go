@@ -668,6 +668,23 @@ func TestCanUserControlNPC(t *testing.T) {
 		t.Fatalf("Failed to create assigned NPC: %v", err)
 	}
 
+	// An NPC that carries a user_id. The create paths leave NPCs' user_id NULL,
+	// but reassignment can set one and older rows/fixtures have one. Whether
+	// a character is an NPC is its character_type, not a NULL user_id: deciding
+	// by user_id treated this as the owner's personal character, so the co-GM --
+	// whom the controllable-characters list DOES offer it to -- got a 500 when
+	// posting as it.
+	npcWithUserID, err := queries.CreateCharacter(ctx, models.CreateCharacterParams{
+		GameID:        game.ID,
+		Name:          "GM Narrator",
+		CharacterType: "npc",
+		UserID:        pgtype.Int4{Int32: int32(gmUser.ID), Valid: true},
+		Status:        "approved",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create NPC with user_id: %v", err)
+	}
+
 	// Assign NPC to user
 	_, err = queries.AssignNPCToUser(ctx, models.AssignNPCToUserParams{
 		CharacterID:      assignedNPC.ID,
@@ -747,6 +764,27 @@ func TestCanUserControlNPC(t *testing.T) {
 			userID:      int32(playerUser.ID),
 			want:        false,
 			description: "Non-assigned user should not control assigned NPC",
+		},
+		{
+			name:        "co-GM can control an NPC that has a user_id",
+			characterID: npcWithUserID.ID,
+			userID:      int32(coGMUser.ID),
+			want:        true,
+			description: "An NPC is an NPC by character_type; co-GMs control all NPCs",
+		},
+		{
+			name:        "GM can control an NPC that has a user_id",
+			characterID: npcWithUserID.ID,
+			userID:      int32(gmUser.ID),
+			want:        true,
+			description: "GM controls all NPCs",
+		},
+		{
+			name:        "player cannot control an NPC that has a user_id",
+			characterID: npcWithUserID.ID,
+			userID:      int32(playerUser.ID),
+			want:        false,
+			description: "A user_id on an NPC grants nothing to unrelated players",
 		},
 		{
 			name:        "invalid character ID returns false",

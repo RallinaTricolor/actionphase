@@ -68,7 +68,17 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
   const [saving, setSaving] = useState(false);
   const savedScrollPositionRef = useRef<number | null>(null);
 
-  const loading = loadingMessages || loadingConversation;
+  // Which conversation's message load last failed (loadMessages resolves null).
+  const [failedLoadFor, setFailedLoadFor] = useState<number | null>(null);
+
+  // `messages` describes this thread only once loadedMessagesConversationId says
+  // so. Until then -- including the first render, before the load effect below
+  // has even flipped loadingMessages -- it may hold the previous conversation's
+  // messages, so render the placeholder rather than an interactive thread over
+  // the wrong data.
+  const messagesBelongHere = loadedMessagesConversationId === conversationId;
+  const loadFailed = !messagesBelongHere && failedLoadFor === conversationId;
+  const loading = loadingMessages || loadingConversation || (!messagesBelongHere && !loadFailed);
 
   //Content autosave id for comment textbox
   const autosaveRefId = postCachingService.createAutosaveId('conversation', conversationId);
@@ -110,11 +120,18 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     }
   }, [conversationId, scrollToBottom]);
 
+  const loadThreadMessages = useCallback(() => {
+    setFailedLoadFor(null);
+    return loadMessages(gameId, conversationId).then((result) => {
+      if (result === null) setFailedLoadFor(conversationId);
+    });
+  }, [gameId, conversationId, loadMessages]);
+
   // Load conversation and messages on mount or when conversationId changes
   useEffect(() => {
     loadConversation(gameId, conversationId);
-    loadMessages(gameId, conversationId);
-  }, [gameId, conversationId, loadConversation, loadMessages]);
+    loadThreadMessages();
+  }, [gameId, conversationId, loadConversation, loadThreadMessages]);
 
   // Auto-select first character from participants
   useEffect(() => {
@@ -386,6 +403,17 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-content-secondary">Loading messages...</div>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-8">
+        <div className="text-content-secondary">Couldn't load messages.</div>
+        <Button variant="secondary" size="sm" onClick={() => { loadThreadMessages(); }}>
+          Retry
+        </Button>
       </div>
     );
   }

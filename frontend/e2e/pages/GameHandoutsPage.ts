@@ -1,5 +1,6 @@
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 import { navigateToGameTab } from '../utils/navigation';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for Game Handouts
@@ -13,7 +14,6 @@ export class GameHandoutsPage {
 
   // Locators
   readonly createHandoutButton: Locator;
-  readonly handoutsList: Locator;
 
   constructor(page: Page, gameId: number) {
     this.page = page;
@@ -21,7 +21,6 @@ export class GameHandoutsPage {
 
     // Define locators
     this.createHandoutButton = page.locator('button:has-text("Create Handout"), button:has-text("New Handout")');
-    this.handoutsList = page.locator('[data-testid="handouts-list"]');
   }
 
   /**
@@ -58,30 +57,10 @@ export class GameHandoutsPage {
 
     // Submit - scope to form to avoid ambiguity with the "Create Handout" button that opens the modal
     const submitButton = this.page.locator('form').getByRole('button', { name: 'Create Handout' });
-    await submitButton.click();
+    await clickAndWaitForMutation(this.page, submitButton, API.createHandout);
 
-    // Wait for modal to close and content to load
+    // Wait for modal to close
     await this.page.waitForSelector('text=Create New Handout', { state: 'hidden', timeout: 5000 });
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Get list of handout titles
-   */
-  async getHandoutTitles(): Promise<string[]> {
-    const handoutCards = await this.page.locator('[data-testid^="handout-"], .handout-card').all();
-    const titles: string[] = [];
-
-    for (const card of handoutCards) {
-      // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-      const titleElement = card.locator('h3, h4, [data-testid="handout-title"]').locator('visible=true').first();
-      const title = await titleElement.textContent();
-      if (title) {
-        titles.push(title.trim());
-      }
-    }
-
-    return titles;
   }
 
   /**
@@ -146,11 +125,10 @@ export class GameHandoutsPage {
     await this.page.getByTestId('handout-content-input').fill(newContent);
 
     const saveButton = this.page.locator('form').getByRole('button', { name: /Save|Update/ });
-    await saveButton.click();
+    await clickAndWaitForMutation(this.page, saveButton, API.updateHandout);
 
     // Wait for modal to close
     await this.page.waitForSelector('text=Edit Handout', { state: 'hidden', timeout: 5000 });
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -175,13 +153,7 @@ export class GameHandoutsPage {
       dialog.accept();
     });
 
-    await deleteButton.click();
-
-    // Wait for the deletion to complete
-    await this.page.waitForLoadState('networkidle');
-
-    // Give a bit more time for the UI to update
-    await this.page.waitForTimeout(500);
+    await clickAndWaitForMutation(this.page, deleteButton, API.deleteHandout);
   }
 
   /**
@@ -198,19 +170,6 @@ export class GameHandoutsPage {
     } catch {
       return false;
     }
-  }
-
-  /**
-   * Get handout content
-   *
-   * @param title - Handout title
-   */
-  async getHandoutContent(title: string): Promise<string> {
-    await this.openHandout(title);
-
-    // Filter to visible element (viewport-agnostic for dual-DOM pattern)
-    const contentElement = this.page.locator('[data-testid="handout-content"], .handout-content').locator('visible=true').first();
-    return await contentElement.textContent() || '';
   }
 
   /**

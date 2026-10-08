@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getWorkerGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameSettingsPage } from '../pages/GameSettingsPage';
 
@@ -22,12 +22,12 @@ import { GameSettingsPage } from '../pages/GameSettingsPage';
 test.describe.serial('GM Edits Game Settings', () => {
   let gameId: number;
 
-  test.beforeAll(async ({ browser }) => {
-    // Look up game ID once before all tests
-    const page = await browser.newPage();
-    await loginAs(page, 'GM');
-    gameId = await getFixtureGameId(page, 'E2E_GAME_SETTINGS');
-    await page.close();
+  test.beforeAll(() => {
+    // By fixture id (#355), not title: 'GM can edit game title' renames this
+    // game, so a title lookup only works on a fresh fixture load. When anything
+    // later in this serial group failed, the retry re-ran beforeAll against the
+    // renamed game and every test in the group failed with "fixture not found".
+    gameId = getWorkerGameId(355);
   });
 
   test('Player cannot edit game settings', async ({ page }) => {

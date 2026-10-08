@@ -8,6 +8,7 @@ import {
 } from '../fixtures/community-helpers';
 import { CommunityPage } from '../pages/CommunityPage';
 import { LONG_TIMEOUT } from '../config/test-timeouts';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * E2E Tests for Community Moderation Tools
@@ -192,8 +193,7 @@ test.describe('Community Moderation', () => {
 
       // Publish it, and it appears.
       await community.gotoManage('documents');
-      await community.documentRowByTitle(title).getByTestId(/^toggle-publish-/).click();
-      await page.waitForLoadState('networkidle');
+      await clickAndWaitForMutation(page, community.documentRowByTitle(title).getByTestId(/^toggle-publish-/), API.updateDocument);
       await expect(community.documentRowByTitle(title)).toContainText('Published', {
         timeout: LONG_TIMEOUT,
       });

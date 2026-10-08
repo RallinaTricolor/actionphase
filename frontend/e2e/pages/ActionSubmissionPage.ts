@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { clickAndWaitForMutation } from '../utils/waits';
 
 /**
  * Page Object for Action Submission
@@ -18,7 +19,6 @@ export class ActionSubmissionPage {
   readonly editActionButton: Locator;
   readonly currentActionDisplay: Locator;
   readonly actionContent: Locator;
-  readonly actionStatus: Locator;
 
   constructor(page: Page, gameId: number, phaseId?: number) {
     this.page = page;
@@ -32,7 +32,6 @@ export class ActionSubmissionPage {
     this.editActionButton = page.getByTestId('edit-action-button');
     this.currentActionDisplay = page.getByTestId('current-action-display');
     this.actionContent = page.getByTestId('action-content');
-    this.actionStatus = page.getByTestId('action-status');
   }
 
   /**
@@ -69,12 +68,7 @@ export class ActionSubmissionPage {
     // Fill action content
     await this.actionTextarea.fill(content);
 
-    // Submit action
-    await this.submitActionButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
+    await this.submitAndWaitForSavedAction();
   }
 
   /**
@@ -94,42 +88,30 @@ export class ActionSubmissionPage {
     await this.actionTextarea.clear();
     await this.actionTextarea.fill(newContent);
 
-    // Submit updated action
-    await this.submitActionButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    // Give UI time to update
-    await this.page.waitForTimeout(500);
+    await this.submitAndWaitForSavedAction();
   }
 
   /**
-   * Get current action status
+   * Click submit and wait until the saved action is what the page shows.
    *
-   * @returns Action status message or null if no action
+   * Three waits, all registered before the click: the POST, then the refetch of
+   * the player's actions that the mutation triggers, then the display. Waiting
+   * on the display alone is not enough when editing -- it is already visible
+   * with the OLD content, so it would resolve before the refetch lands.
    */
-  async getActionStatus(): Promise<string | null> {
-    try {
-      await this.currentActionDisplay.waitFor({ state: 'visible', timeout: 3000 });
-      const statusText = await this.actionStatus.textContent();
-      return statusText?.trim() || null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Get current action content
-   *
-   * @returns Action content or null if no action
-   */
-  async getCurrentActionContent(): Promise<string | null> {
-    try {
-      await this.currentActionDisplay.waitFor({ state: 'visible', timeout: 3000 });
-      const content = await this.actionContent.textContent();
-      return content?.trim() || null;
-    } catch {
-      return null;
-    }
+  private async submitAndWaitForSavedAction() {
+    const refetched = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        /\/api\/v1\/games\/\d+\/actions\/mine$/.test(new URL(response.url()).pathname),
+      { timeout: 10000 }
+    );
+    await clickAndWaitForMutation(this.page, this.submitActionButton, {
+      method: 'POST',
+      path: /^\/api\/v1\/games\/\d+\/actions$/,
+    });
+    await refetched;
+    await this.currentActionDisplay.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   /**
@@ -139,19 +121,6 @@ export class ActionSubmissionPage {
     try {
       await this.currentActionDisplay.waitFor({ state: 'visible', timeout: 3000 });
       return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Check if user can submit actions (form is visible and enabled)
-   */
-  async canSubmitAction(): Promise<boolean> {
-    try {
-      await this.actionSubmissionForm.waitFor({ state: 'visible', timeout: 3000 });
-      const isDisabled = await this.submitActionButton.isDisabled();
-      return !isDisabled;
     } catch {
       return false;
     }
@@ -169,55 +138,4 @@ export class ActionSubmissionPage {
     }
   }
 
-  /**
-   * View action history (if available)
-   */
-  async viewActionHistory() {
-    // Look for "Previous Actions" or "History" section
-    const historyButton = this.page.locator('button:has-text("Previous Actions"), button:has-text("History")');
-    const isVisible = await historyButton.isVisible().catch(() => false);
-
-    if (isVisible) {
-      await historyButton.click();
-      await this.page.waitForTimeout(500);
-    }
-  }
-
-  /**
-   * Get list of previous action submissions
-   *
-   * @returns Array of action contents from previous phases
-   */
-  async getPreviousActions(): Promise<string[]> {
-    await this.viewActionHistory();
-
-    const previousActionElements = await this.page
-      .locator('[data-testid^="previous-action-"], .previous-action')
-      .all();
-
-    const actions: string[] = [];
-    for (const element of previousActionElements) {
-      const content = await element.textContent();
-      if (content) {
-        actions.push(content.trim());
-      }
-    }
-
-    return actions;
-  }
-
-  /**
-   * Wait for phase deadline countdown
-   *
-   * @returns Whether deadline element is visible
-   */
-  async hasDeadline(): Promise<boolean> {
-    try {
-      const deadline = this.page.getByTestId('phase-deadline');
-      await deadline.waitFor({ state: 'visible', timeout: 3000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }
