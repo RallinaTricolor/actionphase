@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, createGameReadyToStart } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { CharacterWorkflowPage } from '../pages/CharacterWorkflowPage';
 import { navigateToGameTab } from '../utils/navigation';
@@ -12,10 +12,12 @@ import { navigateToGameTab } from '../utils/navigation';
  * - Character starts in pending state after creation
  * - GM can approve characters
  * - Approved characters appear in game
- * - Character resubmission workflow (rejected → edited → resubmitted → pending)
  *
- * Fixture characters are pre-baked in 14_character_workflows.sql — no runtime
- * character creation is needed for these tests.
+ * There is no reject path (the approve endpoint only accepts "approved"), so
+ * there is no rejected → resubmitted workflow to test.
+ *
+ * Fixtures live in 14_character_workflows.sql. The approval test creates its
+ * own pending character so it can be retried.
  */
 
 test.describe('@mobile Character Approval Workflow', () => {
@@ -48,60 +50,35 @@ test.describe('@mobile Character Approval Workflow', () => {
       await loginAs(gmPage, 'GM');
       await loginAs(playerPage, 'PLAYER_1');
 
-      // Fixture pre-bakes 'Approval Test Character' in pending status for PLAYER_1
       const gameId = await getFixtureGameId(gmPage, 'E2E_CHARACTER_APPROVE');
+
+      // The player submits a fresh character for this run. Approving the
+      // fixture's pre-baked pending character made the test single-use: a retry
+      // found it already approved, with no Approve button, and failed for a
+      // reason unrelated to approval.
+      const characterName = `Approval Test Character ${Date.now()}`;
+      const created = await playerPage.request.post(`/api/v1/games/${gameId}/characters`, {
+        data: { name: characterName, character_type: 'player_character' },
+      });
+      expect(created.ok(), `create character: ${created.status()} ${await created.text()}`).toBe(true);
 
       const gmCharPage = new CharacterWorkflowPage(gmPage, gameId);
       await gmCharPage.goto();
+      expect(await gmCharPage.getCharacterStatus(characterName)).toBe('pending');
 
-      const characterName = 'Approval Test Character';
       await gmCharPage.approveCharacter(characterName);
 
-      // Verify character now shows as approved on GM view
-      const gmStatus = await gmCharPage.getCharacterStatus(characterName);
-      expect(gmStatus).toBe('approved');
+      // Retrying: the card re-renders when the characters query refetches after
+      // the approval, which can land after approveCharacter returns.
+      await expect.poll(() => gmCharPage.getCharacterStatus(characterName)).toBe('approved');
 
       // Player should see approved status too
       const playerCharPage = new CharacterWorkflowPage(playerPage, gameId);
       await playerCharPage.goto();
-      const playerStatus = await playerCharPage.getCharacterStatus(characterName);
-      expect(playerStatus).toBe('approved');
+      await expect.poll(() => playerCharPage.getCharacterStatus(characterName)).toBe('approved');
     } finally {
       await gmContext.close();
       await playerContext.close();
-    }
-  });
-
-  test('rejected character can be edited and resubmitted', async ({ browser }) => {
-    const gmContext = await browser.newContext();
-    const gmPage = await gmContext.newPage();
-
-    try {
-      await loginAs(gmPage, 'GM');
-
-      // Fixture pre-bakes 'Resubmitted Test Character' in pending status, simulating
-      // the rejected → edited → resubmitted workflow
-      const gameId = await getFixtureGameId(gmPage, 'E2E_CHARACTER_RESUBMIT');
-
-      const gmCharPage = new CharacterWorkflowPage(gmPage, gameId);
-      await gmCharPage.goto();
-
-      // Character that was previously rejected and has been resubmitted (now pending)
-      const characterName = 'Resubmitted Test Character';
-      await expect(gmPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
-
-      // Verify it's in pending state (simulating resubmission after rejection)
-      const status = await gmCharPage.getCharacterStatus(characterName);
-      expect(status).toBe('pending');
-
-      // GM approves the resubmitted character
-      await gmCharPage.approveCharacter(characterName);
-
-      // Verify character now shows as approved
-      const approvedStatus = await gmCharPage.getCharacterStatus(characterName);
-      expect(approvedStatus).toBe('approved');
-    } finally {
-      await gmContext.close();
     }
   });
 
@@ -113,17 +90,17 @@ test.describe('@mobile Character Approval Workflow', () => {
 
     try {
       await loginAs(gmPage, 'GM');
-      await loginAs(playerPage, 'PLAYER_3'); // Player 3 has the approved character in fixture
+      await loginAs(playerPage, 'PLAYER_3');
 
-      const gameId = await getFixtureGameId(playerPage, 'E2E_CHARACTER_IN_GAME');
+      // A game of its own, per run: this test starts it, which is one-way, so a
+      // shared fixture game made the test single-use (see createGameReadyToStart).
+      const characterName = `In-Game Character ${Date.now()}`;
+      const gameId = await createGameReadyToStart(gmPage, playerPage, characterName);
 
-      // Verify approved character exists
-      const characterName = 'Approved Test Character';
+      // Verify the approved character exists before the game starts
       const playerCharPage = new CharacterWorkflowPage(playerPage, gameId);
       await playerCharPage.goto();
-
-      const status = await playerCharPage.getCharacterStatus(characterName);
-      expect(status).toBe('approved');
+      await expect.poll(() => playerCharPage.getCharacterStatus(characterName)).toBe('approved');
 
       // GM starts the game using POM
       const gmGamePage = new GameDetailsPage(gmPage);
@@ -134,11 +111,10 @@ test.describe('@mobile Character Approval Workflow', () => {
       // Verify game is now in_progress
       await expect(gmPage.getByText(/current phase|in progress/i)).toBeVisible({ timeout: 10000 });
 
-      // Navigate to People tab (in_progress games)
-      await gmPage.reload();
-      await gmPage.waitForLoadState('networkidle');
+      // Navigate to People tab (in_progress games). One fresh load picks up
+      // the new state; this used to reload() and then goto() the same URL,
+      // two full page loads that pushed the test past its budget under load.
       await gmPage.goto(`/games/${gameId}`);
-      await gmPage.waitForLoadState('networkidle');
 
       await navigateToGameTab(gmPage, 'People');
 
@@ -146,10 +122,7 @@ test.describe('@mobile Character Approval Workflow', () => {
       await expect(gmPage.getByText(characterName).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
 
       // Player should also see their character in the active game
-      await playerPage.reload();
-      await playerPage.waitForLoadState('networkidle');
       await playerPage.goto(`/games/${gameId}`);
-      await playerPage.waitForLoadState('networkidle');
 
       await navigateToGameTab(playerPage, 'People');
 

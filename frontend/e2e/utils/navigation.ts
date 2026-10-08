@@ -1,4 +1,6 @@
 import { Page, expect } from '@playwright/test';
+import { isMobileViewport } from './viewport';
+import { LONG_TIMEOUT } from '../config/test-timeouts';
 
 /**
  * Navigation Utilities for E2E Tests
@@ -18,9 +20,12 @@ import { Page, expect } from '@playwright/test';
  */
 export async function navigateToGame(page: Page, gameId: number) {
   await page.goto(`/games/${gameId}`);
+  // The game title is the page's <h1> and renders once the game has loaded.
+  // This was waitForSelector('h1, h2', 5000): any h2 satisfied it, and 5s was
+  // shorter than a busy full page load, so it failed on pages still loading.
+  await expect(page.getByRole('heading', { level: 1 }).locator('visible=true').first())
+    .toBeVisible({ timeout: LONG_TIMEOUT });
   await page.waitForLoadState('networkidle');
-  // Wait for game title to be visible (ensures page is loaded)
-  await page.waitForSelector('h1, h2', { timeout: 5000 });
 }
 
 /**
@@ -32,7 +37,7 @@ export async function navigateToGame(page: Page, gameId: number) {
 export async function navigateToGameTab(page: Page, tabName: string) {
   // Mobile uses a select dropdown; desktop uses a tablist with role="tab"
   const mobileSelect = page.locator('select#tab-select');
-  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   if (isMobile) {
     // Find option by label substring (handles badge counts like "Applications (3)")
@@ -96,30 +101,11 @@ export async function navigateToGameAndTab(page: Page, gameId: number, tabName: 
 }
 
 /**
- * Navigate to dashboard
- * @param page - Playwright page object
- */
-export async function navigateToDashboard(page: Page) {
-  await page.goto('/dashboard');
-  await page.waitForLoadState('networkidle');
-  await page.waitForSelector('h1, h2', { timeout: 5000 });
-}
-
-/**
  * Navigate to games list
  * @param page - Playwright page object
  */
 export async function navigateToGamesList(page: Page) {
   await page.goto('/games');
-  await page.waitForLoadState('networkidle');
-}
-
-/**
- * Reload the current page and wait for it to be ready
- * @param page - Playwright page object
- */
-export async function reloadPage(page: Page) {
-  await page.reload();
   await page.waitForLoadState('networkidle');
 }
 
@@ -137,7 +123,7 @@ export async function navigateViaNavLink(page: Page, linkName: string) {
 
   const hamburger = page.locator('button[aria-label="Menu"]');
   // Wait up to 5s for the nav to render before deciding mobile vs desktop
-  const isMobile = await hamburger.isVisible({ timeout: 5000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   if (isMobile) {
     await hamburger.click();
@@ -159,7 +145,7 @@ export async function navigateViaNavLink(page: Page, linkName: string) {
  */
 export async function assertTabVisible(page: Page, tabName: string) {
   const mobileSelect = page.locator('select#tab-select');
-  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   if (isMobile) {
     const option = mobileSelect.locator('option', { hasText: tabName });
@@ -178,7 +164,7 @@ export async function assertTabVisible(page: Page, tabName: string) {
  */
 export async function assertTabNotVisible(page: Page, tabName: string) {
   const mobileSelect = page.locator('select#tab-select');
-  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   if (isMobile) {
     const option = mobileSelect.locator('option', { hasText: tabName });
@@ -197,7 +183,7 @@ export async function assertTabNotVisible(page: Page, tabName: string) {
  */
 export async function assertTabSelected(page: Page, tabName: string) {
   const mobileSelect = page.locator('select#tab-select');
-  const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   if (isMobile) {
     const checkedOption = mobileSelect.locator('option:checked');

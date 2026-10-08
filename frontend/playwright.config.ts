@@ -47,6 +47,13 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
+    /* Bound every action and navigation. Without these a click on an element
+       that never (re)appears waits out the whole test budget, and the failure
+       is reported against whatever else was pending -- e.g. a logout click on a
+       menu that had closed surfaced as a 30s waitForResponse timeout. */
+    actionTimeout: 10000,
+    navigationTimeout: 15000,
+
     /* Capture screenshot on failure */
     screenshot: 'only-on-failure',
 

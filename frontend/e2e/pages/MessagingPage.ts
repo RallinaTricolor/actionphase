@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab, navigateToGameTab } from '../utils/navigation';
-import { waitForVisible } from '../utils/waits';
+import { waitForVisible, clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object Model for Private Messaging
@@ -146,8 +146,7 @@ export class MessagingPage {
     }
 
     // Submit form
-    await this.createConversationButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.createConversationButton, API.createConversation);
 
     // Verify conversation was created - filter to visible element (viewport-agnostic)
     await expect(this.page.getByText(title).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
@@ -163,20 +162,24 @@ export class MessagingPage {
     // Reply button is present and the textarea is not yet mounted; open it first.
     // We still tolerate an already-visible textarea (e.g. reply box left open) so
     // callers that send several messages in a row don't have to re-open it.
-    const replyButton = this.page.getByRole('button', { name: 'Reply' }).locator('visible=true');
-    const visibleTextarea = this.page.locator('textarea[placeholder*="Type your message"]').locator('visible=true');
-    await expect(replyButton.or(visibleTextarea).first()).toBeVisible({ timeout: 5000 });
-    if (await replyButton.count() > 0) {
-      await replyButton.first().click();
-      await this.messageTextarea.waitFor({ state: 'visible', timeout: 5000 });
+    //
+    // No instant count() to pick a branch: Reply could be visible for a frame
+    // and then replaced by the loading placeholder, and the count() that
+    // followed read 0, skipped the click, and waited on a composer that was
+    // never opened. click() waits for Reply to be there (again) and stable.
+    const replyButton = this.page.getByRole('button', { name: 'Reply' }).locator('visible=true').first();
+    if (!(await this.messageTextarea.isVisible())) {
+      await replyButton.click();
     }
+    await expect(this.messageTextarea).toBeVisible({ timeout: 5000 });
 
     await this.messageTextarea.fill(message);
-    await this.sendButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.sendButton, API.sendMessage);
 
-    // Verify message appears - filter to visible element (viewport-agnostic)
-    await expect(this.page.getByText(message).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
+    // Verify the message rendered in the thread. Scoped to message elements:
+    // a bare getByText(message) also matches the composer textarea, which
+    // mirrors what was typed into its text content.
+    await expect(this.messageWithText(message)).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -186,7 +189,28 @@ export class MessagingPage {
   async openConversation(conversationTitle: string) {
     const conversation = this.page.getByText(conversationTitle).locator('visible=true').first();
     await conversation.click();
+    // The thread header (<h2>) names the open conversation, proving the click
+    // opened THIS thread. Level 2 matters: list items render the same title as
+    // <h3>, which is visible before the thread has even mounted.
+    await expect(
+      this.page.getByRole('heading', { level: 2, name: conversationTitle, exact: true }).locator('visible=true').first()
+    ).toBeVisible({ timeout: 10000 });
+    // Opening a thread is several requests, not one: load, a refresh from the
+    // URL sync, mark-as-read, then a conversation-list reload. The thread swaps
+    // in a loading placeholder while they run, so wait for them to finish
+    // before the caller interacts with it.
+    await expect(this.page.getByText('Loading messages...')).toBeHidden({ timeout: 10000 });
     await this.page.waitForLoadState('networkidle');
+  }
+
+  /**
+   * A rendered message containing the given text. Use this rather than
+   * page.getByText(text): that also matches an open composer or edit
+   * <textarea>, because React mirrors a controlled textarea's value into its
+   * text content -- so it can pass before anything was saved.
+   */
+  messageWithText(text: string): Locator {
+    return this.page.getByTestId('message').filter({ hasText: text }).locator('visible=true').first();
   }
 
   /**
@@ -196,15 +220,6 @@ export class MessagingPage {
   async verifyConversationExists(conversationTitle: string) {
     // Filter to visible element (viewport-agnostic)
     await expect(this.page.getByText(conversationTitle).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Verify a conversation does NOT exist in the list
-   * @param conversationTitle - Title to verify is not visible
-   */
-  async verifyConversationNotVisible(conversationTitle: string) {
-    const conversation = this.page.getByText(conversationTitle);
-    await expect(conversation).not.toBeVisible();
   }
 
   /**
@@ -241,15 +256,6 @@ export class MessagingPage {
   }
 
   /**
-   * Verify a message does NOT exist
-   * @param messageContent - Message content to verify is not visible
-   */
-  async verifyMessageNotVisible(messageContent: string) {
-    const message = this.page.getByText(messageContent);
-    await expect(message).not.toBeVisible();
-  }
-
-  /**
    * Navigate to Messages tab using button/tab click
    */
   async navigateToMessages() {
@@ -279,7 +285,7 @@ export class MessagingPage {
     await expect(textarea).toBeVisible();
     await textarea.clear();
     await textarea.fill(newContent);
-    await this.page.getByTestId('save-edit-button').click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.getByTestId('save-edit-button'), API.editMessage);
+    await expect(textarea).not.toBeVisible();
   }
 }

@@ -32,17 +32,20 @@ test.describe('@mobile Action Submission Flow', () => {
     // Verify Action Submission section is visible
     await assertTextVisible(page, 'Action Submission');
 
-    // Player 4 has an existing action - verify it's displayed
+    // Player 4 has an existing action. Assert that one is shown, not its exact
+    // seed text: this test overwrites it, so a retry starts from the edited
+    // content and a seed-text check failed it for a reason unrelated to editing.
     await assertTextVisible(page, 'Your Current Action');
-    await assertTextVisible(page, 'This is an in-progress action that needs to be completed');
+    await expect(actionPage.actionContent).not.toBeEmpty();
 
     // Update the action content using POM — include a timestamp to make it unique
     const newActionContent = `I will execute my plan with precision and care. Updated: ${Date.now()}`;
     await actionPage.editAction(newActionContent);
 
-    // Verify the full updated content is displayed (not just a fragment that could match the original)
-    const savedContent = await actionPage.getCurrentActionContent();
-    expect(savedContent).toContain(newActionContent);
+    // Retrying: the display updates when the actions query refetches after the
+    // save, which can land after editAction returns. A one-shot read here
+    // caught the pre-edit text.
+    await expect(actionPage.actionContent).toContainText(newActionContent, { timeout: 10000 });
     await expect(page.locator('text=Acting as:').locator('..').locator('span:has-text("E2E Test Char 4")')).toBeVisible();
   });
 
@@ -101,12 +104,20 @@ test.describe('@mobile Action Submission Flow', () => {
     // Verify Action Submission section is visible
     await assertTextVisible(page, 'Action Submission');
 
+    // Precondition, stated rather than left to fail obscurely: PLAYER_2 has no
+    // action yet. Actions cannot be deleted, so once this test has submitted
+    // one (including on a retry after a failure elsewhere in this test) it
+    // cannot run again until fixtures are reloaded.
+    await expect(actionPage.actionSubmissionForm.or(actionPage.currentActionDisplay).first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      actionPage.currentActionDisplay,
+      'PLAYER_2 already has an action for this phase. This test is single-use per fixture load; run `just load-e2e`.'
+    ).toHaveCount(0);
+
     // Submit new action using POM
     const newActionContent = `I will scout ahead and report back to the team. This is my first action submission. ${Date.now()}`;
+    // submitAction waits for the save and the refetch it triggers
     await actionPage.submitAction(newActionContent);
-
-    // Wait for submission to complete
-    await page.waitForLoadState('networkidle');
 
     // Verify the action was submitted successfully using POM
     expect(await actionPage.hasSubmittedAction()).toBe(true);

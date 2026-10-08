@@ -185,3 +185,6 @@ scripts/renew-ssl.sh
 ssl/
 
 mailmap.txt
+
+# Held by `just e2e*` while a run is in progress (see _e2e-lock)
+.e2e-run.lock/

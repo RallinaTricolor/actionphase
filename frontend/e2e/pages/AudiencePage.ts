@@ -93,13 +93,6 @@ export class AudiencePage {
   }
 
   /**
-   * Verify conversation count
-   */
-  async verifyConversationCount(expected: string) {
-    await assertTextVisible(this.page, expected);
-  }
-
-  /**
    * Clear all filters
    */
   async clearFilters() {
@@ -113,23 +106,6 @@ export class AudiencePage {
    */
   async verifyMessageExists(content: string) {
     await assertTextVisible(this.page, content);
-  }
-
-  /**
-   * Verify date divider exists
-   */
-  async verifyDateDivider(dateText: string) {
-    await assertTextVisible(this.page, dateText);
-  }
-
-  /**
-   * Verify message grouping by checking sender name appears only once per group
-   */
-  async verifySenderNameInGroup(senderName: string) {
-    const senderElements = this.page.getByText(senderName, { exact: true });
-    const count = await senderElements.count();
-    // Sender name should appear at most twice (mobile + desktop layouts)
-    return count <= 2;
   }
 
   /**
@@ -169,12 +145,4 @@ export class AudiencePage {
     await waitForVisible(preview);
   }
 
-  /**
-   * Verify activity badge is displayed (for conversations with messages)
-   */
-  async verifyActivityBadge() {
-    const badge = this.page.locator('[class*="message"]');
-    const count = await badge.count();
-    return count > 0;
-  }
 }

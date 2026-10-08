@@ -405,6 +405,10 @@ func (h *Handler) humaCreatePost(ctx context.Context, in *createPostInput) (*mes
 			h.App.ObsLogger.Warn(ctx, "Create post rejected: invalid viewers", "error", err, "game_id", in.GameID, "user_id", userID)
 			return nil, huma.Error422UnprocessableEntity(err.Error())
 		}
+		if errors.Is(err, core.ErrCharacterNotControlled) {
+			h.App.ObsLogger.Warn(ctx, "Create post rejected: character not controlled by user", "error", err, "user_id", userID)
+			return nil, huma.Error403Forbidden("You do not control this character")
+		}
 		h.App.ObsLogger.Error(ctx, "Failed to create post", "error", err, "game_id", in.GameID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
 	}
@@ -637,6 +641,10 @@ func (h *Handler) humaCreateComment(ctx context.Context, in *createCommentInput)
 		if core.IsArchivedGameError(err) {
 			h.App.ObsLogger.Warn(ctx, "Create comment rejected: game is archived", "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 			return nil, humaErr(core.ErrGameArchived())
+		}
+		if errors.Is(err, core.ErrCharacterNotControlled) {
+			h.App.ObsLogger.Warn(ctx, "Create comment rejected: character not controlled by user", "error", err, "user_id", userID)
+			return nil, huma.Error403Forbidden("You do not control this character")
 		}
 		h.App.ObsLogger.Error(ctx, "Failed to create comment", "error", err, "game_id", in.GameID, "post_id", in.PostID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())
@@ -1499,6 +1507,10 @@ func (h *Handler) humaCreateDraftPost(ctx context.Context, in *createDraftPostIn
 		if core.IsArchivedGameError(err) {
 			h.App.ObsLogger.Warn(ctx, "Error in create draft post", "phase_id", in.ID)
 			return nil, humaErr(core.ErrGameArchived())
+		}
+		if errors.Is(err, core.ErrCharacterNotControlled) {
+			h.App.ObsLogger.Warn(ctx, "Create draft post rejected: character not controlled by user", "error", err, "user_id", userID)
+			return nil, huma.Error403Forbidden("You do not control this character")
 		}
 		h.App.ObsLogger.Error(ctx, "Failed to create draft post", "error", err, "phase_id", in.ID, "user_id", userID)
 		return nil, huma.Error500InternalServerError(err.Error())

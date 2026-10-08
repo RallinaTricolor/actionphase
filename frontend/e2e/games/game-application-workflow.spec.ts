@@ -4,6 +4,7 @@ import { getFixtureGameId, getWorkerUsername } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { GameApplicationsPage } from '../pages/GameApplicationsPage';
 import { assertTabVisible, navigateToGameTab } from '../utils/navigation';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * E2E Tests for Game Application Workflow
@@ -128,17 +129,15 @@ test.describe('Game Application Workflow', () => {
     await rejectButton.waitFor({ state: 'visible', timeout: 5000 });
     await rejectButton.click();
 
-    // Wait for confirmation modal to appear and confirm
-    // (Modal uses div-based layout, not role="dialog" — scope via fixed/overlay container)
-    const modalHeading = page.getByRole('heading', { name: 'Reject Application' });
-    await expect(modalHeading).toBeVisible({ timeout: 10000 });
-    // Scope to modal container (fixed overlay) to distinguish from card's Reject button
-    const modalContainer = page.locator('.fixed.inset-0').filter({ hasText: 'Reject Application' });
-    await modalContainer.getByRole('button', { name: 'Reject', exact: true }).click();
-
-    // Wait for modal to close (rejection complete)
-    await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
-    await page.waitForLoadState('networkidle');
+    // Confirm in the dialog (scoped so the card's own Reject button can't match)
+    // and wait for the review to be saved
+    const rejectDialog = page.getByRole('dialog', { name: 'Reject Application' });
+    await clickAndWaitForMutation(
+      page,
+      rejectDialog.getByRole('button', { name: 'Reject', exact: true }),
+      API.reviewApplication
+    );
+    await expect(rejectDialog).toBeHidden();
 
     // Refresh and navigate back to applications
     await applicationsPage.goto();
@@ -190,19 +189,8 @@ test.describe('Game Application Workflow', () => {
         .first()
     ).toBeVisible({ timeout: 10000 });
 
-    // Withdraw application using POM
+    // Withdraw application using POM (confirms the dialog and waits for the DELETE)
     await applicationsPage.withdrawApplication();
-
-    // Wait for confirmation modal and confirm withdrawal
-    // (Modal uses div-based layout — scope via fixed overlay container)
-    const withdrawModalHeading = page.getByRole('heading', { name: 'Withdraw Application' });
-    await expect(withdrawModalHeading).toBeVisible({ timeout: 5000 });
-    const withdrawModalContainer = page.locator('.fixed.inset-0').filter({ hasText: 'Withdraw Application' });
-    await withdrawModalContainer.getByRole('button', { name: 'Withdraw Application', exact: true }).click();
-
-    // Wait for modal to close before navigating
-    await expect(withdrawModalHeading).not.toBeVisible({ timeout: 10000 });
-    await page.waitForLoadState('networkidle');
 
     // Refresh page to see updated state
     await gamePage.goto(gameId);

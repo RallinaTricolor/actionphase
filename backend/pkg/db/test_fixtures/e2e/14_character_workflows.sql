@@ -6,6 +6,8 @@
 BEGIN;
 
 -- Delete existing E2E character workflow games to prevent duplicates
+-- 602-604 are retired fixtures (rejection, resubmission, in-game); still deleted
+-- so a database loaded with the old file is cleaned up.
 DELETE FROM games WHERE id IN (300, 301, 302, 600, 601, 602, 603, 604);
 
 DO $$
@@ -19,9 +21,6 @@ DECLARE
   game_char_pending_id INTEGER;
   game_char_view_pending_id INTEGER;
   game_char_approve_id INTEGER;
-  game_char_reject_id INTEGER;
-  game_char_resubmit_id INTEGER;
-  game_char_in_game_id INTEGER;
   game_gm_messaging_id INTEGER;
   phase_id INTEGER;
   gm_char_id INTEGER;
@@ -151,91 +150,6 @@ BEGIN
   -- Pre-created pending character for GM approval test (no runtime creation needed)
   INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
   VALUES (game_char_approve_id, p1_id, 'Approval Test Character', 'player_character', 'pending', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '1 hour');
-
-  -- ============================================
-  -- GAME #323: Character Rejection Test (GM can reject character and player sees rejection)
-  -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
-  VALUES (
-    602,
-    'E2E Test: Character Approval - Reject',
-    'Test GM rejecting characters.',
-    'Test',
-    gm_id,
-    4,
-    'character_creation',
-    NOW() - INTERVAL '3 days',
-    NOW()
-  );
-  game_char_reject_id := 602;
-  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
-  VALUES (game_char_reject_id, p2_id, 'player', 'active', NOW() - INTERVAL '2 days');
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES (game_char_reject_id, gm_id, 'E2E GM', 'npc', 'approved', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days');
-
-  -- ============================================
-  -- GAME #324: Character Resubmission Test (rejected character can be edited and resubmitted)
-  -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
-  VALUES (
-    603,
-    'E2E Test: Character Approval - Resubmit',
-    'Test character resubmission after rejection.',
-    'Test',
-    gm_id,
-    4,
-    'character_creation',
-    NOW() - INTERVAL '3 days',
-    NOW()
-  );
-  game_char_resubmit_id := 603;
-  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
-  VALUES (game_char_resubmit_id, p1_id, 'player', 'active', NOW() - INTERVAL '2 days');
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES (game_char_resubmit_id, gm_id, 'E2E GM', 'npc', 'approved', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days');
-  -- Pre-created resubmitted character (simulates rejected → edited → resubmitted workflow)
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES (
-    game_char_resubmit_id,
-    p1_id,
-    'Resubmitted Test Character',
-    'player_character',
-    'pending',
-    NOW() - INTERVAL '1 hour',
-    NOW() - INTERVAL '1 hour'
-  );
-
-  -- ============================================
-  -- GAME #325: Character In-Game Test (approved characters appear in active game)
-  -- ============================================
-  INSERT INTO games (id, title, description, genre, gm_user_id, max_players, state, created_at, updated_at)
-  VALUES (
-    604,
-    'E2E Test: Character Approval - In Game',
-    'Test approved characters appearing in active game.',
-    'Test',
-    gm_id,
-    4,
-    'character_creation',
-    NOW() - INTERVAL '3 days',
-    NOW()
-  );
-  game_char_in_game_id := 604;
-  INSERT INTO game_participants (game_id, user_id, role, status, joined_at)
-  VALUES (game_char_in_game_id, p3_id, 'player', 'active', NOW() - INTERVAL '2 days');
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES (game_char_in_game_id, gm_id, 'E2E GM', 'npc', 'approved', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days');
-  -- Pre-created approved character
-  INSERT INTO characters (game_id, user_id, name, character_type, status, created_at, updated_at)
-  VALUES (
-    game_char_in_game_id,
-    p3_id,
-    'Approved Test Character',
-    'player_character',
-    'approved',
-    NOW() - INTERVAL '12 hours',
-    NOW() - INTERVAL '12 hours'
-  );
 
   -- ============================================
   -- GAME #302: GM Messaging with Multiple NPCs (private-messages-flow.spec.ts)
@@ -371,7 +285,7 @@ BEGIN
   -- Update games sequence to avoid conflicts
   PERFORM setval('games_id_seq', 325);
 
-  RAISE NOTICE 'Character Workflow fixtures created: Games 300 301 302 600 601 602 603 604 (301/601 include pre-baked pending characters)';
+  RAISE NOTICE 'Character Workflow fixtures created: Games 300 301 302 600 601 (301/601 include pre-baked pending characters)';
 END $$;
 
 SELECT 'E2E Character Workflow fixtures created successfully!' AS message;

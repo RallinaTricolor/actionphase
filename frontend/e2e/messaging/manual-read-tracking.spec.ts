@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { HistoryPage } from '../pages/HistoryPage';
 import { getFixtureGameId, setCommentReadMode } from '../fixtures/game-helpers';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Manual Comment Read Tracking E2E Tests
@@ -45,11 +46,12 @@ test.describe('Manual Comment Read Tracking', () => {
     await commonRoom.goto(gameId);
     await commonRoom.expandComments(FIXTURE_POST);
     const btn = page.locator('[data-testid="toggle-read-button"]').first();
-    if (await btn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const text = await btn.textContent().catch(() => '');
+    // Wait for the button rather than asking isVisible(), which answers
+    // instantly (its timeout is ignored) and skipped this reset on a slow render.
+    if (await btn.waitFor({ state: 'visible', timeout: 5000 }).then(() => true, () => false)) {
+      const text = await btn.textContent();
       if (text?.trim() === 'Unread') {
-        await btn.click();
-        await page.waitForLoadState('networkidle');
+        await clickAndWaitForMutation(page, btn, API.toggleCommentRead);
       }
     }
   });
@@ -68,8 +70,7 @@ test.describe('Manual Comment Read Tracking', () => {
     await expect(readButton).toBeVisible({ timeout: 5000 });
     await expect(readButton).toHaveText('Read');
 
-    await readButton.click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, readButton, API.toggleCommentRead);
     await expect(readButton).toHaveText('Unread', { timeout: 5000 });
   });
 
@@ -101,8 +102,7 @@ test.describe('Manual Comment Read Tracking', () => {
     await expect(readButton).toBeVisible({ timeout: 10000 });
     await expect(readButton).toHaveText('Read');
 
-    await readButton.click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, readButton, API.toggleCommentRead);
     await expect(readButton).toHaveText('Unread', { timeout: 5000 });
   });
 });

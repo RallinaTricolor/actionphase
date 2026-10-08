@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAs, logout, isAuthenticated, login } from '../fixtures/auth-helpers';
+import { loginViaUI, logout, isAuthenticated, login } from '../fixtures/auth-helpers';
 import { assertUrl } from '../utils/assertions';
 
 /**
@@ -15,7 +15,7 @@ test.describe('User Authentication', () => {
 
   test('should successfully login and logout', async ({ page }) => {
     // Login as Game Master
-    await loginAs(page, 'GM');
+    await loginViaUI(page, 'GM');
 
     // Verify we're on the dashboard
     await assertUrl(page, '/dashboard');
@@ -35,7 +35,7 @@ test.describe('User Authentication', () => {
 
   test('should allow re-login after logout', async ({ page }) => {
     // First login
-    await loginAs(page, 'GM');
+    await loginViaUI(page, 'GM');
     await assertUrl(page, '/dashboard');
 
     // Logout
@@ -43,7 +43,7 @@ test.describe('User Authentication', () => {
     await assertUrl(page, '/login');
 
     // Second login (verify we can login again)
-    await loginAs(page, 'GM');
+    await loginViaUI(page, 'GM');
     await assertUrl(page, '/dashboard');
     await expect(page.locator('nav a[href="/dashboard"]').first()).toBeVisible();
   });
@@ -72,7 +72,7 @@ test.describe('User Authentication', () => {
 
   test('should redirect to dashboard when accessing login while authenticated', async ({ page }) => {
     // Login first
-    await loginAs(page, 'PLAYER_2');
+    await loginViaUI(page, 'PLAYER_2');
     await assertUrl(page, '/dashboard');
 
     // Try to navigate to login page while authenticated
@@ -84,7 +84,7 @@ test.describe('User Authentication', () => {
 
   test('should persist authentication across page reloads', async ({ page }) => {
     // Login
-    await loginAs(page, 'PLAYER_3');
+    await loginViaUI(page, 'PLAYER_3');
     await assertUrl(page, '/dashboard');
 
     // Reload the page

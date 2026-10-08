@@ -103,12 +103,10 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
       }
     } else {
       setContent('');
-      // Auto-select character if player has exactly one
-      if (availableCharacters.length === 1) {
-        setSelectedCharacterId(availableCharacters[0].id);
-      } else {
-        setSelectedCharacterId(null);
-      }
+      // No explicit choice. A sole character is still used (see
+      // activeCharacterId) -- derived, not copied in here, because this branch
+      // runs once and the character list may not have loaded yet.
+      setSelectedCharacterId(null);
     }
   }, [currentAction, availableCharacters]);
 
@@ -118,7 +116,9 @@ export function ActionSubmission({ gameId, currentPhase, className = '' }: Actio
 
     const data: ActionSubmissionRequest = {
       content: content.trim(),
-      character_id: selectedCharacterId || undefined
+      // activeCharacterId, not selectedCharacterId: it is what the form shows
+      // under "Acting as", including the auto-selected sole character.
+      character_id: activeCharacterId ?? undefined
     };
 
     submitActionMutation.mutate(data);

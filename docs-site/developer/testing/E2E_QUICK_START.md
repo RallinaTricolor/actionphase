@@ -328,13 +328,17 @@ export async function loginAs(
 ) {
   const user = TEST_USERS[userKey];
 
-  await page.goto('/login');
-  await page.fill('[name="username"]', user.username); // e.g., 'TestGM'
-  await page.fill('[name="password"]', user.password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('/dashboard');
+  // Switching users: drop the previous session (jwt cookie + localStorage
+  // auth_token) directly rather than through the logout UI.
+  await clearSession(page);
 
-  return { user, token: await getAuthToken(page) };
+  // LoginPage waits for the URL to leave /login AND for the new route to be
+  // committed (waitForRouteCommitted) before returning.
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login(getWorkerSpecificUsername(user.username), user.password);
+
+  return { user, token: null };
 }
 ```
 

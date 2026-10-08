@@ -4308,7 +4308,7 @@ components:
             additionalProperties: false
             properties:
                 display_order:
-                    description: Sort order within the poll
+                    description: Sort order within the poll. Omit on every option to keep submission order; when given, values must be distinct.
                     format: int32
                     type: integer
                 text:

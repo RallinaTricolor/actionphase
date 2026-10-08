@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
-import { getFixtureGameId } from '../fixtures/game-helpers';
+import { getFixtureGameId, createPollViaApi } from '../fixtures/game-helpers';
 import { PollsPage } from '../pages/PollsPage';
 
 /**
@@ -76,18 +76,28 @@ test.describe('Polls Flow', () => {
   });
 
   test('Player votes on poll and sees correct badge', async ({ page }) => {
-    await loginAs(page, 'PLAYER_2');
+    // The test votes, so it votes on a poll of its own. Voting on the shared
+    // fixture poll made it single-use: a retry found the vote already cast,
+    // no "Vote Now" button, and failed for a reason unrelated to voting.
+    await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
-    const pollsPage = new PollsPage(page, gameId);
+    // Unique per run, options included: earlier runs' polls stay in the game.
+    const stamp = Date.now();
+    const question = `Which way at the fork? ${stamp}`;
+    const choice = `Take the left path ${stamp}`;
+    await createPollViaApi(page, gameId, question, [choice, `Take the right path ${stamp}`]);
 
+    await loginAs(page, 'PLAYER_2');
+    const pollsPage = new PollsPage(page, gameId);
     await pollsPage.goto();
 
-    // PLAYER_2 has not voted on the fixture poll — cast a fresh vote
-    await pollsPage.voteOnPoll(FIXTURE_POLL, 'Explore the abandoned castle');
+    await pollsPage.voteOnPoll(question, choice);
 
-    expect(await pollsPage.getPollVoteStatus(FIXTURE_POLL)).toBe('voted');
+    // Retrying: the badge updates when the polls query refetches after the
+    // vote, which can land after voteOnPoll returns.
+    await expect.poll(() => pollsPage.getPollVoteStatus(question)).toBe('voted');
     await expect(page.getByText('Your vote:').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Explore the abandoned castle')).toBeVisible();
+    await expect(page.getByText(choice)).toBeVisible();
   });
 
   // ==========================================================================
@@ -97,12 +107,19 @@ test.describe('Polls Flow', () => {
   test('Player voting does not trigger 403 errors or Loading results flash', async ({ page }) => {
     const { consoleErrors } = setupMonitoring(page);
 
-    await loginAs(page, 'PLAYER_3');
+    // Votes on its own poll: see createPollViaApi.
+    await loginAs(page, 'GM');
     const gameId = await getFixtureGameId(page, 'COMMON_ROOM_POLLS');
+    const stamp = Date.now();
+    const question = `Rest or press on? ${stamp}`;
+    const choice = `Make camp ${stamp}`;
+    await createPollViaApi(page, gameId, question, [choice, `Keep marching ${stamp}`]);
+
+    await loginAs(page, 'PLAYER_3');
     const pollsPage = new PollsPage(page, gameId);
 
     await pollsPage.goto();
-    await pollsPage.voteOnPoll(FIXTURE_POLL, 'Return to town for supplies');
+    await pollsPage.voteOnPoll(question, choice);
 
     // "Loading results..." should NEVER appear for players on active polls
     await expect(page.getByText('Loading results...')).not.toBeVisible({ timeout: 100 });
@@ -141,9 +158,7 @@ test.describe('Polls Flow', () => {
     await expect(page.getByText('Voted').first()).toBeVisible({ timeout: 5000 });
     expect(await pollsPage.getVotedBadgeCount()).toBeGreaterThanOrEqual(1);
 
-    // Reload and re-navigate
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    // Fresh load (goto() is a full navigation, so no separate reload needed)
     await pollsPage.goto();
 
     await expect(page.getByText('Loading polls')).not.toBeVisible({ timeout: 5000 });

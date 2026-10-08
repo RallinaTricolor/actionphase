@@ -114,15 +114,15 @@ Example dice roll: 1d20 + 5
     await handoutsPage.createHandout(handoutTitle, 'This will be deleted', true);
 
     // Verify it exists
-    let hasHandout = await handoutsPage.hasHandout(handoutTitle);
+    const hasHandout = await handoutsPage.hasHandout(handoutTitle);
     expect(hasHandout).toBe(true);
 
     // Delete it
     await handoutsPage.deleteHandout(handoutTitle);
 
-    // Verify it's gone
-    hasHandout = await handoutsPage.hasHandout(handoutTitle);
-    expect(hasHandout).toBe(false);
+    // Verify it's gone. Retrying: the card stays until the list refetches
+    // after the DELETE, and a one-shot hasHandout() read could land first.
+    await expect(page.getByRole('heading', { name: handoutTitle, level: 3 })).toHaveCount(0);
   });
 
   test('handout can be opened via direct deep link', async ({ page }) => {
@@ -181,13 +181,14 @@ Example dice roll: 1d20 + 5
     const playerHandoutsPage = new GameHandoutsPage(page, gameId);
     await playerHandoutsPage.goto();
 
-    // Player should NOT see the draft handout
-    const playerCanSeeDraft = await playerHandoutsPage.hasHandout(draftTitle);
-    expect(playerCanSeeDraft).toBe(false);
-
-    // Player SHOULD see the published handout
+    // Player SHOULD see the published handout. Checked first: it proves the
+    // list has loaded, without which the draft check below would pass on an
+    // empty page whatever the server returned.
     const playerCanSeePublished = await playerHandoutsPage.hasHandout(publishedTitle);
     expect(playerCanSeePublished).toBe(true);
+
+    // Player should NOT see the draft handout
+    await expect(page.getByRole('heading', { name: draftTitle, level: 3 })).toHaveCount(0);
 
     // Verify player can open and read the published handout
     await playerHandoutsPage.openHandout(publishedTitle);

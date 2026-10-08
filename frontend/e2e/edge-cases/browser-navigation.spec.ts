@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { navigateToGame, navigateToGameTab, navigateViaNavLink } from '../utils/navigation';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * E2E Tests for Browser Navigation Behavior
@@ -51,7 +52,7 @@ test.describe('@mobile Browser Navigation Behavior', () => {
 
     // Should show game content (tabs or mobile select should be present)
     const mobileSelect = page.locator('select#tab-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(page);
     if (isMobile) {
       await expect(mobileSelect).toBeVisible();
     } else {
