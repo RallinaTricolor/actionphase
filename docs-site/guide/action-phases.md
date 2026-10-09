@@ -22,7 +22,7 @@ There are two ways to insert:
 
 **From the Character Sheet drawer** — Click the **Character Sheet** button (person icon) in the toolbar to open a sidebar listing your skills and inventory. Use the filter box to narrow the list, then click any item to insert it at the current cursor position.
 
-**With the `%%` shortcut** — Type `%%` anywhere in the editor to open an inline autocomplete menu. Continue typing to filter, then press `Enter` or click a result to insert.
+**With the `%%` shortcut** — Type `%%` anywhere in the editor to open an inline autocomplete menu. Continue typing to filter, then press `Tab` or `Enter` (or click a result) to insert. See [Keyboard Shortcuts](./keyboard-shortcuts).
 
 Both methods insert a `[[Item Name|type:id]]` tag. This is stored in your action text and remains readable as plain text if the sheet item is later removed.
 

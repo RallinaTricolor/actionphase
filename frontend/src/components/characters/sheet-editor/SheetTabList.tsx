@@ -69,6 +69,12 @@ export function SheetTabList({
     else setConfirmingKey(tab.key);
   };
 
+  const cancelNew = () => {
+    setAdding(false);
+    setNewLabel('');
+    setAttempted(false);
+  };
+
   const submitNew = () => {
     setAttempted(true);
     if (newLabelError) return;
@@ -166,6 +172,11 @@ export function SheetTabList({
             onChange={(e) => setNewLabel(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') submitNew();
+              if (e.key === 'Escape') {
+                // Cancel the inline add, not whatever dialog this editor sits in
+                e.preventDefault();
+                cancelNew();
+              }
             }}
             error={attempted ? newLabelError ?? undefined : undefined}
             inputSize="sm"
@@ -177,11 +188,7 @@ export function SheetTabList({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => {
-                setAdding(false);
-                setNewLabel('');
-                setAttempted(false);
-              }}
+              onClick={cancelNew}
             >
               Cancel
             </Button>

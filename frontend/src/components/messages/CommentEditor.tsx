@@ -5,6 +5,7 @@ import { Pencil, Eye, HelpCircle } from 'lucide-react';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { TEXT_COLORS } from '@/components/common/markdown/textColors';
 import { CharacterAutocomplete } from '@/components/characters/CharacterAutocomplete';
+import { filterCharacters } from '@/components/characters/filterCharacters';
 import { applyMarkdownFormat, formatForKey } from '@/components/common/markdown/markdownHotkeys';
 import type { MarkdownFormat } from '@/components/common/markdown/markdownHotkeys';
 import { SheetItemAutocomplete } from '@/components/characters/SheetItemAutocomplete';
@@ -14,6 +15,13 @@ import type { Character } from '@/types/characters';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { postCachingService } from '@/services/PostCachingService';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
+import { HELP_KEY, SHORTCUT_GROUPS, isSubmitCombo } from '@/lib/keyboardShortcuts';
+import { ShortcutKeys } from '@/components/common/keyboard/ShortcutKeys';
+
+/** Editor + suggestion shortcuts for the Markdown Help panel, from the shared registry. */
+const EDITOR_SHORTCUTS = SHORTCUT_GROUPS.filter((g) => g.id === 'editor' || g.id === 'suggestions').flatMap(
+  (g) => g.shortcuts
+);
 
 /**
  * Inner component that calls useBlocker and renders the confirmation modal.
@@ -65,6 +73,9 @@ interface CommentEditorProps {
   sheetButton?: ReactNode; // Optional node rendered in the drag-handle bar (e.g. "Character Sheet" toggle)
   insertSheetItemRef?: MutableRefObject<((item: SheetItem) => void) | null>; // Ref to expose cursor-aware insert for external callers (e.g. Drawer)
   autosaveRefId?: string; //Ref to a localstorage key for autosave purposes. Undefined disables autosave.
+  onSubmitShortcut?: () => void; // Ctrl/⌘+Enter. Defaults to submitting the enclosing <form>, if any.
+  onCancelShortcut?: () => void; // Esc, once no suggestion dropdown is open. Takes Esc from an enclosing Modal, so omit it where Cancel just closes the modal.
+  confirmCancelShortcut?: boolean; // Ask before Esc cancels. Defaults to "the editor has text"; pass false when cancelling keeps the draft.
 }
 
 /**
@@ -97,6 +108,9 @@ export const CommentEditor = memo(function CommentEditor({
   sheetButton,
   insertSheetItemRef,
   autosaveRefId = undefined,
+  onSubmitShortcut,
+  onCancelShortcut,
+  confirmCancelShortcut,
 }: CommentEditorProps) {
   const [showPreview, setShowPreview] = useState(showPreviewByDefault);
   const [showHelp, setShowHelp] = useState(false);
@@ -112,6 +126,8 @@ export const CommentEditor = memo(function CommentEditor({
   const [sheetAutocompletePosition, setSheetAutocompletePosition] = useState({ top: 0, left: 0 });
   const [sheetSelectedIndex, setSheetSelectedIndex] = useState(0);
   const [sheetTriggerStartIndex, setSheetTriggerStartIndex] = useState(0);
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const [editorHeight, setEditorHeight] = useState<number | null>(null);
   const dragStartY = useRef<number | null>(null);
@@ -351,8 +367,39 @@ export const CommentEditor = memo(function CommentEditor({
     [value, onChange, maxLength]
   );
 
+  // Ctrl/⌘+Enter. Without an explicit handler, behave exactly like the form's
+  // submit button -- including doing nothing while that button is disabled,
+  // since some forms gate on more than the handler re-checks (e.g. a required
+  // character picker).
+  const handleSubmitShortcut = () => {
+    if (onSubmitShortcut) {
+      onSubmitShortcut();
+      return;
+    }
+    const form = textareaRef.current?.form;
+    if (!form) return;
+    const submitter = form.querySelector<HTMLButtonElement | HTMLInputElement>(
+      'button[type="submit"], input[type="submit"]'
+    );
+    if (submitter?.disabled) return;
+    form.requestSubmit(submitter ?? undefined);
+  };
+
   // Handle keyboard navigation in autocomplete
+  //
+  // While a dropdown is open, Tab accepts the highlighted option like Enter
+  // does (Slack/Discord behavior). With no match it is swallowed rather than
+  // moving focus: the next control is usually Send, and a stray Enter there
+  // posts the message. Escape dismisses the dropdown and frees Tab again.
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isSubmitCombo(e)) {
+      e.preventDefault();
+      handleSubmitShortcut();
+      return;
+    }
+
+    const isAccept = e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey);
+
     // Formatting hotkeys, but not while an autocomplete dropdown owns the keys
     if (!showAutocomplete && !showSheetAutocomplete) {
       const format = formatForKey(e);
@@ -377,44 +424,58 @@ export const CommentEditor = memo(function CommentEditor({
           e.preventDefault();
           setSheetSelectedIndex((prev) => (prev - 1 + Math.max(filteredItems.length, 1)) % Math.max(filteredItems.length, 1));
           return;
-        case 'Enter':
-          if (filteredItems.length > 0) {
-            e.preventDefault();
-            handleInsertSheetItem(filteredItems[sheetSelectedIndex], sheetTriggerStartIndex);
-          }
-          return;
         case 'Escape':
           e.preventDefault();
           setShowSheetAutocomplete(false);
           return;
       }
+      if (isAccept) {
+        if (filteredItems.length > 0) {
+          e.preventDefault();
+          handleInsertSheetItem(filteredItems[sheetSelectedIndex], sheetTriggerStartIndex);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+        }
+      }
+      return;
     }
 
-    if (!showAutocomplete) return;
+    if (!showAutocomplete) {
+      if (e.key === 'Escape' && onCancelShortcut) {
+        e.preventDefault();
+        if (confirmCancelShortcut ?? value.trim().length > 0) {
+          setShowCancelConfirm(true);
+        } else {
+          onCancelShortcut();
+        }
+      }
+      return;
+    }
 
-    const filteredCharacters = characters.filter((char) =>
-      char.name.toLowerCase().includes(autocompleteQuery.toLowerCase())
-    );
+    const filteredCharacters = filterCharacters(characters, autocompleteQuery);
+    const count = Math.max(filteredCharacters.length, 1);
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % filteredCharacters.length);
-        break;
+        setSelectedIndex((prev) => (prev + 1) % count);
+        return;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex((prev) => (prev - 1 + filteredCharacters.length) % filteredCharacters.length);
-        break;
-      case 'Enter':
-        if (filteredCharacters.length > 0) {
-          e.preventDefault();
-          handleSelectCharacter(filteredCharacters[selectedIndex]);
-        }
-        break;
+        setSelectedIndex((prev) => (prev - 1 + count) % count);
+        return;
       case 'Escape':
         e.preventDefault();
         setShowAutocomplete(false);
-        break;
+        return;
+    }
+    if (isAccept) {
+      if (filteredCharacters.length > 0) {
+        e.preventDefault();
+        handleSelectCharacter(filteredCharacters[selectedIndex]);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+      }
     }
   };
 
@@ -595,15 +656,14 @@ export const CommentEditor = memo(function CommentEditor({
             <div className="mt-2 pt-2 border-t border-theme-default text-content-primary">
               <div className="font-semibold text-content-secondary mb-1">Shortcuts</div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div>
-                  <code className="surface-sunken px-1 rounded">Ctrl/⌘ + B</code> → <strong>bold</strong>
-                </div>
-                <div>
-                  <code className="surface-sunken px-1 rounded">Ctrl/⌘ + I</code> → <em>italic</em>
-                </div>
-                <div>
-                  <code className="surface-sunken px-1 rounded">Ctrl/⌘ + K</code> → link
-                </div>
+                {EDITOR_SHORTCUTS.map(({ keys, description }) => (
+                  <div key={description}>
+                    <ShortcutKeys keys={keys} /> → {description}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 text-content-tertiary">
+                Press <ShortcutKeys keys={[HELP_KEY]} /> outside a text box for every shortcut.
               </div>
             </div>
             <div className="mt-2 pt-2 border-t border-theme-default text-content-primary">
@@ -697,6 +757,22 @@ export const CommentEditor = memo(function CommentEditor({
           position={sheetAutocompletePosition}
           onSelect={(item) => handleInsertSheetItem(item, sheetTriggerStartIndex)}
           selectedIndex={sheetSelectedIndex}
+        />
+      )}
+
+      {/* Esc on an editor with text: one stray keypress must not eat a draft */}
+      {onCancelShortcut && (
+        <ConfirmDiscardDraft
+          isOpen={showCancelConfirm}
+          onKeepEditing={() => {
+            setShowCancelConfirm(false);
+            textareaRef.current?.focus();
+          }}
+          onDiscard={() => {
+            setShowCancelConfirm(false);
+            onCancelShortcut();
+          }}
+          testId="discard-on-escape-modal"
         />
       )}
 

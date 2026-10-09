@@ -1736,6 +1736,26 @@ describe('PostCard', () => {
       expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
     });
 
+    it('stays in the editor on Ctrl+Enter when the content is cleared, as Save is disabled', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      await user.clear(screen.getByPlaceholderText(/edit your post\.\.\./i));
+      await user.keyboard('{Control>}{Enter}{/Control}');
+
+      expect(screen.getByPlaceholderText(/edit your post\.\.\./i)).toBeInTheDocument();
+    });
+
     it('reverts changes when cancel button is clicked', async () => {
       const user = userEvent.setup({ delay: null });
       renderWithProviders(

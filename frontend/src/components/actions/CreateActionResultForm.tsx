@@ -158,6 +158,8 @@ export const CreateActionResultForm: React.FC<CreateActionResultFormProps> = ({
           warnOnUnsavedChanges
           showCharacterCount={true}
           autosaveRefId={autosaveRefId}
+          onCancelShortcut={onCancel ? handleCancel : undefined}
+          confirmCancelShortcut={content.trim() !== '' || followUpParts.some(part => part.content.trim() !== '')}
         />
         <p className="mt-1 text-xs text-content-tertiary">Maximum 100,000 characters. Result will be created as a draft.</p>
       </div>
