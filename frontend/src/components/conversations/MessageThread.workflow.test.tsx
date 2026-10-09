@@ -337,7 +337,8 @@ describe('MessageThread', () => {
 
       await openComposer(user);
 
-      expect(screen.getByText(/press ctrl\/cmd \+ enter to send/i)).toBeInTheDocument();
+      // Keys render as <kbd> chips labelled for the platform (Ctrl here; ⌘ on macOS)
+      expect(screen.getByTestId('send-shortcut-hint')).toHaveTextContent(/^Press (Ctrl|⌘) \+ Enter to send$/);
     });
 
     it('shows message when user has no characters', async () => {
@@ -411,6 +412,34 @@ describe('MessageThread', () => {
       await waitFor(() => {
         expect(sentMessage).toBeDefined();
         expect(sentMessage?.content).toBe('New test message');
+      });
+    });
+
+    it('sends message on Ctrl+Enter, as the composer hint promises', async () => {
+      const user = userEvent.setup({ delay: null });
+      let sentMessage: SendMessageRequest | undefined;
+
+      server.use(
+        http.post<never, SendMessageRequest>('/api/v1/games/:gameId/conversations/:conversationId/messages', async ({ request }) => {
+          sentMessage = await request.json();
+          return HttpResponse.json({
+            id: 3, ...sentMessage, created_at: new Date().toISOString()
+          });
+        })
+      );
+
+      renderWithProviders(
+        <MessageThread gameId={1} conversationId={1} characters={mockCharacters} currentPhaseType="common_room" />
+      );
+
+      await openComposer(user);
+
+      const textarea = screen.getByPlaceholderText(/type your message/i);
+      await user.type(textarea, 'Sent from the keyboard');
+      await user.keyboard('{Control>}{Enter}{/Control}');
+
+      await waitFor(() => {
+        expect(sentMessage?.content).toBe('Sent from the keyboard');
       });
     });
 

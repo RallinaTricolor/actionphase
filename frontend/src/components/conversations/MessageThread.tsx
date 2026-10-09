@@ -5,6 +5,8 @@ import { useConversation } from '@/contexts/ConversationContext';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { Button, Select, Alert } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
+import { ShortcutKeys } from '@/components/common/keyboard/ShortcutKeys';
+import { MOD } from '@/lib/keyboardShortcuts';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
@@ -331,6 +333,10 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
     setEditContent(currentContent);
   };
 
+  // Closing keeps the draft (newMessage lives here, not in the composer), so
+  // Esc can close without asking.
+  const closeReply = useCallback(() => setReplyOpen(false), []);
+
   const handleCancelEdit = () => {
     setEditingMessageId(null);
     setEditContent('');
@@ -511,6 +517,7 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
         ) : (
           messages.map((message, index) => {
             const isFirstUnread = index === firstUnreadIndex;
+            const isUnread = firstUnreadIndex !== -1 && index >= firstUnreadIndex;
 
             return (
               <div key={message.id}>
@@ -525,7 +532,8 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                   </div>
                 )}
 
-                <div className="flex gap-3 group" data-testid="message">
+                {/* data-unread-anchor: a stop for the `n` shortcut (UNREAD_ANCHOR_ATTR) */}
+                <div className="flex gap-3 group" data-testid="message" data-unread-anchor={isUnread ? '' : undefined}>
                   <CharacterAvatar
                     avatarUrl={message.sender_avatar_url}
                     characterName={message.sender_character_name || message.sender_username}
@@ -575,6 +583,9 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                           disabled={saving}
                           characters={participantCharacters}
                           textareaTestId="edit-message-textarea"
+                          onSubmitShortcut={handleSaveEdit}
+                          onCancelShortcut={handleCancelEdit}
+                          confirmCancelShortcut={editContent !== message.content}
                         />
                         <div className="flex gap-2 mt-2">
                           <Button
@@ -691,6 +702,8 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 showCharacterCount={true}
                 characters={participantCharacters}
                 autosaveRefId={autosaveRefId}
+                onCancelShortcut={closeReply}
+                confirmCancelShortcut={false}
               />
               <div className="flex items-center gap-2 mt-2">
                 <Button
@@ -702,12 +715,12 @@ export function MessageThread({ gameId, conversationId, characters, currentPhase
                 >
                   {sending ? 'Sending...' : 'Send'}
                 </Button>
-                <p className="text-xs text-content-tertiary hidden sm:block">
-                  Press Ctrl/Cmd + Enter to send
+                <p className="text-xs text-content-tertiary hidden sm:block" data-testid="send-shortcut-hint">
+                  Press <ShortcutKeys keys={[MOD, 'Enter']} /> to send
                 </p>
                 <button
                   type="button"
-                  onClick={() => setReplyOpen(false)}
+                  onClick={closeReply}
                   aria-label="Close reply"
                   className="ml-auto p-1.5 rounded text-content-tertiary hover:text-content-primary hover:bg-interactive-primary-subtle"
                 >

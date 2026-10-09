@@ -616,6 +616,12 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
                             placeholder={field.placeholder}
                             rows={8}
                             showPreviewByDefault={false}
+                            onSubmitShortcut={() => {
+                              if (saveCharacterDataMutation.isPending) return;
+                              handleFieldSave(module.type, field.name, field.type, field.isPublic ?? true);
+                            }}
+                            onCancelShortcut={handleFieldCancel}
+                            confirmCancelShortcut={(editDraft ?? '') !== getFieldValue(module.type, field.name)}
                           />
                           <div className="flex justify-end space-x-3">
                             <Button

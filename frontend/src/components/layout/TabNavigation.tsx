@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useTabOverflow } from '@/hooks/useTabOverflow';
 
 /** Height of the global nav in Layout.tsx (h-16). Sticky bars park below it. */
-const NAVBAR_HEIGHT_PX = 64;
+export const NAVBAR_HEIGHT_PX = 64;
 
 /**
  * CSS `top` value for elements that must stick below both the global nav and a

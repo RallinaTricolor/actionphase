@@ -66,6 +66,7 @@ export function UnreadReplyBox({
         characters={mentionableCharacters}
         textareaTestId="unread-reply-textarea"
         autosaveRefId={autosaveRefId}
+        onSubmitShortcut={handleSubmit}
       />
 
       {error && <Alert variant="danger">{error}</Alert>}

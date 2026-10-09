@@ -518,6 +518,10 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
               disabled={updateMutation.isPending}
               maxLength={100000}
               showCharacterCount
+              // Save doesn't reject empty content itself; the button's disabled state does
+              onSubmitShortcut={() => { if (editedContent.trim()) handleSave(); }}
+              onCancelShortcut={handleCancel}
+              confirmCancelShortcut={editedContent !== result.content}
             />
             <div className="flex justify-end space-x-2">
               <Button

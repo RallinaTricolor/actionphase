@@ -31,6 +31,13 @@ tmp_dir = "tmp"
   # Don't watch generated/vendored/output dirs or tests.
   exclude_dir = ["tmp", "uploads", "test-results", "scripts", "pkg/db/test_fixtures", "pkg/db/migrations"]
   exclude_regex = ["_test\\.go$"]
+  # Poll instead of relying on inotify. On Colima (virtiofs + --mount-inotify),
+  # host edits reach the VM only as synthesized events that Air discards (it
+  # acts on create/write/remove only), so without polling, edits made on the
+  # host never trigger a rebuild. Vite accepts those events, so the frontend
+  # doesn't need this.
+  poll = true
+  poll_interval = 500
   # Give the compiler a moment to see all writes from an editor save.
   delay = 500
   stop_on_error = true

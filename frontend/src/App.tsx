@@ -14,6 +14,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { UtilityDrawerProvider } from './contexts/UtilityDrawerContext';
 import { FontSizeApplier } from '@/components/users/FontSizeApplier';
+import { GlobalKeyboardShortcuts } from '@/components/common/keyboard/GlobalKeyboardShortcuts';
 import { logger } from '@/services/LoggingService';
 
 // Lazy load Layout and all page components for better code splitting
@@ -128,6 +129,7 @@ function RootLayout() {
     <UtilityDrawerProvider>
       <Layout>
         {isAuthenticated && <FontSizeApplier />}
+        {isAuthenticated && <GlobalKeyboardShortcuts />}
         <Suspense fallback={<PageLoader />}>
           <Outlet />
         </Suspense>

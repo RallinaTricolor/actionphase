@@ -2083,6 +2083,51 @@ describe('ThreadedComment', () => {
     });
   });
 
+  describe('Edit keyboard shortcuts', () => {
+    const ownComment: Message = makeMessage({
+      ...mockComment,
+      author_id: mockCurrentUserId,
+      character_id: 1,
+      character_name: 'Hero',
+    });
+
+    const startEditing = async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(
+        <ThreadedComment
+          comment={ownComment}
+          gameId={mockGameId}
+          postId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateReply={mockOnCreateReply}
+          currentUserId={mockCurrentUserId}
+        />
+      );
+      await user.click(screen.getByRole('button', { name: 'Edit this comment' }));
+      return { user, textarea: screen.getByPlaceholderText('Edit comment...') };
+    };
+
+    it('stays in the editor on Ctrl+Enter when the content is cleared, as Save is disabled', async () => {
+      const { user, textarea } = await startEditing();
+
+      await user.clear(textarea);
+      await user.keyboard('{Control>}{Enter}{/Control}');
+
+      expect(screen.getByPlaceholderText('Edit comment...')).toBeInTheDocument();
+    });
+
+    it('asks before Esc discards a change of character alone', async () => {
+      const { user, textarea } = await startEditing();
+
+      await user.selectOptions(screen.getByRole('combobox'), 'Edit as Villain');
+      await user.click(textarea);
+      await user.keyboard('{Escape}');
+
+      expect(await screen.findByTestId('discard-on-escape-modal')).toBeInTheDocument();
+    });
+  });
+
   describe('Read-Only Mode', () => {
     it('should not show edit/delete buttons when readOnly=true', async () => {
       // Create a comment owned by current user (so edit/delete buttons would normally show)

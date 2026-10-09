@@ -469,6 +469,10 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
         characters={characters}
         maxLength={50000}
         showCharacterCount={true}
+        // handleSaveEdit exits edit mode on empty content; Save is disabled instead
+        onSubmitShortcut={() => { if (editContent.trim()) handleSaveEdit(); }}
+        onCancelShortcut={handleCancelEdit}
+        confirmCancelShortcut={editContent !== post.content}
       />
       <div className="flex gap-2">
         <Button
@@ -754,6 +758,7 @@ export const PostCard = React.memo(function PostCard({ post, gameId, characters,
                     warnOnUnsavedChanges
                     showCharacterCount={true}
                     autosaveRefId={autosaveRefId}
+                    onCancelShortcut={discardComment}
                   />
                 </div>
 
