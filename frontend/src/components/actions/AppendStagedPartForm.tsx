@@ -97,6 +97,8 @@ export const AppendStagedPartForm: React.FC<AppendStagedPartFormProps> = ({
         maxLength={100000}
         disabled={isPending}
         showCharacterCount
+        onSubmitShortcut={handleSubmit}
+        onCancelShortcut={onCancel}
       />
 
       <div className="flex justify-end gap-2 mt-3">

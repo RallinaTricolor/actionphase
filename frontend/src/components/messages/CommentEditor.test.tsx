@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
@@ -926,6 +927,272 @@ describe('Tab Layout', () => {
       fireEvent.change(textarea, { target: { value: '%%', selectionStart: 2 } });
       // Only one listbox should be visible
       expect(screen.getAllByRole('listbox')).toHaveLength(1);
+    });
+  });
+
+  describe('Keyboard: Tab and submit shortcuts', () => {
+    const cast = [
+      makeCharacter({ id: 1, name: 'Aragorn' }),
+      makeCharacter({ id: 2, name: 'Gandalf the Grey' }),
+      makeCharacter({ id: 3, name: 'Arwen' }),
+    ];
+    const sheet: SheetItem[] = [
+      { id: 'a1', name: 'Fire Bolt', refKind: 'skill', tabKey: 'skills', tabLabel: 'Skills' },
+      { id: 'i1', name: 'Longbow', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory' },
+    ];
+
+    /**
+     * Controlled editor followed by a Send button, mirroring the PM composer:
+     * a Tab that escapes the textarea lands on Send, where the next Enter
+     * would post the message.
+     */
+    function Composer({ onSubmitShortcut }: { onSubmitShortcut?: () => void }) {
+      const [value, setValue] = useState('');
+      return (
+        <>
+          <CommentEditor
+            value={value}
+            onChange={setValue}
+            characters={cast}
+            sheetItems={sheet}
+            onSubmitShortcut={onSubmitShortcut}
+          />
+          <button type="button">Send</button>
+        </>
+      );
+    }
+
+    it('accepts the highlighted mention on Tab and keeps focus in the editor', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, 'hi @Gan');
+      await user.tab();
+
+      expect(textarea).toHaveValue('hi @Gandalf the Grey ');
+      expect(textarea).toHaveFocus();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+
+    it('accepts the option moved to with the arrow keys on Tab', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, '@Ar');
+      await user.keyboard('{ArrowDown}');
+      await user.tab();
+
+      expect(textarea).toHaveValue('@Arwen ');
+    });
+
+    it('keeps focus in the editor on Tab when no character matches', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, '@Zzz');
+      await user.tab();
+
+      expect(textarea).toHaveValue('@Zzz');
+      expect(textarea).toHaveFocus();
+    });
+
+    it('lets Tab leave the editor once the dropdown is dismissed', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, '@Gan');
+      await user.keyboard('{Escape}');
+      await user.tab();
+
+      expect(screen.getByRole('button', { name: 'Send' })).toHaveFocus();
+    });
+
+    it('lets Tab leave the editor when no dropdown is open', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+
+      await user.type(screen.getByRole('textbox'), 'plain text');
+      await user.tab();
+
+      expect(screen.getByRole('button', { name: 'Send' })).toHaveFocus();
+    });
+
+    it('accepts a match whose name spans a space on Enter', async () => {
+      // The dropdown matches space-insensitively ("@GandalftheG" shows
+      // "Gandalf the Grey"); the key handler must pick from the same list.
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, '@GandalftheG');
+      expect(screen.getByRole('option', { name: 'Gandalf the Grey' })).toBeInTheDocument();
+      await user.keyboard('{Enter}');
+
+      expect(textarea).toHaveValue('@Gandalf the Grey ');
+    });
+
+    it('accepts the highlighted sheet item on Tab', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<Composer />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, '%%long');
+      await user.tab();
+
+      expect(textarea).toHaveValue('[[Longbow|item:i1]] ');
+      expect(textarea).toHaveFocus();
+    });
+
+    it.each([
+      ['Ctrl', '{Control>}{Enter}{/Control}'],
+      ['Cmd', '{Meta>}{Enter}{/Meta}'],
+    ])('calls onSubmitShortcut on %s+Enter without inserting a newline', async (_label, keys) => {
+      const user = userEvent.setup({ delay: null });
+      const onSubmitShortcut = vi.fn();
+      render(<Composer onSubmitShortcut={onSubmitShortcut} />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, 'ready');
+      await user.keyboard(keys);
+
+      expect(onSubmitShortcut).toHaveBeenCalledTimes(1);
+      expect(textarea).toHaveValue('ready');
+    });
+
+    it('submits the enclosing form on Ctrl+Enter when no handler is given', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onSubmit = vi.fn((e: FormEvent) => e.preventDefault());
+      function FormComposer() {
+        const [value, setValue] = useState('');
+        return (
+          <form onSubmit={onSubmit}>
+            <CommentEditor value={value} onChange={setValue} />
+            <button type="submit" disabled={!value.trim()}>Post</button>
+          </form>
+        );
+      }
+      render(<FormComposer />);
+      const textarea = screen.getByRole('textbox');
+
+      // Mirrors the submit button: nothing happens while it is disabled
+      await user.click(textarea);
+      await user.keyboard('{Control>}{Enter}{/Control}');
+      expect(onSubmit).not.toHaveBeenCalled();
+
+      await user.type(textarea, 'hello');
+      await user.keyboard('{Control>}{Enter}{/Control}');
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not submit on a plain Enter', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onSubmitShortcut = vi.fn();
+      render(<Composer onSubmitShortcut={onSubmitShortcut} />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, 'line one{Enter}');
+
+      expect(onSubmitShortcut).not.toHaveBeenCalled();
+      expect(textarea).toHaveValue('line one\n');
+    });
+  });
+
+  describe('Keyboard: Esc cancels', () => {
+    function Cancellable({
+      initial = '',
+      onCancel,
+      confirm,
+    }: {
+      initial?: string;
+      onCancel: () => void;
+      confirm?: boolean;
+    }) {
+      const [value, setValue] = useState(initial);
+      return (
+        <CommentEditor
+          value={value}
+          onChange={setValue}
+          characters={[makeCharacter({ id: 1, name: 'Aragorn' })]}
+          onCancelShortcut={onCancel}
+          confirmCancelShortcut={confirm}
+        />
+      );
+    }
+
+    it('cancels at once when the editor is empty', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onCancel = vi.fn();
+      render(<Cancellable onCancel={onCancel} />);
+
+      await user.click(screen.getByRole('textbox'));
+      await user.keyboard('{Escape}');
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks before discarding typed text, and keeps it on "Keep editing"', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onCancel = vi.fn();
+      render(<Cancellable onCancel={onCancel} />);
+      const textarea = screen.getByRole('textbox');
+
+      await user.type(textarea, 'half a thought{Escape}');
+      expect(await screen.findByTestId('discard-on-escape-modal')).toBeInTheDocument();
+      expect(onCancel).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Keep editing' }));
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(textarea).toHaveValue('half a thought');
+    });
+
+    it('cancels after the discard is confirmed', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onCancel = vi.fn();
+      render(<Cancellable onCancel={onCancel} />);
+
+      await user.type(screen.getByRole('textbox'), 'half a thought{Escape}');
+      await user.click(await screen.findByRole('button', { name: 'Discard' }));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the prompt when the caller says nothing would be lost', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onCancel = vi.fn();
+      render(<Cancellable initial="unchanged edit" onCancel={onCancel} confirm={false} />);
+
+      await user.click(screen.getByRole('textbox'));
+      await user.keyboard('{Escape}');
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('discard-on-escape-modal')).not.toBeInTheDocument();
+    });
+
+    it('only dismisses the suggestion dropdown while one is open', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onCancel = vi.fn();
+      render(<Cancellable onCancel={onCancel} />);
+
+      await user.type(screen.getByRole('textbox'), '@Ara');
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(onCancel).not.toHaveBeenCalled();
+    });
+
+    it('leaves Esc alone when no cancel handler is given', () => {
+      render(<CommentEditor value="text" onChange={vi.fn()} />);
+      const textarea = screen.getByRole('textbox');
+
+      const notCancelled = fireEvent.keyDown(textarea, { key: 'Escape' });
+
+      // Not default-prevented, so an enclosing Modal still closes on Esc
+      expect(notCancelled).toBe(true);
     });
   });
 });

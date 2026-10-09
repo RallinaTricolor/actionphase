@@ -470,6 +470,19 @@ describe('CommentWithParentCard', () => {
       expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument();
     });
+
+    it('stays in the editor on Ctrl+Enter when the content is cleared, as Save is disabled', async () => {
+      const user = userEvent.setup({ delay: null });
+      vi.mocked(useAuth).mockReturnValue({ currentUser: { id: mockComment.author_id } } as never);
+
+      renderWithProviders(<CommentWithParentCard comment={commentWithPostId} gameId={1} />, { gameId: 1 });
+
+      await user.click(screen.getByRole('button', { name: /edit this comment/i }));
+      await user.clear(screen.getByPlaceholderText('Edit comment...'));
+      await user.keyboard('{Control>}{Enter}{/Control}');
+
+      expect(screen.getByPlaceholderText('Edit comment...')).toBeInTheDocument();
+    });
   });
 
   describe('Delete button', () => {

@@ -20,6 +20,7 @@ export default defineConfig({
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Notifications', link: '/guide/notifications' },
             { text: 'User Settings', link: '/guide/user-settings' },
+            { text: 'Keyboard Shortcuts', link: '/guide/keyboard-shortcuts' },
             { text: 'User Profiles', link: '/guide/user-profiles' },
             { text: 'Communities', link: '/guide/communities' },
           ]

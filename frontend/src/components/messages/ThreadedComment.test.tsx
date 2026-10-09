@@ -183,6 +183,20 @@ describe('ThreadedComment — manual read mode', () => {
     });
   });
 
+  describe('stops for the `n` (next unread) shortcut', () => {
+    const anchor = (container: HTMLElement) => container.querySelector('#comment-42');
+
+    it.each<[string, Parameters<typeof renderComment>[0], boolean]>([
+      ['an auto-mode comment that is new since the last visit', { commentReadMode: 'auto', unreadCommentIDs: [42] }, true],
+      ['an auto-mode comment already seen', { commentReadMode: 'auto', unreadCommentIDs: [] }, false],
+      ['a manual-mode comment not yet marked read', { commentReadMode: 'manual', manualReadCommentIDs: [] }, true],
+      ['a manual-mode comment marked read', { commentReadMode: 'manual', manualReadCommentIDs: [42] }, false],
+    ])('%s', (_label, props, expected) => {
+      const { container } = renderComment(props);
+      expect(anchor(container)?.hasAttribute('data-unread-anchor')).toBe(expected);
+    });
+  });
+
   describe('auto mode (default)', () => {
     it('does not show the Mark as Read button', () => {
       renderComment({ commentReadMode: 'auto' });

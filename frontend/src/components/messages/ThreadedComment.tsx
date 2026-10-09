@@ -170,6 +170,11 @@ export const ThreadedComment = memo(function ThreadedComment({
   const isManuallyRead = commentReadMode === 'manual' && manualReadCommentIDs.includes(comment.id);
   const isFavorited = favoriteCommentIDs.includes(comment.id);
   const isUnread = commentReadMode !== 'manual' && unreadCommentIDs.includes(comment.id);
+  // Where the `n` shortcut stops: "new since last visit" in auto mode, and
+  // "not yet marked read" in manual mode (the comments the reader still owes).
+  const isJumpTarget =
+    !comment.is_deleted &&
+    (isUnread || (commentReadMode === 'manual' && allowReadTracking && !isManuallyRead));
 
   // Update local comment state when prop changes (from cache invalidation)
   useEffect(() => {
@@ -578,6 +583,7 @@ export const ThreadedComment = memo(function ThreadedComment({
           scopes the highlight ring to it as well. */}
       <div
         id={`comment-${comment.id}${variant ? `-${variant}` : ''}`}
+        data-unread-anchor={isJumpTarget ? '' : undefined}
         className={`${portraitAvatars ? 'overflow-hidden' : ''}${isUnread ? ' border border-semantic-warning rounded-lg p-3' : ''}${isManuallyRead ? ' opacity-50' : ''}`}
       >
         {portraitAvatars && (
@@ -677,6 +683,10 @@ export const ThreadedComment = memo(function ThreadedComment({
               characters={characters}
               maxLength={10000}
               showCharacterCount={true}
+              // handleSaveEdit exits edit mode on empty content; Save is disabled instead
+              onSubmitShortcut={() => { if (editContent.trim()) handleSaveEdit(); }}
+              onCancelShortcut={handleCancelEdit}
+              confirmCancelShortcut={editContent !== comment.content || selectedEditCharacterId !== comment.character_id}
             />
             <div className="flex gap-2 mt-2">
               <Button
@@ -920,6 +930,7 @@ export const ThreadedComment = memo(function ThreadedComment({
                     warnOnUnsavedChanges
                     showCharacterCount={true}
                     autosaveRefId={autosaveRefId}
+                    onCancelShortcut={discardReply}
                   />
                 </div>
 

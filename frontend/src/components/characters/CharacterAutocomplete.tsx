@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Character } from '@/types/characters';
+import { filterCharacters } from './filterCharacters';
 
 interface CharacterAutocompleteProps {
   characters: Character[];
@@ -18,7 +19,7 @@ interface CharacterAutocompleteProps {
  *
  * Features:
  * - Filters characters by name matching query
- * - Keyboard navigation (arrow keys, enter, escape)
+ * - Keyboard navigation (arrow keys, enter/tab, escape)
  * - Click to select
  * - Position relative to cursor in textarea
  */
@@ -32,11 +33,7 @@ export function CharacterAutocomplete({
 }: CharacterAutocompleteProps) {
   const listRef = useRef<HTMLUListElement>(null);
 
-  // Filter characters based on query (space-insensitive matching)
-  // This allows "@TestPlayer1" to match "Test Player 1 Character"
-  const filteredCharacters = characters.filter((char) =>
-    char.name.toLowerCase().replace(/\s+/g, '').includes(query.toLowerCase().replace(/\s+/g, ''))
-  );
+  const filteredCharacters = filterCharacters(characters, query);
 
   // Scroll selected item into view
   useEffect(() => {
