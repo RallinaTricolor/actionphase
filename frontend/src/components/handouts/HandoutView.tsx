@@ -202,6 +202,7 @@ export function HandoutView({
               disabled={isSubmitting}
               rows={4}
               warnOnUnsavedChanges
+              onSubmitShortcut={handleSubmitNote}
             />
             <div className="flex justify-end gap-2">
               <Button
@@ -251,6 +252,9 @@ export function HandoutView({
                         placeholder="Edit your update..."
                         disabled={updateCommentMutation.isPending}
                         rows={4}
+                        onSubmitShortcut={() => handleSaveEdit(comment.id)}
+                        onCancelShortcut={handleCancelEdit}
+                        confirmCancelShortcut={editContent !== comment.content}
                       />
                       <div className="flex justify-end gap-2">
                         <Button

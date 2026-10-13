@@ -27,6 +27,24 @@ describe('Modal', () => {
     expect(screen.queryByText('body content')).not.toBeInTheDocument();
   });
 
+  // The panel was a bare <div>: assistive tech never announced it as a dialog
+  // and role-based queries (getByRole('dialog', { name })) could not find it.
+  describe('accessibility', () => {
+    it('is a modal dialog named by its title', () => {
+      renderOpen();
+
+      const dialog = screen.getByRole('dialog', { name: 'Edit document' });
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+      expect(dialog).toContainElement(screen.getByText('body content'));
+    });
+
+    it('is still a dialog without a title', () => {
+      renderOpen({ title: undefined });
+
+      expect(screen.getByRole('dialog')).toContainElement(screen.getByText('body content'));
+    });
+  });
+
   describe('test hooks', () => {
     it('exposes the panel, backdrop, and close button by testid', () => {
       renderOpen();

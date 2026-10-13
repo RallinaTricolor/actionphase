@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameTab } from '../utils/navigation';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for Common Room Polls
@@ -13,7 +14,6 @@ export class PollsPage {
 
   // Locators
   readonly createPollButton: Locator;
-  readonly pollsList: Locator;
 
   constructor(page: Page, gameId: number) {
     this.page = page;
@@ -21,7 +21,6 @@ export class PollsPage {
 
     // Define locators
     this.createPollButton = page.getByRole('button', { name: 'Create Poll' });
-    this.pollsList = page.locator('[data-testid="polls-list"]');
   }
 
   /**
@@ -146,8 +145,7 @@ export class PollsPage {
     }
 
     // Submit poll
-    await this.page.getByRole('button', { name: 'Create Poll', exact: true }).click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.getByRole('button', { name: 'Create Poll', exact: true }), API.createPoll);
 
     // Verify poll appears
     await expect(this.page.getByText(options.question)).toBeVisible({ timeout: 5000 });
@@ -199,32 +197,9 @@ export class PollsPage {
 
     // Submit vote
     await expect(this.page.getByRole('button', { name: 'Submit Vote' })).toBeEnabled();
-    await this.page.getByRole('button', { name: 'Submit Vote' }).click();
+    await clickAndWaitForMutation(this.page, this.page.getByRole('button', { name: 'Submit Vote' }), API.vote);
 
     // Wait for modal to close
-    await expect(this.page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Vote on a poll by index (useful when multiple polls exist)
-   *
-   * @param pollIndex - Zero-based index of poll (0 = first poll)
-   * @param response - Option text to vote for, or object for custom "Other" response
-   */
-  async voteOnPollByIndex(pollIndex: number, response: string | { other: string }) {
-    const voteButtons = this.page.getByRole('button', { name: 'Vote Now' });
-    await voteButtons.nth(pollIndex).click();
-
-    await expect(this.page.getByText('Select your response')).toBeVisible({ timeout: 5000 });
-
-    if (typeof response === 'string') {
-      await this.page.getByRole('radio', { name: response }).check();
-    } else {
-      await this.page.getByRole('radio', { name: 'Other (specify below)' }).check();
-      await this.page.locator('input[placeholder="Enter your custom response..."]').fill(response.other);
-    }
-
-    await this.page.getByRole('button', { name: 'Submit Vote' }).click();
     await expect(this.page.getByText('Select your response')).not.toBeVisible({ timeout: 5000 });
   }
 
@@ -310,23 +285,4 @@ export class PollsPage {
     return isVisible;
   }
 
-  /**
-   * Toggle expired polls filter
-   */
-  async toggleExpiredPolls() {
-    const expiredToggle = this.page.locator('input[type="checkbox"][id="show-expired"]');
-    await expiredToggle.check();
-  }
-
-  /**
-   * Verify poll exists by question
-   */
-  async hasPoll(question: string): Promise<boolean> {
-    try {
-      await expect(this.page.getByText(question)).toBeVisible({ timeout: 3000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }

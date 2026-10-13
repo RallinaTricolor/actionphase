@@ -39,7 +39,20 @@ type CreatePollRequest struct {
 // PollOptionRequest represents a poll option in the API request
 type PollOptionRequest struct {
 	Text         string `json:"text" doc:"Option label"`
-	DisplayOrder int32  `json:"display_order" required:"false" doc:"Sort order within the poll"`
+	DisplayOrder int32  `json:"display_order" required:"false" doc:"Sort order within the poll. Omit on every option to keep submission order; when given, values must be distinct."`
+}
+
+// displayOrdersOmitted reports whether the client left display_order out of
+// every option. An int32 cannot tell "omitted" from an explicit 0, so all-zero
+// is read as omitted: with two or more options it is never a valid explicit
+// ordering anyway (values must be distinct).
+func displayOrdersOmitted(options []PollOptionRequest) bool {
+	for _, opt := range options {
+		if opt.DisplayOrder != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // Resolve validates the CreatePollRequest.
@@ -56,6 +69,17 @@ func (req *CreatePollRequest) Resolve(huma.Context) []error {
 	}
 	if len(req.Options) < 2 {
 		errs = append(errs, &huma.ErrorDetail{Message: "at least 2 options are required", Location: "body.options"})
+	}
+	// Duplicates would hit UNIQUE (poll_id, display_order) and surface as a 500.
+	if !displayOrdersOmitted(req.Options) {
+		seen := make(map[int32]bool, len(req.Options))
+		for _, opt := range req.Options {
+			if seen[opt.DisplayOrder] {
+				errs = append(errs, &huma.ErrorDetail{Message: "options must have distinct display_order values", Location: "body.options"})
+				break
+			}
+			seen[opt.DisplayOrder] = true
+		}
 	}
 	if req.HideResultsFromPlayers && req.ShowIndividualVotes {
 		errs = append(errs, &huma.ErrorDetail{Message: "hide_results_from_players cannot be combined with show_individual_votes", Location: "body.hide_results_from_players"})

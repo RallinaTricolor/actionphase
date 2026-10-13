@@ -238,6 +238,8 @@ export function CommentWithParentCard({
     <Card
       className={`hover:shadow-md transition-shadow${isFadedAsRead ? ' opacity-50' : ''}`}
       data-testid="comment-with-parent-card"
+      // A stop for the `n` shortcut. Only manual mode tracks per-comment reads here.
+      data-unread-anchor={commentReadMode === 'manual' && !isRead && !comment.is_deleted ? '' : undefined}
     >
       <CardBody>
         {/* Parent context preview */}
@@ -298,6 +300,10 @@ export function CommentWithParentCard({
                 characters={allGameCharacters}
                 maxLength={10000}
                 showCharacterCount
+                // handleSaveEdit exits edit mode on empty content; Save is disabled instead
+                onSubmitShortcut={() => { if (editContent.trim()) handleSaveEdit(); }}
+                onCancelShortcut={handleCancelEdit}
+                confirmCancelShortcut={editContent !== comment.content}
               />
               <div className="flex gap-2 mt-2">
                 <Button
@@ -500,6 +506,7 @@ export function CommentWithParentCard({
                 maxLength={10000}
                 showCharacterCount
                 autosaveRefId={autosaveRefId}
+                onCancelShortcut={discardReply}
               />
               <div className="flex gap-2 mt-2">
                 <Button

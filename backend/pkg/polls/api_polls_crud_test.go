@@ -154,6 +154,61 @@ func TestPollCRUD_CreatePoll(t *testing.T) {
 		assert.Len(t, options, 2)
 	})
 
+	// display_order is documented as optional, but omitting it gave every option
+	// order 0 and tripped the UNIQUE (poll_id, display_order) constraint: a 500
+	// for any poll with two or more options. The UI always sent it, which hid
+	// the bug; any other client following the contract hit it.
+	t.Run("omitted display_order defaults to submission order", func(t *testing.T) {
+		deadline := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
+		bodyJSON := []byte(fmt.Sprintf(
+			`{"question":"Which way?","deadline":%q,"options":[{"text":"Left"},{"text":"Right"},{"text":"Back"}]}`,
+			deadline,
+		))
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/polls", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var response struct {
+			Options []struct {
+				OptionText   string `json:"option_text"`
+				DisplayOrder int32  `json:"display_order"`
+			} `json:"options"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+		require.Len(t, response.Options, 3)
+		for i, want := range []string{"Left", "Right", "Back"} {
+			assert.Equal(t, want, response.Options[i].OptionText)
+			assert.Equal(t, int32(i), response.Options[i].DisplayOrder)
+		}
+	})
+
+	t.Run("duplicate explicit display_order is a 422, not a 500", func(t *testing.T) {
+		body := CreatePollRequest{
+			Question: "Which way?",
+			Deadline: time.Now().Add(24 * time.Hour),
+			Options: []PollOptionRequest{
+				{Text: "Left", DisplayOrder: 1},
+				{Text: "Right", DisplayOrder: 1},
+			},
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/polls", game.ID), bytes.NewBuffer(bodyJSON))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Contains(t, rec.Body.String(), "distinct display_order")
+	})
+
 	t.Run("non-GM player cannot create poll", func(t *testing.T) {
 		body := CreatePollRequest{
 			Question: "Should we rest?",

@@ -484,6 +484,36 @@ a form tab named `info` collides with the game page's own `info` tab and makes
 - `index.ts` — re-exports all API functions
 - Type-safe API methods with consistent error handling
 
+### 5. Keyboard Shortcuts (added 2026-10-09)
+
+**Registry**: `frontend/src/lib/keyboardShortcuts.ts`. Handlers match keys with
+its predicates/constants, and every list of shortcuts (the `?` cheat sheet in
+`components/common/keyboard/GlobalKeyboardShortcuts.tsx`, the editor's Markdown
+Help) renders `SHORTCUT_GROUPS`. Never hard-code a shortcut hint: the PM
+composer showed "Ctrl/Cmd + Enter to send" for months after its handler was lost.
+
+**Every `CommentEditor` gets the same keys:**
+- **Ctrl/⌘+Enter** submits. With no `onSubmitShortcut`, it submits the enclosing
+  `<form>` via its submit button, and does nothing while that button is
+  disabled. Editors saved by a button `onClick` (inline edits) must pass
+  `onSubmitShortcut`, guarded the way the button's `disabled` is.
+- **Esc** calls `onCancelShortcut` (opt-in). When the editor has text, the editor
+  itself asks before cancelling, so pass the *raw* discard function, not a
+  handler that already confirms. For edits, pass
+  `confirmCancelShortcut={draft !== original}`, and pass `false` where cancelling
+  keeps the draft. Don't wire it where Cancel just closes the enclosing Modal,
+  because a wired Esc stops the Modal from closing.
+- **Tab** inside the `@`/`%%` dropdown inserts the suggestion and never leaves
+  the textarea, even when nothing matches.
+
+**Page-level single keys** (`?`, `n`, Shift+`n`) bail out on editable targets,
+inside `[role="dialog"]`, and when Ctrl/⌘/Alt is held (Shift is allowed: it is
+part of `?`, and it reverses `n`). Direction comes from `shiftKey`, never the
+letter's case, so Caps Lock can't flip it. **`n` / Shift+`n` (next/previous
+unread)** step through elements carrying `data-unread-anchor` (`UNREAD_ANCHOR_ATTR`). Set it on
+anything unread: ThreadedComment, CommentWithParentCard (manual mode) and
+MessageThread messages do today.
+
 ## Database Design Pattern
 
 **Hybrid Relational-Document Design**

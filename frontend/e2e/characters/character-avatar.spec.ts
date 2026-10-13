@@ -4,6 +4,7 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
 import { GameDetailsPage } from '../pages/GameDetailsPage';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { clickAndWaitForMutation } from '../utils/waits';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,14 +90,14 @@ test.describe('Character Avatar Feature', () => {
     await expect(deleteButton).toBeVisible();
     await deleteButton.click();
 
-    // Confirm dialog
-    await page.locator('button:has-text("Delete")').locator('visible=true').last().click();
-
-    // Wait for deletion to complete
-    await page.waitForResponse(
-      resp => resp.url().includes('/avatar') && resp.request().method() === 'DELETE',
-      { timeout: 10000 }
-    );
+    // Confirm, waiting for the DELETE itself. The wait must be registered
+    // before the click: registered after, a fast response has already arrived
+    // and the wait times out on a deletion that succeeded.
+    const confirmDialog = page.getByRole('dialog', { name: 'Delete Avatar' });
+    await clickAndWaitForMutation(page, confirmDialog.getByRole('button', { name: 'Delete Avatar' }), {
+      method: 'DELETE',
+      path: /^\/api\/v1\/characters\/\d+\/avatar$/,
+    });
 
     // Avatar image should be removed
     await expect(avatarImg).not.toBeVisible({ timeout: 10000 });

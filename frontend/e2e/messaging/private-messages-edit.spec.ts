@@ -94,6 +94,10 @@ test.describe('Private Message Editing', () => {
     await expect(page.getByText('This should not be saved')).not.toBeVisible();
   });
 
+  // Tests 4 and 5 save edits, so each sends and edits its OWN message rather
+  // than the seeded "Message from Player 1". Editing seeded data made the tests
+  // single-use: a retry (or a second run without reloading fixtures) found the
+  // message already edited and failed for a reason unrelated to editing.
   test('saves edited content and shows (edited) label', async ({ page }) => {
     await loginAs(page, 'PLAYER_1');
     const gameId = await getFixtureGameId(page, 'E2E_MESSAGES');
@@ -101,18 +105,15 @@ test.describe('Private Message Editing', () => {
     await messaging.goto(gameId);
     await messaging.openConversation('Edit Test 4: Save Shows Edited');
 
-    await expect(page.locator('[data-testid="message"]').first()).toBeVisible({ timeout: 10000 });
-
-    const ownMessage = page.locator('[data-testid="message"]')
-      .filter({ hasText: 'Message from Player 1' })
-      .first();
+    const original = `Player 1 original ${Date.now()}`;
+    await messaging.sendMessage(original);
 
     const editedContent = `Edited message ${Date.now()}`;
-    await messaging.editMessage(ownMessage, editedContent);
+    await messaging.editMessage(messaging.messageWithText(original), editedContent);
 
-    await expect(page.getByTestId('edit-message-textarea')).not.toBeVisible();
-    await expect(page.getByText(editedContent).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('edited-label').first()).toContainText('(edited)');
+    const edited = messaging.messageWithText(editedContent);
+    await expect(edited).toBeVisible({ timeout: 5000 });
+    await expect(edited.getByTestId('edited-label')).toContainText('(edited)');
   });
 
   test('edited message visible to other participants', async ({ page }) => {
@@ -122,25 +123,22 @@ test.describe('Private Message Editing', () => {
     await messaging.goto(gameId);
     await messaging.openConversation('Edit Test 5: Visible To All');
 
-    await expect(page.locator('[data-testid="message"]').first()).toBeVisible({ timeout: 10000 });
+    const original = `Player 1 original ${Date.now()}`;
+    await messaging.sendMessage(original);
 
-    const ownMessage = page.locator('[data-testid="message"]')
-      .filter({ hasText: 'Message from Player 1' })
-      .first();
-
+    // editMessage waits for the PATCH to succeed, so switching users below
+    // cannot cancel the save mid-flight.
     const editedContent = `Player 1 edited this ${Date.now()}`;
-    await messaging.editMessage(ownMessage, editedContent);
-    await expect(page.getByText(editedContent).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
+    await messaging.editMessage(messaging.messageWithText(original), editedContent);
 
-    // Re-login as Player 2 and verify they see the edit too
     await loginAs(page, 'PLAYER_2');
-    const gameId2 = await getFixtureGameId(page, 'E2E_MESSAGES');
     const messaging2 = new MessagingPage(page);
-    await messaging2.goto(gameId2);
+    await messaging2.goto(gameId);
     await messaging2.openConversation('Edit Test 5: Visible To All');
 
-    await expect(page.locator('[data-testid="message"]').first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(editedContent).locator('visible=true').first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('edited-label').first()).toBeVisible();
+    const edited = messaging2.messageWithText(editedContent);
+    await expect(edited).toBeVisible({ timeout: 10000 });
+    await expect(edited.getByTestId('edited-label')).toBeVisible();
+    await expect(messaging2.messageWithText(original)).not.toBeVisible();
   });
 });

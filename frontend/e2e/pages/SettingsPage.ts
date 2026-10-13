@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * Page Object Model for the Settings page
@@ -26,7 +27,7 @@ export class SettingsPage {
    */
   async clickAccountInformation() {
     const mobileSelect = this.page.locator('select#section-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(this.page);
     if (isMobile) {
       await mobileSelect.selectOption('account');
     } else {
@@ -113,7 +114,7 @@ export class SettingsPage {
 
   async clickReadingSection() {
     const mobileSelect = this.page.locator('select#section-select');
-    const isMobile = await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false);
+    const isMobile = isMobileViewport(this.page);
     if (isMobile) {
       await mobileSelect.selectOption('reading');
     } else {
@@ -137,18 +138,4 @@ export class SettingsPage {
     return this.page.getByTestId(`read-mode-${mode}`).locator('input[type="radio"]');
   }
 
-  // Assertions helpers
-  async expectCurrentUsername(username: string) {
-    const display = this.getCurrentUsernameDisplay();
-    await display.waitFor({ state: 'visible' });
-    const text = await display.textContent();
-    return text?.includes(username) ?? false;
-  }
-
-  async expectCurrentEmail(email: string) {
-    const display = this.getCurrentEmailDisplay();
-    await display.waitFor({ state: 'visible' });
-    const text = await display.textContent();
-    return text?.includes(email) ?? false;
-  }
 }

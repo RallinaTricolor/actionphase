@@ -14,6 +14,7 @@ import { GameDetailsPage } from '../pages/GameDetailsPage';
 import { MessagingPage } from '../pages/MessagingPage';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
 import { navigateToGameTab, assertTabVisible, assertTabNotVisible } from '../utils/navigation';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Co-GM Management E2E Tests
@@ -75,9 +76,7 @@ test.describe.serial('@mobile Co-GM Management — UI Lifecycle', () => {
 
     await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).toBeVisible();
     await expect(page.getByText(/Co-GMs can do everything you can except/)).toBeVisible();
-    await page.getByRole('button', { name: 'Promote to Co-GM' }).click();
-
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, page.getByRole('button', { name: 'Promote to Co-GM' }), API.promoteToCoGm);
 
     await expect(page.getByRole('heading', { name: 'Promote to Co-GM?' })).not.toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('heading', { name: /Co-GMs/ })).toBeVisible();
@@ -153,9 +152,7 @@ test.describe.serial('@mobile Co-GM Management — UI Lifecycle', () => {
     await page.getByRole('menuitem', { name: 'Demote from Co-GM' }).click();
 
     await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).toBeVisible();
-    await page.getByRole('button', { name: 'Demote to Audience' }).click();
-
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, page.getByRole('button', { name: 'Demote to Audience' }), API.demoteFromCoGm);
 
     await expect(page.getByRole('heading', { name: 'Demote from Co-GM?' })).not.toBeVisible();
     await expect(page.locator('h3:has-text("Co-GMs")')).not.toBeVisible();
@@ -293,8 +290,8 @@ test.describe('Co-GM Management — Functional Capabilities', () => {
     await phaseCard.getByRole('button', { name: 'Activate', exact: true }).first().click();
 
     await expect(page.getByRole('heading', { name: 'Activate Phase 2?' })).toBeVisible();
-    await page.getByRole('button', { name: 'Activate Phase' }).click();
-    await page.waitForLoadState('networkidle');
+    // exact: "Activate Phase" is a substring of "Publish & Activate Phase"
+    await clickAndWaitForMutation(page, page.getByRole('button', { name: 'Activate Phase', exact: true }), API.activatePhase);
     await expect(page.getByRole('heading', { name: 'Activate Phase 2?' })).not.toBeVisible();
 
     // Now check as co-GM

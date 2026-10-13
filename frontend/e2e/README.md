@@ -66,12 +66,11 @@ e2e/
 │   ├── test-tags.ts         # Test categorization
 │   └── test-data-factory.ts # Test data generation
 │
-├── pages/             # Page Object Model
-│   ├── CharacterSheetPage.ts
-│   ├── RegistrationPage.ts
-│   ├── UserSettingsPage.ts
-│   ├── AdminDashboardPage.ts
-│   └── GameHandoutsPage.ts
+├── pages/             # Page Object Model (full list: pages/README.md)
+│   ├── CommonRoomPage.ts
+│   ├── MessagingPage.ts
+│   ├── GameDetailsPage.ts
+│   └── ...
 │
 ├── smoke/             # Quick health checks (<5 min)
 │   └── health-check.spec.ts
@@ -216,6 +215,11 @@ await loginAs(page, 'PLAYER_1');
 const { username, email, password } = TEST_USERS.GM;
 ```
 
+Calling `loginAs()` on an already-authenticated page switches users without
+touching the logout UI: it clears the session (`clearSession()`: the `jwt`
+cookie and the `auth_token` localStorage copy), then logs in fresh. Use the
+UI `logout()` helper only in specs that test logging out.
+
 **Available Test Users**:
 - `GM` - Game Master
 - `PLAYER_1` through `PLAYER_5` - Players
@@ -335,15 +339,17 @@ Page Objects encapsulate page interactions into reusable, maintainable classes.
 ### Using Existing Page Objects
 
 ```typescript
-import { RegistrationPage } from '../pages/RegistrationPage';
+import { CommonRoomPage } from '../pages/CommonRoomPage';
 
-test('User registration', async ({ page }) => {
-  const registrationPage = new RegistrationPage(page);
+test('GM can create a post', async ({ page }) => {
+  await loginAs(page, 'GM');
+  const commonRoom = new CommonRoomPage(page);
 
-  await registrationPage.goto();
-  await registrationPage.register('user@example.com', 'username', 'password');
+  await commonRoom.goto(gameId);
+  // Waits for the POST to succeed before returning (clickAndWaitForMutation)
+  await commonRoom.createPost(`GM Post ${Date.now()}`);
 
-  // Page object handles all the selectors and interactions
+  // Page object handles all the selectors, waits and interactions
 });
 ```
 

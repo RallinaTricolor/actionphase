@@ -4,6 +4,7 @@ import { getFixtureGameId } from '../fixtures/game-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { MessagingPage } from '../pages/MessagingPage';
 import { PhaseManagementPage } from '../pages/PhaseManagementPage';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * E2E Tests for Notification System
@@ -249,8 +250,7 @@ test.describe('Notification System', () => {
     await expect(notificationBadge).toBeVisible({ timeout: 5000 });
 
     await page.click('[data-testid="notification-bell"]');
-    await page.getByRole('button', { name: 'Mark all read' }).click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, page.getByRole('button', { name: 'Mark all read' }), API.markAllNotificationsRead);
 
     // Close dropdown and verify badge is gone
     await page.click('[data-testid="notification-bell"]');

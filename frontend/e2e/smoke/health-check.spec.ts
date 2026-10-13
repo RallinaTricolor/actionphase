@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from '../fixtures/auth-helpers';
+import { loginViaUI } from '../fixtures/auth-helpers';
 import { tagTest, tags } from '../fixtures/test-tags';
 
 /**
@@ -27,14 +27,14 @@ test.describe('Smoke: Application Health', () => {
   });
 
   test(tagTest([tags.SMOKE], 'Logged-in user can reach dashboard and see games'), async ({ page }) => {
-    await loginAs(page, 'PLAYER_1');
+    await loginViaUI(page, 'PLAYER_1');
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
     await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible();
   });
 
   test(tagTest([tags.SMOKE], 'Notification bell is visible after login'), async ({ page }) => {
-    await loginAs(page, 'PLAYER_5');
+    await loginViaUI(page, 'PLAYER_5');
     await expect(page.locator('[data-testid="notification-bell"]')).toBeVisible();
   });
 

@@ -102,16 +102,53 @@ services:
     networks:
       - actionphase-dev
 
+  # Production build of the frontend, served for E2E. Profile-gated like
+  # playwright below.
+  #
+  # E2E used to drive the dev server, which serves the app unbundled: ~235
+  # module requests per full page load, each transformed on demand by one Vite
+  # process. Six parallel workers turned that into the bottleneck behind most
+  # E2E flakes -- page loads that ate the whole test budget. A build serves a
+  # handful of chunks and is also what actually ships.
+  #
+  # `vite preview` reuses the dev proxy config (/api, /uploads, ... ->
+  # backend). The build goes to /tmp, not the bind-mounted dist/. The just e2e
+  # recipes force-recreate this service so every run tests current source.
+  frontend-e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    profiles: ["e2e"]
+    environment:
+      VITE_PROXY_TARGET: "http://backend:3000"
+    command: >
+      sh -c "npx vite build --outDir /tmp/e2e-dist --emptyOutDir
+      && exec npx vite preview --outDir /tmp/e2e-dist --host --port 4173 --strictPort"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:4173/ || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      # The build runs before the server listens; failures here don't count.
+      start_period: 300s
+    depends_on:
+      - backend
+    networks:
+      - actionphase-dev
+
   # Playwright E2E runner. Profile-gated: does NOT start with `just up` — only
   # when invoked via `just e2e` (docker compose --profile e2e run playwright ...).
-  # Drives the running frontend/backend services over the compose network.
+  # Drives frontend-e2e (production build) and the backend over the compose network.
   playwright:
     image: mcr.microsoft.com/playwright:v1.56.1-noble
     profiles: ["e2e"]
     working_dir: /app
     environment:
-      # Target the running frontend service; don't let Playwright spawn its own.
-      E2E_BASE_URL: "http://frontend:5173"
+      # Target the production-build service; don't let Playwright spawn its own.
+      E2E_BASE_URL: "http://frontend-e2e:4173"
       E2E_NO_WEBSERVER: "true"
       # Fixtures are loaded by `just load-e2e` (backend container) before this runs.
       E2E_SKIP_FIXTURE_SETUP: "true"
@@ -122,8 +159,10 @@ services:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules
     depends_on:
-      - frontend
-      - backend
+      frontend-e2e:
+        condition: service_healthy
+      backend:
+        condition: service_started
     networks:
       - actionphase-dev
 

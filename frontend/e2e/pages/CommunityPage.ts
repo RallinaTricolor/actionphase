@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { MEDIUM_TIMEOUT, DEFAULT_TIMEOUT, LONG_TIMEOUT } from '../config/test-timeouts';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /** The tabs on the community management shell, in the order they render. */
 export type CommunityManageTab =
@@ -23,8 +24,6 @@ export class CommunityPage {
 
   // Public page
   readonly manageButton: Locator;
-  readonly gamesLink: Locator;
-  readonly documentsList: Locator;
 
   // Moderators tab
   readonly moderatorList: Locator;
@@ -62,8 +61,6 @@ export class CommunityPage {
     this.slug = slug;
 
     this.manageButton = page.getByTestId('manage-community');
-    this.gamesLink = page.getByTestId('community-games-link');
-    this.documentsList = page.getByTestId('community-documents');
 
     this.moderatorList = page.getByTestId('moderator-list');
     this.moderatorSearch = page.getByTestId('moderator-user-search');
@@ -180,14 +177,12 @@ export class CommunityPage {
       'add-community-moderator',
       username
     );
-    await this.addModeratorSubmit.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.addModeratorSubmit, API.addModerator);
   }
 
   /** Remove a moderator by user id. There is no confirmation step. */
   async removeModerator(userId: number) {
-    await this.page.getByTestId(`remove-moderator-${userId}`).click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.getByTestId(`remove-moderator-${userId}`), API.removeModerator);
   }
 
   /** True when the roster shows this user as a moderator. */
@@ -207,14 +202,12 @@ export class CommunityPage {
     if (expiresAt) {
       await this.banExpiresAt.fill(expiresAt);
     }
-    await this.banSubmit.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.banSubmit, API.banFromCommunity);
   }
 
   /** Lift a ban by user id. */
   async unbanUser(userId: number) {
-    await this.page.getByTestId(`unban-${userId}`).click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.getByTestId(`unban-${userId}`), API.unbanFromCommunity);
   }
 
   /**
@@ -258,9 +251,8 @@ export class CommunityPage {
       await this.documentPublishNow.click();
     }
 
-    await this.documentSubmit.click();
+    await clickAndWaitForMutation(this.page, this.documentSubmit, API.createDocument);
     await expect(this.documentForm).toBeHidden({ timeout: MEDIUM_TIMEOUT });
-    await this.page.waitForLoadState('networkidle');
   }
 
   /** Locate a document row by its visible title. */
@@ -271,7 +263,6 @@ export class CommunityPage {
   /** Rename the community from the Settings tab. */
   async renameCommunity(name: string) {
     await this.settingsName.fill(name);
-    await this.settingsSave.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.settingsSave, API.updateCommunity);
   }
 }

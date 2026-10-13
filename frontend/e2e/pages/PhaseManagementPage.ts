@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
-import { waitForVisible, waitForModal } from '../utils/waits';
+import { waitForModal, clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object Model for Phase Management
@@ -107,10 +107,9 @@ export class PhaseManagementPage {
     }
 
     // Submit form
-    await this.submitButton.click();
+    await clickAndWaitForMutation(this.page, this.submitButton, API.createPhase);
 
     // Wait for phase to appear - filter to visible element (viewport-agnostic)
-    await this.page.waitForLoadState('networkidle');
     await expect(this.page.getByText(options.title).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
   }
 
@@ -144,97 +143,16 @@ export class PhaseManagementPage {
     const confirmDialog = this.page.locator('.fixed.inset-0').filter({ hasText: 'Activate Phase' });
     await confirmDialog.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Wait for confirmation dialog button to appear and click it
-    if (publishResults) {
-      // Wait for and click "Publish & Activate Phase" button
-      const publishButton = confirmDialog.locator('button', { hasText: 'Publish & Activate Phase' });
-      await publishButton.waitFor({ state: 'visible', timeout: 5000 });
-      await publishButton.click();
-    } else {
-      // Look for either "Activate Phase" or "Activate Without Publishing" button
-      // Try both selectors and click whichever is found
-      const activateButton = confirmDialog.locator('button', { hasText: 'Activate Phase' });
-      const activateWithoutPublishingButton = confirmDialog.locator('button', { hasText: 'Activate Without Publishing' });
-
-      // Wait for one of the buttons to appear
-      try {
-        await activateButton.waitFor({ state: 'visible', timeout: 2000 });
-        await activateButton.click();
-      } catch {
-        // If "Activate Phase" not found, try "Activate Without Publishing"
-        await activateWithoutPublishingButton.waitFor({ state: 'visible', timeout: 3000 });
-        await activateWithoutPublishingButton.click();
-      }
-    }
-
-    await this.page.waitForLoadState('networkidle');
-
-    // Verify the phase is now active by checking for "Currently Active" badge
-    await this.page.waitForTimeout(1000); // Brief wait for UI update
-  }
-
-  /**
-   * Update phase deadline
-   * @param phaseTitle - Title of the phase to update
-   * @param newDeadline - New deadline date
-   */
-  async updateDeadline(phaseTitle: string, newDeadline: Date) {
-    const phaseCard = this.getPhaseCard(phaseTitle);
-
-    // Find deadline input in the phase card
-    const deadlineInput = phaseCard.locator('input[type="datetime-local"]');
-
-    // Format date for datetime-local input
-    const formatted = newDeadline.toISOString().slice(0, 16);
-    await deadlineInput.fill(formatted);
-
-    // Click save/update button
-    await phaseCard.locator('button:has-text("Save"), button:has-text("Update")').click();
-
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Edit a phase
-   * @param phaseTitle - Title of the phase to edit
-   * @param updates - Fields to update
-   */
-  async editPhase(
-    phaseTitle: string,
-    updates: {
-      title?: string;
-      description?: string;
-      deadline?: Date;
-    }
-  ) {
-    const phaseCard = this.getPhaseCard(phaseTitle);
-    await phaseCard.locator('button:has-text("Edit")').click();
-
-    await waitForModal(this.page, 'Edit Phase');
-
-    if (updates.title) {
-      await this.phaseTitleInput.fill(updates.title);
-    }
-
-    if (updates.description) {
-      await this.phaseDescriptionTextarea.fill(updates.description);
-    }
-
-    if (updates.deadline) {
-      const formatted = updates.deadline.toISOString().slice(0, 16);
-      await this.phaseDeadlineInput.fill(formatted);
-    }
-
-    await this.submitButton.click();
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Get count of phases
-   */
-  async getPhaseCount(): Promise<number> {
-    const phases = this.page.locator('[data-testid="phase-card"], .phase-card');
-    return await phases.count();
+    // Confirm, waiting for the activation itself. Exact button names: a
+    // substring match on "Activate Phase" also hits "Publish & Activate Phase",
+    // which would publish pending results the caller asked to leave alone.
+    const confirmButton = publishResults
+      ? confirmDialog.getByRole('button', { name: 'Publish & Activate Phase', exact: true })
+      : confirmDialog
+          .getByRole('button', { name: 'Activate Phase', exact: true })
+          .or(confirmDialog.getByRole('button', { name: 'Activate Without Publishing', exact: true }))
+          .first();
+    await clickAndWaitForMutation(this.page, confirmButton, API.activatePhase);
   }
 
   /**
@@ -244,34 +162,6 @@ export class PhaseManagementPage {
   async verifyPhaseExists(phaseTitle: string) {
     // Filter to visible element (viewport-agnostic)
     await expect(this.page.getByText(phaseTitle).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
-  }
-
-  /**
-   * Verify phase is active
-   * @param phaseTitle - Phase title to verify
-   */
-  async verifyPhaseActive(phaseTitle: string) {
-    const phaseCard = this.getPhaseCard(phaseTitle);
-    const activeBadge = phaseCard.locator('text=Active, text=Current').first();
-    await waitForVisible(activeBadge);
-  }
-
-  /**
-   * Get unpublished results count
-   */
-  async getUnpublishedResultsCount(): Promise<number> {
-    const countElement = this.page.locator('text=/\\d+ unpublished results/i');
-    const text = await countElement.textContent();
-    const match = text?.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 0;
-  }
-
-  /**
-   * Publish all phase results
-   */
-  async publishAllResults() {
-    await this.page.click('button:has-text("Publish All Results")');
-    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -292,10 +182,7 @@ export class PhaseManagementPage {
 
     if (confirm) {
       // Click confirm button
-      await this.page.getByTestId('delete-phase-confirm-button').click();
-
-      // Wait for network to settle (delete API call)
-      await this.page.waitForLoadState('networkidle');
+      await clickAndWaitForMutation(this.page, this.page.getByTestId('delete-phase-confirm-button'), API.deletePhase);
 
       // Wait for phase card to disappear
       await expect(phaseCard).not.toBeVisible({ timeout: 5000 });
@@ -324,8 +211,7 @@ export class PhaseManagementPage {
     }
 
     await this.page.getByTestId('create-draft-content').fill(options.content);
-    await this.page.locator('button:has-text("Save Draft")').click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.locator('button:has-text("Save Draft")'), API.createDraftPost);
   }
 
   /**
@@ -340,8 +226,7 @@ export class PhaseManagementPage {
     await this.page.locator('h2, h3').filter({ hasText: 'Edit Draft Opening Post' }).waitFor({ state: 'visible', timeout: 5000 });
 
     await this.page.getByTestId('edit-draft-content').fill(newContent);
-    await this.page.locator('button:has-text("Save Changes")').click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.locator('button:has-text("Save Changes")'), API.updateDraftPost);
   }
 
   /**

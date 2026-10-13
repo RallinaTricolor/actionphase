@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, render, fireEvent } from '@testing-library/react'
+import { screen, render, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from './Layout'
 import { AdminModeProvider } from '@/contexts/AdminModeContext'
@@ -177,6 +177,27 @@ describe('Layout', () => {
       fireEvent.click(logoutButton)
 
       expect(mockLogout).toHaveBeenCalledOnce()
+    })
+
+    // Navigating while the session is still cached sends /login straight back
+    // to /dashboard (AuthGatedLogin), then back to /login once logout clears
+    // it -- a redirect ping-pong that also leaves a stale state.from behind.
+    it('navigates to /login only after logout has finished', async () => {
+      let finishLogout!: () => void
+      mockLogout.mockReturnValue(new Promise<void>((resolve) => { finishLogout = resolve }))
+      const LocationProbe = () => <div data-testid="pathname">{useLocation().pathname}</div>
+
+      renderLayout(<LocationProbe />, '/dashboard')
+
+      await userEvent.hover(screen.getByRole('button', { name: /testuser/i }))
+      fireEvent.click(screen.getByRole('button', { name: 'Logout' }))
+
+      expect(mockLogout).toHaveBeenCalledOnce()
+      expect(screen.getByTestId('pathname')).toHaveTextContent('/dashboard')
+
+      await act(async () => { finishLogout() })
+
+      expect(screen.getByTestId('pathname')).toHaveTextContent('/login')
     })
 
     it('should have correct link hrefs', () => {

@@ -39,8 +39,9 @@ export default defineConfig({
     host: true,
     // Allow the compose service hostname so the Playwright container (and any
     // other in-network client) can reach the dev server. Vite 7 rejects
-    // unknown Host headers with 403 by default.
-    allowedHosts: ['localhost', 'frontend'],
+    // unknown Host headers with 403 by default. `vite preview` inherits this
+    // list; frontend-e2e is the production build E2E runs against.
+    allowedHosts: ['localhost', 'frontend', 'frontend-e2e'],
     proxy: {
       '/api': {
         target: proxyTarget,

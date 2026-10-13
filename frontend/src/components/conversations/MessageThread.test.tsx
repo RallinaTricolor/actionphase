@@ -41,6 +41,9 @@ const baseConversationContext = {
     participants: [],
   }),
   messages: [] as PrivateMessage[],
+  // Whose messages `messages` holds. Matches defaultProps.conversationId so the
+  // thread renders as loaded; tests about loading override it.
+  loadedMessagesConversationId: 1 as number | null,
   loadingConversations: false,
   loadingMessages: false,
   loadingConversation: false,
@@ -106,7 +109,47 @@ beforeEach(() => {
   mockMarkAsRead.mockResolvedValue(undefined);
   mockRefreshConversation.mockResolvedValue(false);
   baseConversationContext.messages = [];
+  baseConversationContext.loadedMessagesConversationId = 1;
   baseConversationContext.conversation = { ...defaultConversation, participants: [] };
+});
+
+// The thread used to render fully for the first frame after mounting, before
+// its load effect had flipped loadingMessages: an interactive Reply button over
+// the PREVIOUS conversation's messages. A click in that frame raced the loading
+// placeholder that replaced it (an E2E flake), and a reader saw the wrong thread.
+describe('MessageThread before its messages have loaded', () => {
+  beforeEach(() => {
+    baseConversationContext.conversation = {
+      conversation: makeConversation({ title: 'Test Chat', created_by_user_id: 1 }),
+      participants: [makeConversationParticipant({ character_id: 10, character_name: 'TestChar', user_id: 1 })],
+    };
+  });
+
+  it('shows the loading placeholder, not the previous conversation, until its own messages arrive', () => {
+    baseConversationContext.loadedMessagesConversationId = 2;
+    baseConversationContext.messages = [makeMessage({ id: 99, conversation_id: 2, content: 'from another thread' })];
+
+    render(<MessageThread {...defaultProps} conversationId={1} />);
+
+    expect(screen.getByText('Loading messages...')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+    expect(screen.queryByText('from another thread')).not.toBeInTheDocument();
+  });
+
+  it('shows an error with a retry, not an endless spinner, when the load fails', async () => {
+    const user = userEvent.setup({ delay: null });
+    baseConversationContext.loadedMessagesConversationId = null;
+    mockLoadMessages.mockResolvedValue(null);
+
+    render(<MessageThread {...defaultProps} conversationId={1} />);
+
+    expect(await screen.findByText("Couldn't load messages.")).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+
+    mockLoadMessages.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(mockLoadMessages).toHaveBeenCalledWith(defaultProps.gameId, 1);
+  });
 });
 
 describe('MessageThread draft clearing on conversation change', () => {
@@ -129,6 +172,8 @@ describe('MessageThread draft clearing on conversation change', () => {
     expect(textarea).toHaveValue('drafted text for wrong recipient');
 
     // Simulate navigating to a different conversation (e.g. via a notification)
+    // whose messages have loaded.
+    baseConversationContext.loadedMessagesConversationId = 2;
     act(() => {
       rerender(<MessageThread {...defaultProps} conversationId={2} />);
     });

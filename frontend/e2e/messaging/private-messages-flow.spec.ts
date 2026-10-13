@@ -2,6 +2,7 @@ import { test } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { getFixtureGameId, getWorkerGameId } from '../fixtures/game-helpers';
 import { MessagingPage } from '../pages/MessagingPage';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Journey 5: Players Exchange Private Messages
@@ -326,8 +327,7 @@ test.describe('@mobile Private Messages Flow', () => {
       await coGmMessaging.selectSendingCharacter('Mysterious Stranger');
       await coGmMessaging.selectParticipant('Test Player Character');
       await coGmMessaging.conversationTitleInput.fill(strangerConvoTitle);
-      await coGmMessaging.createConversationButton.click();
-      await coGmPage.waitForLoadState('networkidle');
+      await clickAndWaitForMutation(coGmPage, coGmMessaging.createConversationButton, API.createConversation);
 
       // Co-GM (as Mysterious Stranger) sends message
       const strangerMessage = `I've been watching you. There's something you need to know...`;

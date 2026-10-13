@@ -272,6 +272,40 @@ describe('ActionSubmission', () => {
       });
     });
 
+    // The form shows "Acting as: <name>" from the character list itself, so the
+    // label alone proves nothing about what is sent. When the character list
+    // arrived after the actions list, the one-shot form hydration had already
+    // run with no characters, the auto-select never happened, and the action
+    // was saved with no character while the UI claimed otherwise.
+    it('submits the single character even when characters load after the actions list', async () => {
+      const user = userEvent.setup({ delay: null });
+      let submittedData: ActionSubmissionRequest | undefined;
+
+      setupDefaultHandlers([mockCharacters[0]]);
+      server.use(
+        http.get('/api/v1/games/:gameId/characters/controllable', async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return HttpResponse.json([mockCharacters[0]]);
+        }),
+        http.post<never, ActionSubmissionRequest>('/api/v1/games/:gameId/actions', async ({ request }) => {
+          submittedData = await request.json();
+          return HttpResponse.json({ id: 1 }, { status: 201 });
+        })
+      );
+
+      renderWithProviders(
+        <ActionSubmission gameId={1} currentPhase={mockActionPhase} />
+      , { gameId: 1 });
+
+      expect(await screen.findByText('Hero Character')).toBeInTheDocument();
+
+      await user.type(screen.getByRole('textbox'), 'Test action');
+      await user.click(screen.getByRole('button', { name: /submit action/i }));
+
+      await waitFor(() => expect(submittedData).toBeDefined());
+      expect(submittedData?.character_id).toBe(1);
+    });
+
     it('shows character dropdown when multiple characters', async () => {
       setupDefaultHandlers();
 

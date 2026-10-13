@@ -60,6 +60,7 @@ production `docker-compose.yml`):
 | `db` | Postgres 17 | data in the `pgdata` volume |
 | `backend` | Air live-reload under Delve | rebuilds Go on save (~1–2s) |
 | `frontend` | Vite dev server | HMR over the bind mount |
+| `frontend-e2e` | Production build served by `vite preview` (profile `e2e`) | what E2E runs against; rebuilt from current source by every `just e2e*` |
 | `playwright` | E2E runner (profile `e2e`) | only starts for `just e2e*` |
 
 ### Everyday commands

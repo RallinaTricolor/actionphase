@@ -1,4 +1,6 @@
 import { Page, Locator } from '@playwright/test';
+import { isMobileViewport } from '../utils/viewport';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for Character Sheet interactions
@@ -13,14 +15,6 @@ export class CharacterSheetPage {
 
   // Locators
   readonly characterName: Locator;
-  readonly characterType: Locator;
-  readonly characterDescription: Locator;
-  readonly editButton: Locator;
-  readonly saveButton: Locator;
-  readonly cancelButton: Locator;
-  readonly deleteButton: Locator;
-  readonly avatarUploadButton: Locator;
-  readonly inventorySection: Locator;
   readonly skillsSection: Locator;
   readonly itemsSection: Locator;
   readonly numbersSection: Locator;
@@ -30,14 +24,6 @@ export class CharacterSheetPage {
 
     // Define locators
     this.characterName = page.locator('[data-testid="character-name"]');
-    this.characterType = page.locator('[data-testid="character-type"]');
-    this.characterDescription = page.locator('[data-testid="character-description"]');
-    this.editButton = page.locator('[data-testid="edit-character"]');
-    this.saveButton = page.locator('[data-testid="save-character"]');
-    this.cancelButton = page.locator('[data-testid="cancel-edit"]');
-    this.deleteButton = page.locator('[data-testid="delete-character"]');
-    this.avatarUploadButton = page.locator('input[type="file"]');
-    this.inventorySection = page.locator('[data-testid="inventory-section"]');
     this.skillsSection = page.locator('[data-testid="skills-section"]');
     this.itemsSection = page.locator('[data-testid="inventory-section"]');
     this.numbersSection = page.locator('[data-testid="numbers-section"]');
@@ -49,51 +35,6 @@ export class CharacterSheetPage {
   async goto(gameId: number, characterId: number) {
     await this.page.goto(`/games/${gameId}/characters/${characterId}`);
     await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Get character name text
-   */
-  async getCharacterName(): Promise<string> {
-    return await this.characterName.textContent() || '';
-  }
-
-  /**
-   * Edit a character field
-   */
-  async editField(field: string, value: string) {
-    await this.editButton.click();
-    await this.page.waitForLoadState('networkidle');
-
-    await this.page.fill(`[data-testid="input-${field}"]`, value);
-    await this.saveButton.click();
-    await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Upload character avatar
-   */
-  async uploadAvatar(filePath: string) {
-    await this.avatarUploadButton.setInputFiles(filePath);
-    await this.page.waitForSelector('[data-testid="avatar-preview"]', { timeout: 5000 });
-  }
-
-  /**
-   * Delete the character (with confirmation)
-   */
-  async deleteCharacter() {
-    await this.deleteButton.click();
-
-    // Handle confirmation dialog
-    await this.page.click('[data-testid="confirm-delete"]');
-    await this.page.waitForURL('**/games/*', { timeout: 5000 });
-  }
-
-  /**
-   * Check if character is editable by current user
-   */
-  async canEdit(): Promise<boolean> {
-    return await this.editButton.isVisible();
   }
 
   // ========== Character Rename Methods ==========
@@ -133,8 +74,7 @@ export class CharacterSheetPage {
     await nameInput.fill(newName);
 
     const saveButton = this.page.getByRole('button', { name: 'Save' });
-    await saveButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, saveButton, API.renameCharacter);
   }
 
   /**
@@ -153,24 +93,6 @@ export class CharacterSheetPage {
     const cancelButton = this.page.getByRole('button', { name: 'Cancel' });
     await cancelButton.click();
     await this.page.waitForTimeout(500);
-  }
-
-  /**
-   * Check if save button is enabled during rename
-   */
-  async isSaveButtonEnabled(): Promise<boolean> {
-    const saveButton = this.page.getByRole('button', { name: 'Save' });
-    return await saveButton.isEnabled();
-  }
-
-  /**
-   * Get all inventory items
-   */
-  async getInventoryItems(): Promise<string[]> {
-    const items = await this.inventorySection.locator('[data-testid="sheet-entry"]').all();
-    return Promise.all(items.map(i => i.textContent())).then(texts =>
-      texts.filter((t): t is string => t !== null)
-    );
   }
 
   // ========== Character Sheet Tab Navigation ==========
@@ -221,20 +143,6 @@ export class CharacterSheetPage {
       }
     }
     await this.page.waitForLoadState('networkidle');
-  }
-
-  /**
-   * Navigate to the Public Profile (bio) tab.
-   */
-  async goToBioModule() {
-    await this.goToTab('bio', 'Public Profile');
-  }
-
-  /**
-   * Navigate to the Private Notes tab.
-   */
-  async goToNotesTab() {
-    await this.goToTab('notes', 'Private Notes');
   }
 
   /**
@@ -308,8 +216,7 @@ export class CharacterSheetPage {
     await this.page.getByRole('textbox', { name: 'Description' }).fill(description);
 
     // The modal's submit is a bare "Add" — the noun lives in the modal title.
-    await this.page.getByRole('button', { name: 'Add', exact: true }).click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.page.getByRole('button', { name: 'Add', exact: true }), API.setCharacterData);
   }
 
   /**
@@ -369,7 +276,7 @@ export class CharacterSheetPage {
     // Check mobile dropdown (scoped to character sheet module tabs to avoid matching game-level select)
     // Use isVisible() not count() — the select exists in DOM on desktop too but is hidden via md:hidden
     const mobileSelect = this.moduleSelect;
-    if (await mobileSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (isMobileViewport(this.page)) {
       // Check if the option exists in the dropdown
       const option = mobileSelect.locator(`option[value="${moduleId}"]`);
       return await option.count() > 0;

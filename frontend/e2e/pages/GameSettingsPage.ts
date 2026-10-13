@@ -92,8 +92,11 @@ export class GameSettingsPage {
     // Click the input to open the date picker
     await this.page.locator(`#${fieldId}`).click();
 
-    // Wait for the date picker dialog to appear
-    await this.page.waitForSelector('[role="dialog"]', { state: 'visible', timeout: 5000 });
+    // Wait for the date picker to appear. Scoped to react-datepicker's popper:
+    // the Edit Game modal around it is itself a dialog, so a bare
+    // [role="dialog"] never reaches the hidden state waited for below.
+    const picker = this.page.locator('.react-datepicker-popper');
+    await picker.waitFor({ state: 'visible', timeout: 5000 });
     await this.page.waitForTimeout(300); // Give picker time to fully render
 
     // Get the date components
@@ -126,7 +129,7 @@ export class GameSettingsPage {
     await this.page.getByRole('option', { name: timeString }).click();
 
     // Wait for picker to close
-    await this.page.waitForSelector('[role="dialog"]', { state: 'hidden', timeout: 2000 });
+    await picker.waitFor({ state: 'hidden', timeout: 5000 });
   }
 
   /**
@@ -225,20 +228,6 @@ export class GameSettingsPage {
    */
   async isAutoAcceptAudience(): Promise<boolean> {
     return await this.page.locator('#auto_accept_audience').isChecked();
-  }
-
-  /**
-   * Get current title value from form
-   */
-  async getTitle(): Promise<string> {
-    return await this.page.locator('#title').inputValue();
-  }
-
-  /**
-   * Get current description value from form
-   */
-  async getDescription(): Promise<string> {
-    return await this.page.locator('#description').inputValue();
   }
 
   /**

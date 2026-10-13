@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { LONG_TIMEOUT } from '../config/test-timeouts';
+import { waitForRouteCommitted } from '../utils/waits';
 
 /**
  * Page Object for User Login
@@ -13,8 +14,6 @@ export class LoginPage {
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly loginButton: Locator;
-  readonly signUpButton: Locator;
-  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -23,8 +22,6 @@ export class LoginPage {
     this.usernameInput = page.locator('[data-testid="login-username"]');
     this.passwordInput = page.locator('[data-testid="login-password"]');
     this.loginButton = page.locator('[data-testid="login-submit"]');
-    this.signUpButton = page.locator('button:has-text("Don\'t have an account? Sign up")');
-    this.errorMessage = page.locator('[data-testid="error-message"]');
   }
 
   /**
@@ -38,8 +35,9 @@ export class LoginPage {
         await this.page.goto('/login', { waitUntil: 'domcontentloaded' });
         break;
       } catch (error) {
-        const isNavigationError = error.message.includes('interrupted by another navigation') ||
-                                 error.message.includes('ERR_ABORTED');
+        const message = error instanceof Error ? error.message : String(error);
+        const isNavigationError = message.includes('interrupted by another navigation') ||
+                                 message.includes('ERR_ABORTED');
         if (isNavigationError && retries > 1) {
           // Wait a bit and retry
           await this.page.waitForTimeout(300);
@@ -95,59 +93,13 @@ export class LoginPage {
       await this.page.waitForURL((url) => !url.pathname.startsWith('/login'), {
         timeout: LONG_TIMEOUT,
       });
+      // The URL changes before the UI does: React Router commits the new route
+      // in a transition, holding the old one on screen while the lazy page
+      // chunk loads. Anything opened in that window (e.g. the user menu) is
+      // reset when the route commits. Wait for Layout to render the URL's route.
+      await waitForRouteCommitted(this.page);
       await this.page.waitForLoadState('networkidle');
     }
   }
 
-  /**
-   * Attempt login with invalid credentials (for testing validation)
-   */
-  async loginInvalid(username: string, password: string) {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-    await this.loginButton.click();
-  }
-
-  /**
-   * Get error message text
-   */
-  async getErrorMessage(): Promise<string> {
-    return await this.errorMessage.textContent() || '';
-  }
-
-  /**
-   * Check if login button is disabled
-   */
-  async isLoginButtonDisabled(): Promise<boolean> {
-    return await this.loginButton.isDisabled();
-  }
-
-  /**
-   * Navigate to registration page
-   */
-  async goToSignUp() {
-    await this.signUpButton.click();
-    await this.page.waitForTimeout(500); // Wait for form to toggle
-  }
-
-  /**
-   * Fill login form but don't submit
-   */
-  async fillForm(username: string, password: string) {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-  }
-
-  /**
-   * Check if user is logged in (authenticated)
-   */
-  async isLoggedIn(): Promise<boolean> {
-    try {
-      // Check for authenticated navbar (Dashboard or Games link)
-      await this.page.waitForSelector('nav a[href="/dashboard"]', { timeout: 2000, state: 'attached' });
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }

@@ -108,6 +108,17 @@ describe('CharacterSheetEditor', () => {
     expect(onDirtyChange).toHaveBeenLastCalledWith(false);
   });
 
+  it('cancels adding a tab on Escape, like the Cancel button', async () => {
+    setup();
+    const { user } = renderEditor();
+
+    await user.click(within(tabList()).getByRole('button', { name: 'Add tab' }));
+    await user.type(screen.getByRole('textbox', { name: 'New tab name' }), 'Contacts{Escape}');
+
+    expect(screen.queryByRole('textbox', { name: 'New tab name' })).not.toBeInTheDocument();
+    expect(within(tabList()).queryByText('Contacts')).not.toBeInTheDocument();
+  });
+
   it('adds a custom tab with a description field, and a choice field to it', async () => {
     const { saved } = setup();
     const { user } = renderEditor();

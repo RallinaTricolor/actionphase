@@ -3,6 +3,7 @@ import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { getFixtureGameId, getWorkerGameId } from '../fixtures/game-helpers';
 import { deepNestingTargets } from '../fixtures/comment-depth';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * E2E Tests: Common Room Flow
@@ -311,8 +312,7 @@ test.describe('@mobile Common Room Flow', () => {
     await characterSelect.waitFor({ state: 'visible', timeout: 5000 });
     await characterSelect.selectOption({ label: 'Edit as Mysterious Stranger' });
 
-    await commentContainer.getByRole('button', { name: 'Save' }).locator('visible=true').first().click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, commentContainer.getByRole('button', { name: 'Save' }).locator('visible=true').first(), API.editComment);
 
     await expect(commentContainer.getByTestId('comment-author').filter({ hasText: 'Mysterious Stranger' }).locator('visible=true').first()).toBeVisible({ timeout: 5000 });
     await expect(commentContainer.getByTestId('comment-author').filter({ hasText: 'Town Guard' }).first()).not.toBeVisible();

@@ -1,6 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { navigateToGameAndTab } from '../utils/navigation';
-import { waitForVisible } from '../utils/waits';
+import { waitForVisible, clickAndWaitForMutation, performAndWaitForMutation, API } from '../utils/waits';
 import { assertTextVisible } from '../utils/assertions';
 
 /**
@@ -112,17 +112,12 @@ export class CommonRoomPage {
     if (options.visibleTo) {
       await this.restrictTo(this.page.getByTestId('post-viewer-picker'), options.visibleTo);
     }
-    await this.page.waitForTimeout(500); // Allow form to process input
-    await this.createPostButton.click();
+    await clickAndWaitForMutation(this.page, this.createPostButton, API.createPost);
 
-    // Wait for post to appear using network idle (more reliable than timeout)
-    await this.page.waitForLoadState('networkidle');
-
-    // Verify post appears
+    // Verify the post rendered. Only meaningful AFTER the POST succeeded: until
+    // then the composer textarea mirrors the typed content into its text and
+    // satisfies a text match on its own.
     await assertTextVisible(this.page, content);
-
-    // Wait for form to fully collapse and reset before next operation
-    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -237,10 +232,11 @@ export class CommonRoomPage {
     // Filter to visible element (viewport-agnostic for dual-DOM pattern)
     const form = postCard.locator('form').locator('visible=true').first();
 
-    await form.evaluate((f: HTMLFormElement) => f.requestSubmit());
-
-    // Wait for comment to be created
-    await this.page.waitForLoadState('networkidle');
+    await performAndWaitForMutation(
+      this.page,
+      () => form.evaluate((f: HTMLFormElement) => f.requestSubmit()),
+      API.createComment
+    );
   }
 
   /**
@@ -356,8 +352,12 @@ export class CommonRoomPage {
     }
 
     await commentContainer.locator('textarea').locator('visible=true').first().fill(replyText);
-    await commentContainer.locator('form').locator('visible=true').first().evaluate((f: HTMLFormElement) => f.requestSubmit());
-    await this.page.waitForLoadState('networkidle');
+    const form = commentContainer.locator('form').locator('visible=true').first();
+    await performAndWaitForMutation(
+      this.page,
+      () => form.evaluate((f: HTMLFormElement) => f.requestSubmit()),
+      API.createComment
+    );
   }
 
   /**
@@ -374,23 +374,6 @@ export class CommonRoomPage {
    */
   async verifyCommentExists(content: string, timeout = 10000) {
     await assertTextVisible(this.page, content, { timeout });
-  }
-
-  /**
-   * Get autocomplete position info for positioning tests
-   */
-  async getAutocompletePosition() {
-    await waitForVisible(this.autocompleteDropdown);
-    return await this.autocompleteDropdown.boundingBox();
-  }
-
-  /**
-   * Get textarea position info for positioning tests
-   * @param postContent - Post content to identify the post
-   */
-  async getTextareaPosition(postContent: string) {
-    const textarea = this.getCommentTextarea(postContent);
-    return await textarea.boundingBox();
   }
 
   /**

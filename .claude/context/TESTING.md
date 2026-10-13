@@ -302,6 +302,59 @@ re-run that spec alone with `just e2e-test file …`, and check whether the fail
 *set* shifts between runs. A shifting set is flake, not regression. Playwright
 also emits `Internal error: step id not found: fixture@NN` on a clean tree.
 
+**E2E runs against a production build, one run at a time** *(2026-10-07)*.
+`just e2e*` builds the frontend into the `frontend-e2e` service (`vite build` +
+`vite preview`, ~30s) and Playwright targets it, not the dev server. The dev
+server served ~235 unbundled modules per page load, and six workers made it the
+bottleneck behind most budget-exhaustion flakes (desktop 6.6–8.1 → ~4 min).
+Runs hold `.e2e-run.lock`: concurrent runs reset each other's fixtures
+(`load-e2e`) and rebuild the frontend under each other's browsers, producing
+dozens of fake failures. If a killed run left the lock behind, `rmdir .e2e-run.lock`.
+
+**E2E helper rules** *(2026-10-07)* — each one fixed a real flake:
+- **Writes:** submit through `clickAndWaitForMutation` (or
+  `performAndWaitForMutation` for `requestSubmit()`/key presses), matching an
+  entry in the `API` map in `e2e/utils/waits.ts` — add one for a new endpoint.
+  `networkidle` after a click is not a wait for the write — it can resolve
+  before the request starts, so assertions pass early and a following
+  navigation (switching users) cancels the write. A non-2xx fails at the
+  submit: converting the helpers this way surfaced a co-GM post 500 that a
+  text-visible assertion had been hiding.
+- **Never assert typed text with bare `getByText`.** A React-controlled
+  `<textarea>` mirrors its value into its text content, so `getByText(typed)`
+  matches the open editor. Scope to rendered content (e.g.
+  `MessagingPage.messageWithText`).
+- **Mobile vs desktop:** `isMobileViewport(page)` (`e2e/utils/viewport.ts`).
+  `locator.isVisible({ timeout })` ignores `timeout` and answers instantly, so
+  DOM-based detection picked the desktop path on pages still loading.
+- **No `.all()` snapshots of lists that may still be loading** — wait for a
+  readiness signal first (see `CharacterWorkflowPage.loadedCharacterCards`).
+- **Absence checks:** `expect(locator).toHaveCount(0)`, not a helper that waits
+  out its timeout to return `false`.
+- **Tests that write must own their data** (send/create their own row, unique
+  per run) rather than mutate shared seed data — otherwise a retry starts from
+  a different state and fails for an unrelated reason.
+- **Login:** `loginAs` authenticates via the API (setup); `loginViaUI` drives
+  the form and is only for specs that test logging in.
+- `actionTimeout` (10s) and `navigationTimeout` (15s) are set globally so a
+  stuck step fails at its own line instead of consuming the test budget.
+
+**The URL changes before the UI does** *(2026-10-07)*. React Router commits
+navigations in a transition, so while a lazy page chunk loads the URL already
+shows the destination but the old route is still rendered — and `networkidle`
+has often already fired. Anything a test opens in that window (menus,
+dropdowns) is reset when the route commits (Layout closes its menus on pathname
+change). After a navigation the test didn't make via `page.goto`, wait with
+`waitForRouteCommitted(page)` (`e2e/utils/waits.ts`), which compares Layout's
+`data-route` to `location.pathname`. `LoginPage.login()` already does this.
+
+**Switching users does not use the logout UI.** `loginAs()` drops the session
+with `clearSession()` (clears the `jwt` cookie *and* the `auth_token`
+localStorage copy — clearing only the cookie leaves the next load
+authenticated via the Bearer header). Driving the user menu as setup for
+~35 multi-user specs caused the logout-hang flakes; UI logout is covered once,
+in `auth/login.spec.ts`, via the `logout()` helper.
+
 ---
 
 ## Hidden Elements: In the DOM, Not in the A11y Tree

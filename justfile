@@ -1107,28 +1107,69 @@ PW := "docker compose -f docker-compose.dev.yml --profile e2e run --rm playwrigh
 
 # Run E2E tests on both desktop and mobile (sequential to avoid fixture conflicts)
 e2e:
-  @just e2e-desktop
-  @just e2e-mobile
+  #!/usr/bin/env bash
+  set -euo pipefail
+  just _e2e-lock
+  trap 'rmdir .e2e-run.lock' EXIT
+  just _e2e-app
+  just _e2e-run chromium
+  just _e2e-run mobile-chrome
 
 # Run E2E tests on mobile only (Pixel 5)
 e2e-mobile:
-  @echo "🔄 Applying E2E test fixtures..."
-  @just load-e2e
-  @echo ""
-  {{PW}} npx playwright test --project=mobile-chrome
+  #!/usr/bin/env bash
+  set -euo pipefail
+  just _e2e-lock
+  trap 'rmdir .e2e-run.lock' EXIT
+  just _e2e-app
+  just _e2e-run mobile-chrome
 
 # Run E2E tests on desktop only (Chrome)
 e2e-desktop:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  just _e2e-lock
+  trap 'rmdir .e2e-run.lock' EXIT
+  just _e2e-app
+  just _e2e-run chromium
+
+# One E2E run at a time. Two runs share one database and one frontend-e2e:
+# each run's load-e2e resets the other's fixtures and users mid-test, and its
+# frontend rebuild takes the server down under the other's browsers. The
+# result is dozens of failures that look like test bugs but are not.
+# mkdir is atomic, so this is a race-free lock. Released by the caller's trap.
+_e2e-lock:
+  #!/usr/bin/env bash
+  if ! mkdir .e2e-run.lock 2>/dev/null; then
+    echo "❌ Another E2E run is in progress (.e2e-run.lock exists)."
+    echo "   Concurrent runs reset each other's fixtures and frontend."
+    echo "   If no run is actually active (e.g. one was killed), remove it: rmdir .e2e-run.lock"
+    exit 1
+  fi
+
+# Build the frontend from current source and serve it for E2E (frontend-e2e).
+# Force-recreated every run: a still-running frontend-e2e holds the build from
+# whenever it last started, and E2E must never test stale code.
+_e2e-app:
+  @echo "📦 Building the frontend for E2E (production build)..."
+  docker compose -f docker-compose.dev.yml --profile e2e up -d --force-recreate --wait frontend-e2e
+
+_e2e-run project:
   @echo "🔄 Applying E2E test fixtures..."
   @just load-e2e
   @echo ""
-  {{PW}} npx playwright test --project=chromium
+  {{PW}} npx playwright test --project={{project}}
 
 # E2E testing with options (runs in Playwright container)
 # Note: headed/ui/debug need a display and are host-only — see 'just dev-help'.
 e2e-test mode="headless" file="":
   #!/usr/bin/env bash
   PW='docker compose -f docker-compose.dev.yml --profile e2e run --rm playwright'
+  if [ "{{mode}}" = "headless" ] || [ "{{mode}}" = "file" ]; then
+    just _e2e-lock || exit 1
+    trap 'rmdir .e2e-run.lock' EXIT
+    just _e2e-app
+  fi
   echo "🔄 Applying E2E test fixtures..."
   just load-e2e
   echo ""

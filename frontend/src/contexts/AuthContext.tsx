@@ -21,7 +21,7 @@ interface AuthContextValue {
   // Auth methods
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<AxiosResponse<RegisterResponse>>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
 
   // Error state
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.auth.login(data);
       return response;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       const token = response.data.Token;
       logger.info('Login successful', { hasToken: !!token });
 
@@ -113,8 +113,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           queryKey: ['dashboard'],
           queryFn: () => simpleApi.getDashboard().then(r => r.data),
         });
-        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
+        // Awaited so login() resolves only once currentUser holds the session.
+        // Callers navigate to a protected route straight after; if the cache
+        // still read "logged out", ProtectedRoute would bounce to /login and
+        // AuthGatedLogin would bounce back once /auth/me landed.
+        await queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       }
     },
     onError: (error: Error) => {
@@ -130,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.auth.register(data);
       return response;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       // 202 means the account awaits admin approval: no token is issued, and
       // the body is a {status, error} notice rather than a user. The two
       // shapes share no fields, so this narrowing is now required by the type
@@ -147,8 +151,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           queryKey: ['dashboard'],
           queryFn: () => simpleApi.getDashboard().then(r => r.data),
         });
-        queryClient.invalidateQueries({ queryKey: ['currentUser'] });
         setAuthError(null);
+        // Awaited for the same reason as login: callers navigate on resolve.
+        await queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       }
     },
     onError: (error: Error) => {

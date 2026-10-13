@@ -1,6 +1,8 @@
 import { Page, expect } from '@playwright/test';
 import { TEST_USERS } from './test-users';
 import { LoginPage } from '../pages/LoginPage';
+import { waitForRouteCommitted } from '../utils/waits';
+import { isMobileViewport } from '../utils/viewport';
 
 /**
  * Authentication Helper Functions for E2E Tests
@@ -25,36 +27,64 @@ function getWorkerSpecificUsername(baseUsername: string): string {
 }
 
 /**
- * Login as a specific test user
+ * Log in as a test user for test SETUP, and land on the dashboard.
+ *
+ * Authenticates through the API, not the login form: the form is a feature
+ * with its own specs (auth/login.spec.ts, the smoke suite, via loginViaUI).
+ * As setup it cost a full /login load, form input, and an SPA hop to the
+ * dashboard -- per user, ~35 specs switch users -- which pushed multi-user
+ * journeys past their time budget under parallel load.
+ *
+ * page.request shares the page's cookie jar, so the login response's jwt
+ * cookie authenticates the page. Switching users clears the previous session
+ * first; the full navigation to /dashboard then discards the previous user's
+ * in-memory app state (React Query cache).
+ *
  * @param page - Playwright page object
  * @param userKey - Key from TEST_USERS object (e.g., 'GM', 'PLAYER_1')
  * @returns Object with user info and token
  */
 export async function loginAs(page: Page, userKey: keyof typeof TEST_USERS) {
   const user = TEST_USERS[userKey];
-
-  // Get worker-specific username
   const workerUsername = getWorkerSpecificUsername(user.username);
 
-  // Check if already logged in by checking for JWT cookie - if so, logout first
-  const isLoggedIn = await isAuthenticated(page);
-  if (isLoggedIn) {
-    await logout(page);
-    // After logout, we're already on /login page, so no need to navigate again
+  await clearSession(page);
+
+  const response = await page.request.post('/api/v1/auth/login', {
+    data: { username: workerUsername, password: user.password },
+  });
+  if (!response.ok()) {
+    throw new Error(`API login as ${workerUsername} failed: ${response.status()} ${await response.text()}`);
   }
 
-  // Use LoginPage POM for login
+  await page.goto('/dashboard');
+  await waitForRouteCommitted(page);
+  // ProtectedRoute bounces an unauthenticated load to /login; fail here, by
+  // name, rather than in whatever the test does next.
+  await expect(page).toHaveURL(/\/dashboard$/);
+
+  return { user, token: null };
+}
+
+/**
+ * Log in as a test user through the login form.
+ *
+ * For specs that test logging in. Everything else should use loginAs().
+ */
+export async function loginViaUI(page: Page, userKey: keyof typeof TEST_USERS) {
+  const user = TEST_USERS[userKey];
+  const workerUsername = getWorkerSpecificUsername(user.username);
+
+  // Switching users drops the previous session directly; logout through the
+  // user menu is tested on its own via logout().
+  await clearSession(page);
+
   const loginPage = new LoginPage(page);
-
-  // Always navigate to login page to ensure clean state
-  // Even if we're already at /login (e.g., after logout), this ensures
-  // the auth state has stabilized and network is idle before attempting login
+  // Full navigation to /login: discards the previous user's in-memory app
+  // state (React Query cache) along with the session cleared above.
   await loginPage.goto();
-
   await loginPage.login(workerUsername, user.password);
 
-  // Authentication is now handled via HTTP-only cookies
-  // No need to extract token from localStorage
   return { user, token: null };
 }
 
@@ -77,14 +107,36 @@ export async function login(
 }
 
 /**
- * Logout the current user
+ * Drop the current session without touching the UI.
+ *
+ * Mirrors what logging out does to the browser: the backend's logout only
+ * clears the `jwt` cookie, and the app also keeps the token in localStorage
+ * (`auth_token`), which the API client sends as a Bearer header. Clearing the
+ * cookie alone would leave the next page load authenticated via that header.
+ *
+ * localStorage is per-origin, so it can only be cleared from a page on the app
+ * origin; a page that has never left about:blank holds no token to clear.
+ */
+export async function clearSession(page: Page) {
+  await page.context().clearCookies({ name: 'jwt' });
+  if (page.url().startsWith('http')) {
+    await page.evaluate(() => localStorage.removeItem('auth_token'));
+  }
+}
+
+/**
+ * Logout the current user through the UI.
+ *
+ * Only for specs that test logout itself. To switch users, call loginAs(),
+ * which drops the session without the UI.
+ *
  * Handles both mobile (hamburger menu) and desktop (hover user menu) navigation.
  * @param page - Playwright page object
  */
 export async function logout(page: Page) {
   // Detect viewport: mobile shows hamburger (md:hidden), desktop shows user-menu-trigger (hidden md:block)
   const hamburger = page.locator('button[aria-label="Menu"]');
-  const isMobile = await hamburger.isVisible({ timeout: 2000 }).catch(() => false);
+  const isMobile = isMobileViewport(page);
 
   const logoutButton = page.locator('button:has-text("Logout")').locator('visible=true').first();
 
@@ -111,12 +163,17 @@ export async function logout(page: Page) {
   }
 
   // Use Promise.all to handle the logout click and response concurrently
-  // This ensures we catch the response even if navigation happens immediately
+  // This ensures we catch the response even if navigation happens immediately.
+  //
+  // Both carry explicit timeouts. Without them, a menu that closes before the
+  // click lands leaves click() waiting for the rest of the test budget, and the
+  // failure is reported against waitForResponse instead of the missing button.
   await Promise.all([
     page.waitForResponse(
-      response => response.url().includes('/api/v1/auth/logout') && response.status() === 200
+      response => response.url().includes('/api/v1/auth/logout') && response.status() === 200,
+      { timeout: 10000 }
     ),
-    logoutButton.click(),
+    logoutButton.click({ timeout: 5000 }),
   ]);
 
   // Wait for redirect to login page
@@ -149,23 +206,4 @@ export async function isAuthenticated(page: Page): Promise<boolean> {
   }
 
   return false;
-}
-
-/**
- * Get the current user's token from localStorage
- * @deprecated Authentication now uses HTTP-only cookies. This function always returns null.
- */
-export async function getAuthToken(): Promise<string | null> {
-  // Authentication is now cookie-based, no token in localStorage
-  return null;
-}
-
-/**
- * Clear authentication state (logout without UI interaction)
- * @deprecated Use the logout() function instead. HTTP-only cookies cannot be cleared from JavaScript.
- */
-export async function clearAuth() {
-  // HTTP-only cookies cannot be cleared from JavaScript
-  // Use the logout() function instead for proper logout
-  // This function is kept for backwards compatibility but does nothing
 }

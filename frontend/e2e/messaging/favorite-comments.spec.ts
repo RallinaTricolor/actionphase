@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAs } from '../fixtures/auth-helpers';
 import { CommonRoomPage } from '../pages/CommonRoomPage';
 import { getFixtureGameId } from '../fixtures/game-helpers';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Private Comment Favorites E2E Tests
@@ -27,6 +28,7 @@ const FIXTURE_POST = 'Favorites Test Post';
 const STARRED_COMMENT = 'The comment Player 1 will star';
 const UNSTARRED_COMMENT = 'The comment Player 1 will leave alone';
 const ARCHIVED_PHASE = 'Archived Discussion';
+const ARCHIVED_POST = 'Archived Favorites Post';
 const ARCHIVED_COMMENT = 'The archived comment Player 1 will star from history';
 
 /**
@@ -60,8 +62,7 @@ test.describe('Private Comment Favorites', () => {
     await page.waitForLoadState('networkidle');
     const stars = page.locator('[data-testid="favorite-button"]');
     for (let remaining = await stars.count(); remaining > 0; remaining--) {
-      await stars.first().click();
-      await page.waitForLoadState('networkidle');
+      await clickAndWaitForMutation(page, stars.first(), API.favoriteComment);
     }
   });
 
@@ -102,8 +103,7 @@ test.describe('Private Comment Favorites', () => {
     // 3. Unfavorite from the page itself and confirm the server agrees. The
     //    card stays on screen (dimmed) as the undo affordance, so a reload is
     //    what distinguishes "removed" from "still there but faded".
-    await card.locator('[data-testid="favorite-button"]').click();
-    await page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(page, card.locator('[data-testid="favorite-button"]'), API.favoriteComment);
     await page.reload();
     await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-testid="favorite-comment-card"]')).toHaveCount(0, { timeout: 10000 });
@@ -158,8 +158,8 @@ test.describe('Private Comment Favorites', () => {
     await page.getByRole('button', { name: new RegExp(ARCHIVED_PHASE) }).click();
     await page.waitForLoadState('networkidle');
 
-    const commonRoomPage = new CommonRoomPage(page, gameId);
-    await commonRoomPage.expandComments();
+    const commonRoomPage = new CommonRoomPage(page);
+    await commonRoomPage.expandComments(ARCHIVED_POST);
 
     const star = starFor(page, ARCHIVED_COMMENT);
     await expect(star).toBeVisible({ timeout: 10000 });

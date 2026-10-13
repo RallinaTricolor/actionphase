@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { LONG_TIMEOUT } from '../config/test-timeouts';
 import { CommunityPage } from './CommunityPage';
+import { clickAndWaitForMutation, API } from '../utils/waits';
 
 /**
  * Page Object for the Communities tab of the site-admin panel (/admin/communities).
@@ -57,8 +58,7 @@ export class AdminCommunitiesPage {
       owner
     );
 
-    await this.createButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await clickAndWaitForMutation(this.page, this.createButton, API.adminCreateCommunity);
 
     await expect(this.rowByName(name)).toBeVisible({ timeout: LONG_TIMEOUT });
   }

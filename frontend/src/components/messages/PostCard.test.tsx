@@ -105,6 +105,27 @@ describe('PostCard', () => {
     );
   });
 
+  // loadingComments started false and only flipped inside the load effect, so
+  // the first render showed "No comments yet. Be the first to reply!" on a post
+  // that has comments. It also left nothing marking the post as still loading,
+  // which a deep link (CommonRoom) needs to tell "not loaded yet" from "not on
+  // this page".
+  it('shows the loading state, not a false "No comments yet", before comments arrive', () => {
+    renderWithProviders(
+      <PostCard
+        post={mockPost}
+        gameId={1}
+        characters={mockCharacters}
+        controllableCharacters={mockCharacters}
+        onCreateComment={mockOnCreateComment}
+        currentUserId={100}
+      />
+    );
+
+    expect(screen.getByTestId('comments-loading')).toBeInTheDocument();
+    expect(screen.queryByText(/No comments yet/i)).not.toBeInTheDocument();
+  });
+
   describe('Restricted posts', () => {
     // Who gets the list and the edit action is covered in PostRestriction.test.tsx.
     it('shows the Restricted badge on a restricted post', () => {
@@ -1713,6 +1734,26 @@ describe('PostCard', () => {
 
       // Edit button should be hidden
       expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
+    });
+
+    it('stays in the editor on Ctrl+Enter when the content is cleared, as Save is disabled', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(
+        <PostCard
+          post={mockPost}
+          gameId={1}
+          characters={mockCharacters}
+          controllableCharacters={mockCharacters}
+          onCreateComment={mockOnCreateComment}
+          currentUserId={100}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      await user.clear(screen.getByPlaceholderText(/edit your post\.\.\./i));
+      await user.keyboard('{Control>}{Enter}{/Control}');
+
+      expect(screen.getByPlaceholderText(/edit your post\.\.\./i)).toBeInTheDocument();
     });
 
     it('reverts changes when cancel button is clicked', async () => {
