@@ -8,7 +8,6 @@ import type { ConversationListItem } from '@/types/conversations';
 
 interface ConversationListProps {
   gameId: number;
-  onSelectConversation: (conversationId: number) => void;
   selectedConversationId?: number;
 }
 
@@ -23,7 +22,7 @@ function matchesFilter(conversation: ConversationListItem, filter: string): bool
   return words.every((word) => haystack.includes(word));
 }
 
-export function ConversationList({ gameId, onSelectConversation, selectedConversationId }: ConversationListProps) {
+export function ConversationList({ gameId, selectedConversationId }: ConversationListProps) {
   const { conversations, loadingConversations, loadConversations } = useConversation();
   const [searchParams] = useSearchParams();
 
@@ -130,11 +129,16 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
         {filteredConversations.map((conversation) => (
           <Link
             key={conversation.id}
+            // The link alone opens the conversation, by pushing its URL; the
+            // thread follows the URL. Writing the param from onClick as well
+            // ran before the push and replaced the list's own history entry,
+            // so Back returned to the conversation instead of the list.
+            // The state tells the thread's back button that the previous
+            // entry is this list, so it can step back instead of adding one.
             to={getConversationHref(conversation.id)}
-            onClick={(e) => {
-              if (e.ctrlKey || e.metaKey) return;
+            state={{ fromConversationList: true }}
+            onClick={() => {
               logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
-              onSelectConversation(conversation.id);
             }}
             className={`block w-full text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
               selectedConversationId === conversation.id

@@ -8,8 +8,6 @@ import { server } from '@/mocks/server'
 import type { ConversationListItem } from '@/types/conversations'
 
 describe('ConversationList', () => {
-  const mockOnSelectConversation = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -74,7 +72,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -142,7 +139,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -221,7 +217,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -253,7 +248,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -291,14 +285,13 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
       expect(screen.getByText('Loading conversations...')).toBeInTheDocument()
     })
 
-    it('should call onSelectConversation when clicking a conversation', async () => {
+    it('links each conversation to its URL, keeping the current params', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/auth/me', () => {
           return HttpResponse.json({
@@ -317,18 +310,20 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
-        />
+        />,
+        { initialRoute: '/?tab=messages&conversationFilter=test' }
       )
 
       await waitFor(() => {
         expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
-      const conversationButton = screen.getByRole('link')
-      fireEvent.click(conversationButton)
-
-      expect(mockOnSelectConversation).toHaveBeenCalledWith(1)
+      // Opening a conversation is the link's navigation alone; see the
+      // browser-history tests in PrivateMessages.workflow.test.tsx
+      expect(screen.getByRole('link')).toHaveAttribute(
+        'href',
+        '/?tab=messages&conversationFilter=test&conversation=1'
+      )
     })
 
     it('should highlight selected conversation', async () => {
@@ -350,7 +345,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
           selectedConversationId={1}
         />
       )
@@ -376,7 +370,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -402,7 +395,7 @@ describe('ConversationList', () => {
         })
       )
       renderWithProviders(
-        <ConversationList gameId={123} onSelectConversation={mockOnSelectConversation} />,
+        <ConversationList gameId={123} />,
         { initialRoute }
       )
     }
@@ -482,7 +475,7 @@ describe('ConversationList', () => {
         })
       )
       renderWithProviders(
-        <ConversationList gameId={123} onSelectConversation={mockOnSelectConversation} />
+        <ConversationList gameId={123} />
       )
 
       await waitFor(() => expect(screen.getByText('No conversations yet')).toBeInTheDocument())

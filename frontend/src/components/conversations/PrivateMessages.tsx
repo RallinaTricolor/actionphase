@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useUrlParam } from '@/hooks/useUrlParam';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
@@ -36,7 +36,8 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
 
   // Identifies each navigation, so re-entering the conversation already on
   // screen (e.g. via a notification link) is distinguishable from a re-render.
-  const { key: locationKey } = useLocation();
+  const { key: locationKey, state: locationState } = useLocation();
+  const navigate = useNavigate();
   const initialLocationKeyRef = useRef(locationKey);
 
   const [conversationParam, setConversationParam] = useUrlParam<number | null>('conversation', null, {
@@ -118,12 +119,15 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
     setConversationParam(conversationId);
   };
 
-  const handleSelectConversation = (conversationId: number) => {
-    logger.debug('Conversation selected', { conversationId, gameId });
-    setConversationParam(conversationId);
-  };
-
+  // Opened from the list, the previous history entry IS the list (filter
+  // included), so step back to it: replacing would leave two copies of the
+  // list, and the next browser Back would appear to do nothing. Arriving any
+  // other way (a notification, a shared link), there is no list behind us.
   const handleBackToList = () => {
+    if ((locationState as { fromConversationList?: boolean } | null)?.fromConversationList) {
+      navigate(-1);
+      return;
+    }
     setConversationParam(null);
   };
 
@@ -173,7 +177,6 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border-primary scrollbar-track-transparent hover:scrollbar-thumb-border-secondary">
             <ConversationList
               gameId={gameId}
-              onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversationId || undefined}
             />
           </div>
