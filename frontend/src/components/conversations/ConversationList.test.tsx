@@ -387,4 +387,106 @@ describe('ConversationList', () => {
       })
     })
   })
+
+  describe('Filter bar', () => {
+    const conversations: ConversationListItem[] = [
+      makeConversationListItem({ id: 1, title: 'The Old Mill', participant_names: 'Alice, Bob', last_message: 'Meet at the docks' }),
+      makeConversationListItem({ id: 2, title: 'Smuggling Run', participant_names: 'Bob, Charlie' }),
+      makeConversationListItem({ id: 3, title: null, participant_names: 'Dana' }),
+    ]
+
+    const renderList = (initialRoute = '/') => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations })
+        })
+      )
+      renderWithProviders(
+        <ConversationList gameId={123} onSelectConversation={mockOnSelectConversation} />,
+        { initialRoute }
+      )
+    }
+
+    const filterTo = (text: string) => {
+      fireEvent.change(screen.getByTestId('conversation-filter'), { target: { value: text } })
+    }
+
+    it('filters on conversation title, ignoring case', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('old MILL')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('The Old Mill')[0]).toBeInTheDocument()
+    })
+
+    it('filters on participant names', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('bob')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(2)
+
+      filterTo('dana')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('Untitled Conversation')[0]).toBeInTheDocument()
+    })
+
+    it('requires every word to match, across title and participants', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      // "bob" is in two conversations, "smuggling" narrows it to one
+      filterTo('bob smuggling')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('Smuggling Run')[0]).toBeInTheDocument()
+    })
+
+    it('does not match message text', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('docks')
+
+      expect(screen.queryAllByTestId('conversation-item')).toHaveLength(0)
+    })
+
+    it('shows a no-match state that clears the filter', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('zzz')
+
+      expect(screen.getByText('No conversations match "zzz"')).toBeInTheDocument()
+      expect(screen.queryByText('No conversations yet')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }))
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(3)
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+    })
+
+    it('restores the filter from the URL, so it survives opening a conversation and coming back', async () => {
+      renderList('/?conversationFilter=charlie')
+
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('charlie')
+    })
+
+    it('is hidden when there are no conversations at all', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: [] })
+        })
+      )
+      renderWithProviders(
+        <ConversationList gameId={123} onSelectConversation={mockOnSelectConversation} />
+      )
+
+      await waitFor(() => expect(screen.getByText('No conversations yet')).toBeInTheDocument())
+      expect(screen.queryByTestId('conversation-filter')).not.toBeInTheDocument()
+    })
+  })
 })
