@@ -16,6 +16,9 @@ interface ErrorResponse {
   message?: string;
 }
 
+/** Huma's validator wording, which is written for API clients, not people. */
+const RAW_SCHEMA_TEXT = /^(expected |unexpected property)/i;
+
 /**
  * Maps authentication-related errors to user-friendly messages
  */
@@ -130,11 +133,15 @@ export function mapAuthError(error: ErrorResponse | unknown): string {
   if (rawError?.response?.status) {
     const status = rawError.response.status;
     // 400 (could not parse) and 422 (parsed, failed validation) are both
-    // "your input was wrong". The specific-message branches above already
-    // caught anything we can phrase well; reaching here means the message is
-    // raw server text -- for 422 that is a schema error like
-    // "expected length >= 8 (body.password: x)", which must not be shown.
+    // "your input was wrong". The backend phrases validation failures for
+    // people ("Username must be at most 20 characters"), so show what it said.
+    // Raw validator text ("expected length >= 8 (body.password: x)") is still
+    // refused, should it ever get through unphrased.
     if (status === 400 || status === 422) {
+      const apiMessage = extractApiErrorMessage(error);
+      if (apiMessage && !RAW_SCHEMA_TEXT.test(apiMessage)) {
+        return apiMessage;
+      }
       return 'Invalid request. Please check your information and try again.';
     }
     if (status === 401) {

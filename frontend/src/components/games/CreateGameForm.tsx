@@ -140,13 +140,9 @@ export const CreateGameForm = ({
         onSuccess?.(gameId);
       }
     } catch (err: unknown) {
-      const axiosErr = err as { message?: string };
-      const errorMessage =
-        extractApiErrorMessage(err) ||
-        (axiosErr?.message && axiosErr.message !== 'Network Error'
-          ? axiosErr.message
-          : 'Failed to create game');
-      setError(errorMessage);
+      // Not axios' own err.message: that is "Request failed with status code
+      // 422", which tells the GM nothing they can fix.
+      setError(extractApiErrorMessage(err) ?? 'Failed to create game. Please try again.');
     } finally {
       setLoading(false);
     }

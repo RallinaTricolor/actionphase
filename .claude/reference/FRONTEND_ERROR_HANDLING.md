@@ -40,6 +40,22 @@ interface AppError extends Error {
 ### Error Sources and Handling
 
 #### 1. API/Network Errors
+
+**`error.message` is already user-facing (since 2026-10-21).** The API client's
+response interceptor (`lib/api/client.ts`) replaces axios' own message
+("Request failed with status code 422") with `userFacingApiMessage()` from
+`lib/errors.ts`: the server's `detail`, or its field-level `errors[]` messages
+when `detail` is the generic "validation failed", or a plain-language line for
+the status. 5xx details are never shown. Network failures (no response) keep
+axios' message. So `error instanceof Error ? error.message : 'Fallback'` is
+safe in components; `extractApiErrorMessage(err) ?? 'Fallback'` is equivalent
+and preferred in new code.
+
+Backend validation messages arrive already phrased for people
+("Description must be at least 10 characters"); see
+`backend/pkg/humaconfig/messages.go`. Still mirror simple limits client-side
+so the user hears about them before submitting.
+
 Handled by `createAppError()` function which processes Axios errors:
 
 ```typescript

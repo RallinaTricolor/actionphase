@@ -160,6 +160,31 @@ func (s *UserService) CreateUser(user *User) (*User, error) {
 
 ### Validation Errors
 
+Request validation lives in huma struct tags (`minLength`, `required`,
+`minimum`, ...) and `Resolve` hooks. Huma's raw wording ("expected length >=
+10") is rewritten for people in one place, `backend/pkg/humaconfig/messages.go`,
+which every huma error passes through:
+
+```json
+{
+  "status": 422,
+  "detail": "Description must be at least 10 characters",
+  "errors": [{ "message": "Description must be at least 10 characters", "location": "body.description" }]
+}
+```
+
+- The field label comes from the JSON name: `max_players` → "Max players",
+  `community_id` → "Community".
+- `detail` summarises the field errors, one sentence per field, replacing
+  huma's generic "validation failed". A detail a handler chose is kept.
+- A missing property is reported at `body.<field>`, not huma's bare `body`.
+- Messages a `Resolve` hook returns should be prose
+  ("deadline must be in the future"); a leading JSON field name is swapped for
+  its label and the first letter capitalised.
+- Assert on the humanized text in tests: it is what users see.
+
+Older pattern, still used in some services:
+
 ```go
 func validateGameRequest(req CreateGameRequest) error {
     if req.Title == "" {

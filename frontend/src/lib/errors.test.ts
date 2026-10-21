@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AxiosError } from 'axios';
-import { createAppError, extractApiErrorMessage } from './errors';
+import { createAppError, extractApiErrorMessage, userFacingApiMessage } from './errors';
 import { ERROR_MESSAGES } from '../types/errors';
 
 /**
@@ -35,7 +35,9 @@ describe('extractApiErrorMessage', () => {
     ).toBe('title is required');
   });
 
-  it('joins field-level messages from the RFC 7807 errors array', () => {
+  it('prefers field-level messages over a generic "validation failed" detail', () => {
+    // Regression: a GM whose game description was too short saw only
+    // "validation failed", with no hint of which field or why.
     expect(
       extractApiErrorMessage(
         axios422({
@@ -43,14 +45,29 @@ describe('extractApiErrorMessage', () => {
           status: 422,
           detail: 'validation failed',
           errors: [
-            { message: 'expected length >= 8', location: 'body.password' },
-            { message: 'expected a valid email', location: 'body.email' },
+            { message: 'Description must be at least 10 characters', location: 'body.description' },
+            { message: 'Title is required', location: 'body' },
           ],
         })
       )
-      // `detail` wins when present -- it is specific to the occurrence. The
-      // array is the fallback for bodies that carry only field errors.
-    ).toBe('validation failed');
+    ).toBe('Description must be at least 10 characters. Title is required');
+  });
+
+  it('prefers a specific detail over the errors array', () => {
+    // The backend summarises field errors into detail; when it has, detail is
+    // the one to show.
+    expect(
+      extractApiErrorMessage(
+        axios422({
+          detail: 'Description must be at least 10 characters',
+          errors: [{ message: 'Description must be at least 10 characters', location: 'body.description' }],
+        })
+      )
+    ).toBe('Description must be at least 10 characters');
+  });
+
+  it('still shows a generic detail when there is nothing more specific', () => {
+    expect(extractApiErrorMessage(axios422({ detail: 'validation failed' }))).toBe('validation failed');
   });
 
   it('falls back to the errors array when detail is absent', () => {
@@ -211,13 +228,13 @@ describe('extractApiErrorMessage against live API payloads', () => {
             status: 422,
             detail: 'validation failed',
             errors: [
-              { message: 'expected length >= 3', location: 'body.title', value: '' },
-              { message: 'title must not be blank', location: 'body.title' },
+              { message: 'Title must be at least 3 characters', location: 'body.title', value: '' },
+              { message: 'Description is required', location: 'body.description' },
             ],
           },
         },
       })
-    ).toBe('validation failed');
+    ).toBe('Title must be at least 3 characters. Description is required');
   });
 
   it('never renders the numeric status as the message', () => {
@@ -226,5 +243,34 @@ describe('extractApiErrorMessage against live API payloads', () => {
     for (const status of [401, 403, 404, 422, 500]) {
       expect(extractApiErrorMessage({ response: { data: { status } } })).toBeUndefined();
     }
+  });
+});
+
+describe('userFacingApiMessage', () => {
+  function failed(status: number, data: unknown): AxiosError {
+    const err = new AxiosError(`Request failed with status code ${status}`);
+    err.response = { status, data } as AxiosError['response'];
+    return err;
+  }
+
+  it('uses what the server said', () => {
+    expect(userFacingApiMessage(400, failed(400, { detail: 'That phase has already ended' })))
+      .toBe('That phase has already ended');
+  });
+
+  it('never returns axios\' "Request failed with status code" text', () => {
+    for (const status of [400, 401, 403, 404, 409, 422, 429, 500, 502]) {
+      expect(userFacingApiMessage(status, failed(status, '<html>proxy error</html>')))
+        .not.toMatch(/status code/i);
+    }
+  });
+
+  it('falls back to a plain-language line for an empty 404', () => {
+    expect(userFacingApiMessage(404, failed(404, ''))).toMatch(/could not be found/i);
+  });
+
+  it('never shows a 5xx detail, which may carry internal error text', () => {
+    expect(userFacingApiMessage(500, failed(500, { detail: 'pq: relation "games" does not exist' })))
+      .toBe(ERROR_MESSAGES.SERVER_ERROR);
   });
 });

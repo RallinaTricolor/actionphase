@@ -26,7 +26,8 @@ import (
 )
 
 // InstallProblemErrorFormat makes huma stamp the correlation ID into the
-// RFC 7807 `instance` field.
+// RFC 7807 `instance` field, and rewrites validation failures into messages a
+// person can act on (see humanizeValidation).
 //
 // Huma's own ErrorModel is already RFC 7807-compliant, so the body shape needs
 // no help. The one thing huma cannot know is our correlation ID, and the hook
@@ -48,6 +49,7 @@ func InstallProblemErrorFormat() {
 		if !ok {
 			return err
 		}
+		humanizeValidation(model)
 		if ctx != nil {
 			if id := observability.GetCorrelationID(ctx.Context()); id != "" {
 				model.Instance = CorrelationInstance(id)

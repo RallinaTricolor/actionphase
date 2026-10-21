@@ -272,6 +272,19 @@ describe('mapAuthError', () => {
       expect(mapAuthError(error)).toBe('Invalid request. Please check your information and try again.');
     });
 
+    it('shows a validation message the backend phrased for people', () => {
+      const error = {
+        response: {
+          status: 422,
+          data: {
+            detail: 'validation failed',
+            errors: [{ message: 'Display name must be at most 50 characters', location: 'body.display_name' }],
+          },
+        },
+      };
+      expect(mapAuthError(error)).toBe('Display name must be at most 50 characters');
+    });
+
     it('maps 401 Unauthorized', () => {
       const error = {
         response: {

@@ -15,9 +15,15 @@ import {
 import { logger } from '@/services/LoggingService';
 
 /**
+ * Details that say only that something failed, not what. Huma sends
+ * "validation failed" alongside the field errors that explain it.
+ */
+const GENERIC_DETAILS = new Set(['validation failed']);
+
+/**
  * Pulls a displayable message out of an RFC 7807 problem document
  * (see `ApiError`), preferring `detail`, then field-level `errors[]`, then
- * `title`.
+ * `title`. A generic detail ("validation failed") ranks below `errors[]`.
  *
  * Deliberately never returns `status`: under RFC 7807 it is the numeric status
  * code, so falling back to it renders a bare `403` as the user's error message,
@@ -32,19 +38,25 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
   const body = extractApiErrorBody(error);
   if (!body) return undefined;
 
-  if (typeof body.detail === 'string' && body.detail.trim() !== '') {
-    return body.detail;
+  const detail = typeof body.detail === 'string' ? body.detail.trim() : '';
+  if (detail !== '' && !GENERIC_DETAILS.has(detail.toLowerCase())) {
+    return detail;
   }
 
-  // Field-level validation failures. `detail` for these is generic
-  // ("validation failed"), so the individual messages are what a user can act
-  // on; join them rather than surfacing only the first.
+  // Field-level validation failures. The backend summarises these into
+  // `detail`, but should a generic detail ("validation failed") ever reach us,
+  // the individual messages are what a user can act on; join them rather than
+  // surfacing only the first.
   const details = Array.isArray(body.errors) ? body.errors : [];
   const messages = details
-    .map((detail: ApiErrorDetail) => detail?.message)
+    .map((errorDetail: ApiErrorDetail) => errorDetail?.message)
     .filter((message): message is string => typeof message === 'string' && message.trim() !== '');
   if (messages.length > 0) {
     return messages.join('. ');
+  }
+
+  if (detail !== '') {
+    return detail;
   }
 
   // `title` is a static summary of the error class rather than of this
@@ -54,6 +66,35 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * The message to show a person for a failed API response: what the server
+ * said, or a plain-language line for its status when it said nothing usable
+ * (a proxy's HTML 502, an empty 404).
+ *
+ * Exists because axios' own `error.message` is "Request failed with status
+ * code 422", and most components display `error.message` directly. The API
+ * client's response interceptor overwrites it with this before rejecting.
+ */
+export function userFacingApiMessage(status: number, error: unknown): string {
+  // A 5xx detail may carry internal error text, and there is nothing the user
+  // can fix anyway, so it is never shown.
+  if (status >= 500) return ERROR_MESSAGES.SERVER_ERROR;
+  const apiMessage = extractApiErrorMessage(error);
+  if (apiMessage) return apiMessage;
+  switch (status) {
+    case 401:
+      return ERROR_MESSAGES.SESSION_EXPIRED;
+    case 403:
+      return ERROR_MESSAGES.UNAUTHORIZED;
+    case 404:
+      return 'The requested item could not be found. It may have been removed.';
+    case 429:
+      return 'Too many requests. Please wait a moment and try again.';
+    default:
+      return ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
 }
 
 /**

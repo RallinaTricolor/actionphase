@@ -4,6 +4,11 @@ import type { GameFormData } from '@/components/games/GameFormFields';
 import { convertToISO8601, formatDateTimeLocal } from '../lib/utils/dates';
 import { useUploadGameBanner, useDeleteGameBanner } from './useGameBanner';
 
+// Mirrors minLength on the backend's create/update game bodies. Checked here
+// so the GM is told before submitting; the server enforces the same limits.
+export const GAME_TITLE_MIN_LENGTH = 3;
+export const GAME_DESCRIPTION_MIN_LENGTH = 10;
+
 const BLANK_FORM_DATA: GameFormData = {
   title: '',
   description: '',
@@ -143,8 +148,17 @@ export function useGameForm(initialData?: GameWithDetails) {
     if (!formData.title.trim()) {
       return { payload: null, error: 'Game title is required' };
     }
+    if (formData.title.trim().length < GAME_TITLE_MIN_LENGTH) {
+      return { payload: null, error: `Game title must be at least ${GAME_TITLE_MIN_LENGTH} characters` };
+    }
     if (!formData.description.trim()) {
       return { payload: null, error: 'Game description is required' };
+    }
+    if (formData.description.trim().length < GAME_DESCRIPTION_MIN_LENGTH) {
+      return {
+        payload: null,
+        error: `Game description must be at least ${GAME_DESCRIPTION_MIN_LENGTH} characters`,
+      };
     }
     if (requireCommunity && (formData.community_id === '' || formData.community_id === undefined)) {
       return { payload: null, error: 'Please choose a community for this game' };
