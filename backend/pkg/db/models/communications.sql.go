@@ -11,6 +11,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addCharacterControllersToConversations = `-- name: AddCharacterControllersToConversations :exec
+INSERT INTO conversation_participants (conversation_id, user_id, character_id)
+SELECT DISTINCT cp.conversation_id, controller.user_id, cp.character_id
+FROM conversation_participants cp
+CROSS JOIN unnest($1::int[]) AS controller(user_id)
+WHERE cp.character_id = $2
+ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
+`
+
+type AddCharacterControllersToConversationsParams struct {
+	UserIds     []int32     `json:"user_ids"`
+	CharacterID pgtype.Int4 `json:"character_id"`
+}
+
+// Gives each of @user_ids a participant row for @character_id in every
+// conversation that character is already in. Used when control of a character
+// changes, so its new controller sees the conversations it joined before the
+// handoff (see syncCharacterConversationParticipants).
+func (q *Queries) AddCharacterControllersToConversations(ctx context.Context, arg AddCharacterControllersToConversationsParams) error {
+	_, err := q.db.Exec(ctx, addCharacterControllersToConversations, arg.UserIds, arg.CharacterID)
+	return err
+}
+
 const addConversationParticipant = `-- name: AddConversationParticipant :one
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
 VALUES ($1, $2, $3)
@@ -1534,6 +1557,24 @@ func (q *Queries) ListRecentUnreadCommentsWithParents(ctx context.Context, arg L
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeCharacterControllersFromConversations = `-- name: RemoveCharacterControllersFromConversations :exec
+DELETE FROM conversation_participants
+WHERE character_id = $1
+  AND NOT (user_id = ANY($2::int[]))
+`
+
+type RemoveCharacterControllersFromConversationsParams struct {
+	CharacterID pgtype.Int4 `json:"character_id"`
+	UserIds     []int32     `json:"user_ids"`
+}
+
+// Drops @character_id's participant rows for every user not in @user_ids: the
+// previous controller stops receiving the character's conversations.
+func (q *Queries) RemoveCharacterControllersFromConversations(ctx context.Context, arg RemoveCharacterControllersFromConversationsParams) error {
+	_, err := q.db.Exec(ctx, removeCharacterControllersFromConversations, arg.CharacterID, arg.UserIds)
+	return err
 }
 
 const removeConversationParticipant = `-- name: RemoveConversationParticipant :exec

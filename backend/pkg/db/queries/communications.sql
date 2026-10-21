@@ -208,6 +208,25 @@ VALUES ($1, $2, $3)
 ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
 RETURNING *;
 
+-- name: AddCharacterControllersToConversations :exec
+-- Gives each of @user_ids a participant row for @character_id in every
+-- conversation that character is already in. Used when control of a character
+-- changes, so its new controller sees the conversations it joined before the
+-- handoff (see syncCharacterConversationParticipants).
+INSERT INTO conversation_participants (conversation_id, user_id, character_id)
+SELECT DISTINCT cp.conversation_id, controller.user_id, cp.character_id
+FROM conversation_participants cp
+CROSS JOIN unnest(sqlc.arg(user_ids)::int[]) AS controller(user_id)
+WHERE cp.character_id = sqlc.arg(character_id)
+ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING;
+
+-- name: RemoveCharacterControllersFromConversations :exec
+-- Drops @character_id's participant rows for every user not in @user_ids: the
+-- previous controller stops receiving the character's conversations.
+DELETE FROM conversation_participants
+WHERE character_id = sqlc.arg(character_id)
+  AND NOT (user_id = ANY(sqlc.arg(user_ids)::int[]));
+
 -- name: GetConversationParticipants :many
 SELECT cp.*, u.username, c.name as character_name
 FROM conversation_participants cp

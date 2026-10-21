@@ -1294,14 +1294,22 @@ func (gs *GameService) PromoteToCoGM(ctx context.Context, gameID, userID, reques
 	}
 
 	// 5. Update participant role to co_gm
-	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
-		GameID: gameID,
-		UserID: userID,
-		Role:   "co_gm",
+	// Co-GMs control every NPC, so the role change moves the game's NPC
+	// conversations into (or out of) this user's inbox in the same transaction.
+	err = pgx.BeginFunc(ctx, gs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		if _, err := qtx.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+			GameID: gameID,
+			UserID: userID,
+			Role:   "co_gm",
+		}); err != nil {
+			return fmt.Errorf("failed to update participant role: %w", err)
+		}
+		return syncGameNPCConversationParticipants(ctx, qtx, gameID)
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update participant role: %w", err)
+		return err
 	}
 
 	gs.Logger.Info(ctx, "User promoted to co-GM",
@@ -1356,14 +1364,22 @@ func (gs *GameService) DemoteFromCoGM(ctx context.Context, gameID, userID, reque
 	}
 
 	// 4. Update participant role to audience
-	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
-		GameID: gameID,
-		UserID: userID,
-		Role:   "audience",
+	// Co-GMs control every NPC, so the role change moves the game's NPC
+	// conversations into (or out of) this user's inbox in the same transaction.
+	err = pgx.BeginFunc(ctx, gs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		if _, err := qtx.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+			GameID: gameID,
+			UserID: userID,
+			Role:   "audience",
+		}); err != nil {
+			return fmt.Errorf("failed to update participant role: %w", err)
+		}
+		return syncGameNPCConversationParticipants(ctx, qtx, gameID)
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update participant role: %w", err)
+		return err
 	}
 
 	gs.Logger.Info(ctx, "Co-GM demoted to audience",

@@ -31,6 +31,22 @@ Key columns:
 
 - `conversations` — `conversation_type` is `'direct'` or `'group'`
 - `conversation_participants` — who is in it (user + optional character)
+  - One row per **controller** of each character: a player character's owner;
+    for an NPC, the GM, every co-GM and its assignee (same rule as
+    `core.CanUserControlNPC`)
+  - The inbox, message reads, sends, read tracking and notifications all key
+    on `user_id`, so rows **follow control**: NPC assignment, character
+    reassignment and co-GM promote/demote re-sync them in the same transaction
+    (`syncCharacterConversationParticipants`,
+    `backend/pkg/db/services/conversation_participants.go`)
+  - **Holding a row ≠ being notified.** A message notifies, per recipient
+    character, only who *answers* for it (`characterAnswererUserIDs`): a player
+    character's owner, an assigned NPC's assignee, or the GM + co-GMs for an
+    unassigned NPC. GMs keep assigned NPCs' conversations in their inbox but
+    are not notified about them, or they'd be flooded
+  - ❌ Never write participant rows by hand or snapshot a controller elsewhere;
+    a new controller would not see conversations from before the handoff
+    (fixed 2026-10-21)
 - `private_messages` — the message bodies
 - ⚠️ `conversations` has **no `phase_id`** — conversations span phases
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -307,10 +308,18 @@ func (cs *CharacterService) AssignNPCToUser(ctx context.Context, characterID, as
 		return fmt.Errorf("character is not an NPC")
 	}
 
-	_, err = queries.AssignNPCToUser(ctx, models.AssignNPCToUserParams{
-		CharacterID:      characterID,
-		AssignedUserID:   assignedUserID,
-		AssignedByUserID: assignedByUserID,
+	// The assignment and the NPC's conversation participants change together,
+	// so the new controller never holds the NPC without its conversations.
+	err = pgx.BeginFunc(ctx, cs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		if _, err := qtx.AssignNPCToUser(ctx, models.AssignNPCToUserParams{
+			CharacterID:      characterID,
+			AssignedUserID:   assignedUserID,
+			AssignedByUserID: assignedByUserID,
+		}); err != nil {
+			return err
+		}
+		return syncCharacterConversationParticipants(ctx, qtx, characterID)
 	})
 
 	if err != nil {
@@ -537,9 +546,19 @@ func (cs *CharacterService) ReassignCharacter(ctx context.Context, characterID, 
 
 	queries := models.New(cs.DB)
 
-	character, err := queries.ReassignCharacter(ctx, models.ReassignCharacterParams{
-		ID:     characterID,
-		UserID: pgtype.Int4{Int32: newOwnerUserID, Valid: true},
+	// The new owner takes over the character's conversations along with it.
+	var character models.Character
+	err := pgx.BeginFunc(ctx, cs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		var err error
+		character, err = qtx.ReassignCharacter(ctx, models.ReassignCharacterParams{
+			ID:     characterID,
+			UserID: pgtype.Int4{Int32: newOwnerUserID, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		return syncCharacterConversationParticipants(ctx, qtx, characterID)
 	})
 
 	if err != nil {
@@ -796,10 +815,20 @@ func (cs *CharacterService) AssignNPCToAudience(ctx context.Context, characterID
 	}
 
 	// Create or update the assignment
-	assignment, err := queries.AssignNPCToAudience(ctx, models.AssignNPCToAudienceParams{
-		CharacterID:      characterID,
-		AssignedUserID:   assignedUserID,
-		AssignedByUserID: assignedByUserID,
+	// See AssignNPCToUser: the conversations move with the assignment.
+	var assignment models.NpcAssignment
+	err = pgx.BeginFunc(ctx, cs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		var err error
+		assignment, err = qtx.AssignNPCToAudience(ctx, models.AssignNPCToAudienceParams{
+			CharacterID:      characterID,
+			AssignedUserID:   assignedUserID,
+			AssignedByUserID: assignedByUserID,
+		})
+		if err != nil {
+			return err
+		}
+		return syncCharacterConversationParticipants(ctx, qtx, characterID)
 	})
 
 	if err != nil {
