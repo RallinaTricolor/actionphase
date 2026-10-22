@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AxiosError } from 'axios';
-import { createAppError, extractApiErrorMessage } from './errors';
+import { createAppError, extractApiErrorMessage, userFacingApiMessage } from './errors';
 import { ERROR_MESSAGES } from '../types/errors';
 
 /**
@@ -35,7 +35,9 @@ describe('extractApiErrorMessage', () => {
     ).toBe('title is required');
   });
 
-  it('joins field-level messages from the RFC 7807 errors array', () => {
+  it('prefers field-level messages over a generic "validation failed" detail', () => {
+    // Regression: a GM whose game description was too short saw only
+    // "validation failed", with no hint of which field or why.
     expect(
       extractApiErrorMessage(
         axios422({
@@ -43,14 +45,29 @@ describe('extractApiErrorMessage', () => {
           status: 422,
           detail: 'validation failed',
           errors: [
-            { message: 'expected length >= 8', location: 'body.password' },
-            { message: 'expected a valid email', location: 'body.email' },
+            { message: 'Description must be at least 10 characters', location: 'body.description' },
+            { message: 'Title is required', location: 'body' },
           ],
         })
       )
-      // `detail` wins when present -- it is specific to the occurrence. The
-      // array is the fallback for bodies that carry only field errors.
-    ).toBe('validation failed');
+    ).toBe('Description must be at least 10 characters. Title is required');
+  });
+
+  it('prefers a specific detail over the errors array', () => {
+    // The backend summarises field errors into detail; when it has, detail is
+    // the one to show.
+    expect(
+      extractApiErrorMessage(
+        axios422({
+          detail: 'Description must be at least 10 characters',
+          errors: [{ message: 'Description must be at least 10 characters', location: 'body.description' }],
+        })
+      )
+    ).toBe('Description must be at least 10 characters');
+  });
+
+  it('still shows a generic detail when there is nothing more specific', () => {
+    expect(extractApiErrorMessage(axios422({ detail: 'validation failed' }))).toBe('validation failed');
   });
 
   it('falls back to the errors array when detail is absent', () => {
@@ -158,9 +175,11 @@ describe('extractApiErrorMessage against live API payloads', () => {
     ).toBe('admin privileges required');
   });
 
-  it('reads a 429 from the rate limiter', () => {
+  it('withholds a 429 from the rate limiter', () => {
     // tollbooth takes a fixed string, so this body alone carries no
-    // `instance` -- the one emitter that cannot.
+    // `instance` -- the one emitter that cannot. Its detail names the rate
+    // limit, which must never reach a user; the body's own `status` is what
+    // withholds it when the caller passes only the response.
     expect(
       extractApiErrorMessage({
         response: {
@@ -171,10 +190,10 @@ describe('extractApiErrorMessage against live API payloads', () => {
           },
         },
       })
-    ).toBe('Rate limit exceeded. Please try again later.');
+    ).toBeUndefined();
   });
 
-  it('reads a 500 from the panic recovery middleware', () => {
+  it('withholds a 500 from the panic recovery middleware', () => {
     // Shape asserted server-side by
     // TestErrorRecoveryMiddleware_EmitsProblemJSON; there is deliberately no
     // route that panics on demand to capture this from a live server.
@@ -189,7 +208,7 @@ describe('extractApiErrorMessage against live API payloads', () => {
           },
         },
       })
-    ).toBe('Internal server error');
+    ).toBeUndefined();
   });
 
   it('reads a 404 from a huma handler', () => {
@@ -211,13 +230,13 @@ describe('extractApiErrorMessage against live API payloads', () => {
             status: 422,
             detail: 'validation failed',
             errors: [
-              { message: 'expected length >= 3', location: 'body.title', value: '' },
-              { message: 'title must not be blank', location: 'body.title' },
+              { message: 'Title must be at least 3 characters', location: 'body.title', value: '' },
+              { message: 'Description is required', location: 'body.description' },
             ],
           },
         },
       })
-    ).toBe('validation failed');
+    ).toBe('Title must be at least 3 characters. Description is required');
   });
 
   it('never renders the numeric status as the message', () => {
@@ -225,6 +244,63 @@ describe('extractApiErrorMessage against live API payloads', () => {
     // RFC 7807, so a fallback chain reaching it shows the user a bare "422".
     for (const status of [401, 403, 404, 422, 500]) {
       expect(extractApiErrorMessage({ response: { data: { status } } })).toBeUndefined();
+    }
+  });
+});
+
+describe('userFacingApiMessage', () => {
+  function failed(status: number, data: unknown): AxiosError {
+    const err = new AxiosError(`Request failed with status code ${status}`);
+    err.response = { status, data } as AxiosError['response'];
+    return err;
+  }
+
+  it('uses what the server said', () => {
+    expect(userFacingApiMessage(400, failed(400, { detail: 'That phase has already ended' })))
+      .toBe('That phase has already ended');
+  });
+
+  it('never returns axios\' "Request failed with status code" text', () => {
+    for (const status of [400, 401, 403, 404, 409, 422, 429, 500, 502]) {
+      expect(userFacingApiMessage(status, failed(status, '<html>proxy error</html>')))
+        .not.toMatch(/status code/i);
+    }
+  });
+
+  it('falls back to a plain-language line for an empty 404', () => {
+    expect(userFacingApiMessage(404, failed(404, ''))).toMatch(/could not be found/i);
+  });
+
+  it('never shows a 5xx detail, which may carry internal error text', () => {
+    expect(userFacingApiMessage(500, failed(500, { detail: 'pq: relation "games" does not exist' })))
+      .toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+  });
+
+  it('never reveals rate limiting', () => {
+    const limited = failed(429, { title: 'Too Many Requests', status: 429, detail: 'Rate limit exceeded. Please try again later.' });
+    expect(userFacingApiMessage(429, limited)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+    expect(userFacingApiMessage(429, failed(429, ''))).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+  });
+
+  // Regression: components that call extractApiErrorMessage directly
+  // (CreateGameForm and ~20 others) showed a 5xx or 429 detail verbatim.
+  it('withholds a 5xx or 429 detail from direct extractApiErrorMessage callers', () => {
+    for (const status of [429, 500, 502, 503]) {
+      expect(extractApiErrorMessage(failed(status, { detail: 'pq: connection refused' })), `status ${status}`)
+        .toBeUndefined();
+    }
+  });
+
+  // Regression: createAppError worded statuses itself and disagreed with this
+  // (an empty 404 or 429 read "An unexpected error occurred"), so the text a
+  // user saw depended on which helper a component happened to call.
+  it('agrees with createAppError for every status, with and without a server message', () => {
+    for (const status of [400, 401, 403, 404, 409, 422, 429, 500, 501, 502, 503]) {
+      for (const data of ['', { detail: 'That phase has already ended' }]) {
+        const error = failed(status, data);
+        expect(createAppError(error).context?.userMessage, `status ${status}`)
+          .toBe(userFacingApiMessage(status, error));
+      }
     }
   });
 });

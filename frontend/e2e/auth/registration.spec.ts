@@ -65,9 +65,10 @@ test.describe('User Registration', () => {
     await page.getByTestId('register-confirm-password').fill('short');
     await page.getByTestId('register-submit').click();
 
-    // Error should appear after submission (mapped to user-friendly message)
+    // Error should appear after submission, naming each field that failed
     await expect(page.getByTestId('error-message')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=/invalid request/i')).toBeVisible();
+    await expect(page.getByTestId('error-message')).toContainText('Password must be at least 8 characters');
+    await expect(page.getByTestId('error-message')).toContainText('Username must be at least 3 characters');
 
     // Navigate back to login form
     await page.getByRole('button', { name: /Already have an account\? Sign in/i }).click();
@@ -78,7 +79,7 @@ test.describe('User Registration', () => {
 
     // CRITICAL: Error should NOT be visible on fresh form load
     await expect(page.getByTestId('error-message')).not.toBeVisible();
-    await expect(page.locator('text=/invalid request/i')).not.toBeVisible();
+    await expect(page.locator('text=/must be at least/i')).not.toBeVisible();
 
     // Form should be clean and ready for input
     await expect(page.getByTestId('register-username')).toHaveValue('');

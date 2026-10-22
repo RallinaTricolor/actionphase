@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logger, setCorrelationId } from '@/services/LoggingService';
+import { userFacingApiMessage } from '@/lib/errors';
 
 const API_BASE_URL = ''; // Use proxy in development
 
@@ -174,6 +175,14 @@ export class BaseApiClient {
             }
             return Promise.reject(refreshError);
           }
+        }
+
+        // Components display error.message directly, and axios sets it to
+        // "Request failed with status code 422". Replace it with what the
+        // server said, so every caller shows something a person can act on.
+        // Network failures (no response) keep axios' message.
+        if (error.response?.status) {
+          error.message = userFacingApiMessage(error.response.status, error);
         }
 
         return Promise.reject(error);

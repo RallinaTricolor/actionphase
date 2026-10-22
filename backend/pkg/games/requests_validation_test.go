@@ -19,10 +19,10 @@ func bindUpdate(t *testing.T, body string) (*updateGameBody, error) {
 // fields, so a blank title reached the service and surfaced to the GM as a 500
 // "unexpected error" rather than a 400.
 //
-// The constraints now live as huma tags rather than `validate` tags, so the
-// wording differs -- huma says "expected length >= 3" where core.ValidateStruct
-// said "title must be at least 3 characters". Every input rejected before is
-// still rejected, and with the same 400; only the message text moved.
+// The constraints now live as huma tags rather than `validate` tags. Huma's own
+// wording (expected length >= N) is rewritten by humaconfig into a sentence
+// naming the field, which is what these assert: the message is what the GM
+// sees, so it is part of the behaviour under test.
 func TestGameRequestTagValidation(t *testing.T) {
 	const goodDescription = "A description long enough to validate."
 
@@ -31,7 +31,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected a missing title to be rejected")
 		}
-		if !strings.Contains(err.Error(), "expected required property title to be present") {
+		if !strings.Contains(err.Error(), "Title is required") {
 			t.Errorf("expected a missing-property message, got %q", err.Error())
 		}
 	})
@@ -43,7 +43,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		}
 		// Trimmed to empty by the Resolve hook, then reported as blank rather
 		// than passing a whitespace title through to the database.
-		if !strings.Contains(err.Error(), "title must not be blank") {
+		if !strings.Contains(err.Error(), "Title must not be blank") {
 			t.Errorf("expected a blank-title message, got %q", err.Error())
 		}
 	})
@@ -53,7 +53,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected a two-character title to be rejected")
 		}
-		if !strings.Contains(err.Error(), "expected length >= 3") {
+		if !strings.Contains(err.Error(), "Title must be at least 3 characters") {
 			t.Errorf("expected a min-length message, got %q", err.Error())
 		}
 	})
@@ -63,7 +63,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected a five-character description to be rejected")
 		}
-		if !strings.Contains(err.Error(), "expected length >= 10") {
+		if !strings.Contains(err.Error(), "Description must be at least 10 characters") {
 			t.Errorf("expected a min-length message, got %q", err.Error())
 		}
 	})
@@ -89,7 +89,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected a whitespace-only title to be rejected")
 		}
-		if !strings.Contains(err.Error(), "title must not be blank") {
+		if !strings.Contains(err.Error(), "Title must not be blank") {
 			t.Errorf("expected a blank-title message, got %q", err.Error())
 		}
 	})
@@ -108,7 +108,7 @@ func TestGameRequestTagValidation(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected the body to be rejected")
 		}
-		if !strings.Contains(err.Error(), "expected length >= 3") {
+		if !strings.Contains(err.Error(), "Title must be at least 3 characters") {
 			t.Errorf("expected the title error to win, got %q", err.Error())
 		}
 		if strings.Contains(err.Error(), "schedule fields") {

@@ -1338,6 +1338,25 @@ func (q *Queries) UnassignNPC(ctx context.Context, characterID int32) error {
 	return err
 }
 
+const unassignUserNPCsInGame = `-- name: UnassignUserNPCsInGame :exec
+DELETE FROM npc_assignments na
+USING characters c
+WHERE na.character_id = c.id
+  AND c.game_id = $1
+  AND na.assigned_user_id = $2
+`
+
+type UnassignUserNPCsInGameParams struct {
+	GameID int32 `json:"game_id"`
+	UserID int32 `json:"user_id"`
+}
+
+// A user leaving or removed from a game gives up every NPC assigned to them.
+func (q *Queries) UnassignUserNPCsInGame(ctx context.Context, arg UnassignUserNPCsInGameParams) error {
+	_, err := q.db.Exec(ctx, unassignUserNPCsInGame, arg.GameID, arg.UserID)
+	return err
+}
+
 const updateCharacter = `-- name: UpdateCharacter :one
 UPDATE characters
 SET name = $2, status = $3, updated_at = NOW()

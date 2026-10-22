@@ -104,6 +104,15 @@ moves the *player* to the audience role). Inactive characters are listed via
 
 **See**: [character-workflows.md](resources/character-workflows.md)
 
+### NPC handoff keeps its conversations (2026-10-21)
+
+Whoever controls a character holds its `conversation_participants` rows, and
+those rows move whenever control changes: NPC assignment, character
+reassignment, co-GM promote/demote. A new controller gets every earlier
+conversation, history included; an NPC stays in the GM's and co-GMs' inbox even
+when assigned, but only the assignee is notified about messages to it. See
+[messaging-system.md](resources/messaging-system.md).
+
 ### Hidden NPCs (added 2026-09-22)
 
 `characters.is_hidden` conceals an NPC from regular players. GMs, co-GMs and

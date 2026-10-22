@@ -82,7 +82,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				"email":    "test@example.com",
 				"password": "123", // too short
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Registration with weak password should fail",
 		},
 		{
@@ -92,7 +92,7 @@ func TestAuthAPI_RegistrationEndpoint(t *testing.T) {
 				"email":    "invalid-email",
 				"password": "securepassword123",
 			},
-			expectedStatus: 400,
+			expectedStatus: http.StatusUnprocessableEntity,
 			description:    "Registration with invalid email should fail",
 		},
 		{

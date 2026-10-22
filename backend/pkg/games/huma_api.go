@@ -1503,7 +1503,11 @@ func (h *Handler) coGMTransition(ctx context.Context, in *userScopedInput, kind,
 		if err.Error() == forbiddenMsg {
 			return nil, h.logAndErr(ctx, core.ErrForbidden(err.Error()), "Role transition forbidden", "error", err.Error())
 		}
-		return nil, h.logAndErr(ctx, core.ErrBadRequest(err), "Bad role transition request", "error", err)
+		if errors.Is(err, core.ErrInvalidRoleTransition) {
+			return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrInvalidRoleTransition)),
+				"Bad role transition request", "error", err)
+		}
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Role transition failed", "error", err)
 	}
 
 	h.App.ObsLogger.Info(ctx, successMsg, "game_id", gameID, targetKey, in.UserID, actorKey, requestingUserID)

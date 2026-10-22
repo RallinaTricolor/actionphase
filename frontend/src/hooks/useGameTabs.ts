@@ -8,7 +8,8 @@ import { isPublicArchive } from '@/lib/gamePermissions';
 interface UseGameTabsOptions {
   gameState: GameState | undefined;
   isGM: boolean;
-  participantCount: number;
+  /** Filled player slots (game.current_players), shown as the People tab badge. */
+  playerCount: number;
   currentPhaseType?: string;
   isPhaseLoading?: boolean;
   isAudience?: boolean;
@@ -51,7 +52,7 @@ const icons = {
 export function useGameTabs({
   gameState,
   isGM,
-  participantCount,
+  playerCount,
   currentPhaseType,
   isPhaseLoading = false,
   isAudience = false,
@@ -85,7 +86,7 @@ export function useGameTabs({
       // no confirmed participants yet.
     } else if (gameState === 'character_creation') {
       // People tab (combines Characters and Participants)
-      tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
+      tabList.push({ id: 'people', label: 'People', badge: playerCount, icon: icons.people });
       // Note: Applications tab removed - recruitment is closed, no new applications accepted
       // Handouts - players can reference materials while creating characters
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
@@ -138,7 +139,7 @@ export function useGameTabs({
       }
 
       // People tab (combines Characters and Participants)
-      tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
+      tabList.push({ id: 'people', label: 'People', badge: playerCount, icon: icons.people });
 
       // Handouts - available to all participants
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
@@ -158,7 +159,7 @@ export function useGameTabs({
       tabList.push({ id: 'history', label: 'History', icon: icons.history });
 
       // People tab (combines Characters and Participants) - same as in-progress games
-      tabList.push({ id: 'people', label: 'People', badge: participantCount, icon: icons.people });
+      tabList.push({ id: 'people', label: 'People', badge: playerCount, icon: icons.people });
 
       // Stats - completed games only. Cancelled games are excluded because the
       // stats endpoint serves completed games exclusively (a cancelled game is
@@ -210,7 +211,7 @@ export function useGameTabs({
     }
 
     return tabList;
-  }, [gameState, isGM, participantCount, currentPhaseType, isParticipant, isAudience, hasCharacters, unvotedPollsCount, hasSubmittedAction]);
+  }, [gameState, isGM, playerCount, currentPhaseType, isParticipant, isAudience, hasCharacters, unvotedPollsCount, hasSubmittedAction]);
 
   // Smart default tab selection logic based on game context
   const defaultTab = useMemo(() => {

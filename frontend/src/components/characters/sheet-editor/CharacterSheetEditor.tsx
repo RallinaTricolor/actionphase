@@ -21,15 +21,7 @@ interface CharacterSheetEditorProps {
 /** Compared as stored, so whitespace the backend would trim away is not a change. */
 const savedForm = (tabs: readonly SheetTab[]) => JSON.stringify(toSheetConfig(tabs));
 
-/**
- * Huma reports a rejected layout as `detail: "validation failed"` with the
- * reason in `errors[]`, so read those first; extractApiErrorMessage prefers
- * the generic detail.
- */
 function saveErrorMessage(error: unknown): string {
-  const errors = (error as { response?: { data?: { errors?: { message?: unknown }[] } } })?.response?.data?.errors;
-  const reasons = (errors ?? []).map((e) => e?.message).filter((m): m is string => typeof m === 'string' && m !== '');
-  if (reasons.length > 0) return reasons.join('. ');
   return extractApiErrorMessage(error) ?? 'Failed to save the character sheet. Please try again.';
 }
 

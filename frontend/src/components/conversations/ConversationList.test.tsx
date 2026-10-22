@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test-utils';
 import { makeConversationListItem } from '@/test-utils/factories';
 import { ConversationList } from './ConversationList'
@@ -8,8 +8,6 @@ import { server } from '@/mocks/server'
 import type { ConversationListItem } from '@/types/conversations'
 
 describe('ConversationList', () => {
-  const mockOnSelectConversation = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -74,7 +72,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -142,7 +139,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -221,7 +217,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -253,7 +248,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -291,14 +285,13 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
       expect(screen.getByText('Loading conversations...')).toBeInTheDocument()
     })
 
-    it('should call onSelectConversation when clicking a conversation', async () => {
+    it('links each conversation to its URL, keeping the current params', async () => {
       server.use(
         http.get('http://localhost:3000/api/v1/auth/me', () => {
           return HttpResponse.json({
@@ -317,18 +310,20 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
-        />
+        />,
+        { initialRoute: '/?tab=messages&conversationFilter=test' }
       )
 
       await waitFor(() => {
         expect(screen.getAllByText('Test Conversation')[0]).toBeInTheDocument()
       })
 
-      const conversationButton = screen.getByRole('link')
-      fireEvent.click(conversationButton)
-
-      expect(mockOnSelectConversation).toHaveBeenCalledWith(1)
+      // Opening a conversation is the link's navigation alone; see the
+      // browser-history tests in PrivateMessages.workflow.test.tsx
+      expect(screen.getByRole('link')).toHaveAttribute(
+        'href',
+        '/?tab=messages&conversationFilter=test&conversation=1'
+      )
     })
 
     it('should highlight selected conversation', async () => {
@@ -350,7 +345,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
           selectedConversationId={1}
         />
       )
@@ -376,7 +370,6 @@ describe('ConversationList', () => {
       renderWithProviders(
         <ConversationList
           gameId={123}
-          onSelectConversation={mockOnSelectConversation}
         />
       )
 
@@ -385,6 +378,207 @@ describe('ConversationList', () => {
       await waitFor(() => {
         expect(screen.getByText('No conversations yet')).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Filter bar', () => {
+    const conversations: ConversationListItem[] = [
+      makeConversationListItem({ id: 1, title: 'The Old Mill', participant_names: 'Alice, Bob', last_message: 'Meet at the docks' }),
+      makeConversationListItem({ id: 2, title: 'Smuggling Run', participant_names: 'Bob, Charlie' }),
+      makeConversationListItem({ id: 3, title: null, participant_names: 'Dana' }),
+    ]
+
+    const renderList = (initialRoute = '/') => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations })
+        })
+      )
+      return renderWithProviders(
+        <ConversationList gameId={123} />,
+        { initialRoute }
+      )
+    }
+
+    const filterTo = (text: string) => {
+      fireEvent.change(screen.getByTestId('conversation-filter'), { target: { value: text } })
+    }
+
+    it('filters on conversation title, ignoring case', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('old MILL')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('The Old Mill')[0]).toBeInTheDocument()
+    })
+
+    it('filters on participant names', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('bob')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(2)
+
+      filterTo('dana')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('Untitled Conversation')[0]).toBeInTheDocument()
+    })
+
+    it('requires every word to match, across title and participants', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      // "bob" is in two conversations, "smuggling" narrows it to one
+      filterTo('bob smuggling')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+      expect(screen.getAllByText('Smuggling Run')[0]).toBeInTheDocument()
+    })
+
+    it('does not match message text', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('docks')
+
+      expect(screen.queryAllByTestId('conversation-item')).toHaveLength(0)
+    })
+
+    it('shows a no-match state that clears the filter', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('zzz')
+
+      expect(screen.getByText('No conversations match "zzz"')).toBeInTheDocument()
+      expect(screen.queryByText('No conversations yet')).not.toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }))
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(3)
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+    })
+
+    it('restores the filter from the URL, so it survives opening a conversation and coming back', async () => {
+      renderList('/?conversationFilter=charlie')
+
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('charlie')
+    })
+
+    // Regression: the input copied the URL only on mount, so a link that drops
+    // the param (the Messages tab) left the list filtered with no filter in the
+    // URL, and conversation links stopped carrying it.
+    it('follows the URL when a navigation elsewhere changes the filter', async () => {
+      const { router } = renderList('/?conversationFilter=charlie')
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+
+      await act(async () => { await router.navigate('/') })
+
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(3)
+
+      await act(async () => { await router.navigate('/?conversationFilter=dana') })
+
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('dana')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+    })
+
+    it('keeps what is typed in step with the URL', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('bo')
+      filterTo('bob')
+
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=bob'))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('bob')
+    })
+
+    // Regression: useUrlParam dropped the text "null" from the URL, and the
+    // input then followed the URL and wiped what was typed.
+    it('keeps the filter text "null"', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('null')
+
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=null'))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('null')
+    })
+
+    // Regression: every keystroke was a router navigation, re-rendering the
+    // whole game page as the filter was typed.
+    it('writes the URL once typing pauses, not on every keystroke', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+      const searches: string[] = []
+      const unsubscribe = router.subscribe((state) => searches.push(state.location.search))
+
+      filterTo('b')
+      filterTo('bo')
+      filterTo('bob')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(2)
+      expect(router.state.location.search).toBe('')
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=bob'))
+      unsubscribe()
+      expect(new Set(searches)).toEqual(new Set(['?conversationFilter=bob']))
+    })
+
+    it('carries what was just typed in conversation links, before the URL catches up', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('smuggling')
+
+      const href = screen.getByTestId('conversation-item').closest('a')?.getAttribute('href') ?? ''
+      expect(new URLSearchParams(href.replace(/^\?/, '')).get('conversationFilter')).toBe('smuggling')
+    })
+
+    it('drops a pending URL write when a navigation elsewhere changes the filter', async () => {
+      const { router } = renderList('/?conversationFilter=charlie')
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+
+      filterTo('charlie smuggling')
+      await act(async () => { await router.navigate('/') })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      expect(router.state.location.search).toBe('')
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+    })
+
+    // Regression: the empty state checked filter === '', but a whitespace-only
+    // filter matches everything, so it showed a no-match message for "".
+    it('treats a whitespace-only filter as no filter', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: [] })
+        })
+      )
+      renderWithProviders(
+        <ConversationList gameId={123} />,
+        { initialRoute: '/?conversationFilter=%20' }
+      )
+
+      await waitFor(() => expect(screen.getByText('No conversations yet')).toBeInTheDocument())
+      expect(screen.queryByText(/No conversations match/)).not.toBeInTheDocument()
+    })
+
+    it('is hidden when there are no conversations at all', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: [] })
+        })
+      )
+      renderWithProviders(
+        <ConversationList gameId={123} />
+      )
+
+      await waitFor(() => expect(screen.getByText('No conversations yet')).toBeInTheDocument())
+      expect(screen.queryByTestId('conversation-filter')).not.toBeInTheDocument()
     })
   })
 })

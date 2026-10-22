@@ -682,13 +682,29 @@ func (q *Queries) ListExportCommentTree(ctx context.Context, parentID pgtype.Int
 }
 
 const listExportConversationParticipants = `-- name: ListExportConversationParticipants :many
-SELECT cp.conversation_id, u.username, ch.name AS character_name
-FROM conversation_participants cp
-JOIN conversations c ON cp.conversation_id = c.id
-JOIN users u ON cp.user_id = u.id
-LEFT JOIN characters ch ON cp.character_id = ch.id
-WHERE c.game_id = $1
-ORDER BY cp.conversation_id, cp.id
+WITH members AS (
+    SELECT DISTINCT cp.conversation_id, cp.character_id,
+           CASE WHEN cp.character_id IS NULL THEN cp.user_id END AS user_id
+    FROM conversation_participants cp
+    JOIN conversations c ON cp.conversation_id = c.id
+    WHERE c.game_id = $1
+),
+voices AS (
+    SELECT DISTINCT pm.conversation_id, pm.sender_character_id AS character_id, pm.sender_user_id AS user_id
+    FROM private_messages pm
+    JOIN conversations c ON pm.conversation_id = c.id
+    WHERE c.game_id = $1 AND pm.is_deleted = FALSE AND pm.sender_character_id IS NOT NULL
+)
+SELECT m.conversation_id, COALESCE(u.username, '')::text AS username, ch.name AS character_name
+FROM members m
+LEFT JOIN characters ch ON m.character_id = ch.id
+LEFT JOIN voices v ON v.conversation_id = m.conversation_id AND v.character_id = m.character_id
+LEFT JOIN users u ON u.id = COALESCE(
+    m.user_id,
+    v.user_id,
+    CASE WHEN ch.character_type <> 'npc' THEN ch.user_id END
+)
+ORDER BY m.conversation_id, ch.name, u.username
 `
 
 type ListExportConversationParticipantsRow struct {
@@ -697,6 +713,13 @@ type ListExportConversationParticipantsRow struct {
 	CharacterName  pgtype.Text `json:"character_name"`
 }
 
+// One entry per character in each conversation, labelled with the users who
+// spoke as it there. Participant rows can't say that: they name whoever
+// controls a character now (for an NPC the GM, every co-GM and its assignee),
+// so they would list the whole GM team against every NPC and drop whoever
+// played one before a handoff. A character that never spoke is labelled with
+// its owner, or, for an NPC, left with an empty username. A row whose
+// character was deleted (ON DELETE SET NULL) stands for its user.
 func (q *Queries) ListExportConversationParticipants(ctx context.Context, gameID int32) ([]ListExportConversationParticipantsRow, error) {
 	rows, err := q.db.Query(ctx, listExportConversationParticipants, gameID)
 	if err != nil {

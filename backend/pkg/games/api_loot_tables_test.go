@@ -961,7 +961,7 @@ func TestSetRandomLootForCharacterGivesEachRollAnID(t *testing.T) {
 
 		rec := roll(t, broken.ID)
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
-		assert.Contains(t, rec.Body.String(), `rolled \"Rumour\"`)
+		assert.Contains(t, rec.Body.String(), `Rolled \"Rumour\"`)
 
 		data, err := characterService.GetCharacterData(ctx, npc.ID)
 		require.NoError(t, err)

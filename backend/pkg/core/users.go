@@ -1,6 +1,8 @@
 package core
 
 import (
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -152,13 +154,40 @@ type UserService interface {
 	DeleteUser(id int) error
 }
 
+// Validate checks the user against its validate tags. A failure comes back as
+// sentences for the person registering ("Password must be at least 8
+// characters"), never go-playground's own "Key: 'User.Password' Error:Field
+// validation for 'Password' failed on the 'min' tag".
 func (u *User) Validate() error {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 	err := validate.Struct(u)
-	if err != nil {
-		return err
+	var fieldErrs validator.ValidationErrors
+	if errors.As(err, &fieldErrs) {
+		return errors.New(validationSentences(fieldErrs))
 	}
-	return nil
+	return err
+}
+
+// validationSentences words go-playground field errors for a person, one
+// sentence per field.
+func validationSentences(fieldErrs validator.ValidationErrors) string {
+	sentences := make([]string, 0, len(fieldErrs))
+	for _, fe := range fieldErrs {
+		label := fe.Field()
+		switch fe.Tag() {
+		case "required":
+			sentences = append(sentences, label+" is required")
+		case "min":
+			sentences = append(sentences, label+" must be at least "+fe.Param()+" characters")
+		case "max":
+			sentences = append(sentences, label+" must be at most "+fe.Param()+" characters")
+		case "email":
+			sentences = append(sentences, label+" must be a valid email address")
+		default:
+			sentences = append(sentences, label+" is not valid")
+		}
+	}
+	return strings.Join(sentences, ". ")
 }
 
 type Session struct {

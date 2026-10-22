@@ -1025,6 +1025,19 @@ func (gs *GameService) RemovePlayer(ctx context.Context, gameID, userID, gmUserI
 		return fmt.Errorf("failed to deactivate characters: %w", err)
 	}
 
+	// Someone no longer in the game controls none of its NPCs: withdraw any
+	// assigned to them, then re-sync the NPC conversations, which drops a
+	// departing co-GM or assignee from them.
+	if err := txQueries.UnassignUserNPCsInGame(ctx, models.UnassignUserNPCsInGameParams{
+		GameID: gameID,
+		UserID: userID,
+	}); err != nil {
+		return fmt.Errorf("failed to unassign NPCs: %w", err)
+	}
+	if err := syncGameNPCConversationParticipants(ctx, txQueries, gameID); err != nil {
+		return err
+	}
+
 	// Commit the transaction
 	gs.Logger.Debug(ctx, "Committing player removal transaction",
 		"game_id", gameID,
@@ -1275,12 +1288,12 @@ func (gs *GameService) PromoteToCoGM(ctx context.Context, gameID, userID, reques
 		UserID: userID,
 	})
 	if err != nil {
-		return fmt.Errorf("user is not a participant in this game: %w", err)
+		return participantLookupErr(err)
 	}
 
 	// 3. Verify target user is currently an audience member
 	if participant.Role != "audience" {
-		return fmt.Errorf("can only promote audience members to co-GM (current role: %s)", participant.Role)
+		return fmt.Errorf("%w: only audience members can be promoted to co-GM", core.ErrInvalidRoleTransition)
 	}
 
 	// 4. Verify no existing co-GM in the game
@@ -1290,18 +1303,26 @@ func (gs *GameService) PromoteToCoGM(ctx context.Context, gameID, userID, reques
 	}
 
 	if coGMCount > 0 {
-		return fmt.Errorf("game already has a co-GM, only one co-GM allowed per game")
+		return fmt.Errorf("%w: this game already has a co-GM", core.ErrInvalidRoleTransition)
 	}
 
 	// 5. Update participant role to co_gm
-	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
-		GameID: gameID,
-		UserID: userID,
-		Role:   "co_gm",
+	// Co-GMs control every NPC, so the role change moves the game's NPC
+	// conversations into (or out of) this user's inbox in the same transaction.
+	err = pgx.BeginFunc(ctx, gs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		if _, err := qtx.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+			GameID: gameID,
+			UserID: userID,
+			Role:   "co_gm",
+		}); err != nil {
+			return fmt.Errorf("failed to update participant role: %w", err)
+		}
+		return syncGameNPCConversationParticipants(ctx, qtx, gameID)
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update participant role: %w", err)
+		return err
 	}
 
 	gs.Logger.Info(ctx, "User promoted to co-GM",
@@ -1347,23 +1368,31 @@ func (gs *GameService) DemoteFromCoGM(ctx context.Context, gameID, userID, reque
 		UserID: userID,
 	})
 	if err != nil {
-		return fmt.Errorf("user is not a participant in this game: %w", err)
+		return participantLookupErr(err)
 	}
 
 	// 3. Verify target user is currently a co-GM
 	if participant.Role != "co_gm" {
-		return fmt.Errorf("can only demote co-GMs (current role: %s)", participant.Role)
+		return fmt.Errorf("%w: only a co-GM can be demoted", core.ErrInvalidRoleTransition)
 	}
 
 	// 4. Update participant role to audience
-	_, err = queries.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
-		GameID: gameID,
-		UserID: userID,
-		Role:   "audience",
+	// Co-GMs control every NPC, so the role change moves the game's NPC
+	// conversations into (or out of) this user's inbox in the same transaction.
+	err = pgx.BeginFunc(ctx, gs.DB, func(tx pgx.Tx) error {
+		qtx := queries.WithTx(tx)
+		if _, err := qtx.UpdateParticipantRole(ctx, models.UpdateParticipantRoleParams{
+			GameID: gameID,
+			UserID: userID,
+			Role:   "audience",
+		}); err != nil {
+			return fmt.Errorf("failed to update participant role: %w", err)
+		}
+		return syncGameNPCConversationParticipants(ctx, qtx, gameID)
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to update participant role: %w", err)
+		return err
 	}
 
 	gs.Logger.Info(ctx, "Co-GM demoted to audience",
@@ -1373,6 +1402,15 @@ func (gs *GameService) DemoteFromCoGM(ctx context.Context, gameID, userID, reque
 	)
 
 	return nil
+}
+
+// participantLookupErr words a failed role-change target lookup: a target who
+// isn't in the game is the GM's mistake, anything else is a database fault.
+func participantLookupErr(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("%w: that user is not in this game", core.ErrInvalidRoleTransition)
+	}
+	return fmt.Errorf("failed to get participant: %w", err)
 }
 
 // TransitionPlayerToAudience changes a player's role to audience without deactivating their characters.
@@ -1394,10 +1432,10 @@ func (gs *GameService) TransitionPlayerToAudience(ctx context.Context, gameID, u
 		UserID: userID,
 	})
 	if err != nil {
-		return fmt.Errorf("user is not a participant in this game: %w", err)
+		return participantLookupErr(err)
 	}
 	if participant.Role != "player" {
-		return fmt.Errorf("can only transition players to audience (current role: %s)", participant.Role)
+		return fmt.Errorf("%w: only players can be moved to the audience", core.ErrInvalidRoleTransition)
 	}
 
 	_, err = queries.TransitionParticipantToAudience(ctx, models.TransitionParticipantToAudienceParams{

@@ -156,7 +156,9 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
   const { tabs, activeTab, setActiveTab } = useGameTabs({
     gameState: game?.state,
     isGM,
-    participantCount: participants.length,
+    // Player slots, matching the header -- not participants.length, which also
+    // counts audience members and the co-GM.
+    playerCount: game?.current_players ?? 0,
     currentPhaseType: currentPhaseData?.phase?.phase_type,
     isPhaseLoading: isLoadingPhase,
     isAudience,

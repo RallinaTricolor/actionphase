@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -528,11 +528,105 @@ describe('PrivateMessages', () => {
         expect(screen.getAllByText('Deep Linked Conversation')[0]).toBeInTheDocument();
       });
 
-      // The conversation link calls onSelectConversation which sets the URL param
+      // The conversation link pushes the URL; the thread follows the param
       await user.click(screen.getAllByText('Deep Linked Conversation')[0]);
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
+      });
+    });
+
+    // Regression: the click handler replaced the list's history entry with the
+    // conversation before the link pushed it, so Back landed on the same
+    // conversation instead of the list.
+    describe('browser history', () => {
+      const mockThreadApis = () =>
+        server.use(
+          http.get('/api/v1/games/:gameId/conversations', () => {
+            return HttpResponse.json({ conversations: mockConversations });
+          }),
+          http.get('/api/v1/games/:gameId/conversations/:conversationId', () => {
+            return HttpResponse.json({
+              conversation: { id: 42, title: 'Deep Linked Conversation', conversation_type: 'direct' },
+              participants: [{ user_id: 1, character_id: 1, character_name: 'Alice', username: 'alice' }],
+            });
+          }),
+          http.get('/api/v1/conversations/:conversationId/messages', () => {
+            return HttpResponse.json({ messages: [] });
+          })
+        );
+
+      const openConversationFromList = async () => {
+        const user = userEvent.setup({ delay: null });
+        mockThreadApis();
+        const result = renderWithProviders(
+          <PrivateMessages
+            gameId={1}
+            characters={mockCharacters}
+            isAnonymous={false}
+            allowGroupConversations={true}
+            currentPhaseType="common_room"
+          />,
+          { gameId: 1, initialEntries: ['/?tab=messages'] }
+        );
+        await waitFor(() => {
+          expect(screen.getAllByText('Deep Linked Conversation')[0]).toBeInTheDocument();
+        });
+        await user.click(screen.getAllByText('Deep Linked Conversation')[0]);
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
+        });
+        return { user, router: result.router };
+      };
+
+      it('browser Back from a conversation returns to the list', async () => {
+        const { router } = await openConversationFromList();
+
+        await act(async () => { await router.navigate(-1); });
+
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
+        });
+        expect(router.state.location.search).toBe('?tab=messages');
+        expect(screen.getAllByText('Deep Linked Conversation')[0]).toBeInTheDocument();
+      });
+
+      it('the in-app back button steps back through history rather than adding an entry', async () => {
+        const { user, router } = await openConversationFromList();
+
+        await user.click(screen.getByRole('button', { name: /back to conversations/i }));
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
+        });
+
+        // Had it replaced the conversation's entry with a second copy of the
+        // list, Forward would have nowhere to go and the next Back would show
+        // the same list again.
+        await act(async () => { await router.navigate(1); });
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
+        });
+      });
+
+      // Regression: the back button only stepped back when the conversation's
+      // own entry came from the list. Re-opening it by a notification link
+      // pushed an entry without that mark, so the button replaced it with a
+      // copy of the list, and browser Back from there returned to the
+      // conversation.
+      it('the in-app back button returns to the list entry after a notification re-opens the conversation', async () => {
+        const { user, router } = await openConversationFromList();
+
+        // A notification link pushes the conversation's URL again.
+        await act(async () => { await router.navigate('/?tab=messages&conversation=42'); });
+        await user.click(screen.getByRole('button', { name: /back to conversations/i }));
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
+        });
+        expect(router.state.location.search).toBe('?tab=messages');
+
+        // Back on the original list entry, there is no conversation behind it.
+        await act(async () => { await router.navigate(-1); });
+        expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
       });
     });
 

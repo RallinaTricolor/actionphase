@@ -86,6 +86,22 @@ func TestGameAPI_PromoteToCoGM(t *testing.T) {
 
 		// Service returns validation error which maps to 400
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"detail":"Only audience members can be promoted to co-GM"`)
+	})
+
+	// Regression: the 400 carried the service's wrapped lookup error,
+	// "user is not a participant in this game: no rows in result set".
+	t.Run("promoting someone not in the game is a 400 that says so", func(t *testing.T) {
+		outsider := testDB.CreateTestUser(t, "outsider", "outsider@example.com")
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/participants/%d/promote-to-co-gm", game.ID, outsider.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"detail":"That user is not in this game"`)
+		assert.NotContains(t, rec.Body.String(), "no rows")
 	})
 }
 

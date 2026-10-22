@@ -4,6 +4,7 @@ import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { GAME_FORM_TABS } from './gameFormTabs';
 import type { GameFormTabId } from './gameFormTabs';
+import { GAME_TITLE_MIN_LENGTH, GAME_DESCRIPTION_MIN_LENGTH } from '@/hooks/useGameForm';
 
 export interface GameFormData {
   title: string;
@@ -130,6 +131,7 @@ export const GameFormFields = ({ formData, onChange, bannerUpload, activeTab, on
           value={formData.title}
           onChange={(e) => onChange('title', e.target.value)}
           placeholder="Enter a compelling game title"
+          helperText={`At least ${GAME_TITLE_MIN_LENGTH} characters`}
           maxLength={255}
           data-testid="game-title"
         />
@@ -142,6 +144,7 @@ export const GameFormFields = ({ formData, onChange, bannerUpload, activeTab, on
           rows={4}
           required
           placeholder="Describe your game world, setting, and what players can expect..."
+          helperText={`At least ${GAME_DESCRIPTION_MIN_LENGTH} characters`}
           data-testid="game-description"
         />
 

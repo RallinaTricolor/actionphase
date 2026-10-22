@@ -215,7 +215,7 @@ func TestCreateStagedResultChain(t *testing.T) {
 			{
 				name:   "head carrying a delay",
 				mutate: func(r *core.CreateStagedResultChainRequest) { r.Parts[0].DelayMinutes = 10 },
-				errMsg: "chain head and cannot have a delay",
+				errMsg: "part 1 is released first and cannot have a delay",
 			},
 		}
 
@@ -465,7 +465,7 @@ func TestCancelPendingPart(t *testing.T) {
 		// does not suggest it.
 		err = env.actionService.CancelPendingPart(ctx, chain[0].ID)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not a staged part")
+		assert.Contains(t, err.Error(), "not part of a staged chain")
 	})
 
 	t.Run("refuses to cancel a published head, which is already visible", func(t *testing.T) {
@@ -927,7 +927,7 @@ func TestUpdateStagedPartDelay(t *testing.T) {
 		_, err = env.actionService.UpdateStagedPartDelay(ctx, chain[0].ID, 30)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, core.ErrCannotEditChain)
-		assert.Contains(t, err.Error(), "chain head")
+		assert.Contains(t, err.Error(), "has no delay to change")
 	})
 
 	t.Run("rejects a delay outside the allowed range", func(t *testing.T) {
