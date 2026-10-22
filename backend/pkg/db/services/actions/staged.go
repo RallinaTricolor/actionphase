@@ -253,7 +253,7 @@ func (as *ActionSubmissionService) CancelPendingPart(ctx context.Context, result
 		// deletion, and routing it here would silently destroy the whole chain
 		// under a name that does not suggest it.
 		if !result.ParentResultID.Valid {
-			return fmt.Errorf("%w: result %d is not a staged part; use DeleteActionResult", core.ErrCannotCancelPart, resultID)
+			return fmt.Errorf("%w: result %d is not part of a staged chain", core.ErrCannotCancelPart, resultID)
 		}
 
 		if err := queries.DeletePublishedDrafts(ctx, resultID); err != nil {
@@ -321,8 +321,8 @@ func (as *ActionSubmissionService) AppendStagedPart(ctx context.Context, anchorI
 		}
 
 		if tail.PartCount >= core.MaxStagedChainLength {
-			return fmt.Errorf("%w: may have at most %d parts, chain already has %d",
-				core.ErrInvalidStagedChain, core.MaxStagedChainLength, tail.PartCount)
+			return fmt.Errorf("%w: a staged result can have at most %d parts",
+				core.ErrInvalidStagedChain, core.MaxStagedChainLength)
 		}
 
 		created, err = queries.CreateStagedResultPart(ctx, models.CreateStagedResultPartParams{
@@ -391,7 +391,7 @@ func (as *ActionSubmissionService) UpdateStagedPartDelay(ctx context.Context, re
 				return nil, fmt.Errorf("%w: part has already been released", core.ErrCannotEditChain)
 			}
 			if !existing.ParentResultID.Valid {
-				return nil, fmt.Errorf("%w: result %d is a chain head and has no delay", core.ErrCannotEditChain, resultID)
+				return nil, fmt.Errorf("%w: result %d is the first part of its chain and has no delay to change", core.ErrCannotEditChain, resultID)
 			}
 			return nil, fmt.Errorf("action result not found")
 		}
@@ -431,11 +431,11 @@ func (as *ActionSubmissionService) GetResultChain(ctx context.Context, resultID 
 // the database produces a blunt one.
 func validateStagedChainRequest(req core.CreateStagedResultChainRequest) error {
 	if len(req.Parts) < 2 {
-		return fmt.Errorf("%w: needs at least 2 parts, got %d; use CreateActionResult for a single result", core.ErrInvalidStagedChain, len(req.Parts))
+		return fmt.Errorf("%w: a staged result needs at least 2 parts", core.ErrInvalidStagedChain)
 	}
 
 	if len(req.Parts) > core.MaxStagedChainLength {
-		return fmt.Errorf("%w: may have at most %d parts, got %d", core.ErrInvalidStagedChain, core.MaxStagedChainLength, len(req.Parts))
+		return fmt.Errorf("%w: a staged result can have at most %d parts", core.ErrInvalidStagedChain, core.MaxStagedChainLength)
 	}
 
 	for i, part := range req.Parts {
@@ -449,7 +449,7 @@ func validateStagedChainRequest(req core.CreateStagedResultChainRequest) error {
 		// dropping it, since a GM who set it expected it to do something.
 		if i == 0 {
 			if part.DelayMinutes != 0 {
-				return fmt.Errorf("%w: part 1 is the chain head and cannot have a delay, got %d minutes", core.ErrInvalidStagedChain, part.DelayMinutes)
+				return fmt.Errorf("%w: part 1 is released first and cannot have a delay", core.ErrInvalidStagedChain)
 			}
 			continue
 		}

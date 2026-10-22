@@ -62,8 +62,8 @@ func TestMessageRequestValidation(t *testing.T) {
 		w := send(t, http.MethodPost, postsPath, body)
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Whitespace-only content should be rejected")
-		if !bytes.Contains(w.Body.Bytes(), []byte("content is required")) {
-			t.Errorf("expected 'content is required' in body, got %q", w.Body.String())
+		if !bytes.Contains(w.Body.Bytes(), []byte("Content is required")) {
+			t.Errorf("expected 'Content is required' in body, got %q", w.Body.String())
 		}
 	})
 
@@ -71,10 +71,9 @@ func TestMessageRequestValidation(t *testing.T) {
 		w := send(t, http.MethodPost, postsPath, `{"content": "orphan post"}`)
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Missing character_id should be rejected")
-		// The message names the offending field; the exact wording is huma's
-		// ("expected required property character_id to be present") and is not
-		// worth pinning, but the field name is the part clients read.
-		if !bytes.Contains(w.Body.Bytes(), []byte("character_id")) {
+		// The message is phrased for people ("Character is required"); the
+		// JSON field name a client maps errors with is in the location.
+		if !bytes.Contains(w.Body.Bytes(), []byte(`"location":"body.character_id"`)) {
 			t.Errorf("expected 'character_id' named in body, got %q", w.Body.String())
 		}
 		// The Go field name must not leak to clients.
@@ -110,8 +109,8 @@ func TestMessageRequestValidation(t *testing.T) {
 		w := send(t, http.MethodPatch, updatePath, `{"content": "  "}`)
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Whitespace-only edit should be rejected")
-		if !bytes.Contains(w.Body.Bytes(), []byte("content is required")) {
-			t.Errorf("expected 'content is required' in body, got %q", w.Body.String())
+		if !bytes.Contains(w.Body.Bytes(), []byte("Content is required")) {
+			t.Errorf("expected 'Content is required' in body, got %q", w.Body.String())
 		}
 	})
 }

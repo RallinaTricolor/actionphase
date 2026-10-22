@@ -70,6 +70,14 @@ RETURNING *;
 -- name: UnassignNPC :exec
 DELETE FROM npc_assignments WHERE character_id = $1;
 
+-- name: UnassignUserNPCsInGame :exec
+-- A user leaving or removed from a game gives up every NPC assigned to them.
+DELETE FROM npc_assignments na
+USING characters c
+WHERE na.character_id = c.id
+  AND c.game_id = @game_id
+  AND na.assigned_user_id = @user_id;
+
 -- name: GetNPCAssignment :one
 SELECT * FROM npc_assignments WHERE character_id = $1;
 

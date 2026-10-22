@@ -160,6 +160,46 @@ describe('CreateGameForm', () => {
       });
     });
 
+    it('tells the GM the minimum description length before submitting', async () => {
+      // Regression: a too-short description reached the server and came back
+      // as a bare "validation failed".
+      const user = userEvent.setup({ delay: null });
+      let requested = false;
+      server.use(
+        http.post('/api/v1/games', () => {
+          requested = true;
+          return HttpResponse.json({ id: 1 });
+        })
+      );
+      renderWithProviders(<CreateGameForm />);
+
+      expect(screen.getByText('At least 10 characters')).toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(/game title/i), 'Epic Game');
+      await user.type(screen.getByLabelText(/description/i), 'Too short');
+      await user.click(screen.getByRole('button', { name: /create game/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.getAllByText('Game description must be at least 10 characters').length
+        ).toBeGreaterThan(0);
+      });
+      expect(requested).toBe(false);
+    });
+
+    it('tells the GM the minimum title length before submitting', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(<CreateGameForm />);
+
+      await user.type(screen.getByLabelText(/game title/i), 'Ab');
+      await user.type(screen.getByLabelText(/description/i), 'A long enough description');
+      await user.click(screen.getByRole('button', { name: /create game/i }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Game title must be at least 3 characters').length).toBeGreaterThan(0);
+      });
+    });
+
     it('enforces max length on title field', () => {
       renderWithProviders(<CreateGameForm />);
 
@@ -415,6 +455,59 @@ describe('CreateGameForm', () => {
       });
     });
 
+    it('shows which field failed validation rather than a generic message', async () => {
+      // The shape huma sends when the backend's own summary is missing: the
+      // reason lives only in errors[].
+      const user = userEvent.setup({ delay: null });
+      server.use(
+        http.post('/api/v1/games', () =>
+          HttpResponse.json(
+            {
+              title: 'Unprocessable Entity',
+              status: 422,
+              detail: 'validation failed',
+              errors: [{ message: 'Genre must be at most 100 characters', location: 'body.genre' }],
+            },
+            { status: 422 }
+          )
+        )
+      );
+      renderWithProviders(<CreateGameForm />);
+
+      await user.type(screen.getByLabelText(/game title/i), 'Test Game');
+      await user.type(screen.getByLabelText(/description/i), 'Test Description');
+      await user.click(screen.getByRole('button', { name: /create game/i }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Genre must be at most 100 characters').length).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/validation failed/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/status code/i)).not.toBeInTheDocument();
+    });
+
+    it('never shows the GM a server error\'s internal detail', async () => {
+      // Regression: the form showed a 5xx detail verbatim.
+      const user = userEvent.setup({ delay: null });
+      server.use(
+        http.post('/api/v1/games', () =>
+          HttpResponse.json(
+            { title: 'Internal Server Error', status: 500, detail: 'pq: relation "games" does not exist' },
+            { status: 500 }
+          )
+        )
+      );
+      renderWithProviders(<CreateGameForm />);
+
+      await user.type(screen.getByLabelText(/game title/i), 'Test Game');
+      await user.type(screen.getByLabelText(/description/i), 'Test Description');
+      await user.click(screen.getByRole('button', { name: /create game/i }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Failed to create game. Please try again.').length).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/relation "games"/)).not.toBeInTheDocument();
+    });
+
     it('displays generic error for network failures', async () => {
       const user = userEvent.setup({ delay: null });
 
@@ -497,7 +590,7 @@ describe('CreateGameForm', () => {
 
       // Wait for error
       await waitFor(() => {
-        expect(screen.getAllByText(/error/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/failed to create game/i).length).toBeGreaterThan(0);
       });
 
       // Button should be re-enabled

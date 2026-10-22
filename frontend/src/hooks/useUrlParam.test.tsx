@@ -62,6 +62,25 @@ describe('useUrlParam', () => {
 
       expect(result.current.params.get('subTab')).toBeNull();
     });
+
+    // Regression: the text "null" was treated as an absent value and dropped,
+    // so it could never be typed into a URL-backed filter.
+    it('keeps the literal text "null"', () => {
+      const { result } = renderHook(
+        () => ({
+          param: useUrlParam<string>('filter', ''),
+          params: useCurrentParams(),
+        }),
+        { wrapper: makeWrapper('/') }
+      );
+
+      act(() => {
+        result.current.param[1]('null');
+      });
+
+      expect(result.current.params.get('filter')).toBe('null');
+      expect(result.current.param[0]).toBe('null');
+    });
   });
 
   describe('nullable string param', () => {

@@ -112,6 +112,27 @@ func TestConversationService_CreateConversation(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, participants, 2)
 	})
+
+	// The characters are looked up in one query, which simply returns no row
+	// for an unknown ID; that must still fail rather than create a
+	// conversation missing a participant.
+	t.Run("fails on an unknown character and creates nothing", func(t *testing.T) {
+		var before int
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM conversations").Scan(&before))
+
+		_, err := service.CreateConversation(context.Background(), CreateConversationRequest{
+			GameID:          game.ID,
+			Title:           "Ghost",
+			CreatedByUserID: int32(player1.ID),
+			ParticipantIDs:  []int32{char1.ID, 999999},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "999999")
+
+		var after int
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM conversations").Scan(&after))
+		assert.Equal(t, before, after)
+	})
 }
 
 func TestConversationService_SendMessage(t *testing.T) {

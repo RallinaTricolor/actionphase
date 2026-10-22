@@ -1373,7 +1373,7 @@ func TestGameService_PromoteToCoGM(t *testing.T) {
 			targetUserID:     9999, // Non-existent user
 			requestingUserID: int32(fixtures.TestUser.ID),
 			expectError:      true,
-			errorContains:    "not a participant",
+			errorContains:    "not in this game",
 		},
 	}
 
@@ -1478,7 +1478,7 @@ func TestGameService_PromoteToCoGM_OnlyAudienceCanBePromoted(t *testing.T) {
 	// Try to promote player to co-GM (should fail - must be audience first)
 	err = gameService.PromoteToCoGM(context.Background(), game.ID, int32(player.ID), int32(fixtures.TestUser.ID))
 	core.AssertError(t, err, "Expected error when promoting non-audience member")
-	core.AssertErrorContains(t, err, "only promote audience members", "Error message should mention audience requirement")
+	core.AssertErrorContains(t, err, "only audience members can be promoted", "Error message should mention audience requirement")
 
 	t.Log("Successfully verified that only audience members can be promoted to co-GM")
 }
@@ -1544,7 +1544,7 @@ func TestGameService_DemoteFromCoGM(t *testing.T) {
 			targetUserID:     int32(otherUser.ID), // Audience, not co-GM
 			requestingUserID: int32(fixtures.TestUser.ID),
 			expectError:      true,
-			errorContains:    "only demote co-GMs",
+			errorContains:    "only a co-GM can be demoted",
 		},
 	}
 

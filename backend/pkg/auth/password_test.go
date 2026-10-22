@@ -317,3 +317,26 @@ func TestPasswordValidationError(t *testing.T) {
 
 	assert.Equal(t, "password: too short", err.Error())
 }
+
+// Error() is "password: must ..." for logs; what a person sees must be a
+// sentence that names the field once.
+func TestPasswordValidationError_UserMessage(t *testing.T) {
+	tests := []struct {
+		err  *PasswordValidationError
+		want string
+	}{
+		{&PasswordValidationError{Field: "password", Reason: "must contain at least one number"},
+			"Password must contain at least one number"},
+		{&PasswordValidationError{Field: "username", Reason: "username must be at least 3 characters long"},
+			"Username must be at least 3 characters long"},
+		{&PasswordValidationError{Field: "confirmPassword", Reason: "passwords do not match"},
+			"Passwords do not match"},
+		{&PasswordValidationError{Field: "current_password", Reason: "Current password is required"},
+			"Current password is required"},
+	}
+	for _, tt := range tests {
+		if got := tt.err.UserMessage(); got != tt.want {
+			t.Errorf("UserMessage() = %q, want %q", got, tt.want)
+		}
+	}
+}

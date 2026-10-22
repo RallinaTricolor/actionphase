@@ -174,7 +174,7 @@ func TestConversationAPI_CreateConversation(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, rec.Body.String(), "at least 2 characters")
+		assert.Contains(t, rec.Body.String(), "At least 2 characters")
 	})
 
 	t.Run("rejects conversation without title", func(t *testing.T) {
@@ -314,7 +314,7 @@ func TestConversationAPI_CreateConversation_GroupRestriction(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, rec.Body.String(), "group conversations are not allowed")
+		assert.Contains(t, rec.Body.String(), "Group conversations are not allowed")
 	})
 
 	t.Run("allows 2-participant conversation when group conversations disabled", func(t *testing.T) {

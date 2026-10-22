@@ -9,6 +9,8 @@ import (
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"actionphase/pkg/core"
 )
 
 const (
@@ -24,6 +26,18 @@ type PasswordValidationError struct {
 
 func (e *PasswordValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Reason)
+}
+
+// UserMessage is the error as a sentence for the person who made it. Error()
+// is "password: must contain at least one number", which is fine in a log but
+// reads as a stack trace in a form: a reason that continues a sentence ("must
+// ...") gets its field's label in front, and any other reason already names
+// what it is about.
+func (e *PasswordValidationError) UserMessage() string {
+	if strings.HasPrefix(e.Reason, "must ") {
+		return core.CapitalizeSentence(strings.ReplaceAll(e.Field, "_", " ")) + " " + e.Reason
+	}
+	return core.CapitalizeSentence(e.Reason)
 }
 
 // ValidatePassword validates a password meets security requirements

@@ -1,5 +1,6 @@
 import { DEFAULT_SHEET_LAYOUT } from '@/hooks/useSheetLayout';
 import { normalizeEntry, type RawSheetEntry, type SheetEntry } from '@/lib/sheetEntries';
+import { runeLength } from '@/lib/utils/runeLength';
 import {
   storageFieldName,
   type CharacterData,
@@ -45,10 +46,6 @@ export function fieldTypeLabel(type: string): string {
 
 /** The key new custom tabs start from. `description` is valid on any tab. */
 const STARTER_FIELD: CharacterSheetField = { key: 'description', label: 'Description', type: 'markdown' };
-
-// Counted in code points, as the backend counts runes. `.length` would count
-// UTF-16 units and reject labels the server accepts.
-const runeLength = (value: string) => [...value].length;
 
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { useUrlParam } from '@/hooks/useUrlParam';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
@@ -37,6 +37,8 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
   // Identifies each navigation, so re-entering the conversation already on
   // screen (e.g. via a notification link) is distinguishable from a re-render.
   const { key: locationKey } = useLocation();
+  const navigationType = useNavigationType();
+  const navigate = useNavigate();
   const initialLocationKeyRef = useRef(locationKey);
 
   const [conversationParam, setConversationParam] = useUrlParam<number | null>('conversation', null, {
@@ -118,12 +120,41 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
     setConversationParam(conversationId);
   };
 
-  const handleSelectConversation = (conversationId: number) => {
-    logger.debug('Conversation selected', { conversationId, gameId });
-    setConversationParam(conversationId);
-  };
+  // The history entries from the list's own entry (keys[0]) up to wherever the
+  // user went from it, and which of them is current. The back button returns to
+  // that exact entry, filter included, however many conversations were opened
+  // on top of it (from the list, then a notification, ...): replacing instead
+  // would leave a second copy of the list in history, and browser Back from it
+  // would return to a conversation. Null when no list entry is known to be
+  // behind us: a conversation opened by a shared link, or one that replaced
+  // the list's entry (a newly created conversation).
+  const listTrailRef = useRef<{ keys: string[]; pos: number } | null>(null);
+  useEffect(() => {
+    if (conversationParam === null) {
+      listTrailRef.current = { keys: [locationKey], pos: 0 };
+      return;
+    }
+    const trail = listTrailRef.current;
+    if (!trail) return;
+    if (navigationType === 'PUSH') {
+      trail.keys = [...trail.keys.slice(0, trail.pos + 1), locationKey];
+      trail.pos += 1;
+    } else if (navigationType === 'REPLACE') {
+      if (trail.pos === 0) listTrailRef.current = null;
+      else trail.keys[trail.pos] = locationKey;
+    } else {
+      const pos = trail.keys.indexOf(locationKey);
+      if (pos < 0) listTrailRef.current = null;
+      else trail.pos = pos;
+    }
+  }, [locationKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBackToList = () => {
+    const trail = listTrailRef.current;
+    if (trail && trail.pos > 0) {
+      navigate(-trail.pos);
+      return;
+    }
     setConversationParam(null);
   };
 
@@ -173,7 +204,6 @@ function PrivateMessagesInner({ gameId, characters, isAnonymous, allowGroupConve
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border-primary scrollbar-track-transparent hover:scrollbar-thumb-border-secondary">
             <ConversationList
               gameId={gameId}
-              onSelectConversation={handleSelectConversation}
               selectedConversationId={selectedConversationId || undefined}
             />
           </div>

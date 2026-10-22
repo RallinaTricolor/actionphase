@@ -1,6 +1,43 @@
 package core
 
-import "errors"
+import (
+	"errors"
+	"strings"
+	"unicode"
+)
+
+// UserMessage renders an error wrapping sentinel ("<sentinel>: <reason>") as
+// the sentence to show a person: the reason alone, capitalized. The sentinel's
+// text is for logs and errors.Is; "invalid staged result chain: part 2: ..."
+// reads as a stack trace to the GM who has to fix part 2.
+//
+// An error that does not carry the sentinel's prefix is returned whole,
+// capitalized.
+func UserMessage(err error, sentinel error) string {
+	msg := err.Error()
+	msg = strings.TrimPrefix(msg, sentinel.Error()+": ")
+	return CapitalizeSentence(msg)
+}
+
+// CapitalizeSentence upper-cases a message's first letter. Go error strings
+// are lowercase by convention; a message shown to a person is a sentence.
+func CapitalizeSentence(s string) string {
+	for i, r := range s {
+		return s[:i] + string(unicode.ToUpper(r)) + s[i+len(string(r)):]
+	}
+	return s
+}
+
+// ErrInvalidRoleTransition is returned when a promote, demote or
+// move-to-audience doesn't fit the target's current role, or the target isn't
+// in the game. Wrapped with a reason for the GM; handlers answer 400 with
+// UserMessage and treat anything else as a server fault.
+var ErrInvalidRoleTransition = errors.New("invalid role transition")
+
+// ErrCannotDeletePhase is returned when a phase still has content (or is the
+// active one) and so cannot be deleted. Wrapped with the reason; handlers
+// answer 400 with UserMessage and treat anything else as a server fault.
+var ErrCannotDeletePhase = errors.New("cannot delete phase")
 
 // ErrNotImplemented is returned by mock methods that have not been implemented
 var ErrNotImplemented = errors.New("not implemented")

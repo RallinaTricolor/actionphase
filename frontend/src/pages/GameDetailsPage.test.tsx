@@ -613,6 +613,25 @@ describe('GameDetailsPage', () => {
   })
 
   describe('Tab Navigation - In Progress State', () => {
+    // The badge used to count every participant, so audience members and the
+    // co-GM inflated it past the "2/5 Players" the header shows beside it.
+    it('People tab badge counts player slots, not every participant', async () => {
+      const inProgressGame = { ...mockGame, state: 'in_progress' as const, current_players: 2 }
+      const everyone = [
+        ...mockParticipants,
+        makeGameParticipant({ id: 3, game_id: 1, user_id: 4, username: 'watcher1', role: 'audience', status: 'active' }),
+        makeGameParticipant({ id: 4, game_id: 1, user_id: 5, username: 'watcher2', role: 'audience', status: 'active' }),
+        makeGameParticipant({ id: 5, game_id: 1, user_id: 6, username: 'cogm', role: 'co_gm', status: 'active' }),
+      ]
+      setupDefaultHandlers(inProgressGame, everyone, 999)
+
+      renderGameDetailsPage(1)
+
+      await waitFor(() => {
+        expect(screen.getByRole('tab', { name: /people/i })).toHaveTextContent(/^People\s*2$/)
+      })
+    })
+
     it('should show game tabs when game is in progress', async () => {
       const inProgressGame = { ...mockGame, state: 'in_progress' as const }
       setupDefaultHandlers(inProgressGame, mockParticipants, 2) // player

@@ -32,7 +32,7 @@ type conversationDetailOutput struct {
 		// nullable:"false" despite toConversationParticipantResponses opening
 		// with `if rows == nil { return nil }` -- a branch that IS reachable in
 		// principle, because sqlc returns a nil slice for zero rows. It is not
-		// reachable in practice: every AddConversationParticipant call runs in
+		// reachable in practice: AddConversationParticipants runs in
 		// the same transaction that creates the conversation, so a
 		// zero-participant conversation cannot be committed.
 		//

@@ -6056,7 +6056,10 @@ export interface components {
         };
         RegisterBody: {
             bio?: string;
-            /** @description Email address; a verification mail is sent here */
+            /**
+             * Format: email
+             * @description Email address; a verification mail is sent here
+             */
             email: string;
             /** @description Device fingerprint, recorded on the session */
             fingerprint?: string;

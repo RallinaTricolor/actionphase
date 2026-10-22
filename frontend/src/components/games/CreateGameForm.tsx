@@ -140,13 +140,9 @@ export const CreateGameForm = ({
         onSuccess?.(gameId);
       }
     } catch (err: unknown) {
-      const axiosErr = err as { message?: string };
-      const errorMessage =
-        extractApiErrorMessage(err) ||
-        (axiosErr?.message && axiosErr.message !== 'Network Error'
-          ? axiosErr.message
-          : 'Failed to create game');
-      setError(errorMessage);
+      // The server's reason, which is withheld for a 429 or 5xx, so those
+      // read as the generic line below.
+      setError(extractApiErrorMessage(err) ?? 'Failed to create game. Please try again.');
     } finally {
       setLoading(false);
     }

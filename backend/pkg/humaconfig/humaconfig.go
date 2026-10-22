@@ -26,7 +26,8 @@ import (
 )
 
 // InstallProblemErrorFormat makes huma stamp the correlation ID into the
-// RFC 7807 `instance` field.
+// RFC 7807 `instance` field, and rewrites validation failures into messages a
+// person can act on (see humanizeValidation).
 //
 // Huma's own ErrorModel is already RFC 7807-compliant, so the body shape needs
 // no help. The one thing huma cannot know is our correlation ID, and the hook
@@ -41,6 +42,15 @@ import (
 // It mutates a package-level variable in huma, so it must run once, before any
 // huma API is served. Idempotent.
 func InstallProblemErrorFormat() {
+	// Every error a handler returns (huma.Error400BadRequest and friends) is
+	// built by huma.NewError, so this is the one place all of them pass.
+	huma.NewError = func(status int, msg string, errs ...error) huma.StatusError {
+		err := humaNewError(status, msg, errs...)
+		if model, ok := err.(*huma.ErrorModel); ok {
+			politeClientDetail(model)
+		}
+		return err
+	}
 	huma.NewErrorWithContext = func(ctx huma.Context, status int, msg string, errs ...error) huma.StatusError {
 		err := huma.NewError(status, msg, errs...)
 
@@ -48,6 +58,7 @@ func InstallProblemErrorFormat() {
 		if !ok {
 			return err
 		}
+		humanizeValidation(model)
 		if ctx != nil {
 			if id := observability.GetCorrelationID(ctx.Context()); id != "" {
 				model.Instance = CorrelationInstance(id)
@@ -56,6 +67,11 @@ func InstallProblemErrorFormat() {
 		return model
 	}
 }
+
+// humaNewError is huma's own constructor, captured before
+// InstallProblemErrorFormat replaces it, so the replacement can call it however
+// many times Install runs.
+var humaNewError = huma.NewError
 
 // CorrelationInstance renders a correlation ID as the URI reference RFC 7807
 // asks `instance` to be.
