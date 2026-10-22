@@ -112,32 +112,38 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req Create
 	// Add all participants (characters), one row per user who controls each.
 	// The same rule re-syncs these rows whenever control changes; see
 	// conversation_participants.go.
+	rows, err := qtx.GetCharacterControlByIDs(ctx, req.ParticipantIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get participant characters: %w", err)
+	}
+	controls := make(map[int32]characterControl, len(rows))
+	for _, row := range rows {
+		controls[row.ID] = characterControl{characterType: row.CharacterType, ownerUserID: row.UserID, assigneeUserID: row.AssignedUserID}
+	}
+
 	gms := newGameGMs(qtx, req.GameID)
+	var characterIDs, userIDs []int32
 	for _, charID := range req.ParticipantIDs {
-		char, err := qtx.GetCharacter(ctx, charID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get character %d: %w", charID, err)
+		control, ok := controls[charID]
+		if !ok {
+			return nil, fmt.Errorf("failed to get character %d: %w", charID, pgx.ErrNoRows)
 		}
-
-		control, err := loadCharacterControl(ctx, qtx, char)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve controllers of character %d: %w", charID, err)
-		}
-		userIDs, err := control.controllers(ctx, gms)
+		controllers, err := control.controllers(ctx, gms)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve controllers of character %d: %w", charID, err)
 		}
-
-		for _, userID := range userIDs {
-			_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
-				ConversationID: conv.ID,
-				UserID:         userID,
-				CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to add user %d as participant for character %d: %w", userID, charID, err)
-			}
+		for _, userID := range controllers {
+			characterIDs = append(characterIDs, charID)
+			userIDs = append(userIDs, userID)
 		}
+	}
+
+	if err := qtx.AddConversationParticipants(ctx, models.AddConversationParticipantsParams{
+		CharacterIds:   characterIDs,
+		UserIds:        userIDs,
+		ConversationID: conv.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to add conversation participants: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -450,8 +456,10 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 		control := characterControl{characterType: c.CharacterType, ownerUserID: c.UserID, assigneeUserID: c.AssignedUserID}
 		users, err := control.answerers(ctx, gms)
 		if err != nil {
+			// Skip only this character: the others' answerers are unaffected
+			// and still get their notifications.
 			slog.Error("Failed to resolve who answers for a character", "error", err, "character_id", c.ID)
-			return
+			continue
 		}
 		answerers[c.ID] = users
 	}

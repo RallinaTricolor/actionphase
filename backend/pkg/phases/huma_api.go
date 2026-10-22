@@ -561,9 +561,14 @@ func (h *Handler) humaDeletePhase(ctx context.Context, in *phaseIDInput) (*noCon
 	}
 
 	// Validation (no associated content) happens in the service layer, and its
-	// failures are the caller's to fix, hence 400 rather than 500.
+	// failures are the caller's to fix, hence 400 rather than 500. Anything
+	// else is a database fault, whose text must not reach the GM.
 	if err := h.PhaseService.DeletePhase(ctx, in.ID); err != nil {
-		return nil, h.logAndErr(ctx, core.ErrBadRequest(err), "Failed to delete phase", "error", err)
+		if errors.Is(err, core.ErrCannotDeletePhase) {
+			return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.CapitalizeSentence(err.Error())),
+				"Phase cannot be deleted", "error", err)
+		}
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete phase", "error", err)
 	}
 
 	return &noContentOutput{}, nil
@@ -1182,7 +1187,8 @@ func (h *Handler) humaCreateStagedResultChain(ctx context.Context, in *createSta
 		// head carrying a delay) are the caller's mistake, not a server fault.
 		// They surface as 400 so the composer can show the GM what to fix.
 		if errors.Is(err, core.ErrInvalidStagedChain) {
-			return nil, h.logAndErr(ctx, core.ErrBadRequest(err), "Invalid staged result chain", "error", err)
+			return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrInvalidStagedChain)),
+				"Invalid staged result chain", "error", err)
 		}
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to create staged result chain", "error", err)
 	}
@@ -1290,7 +1296,8 @@ func (h *Handler) humaCancelPendingStagedPart(ctx context.Context, in *resultIDI
 		// reach by racing the release worker or clicking the wrong control, so
 		// they are 400s rather than 500s.
 		if errors.Is(err, core.ErrCannotCancelPart) {
-			return nil, h.logAndErr(ctx, core.ErrBadRequest(err), "Cannot cancel staged part", "error", err)
+			return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrCannotCancelPart)),
+				"Cannot cancel staged part", "error", err)
 		}
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to cancel pending part", "error", err)
 	}
@@ -1346,9 +1353,9 @@ func (h *Handler) requireStagedChainManagerCtx(ctx context.Context, gameID, resu
 func (h *Handler) stagedEditErr(ctx context.Context, err error, logMsg string) error {
 	switch {
 	case errors.Is(err, core.ErrInvalidStagedChain):
-		return h.logAndErr(ctx, core.ErrBadRequest(err), logMsg, "error", err)
+		return h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrInvalidStagedChain)), logMsg, "error", err)
 	case errors.Is(err, core.ErrCannotEditChain):
-		return h.logAndErr(ctx, core.ErrConflict(err.Error()), logMsg, "error", err)
+		return h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrCannotEditChain)), logMsg, "error", err)
 	case err != nil && err.Error() == "action result not found":
 		return h.logAndErr(ctx, core.ErrNotFound("action result not found"), logMsg, "error", err)
 	default:

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mapAuthError, validatePasswordRequirements, isPasswordValid } from './errorMapper';
+import { ERROR_MESSAGES } from '@/types/errors';
 
 describe('mapAuthError', () => {
   describe('Password validation errors', () => {
@@ -210,8 +211,10 @@ describe('mapAuthError', () => {
     });
   });
 
-  describe('Rate limiting errors', () => {
-    it('maps "rate limit exceeded" error', () => {
+  // People must not learn they were rate limited, and a server fault shows
+  // only the generic line.
+  describe('Rate limiting and server errors', () => {
+    it('does not reveal a message that mentions rate limiting', () => {
       const error = {
         response: {
           data: {
@@ -219,18 +222,35 @@ describe('mapAuthError', () => {
           },
         },
       };
-      expect(mapAuthError(error)).toBe('Too many attempts. Please wait a few minutes before trying again.');
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
     });
 
-    it('maps "too many requests" error', () => {
+    it('does not reveal the rate limiter\'s 429', () => {
       const error = {
+        message: 'An unexpected error occurred. Please try again.',
         response: {
-          data: {
-            message: 'too many registration attempts',
-          },
+          status: 429,
+          data: { title: 'Too Many Requests', status: 429, detail: 'Rate limit exceeded. Please try again later.' },
         },
       };
-      expect(mapAuthError(error)).toBe('Too many attempts. Please wait a few minutes before trying again.');
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+    });
+
+    // Regression: a proxy 502 with an HTML body read as rate limiting, because
+    // its interceptor-set message said "try again later".
+    it('reports a 5xx with no usable body as a generic failure, not rate limiting', () => {
+      const error = {
+        message: 'Server error occurred. Please try again later.',
+        response: { status: 502, data: '<html>Bad Gateway</html>' },
+      };
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+    });
+
+    it('never shows a 5xx detail', () => {
+      const error = {
+        response: { status: 500, data: { status: 500, detail: 'pq: relation "users" does not exist' } },
+      };
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
     });
   });
 
@@ -270,6 +290,23 @@ describe('mapAuthError', () => {
         },
       };
       expect(mapAuthError(error)).toBe('Invalid request. Please check your information and try again.');
+    });
+
+    // Regression: the keyword matching ran first and rewrote this to the
+    // password requirement alone, so the username problem was never shown.
+    it('shows every field the backend rejected, not just the first keyword it matches', () => {
+      const error = {
+        response: {
+          status: 422,
+          data: { detail: 'Username must be at least 3 characters. Password must be at least 8 characters' },
+        },
+      };
+      expect(mapAuthError(error)).toBe('Username must be at least 3 characters. Password must be at least 8 characters');
+    });
+
+    it('shows a taken username as the backend words it', () => {
+      const error = { response: { status: 400, data: { detail: 'Username is already taken' } } };
+      expect(mapAuthError(error)).toBe('Username is already taken');
     });
 
     it('shows a validation message the backend phrased for people', () => {
@@ -325,24 +362,24 @@ describe('mapAuthError', () => {
       expect(mapAuthError(error)).toBe('Conflict. The information you provided conflicts with existing data.');
     });
 
-    it('maps 429 Too Many Requests', () => {
+    it('maps 429 Too Many Requests to the generic message', () => {
       const error = {
         response: {
           status: 429,
           data: {},
         },
       };
-      expect(mapAuthError(error)).toBe('Too many requests. Please wait a moment before trying again.');
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
     });
 
-    it('maps 500 Internal Server Error', () => {
+    it('maps 500 Internal Server Error to the generic message', () => {
       const error = {
         response: {
           status: 500,
           data: {},
         },
       };
-      expect(mapAuthError(error)).toBe('Server error. Please try again later or contact support if the problem persists.');
+      expect(mapAuthError(error)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
     });
   });
 

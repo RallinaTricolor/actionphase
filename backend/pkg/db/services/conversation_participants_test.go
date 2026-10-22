@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"actionphase/pkg/core"
 	dbmodels "actionphase/pkg/db/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -183,6 +186,92 @@ func TestConversationParticipants_FollowCoGMRole(t *testing.T) {
 	assert.True(t, inboxHas(t, service, game.ID, int32(gm.ID), conv.ID))
 }
 
+// TestConversationParticipants_RemovedFromGame: a user who leaves or is removed
+// from the game no longer controls its NPCs, so loses their conversations. The
+// leave endpoint goes through RemovePlayer too (as the user removing
+// themselves), so a co-GM who leaves is covered by the same path.
+func TestConversationParticipants_RemovedFromGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	ctx := context.Background()
+
+	service := NewConversationService(testDB.Pool, nil)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	coGM := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	assignee := testDB.CreateTestUser(t, "assignee", "assignee@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Departures")
+
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(coGM.ID), "audience")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(assignee.ID), "audience")
+	require.NoError(t, err)
+	require.NoError(t, gameService.PromoteToCoGM(ctx, game.ID, int32(coGM.ID), int32(gm.ID)))
+
+	playerID := int32(player.ID)
+	playerChar, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: &playerID, Name: "Hero", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	innkeeper, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Innkeeper", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	smith, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Smith", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	require.NoError(t, charService.AssignNPCToUser(ctx, smith.ID, int32(assignee.ID), int32(gm.ID)))
+
+	atInn, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID: game.ID, Title: "At the inn", CreatedByUserID: int32(gm.ID),
+		ParticipantIDs: []int32{playerChar.ID, innkeeper.ID},
+	})
+	require.NoError(t, err)
+	atForge, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID: game.ID, Title: "At the forge", CreatedByUserID: int32(assignee.ID),
+		ParticipantIDs: []int32{playerChar.ID, smith.ID},
+	})
+	require.NoError(t, err)
+
+	require.True(t, inboxHas(t, service, game.ID, int32(coGM.ID), atInn.ID))
+	require.True(t, inboxHas(t, service, game.ID, int32(assignee.ID), atForge.ID))
+
+	t.Run("a co-GM who leaves loses the NPC conversations", func(t *testing.T) {
+		require.NoError(t, gameService.RemovePlayer(ctx, game.ID, int32(coGM.ID), int32(coGM.ID)))
+
+		assert.False(t, inboxHas(t, service, game.ID, int32(coGM.ID), atInn.ID))
+		assert.False(t, inboxHas(t, service, game.ID, int32(coGM.ID), atForge.ID))
+		_, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID: atInn.ID, SenderUserID: int32(coGM.ID), SenderCharacterID: innkeeper.ID,
+			Content: "Still here?",
+		})
+		assert.Error(t, err, "a departed co-GM cannot send as the game's NPCs")
+		assert.True(t, inboxHas(t, service, game.ID, int32(gm.ID), atInn.ID))
+	})
+
+	t.Run("a removed assignee loses the NPC and its conversations", func(t *testing.T) {
+		require.NoError(t, gameService.RemovePlayer(ctx, game.ID, int32(assignee.ID), int32(gm.ID)))
+
+		_, err := dbmodels.New(testDB.Pool).GetNPCAssignment(ctx, smith.ID)
+		assert.Error(t, err, "the NPC assignment should be withdrawn")
+		assert.False(t, inboxHas(t, service, game.ID, int32(assignee.ID), atForge.ID))
+		assert.True(t, inboxHas(t, service, game.ID, int32(gm.ID), atForge.ID),
+			"the GM keeps the conversation of an NPC they control again")
+	})
+
+	t.Run("the player's own rows are untouched", func(t *testing.T) {
+		assert.True(t, inboxHas(t, service, game.ID, playerID, atInn.ID))
+		assert.True(t, inboxHas(t, service, game.ID, playerID, atForge.ID))
+	})
+}
+
 // TestConversationParticipants_FollowCharacterReassignment: an inactive player
 // character given to a new owner takes its conversations with it.
 func TestConversationParticipants_FollowCharacterReassignment(t *testing.T) {
@@ -337,6 +426,43 @@ func TestNotifyPrivateMessage_OnlyAnswerersOfEachCharacter(t *testing.T) {
 		got := send(t, withBoth.ID, playerID, playerChar.ID)
 		assert.Equal(t, map[int32]int{gmID: 1, coGMID: 1, audienceID: 1}, got)
 	})
+
+	// Regression: one character whose answerers could not be resolved used to
+	// abort the whole notifier, so nobody heard about the message.
+	t.Run("failing to resolve one character still notifies the others", func(t *testing.T) {
+		withBoth, err := service.CreateConversation(ctx, CreateConversationRequest{
+			GameID: game.ID, Title: "GM lookup fails", CreatedByUserID: audienceID,
+			ParticipantIDs: []int32{playerChar.ID, assigned.ID, gmsOwn.ID},
+		})
+		require.NoError(t, err)
+
+		// The unassigned NPC is the only character whose answerers need the
+		// GM team, so failing that lookup fails it alone.
+		healthy := service.Queries
+		service.Queries = dbmodels.New(failingQuery{DBTX: testDB.Pool, name: "GetGameCoGMs"})
+		defer func() { service.Queries = healthy }()
+
+		got := send(t, withBoth.ID, audienceID, assigned.ID)
+		assert.Equal(t, map[int32]int{playerID: 1}, got)
+	})
+}
+
+// failingQuery fails the sqlc query with the given name and passes every other
+// one through, to exercise a lookup failing mid-operation.
+type failingQuery struct {
+	dbmodels.DBTX
+	name string
+}
+
+func (f failingQuery) failing(sql string) bool {
+	return strings.HasPrefix(sql, "-- name: "+f.name+" ")
+}
+
+func (f failingQuery) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	if f.failing(sql) {
+		return nil, errors.New("injected failure")
+	}
+	return f.DBTX.Query(ctx, sql, args...)
 }
 
 // TestConversationLists_OneEntryPerConversation: the GM and co-GMs hold a

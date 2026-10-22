@@ -105,9 +105,8 @@ export const ERROR_MESSAGES = {
 
   // Generic fallbacks
   NOT_FOUND: 'The requested item could not be found. It may have been removed.',
-  RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
-  UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
-  SERVER_ERROR: 'Server error occurred. Please try again later.'
+  // Also what a 429 or 5xx shows: deliberately says nothing about why.
+  UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.'
 } as const;
 
 // HTTP status code to error type mapping

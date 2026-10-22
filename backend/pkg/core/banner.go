@@ -14,6 +14,7 @@ package core
 // a path this phase does not otherwise touch.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -42,7 +43,9 @@ func ReadAndValidateBannerSize(file io.Reader) (io.Reader, error) {
 	limited := io.LimitReader(file, MaxBannerSize+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		// Shown to the uploader as a 400, so it says what happened rather than
+		// carrying the reader's own error text ("unexpected EOF").
+		return nil, errors.New("the uploaded image could not be read. Please try again")
 	}
 	if int64(len(data)) > MaxBannerSize {
 		return nil, fmt.Errorf("image too large. Maximum size is 5MB")

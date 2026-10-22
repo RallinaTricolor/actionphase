@@ -216,11 +216,20 @@ ORDER BY COALESCE(
     0
 )::bigint DESC NULLS LAST, c.updated_at DESC;
 
--- name: AddConversationParticipant :one
+-- name: AddConversationParticipants :exec
+-- Adds one participant row per (@character_ids[i], @user_ids[i]) pair to a new
+-- conversation, so creating it costs one insert however many characters and
+-- controllers it has. (Zipped by position, as in
+-- AddControllersToCharacterConversations.)
+WITH want AS (
+    SELECT c.character_id, u.user_id
+    FROM unnest(sqlc.arg(character_ids)::int[]) WITH ORDINALITY AS c(character_id, n)
+    JOIN unnest(sqlc.arg(user_ids)::int[]) WITH ORDINALITY AS u(user_id, n) ON u.n = c.n
+)
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
-VALUES ($1, $2, $3)
-ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
-RETURNING *;
+SELECT sqlc.arg(conversation_id)::int, want.user_id, want.character_id
+FROM want
+ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING;
 
 -- name: AddControllersToCharacterConversations :exec
 -- For each (@character_ids[i], @user_ids[i]) pair, gives that user a
@@ -265,6 +274,14 @@ FROM conversation_participants cp
 JOIN characters ch ON cp.character_id = ch.id
 LEFT JOIN npc_assignments na ON na.character_id = ch.id
 WHERE cp.conversation_id = $1;
+
+-- name: GetCharacterControlByIDs :many
+-- GetConversationCharacterControl for characters not yet in a conversation:
+-- what decides who controls each of them, in one query.
+SELECT ch.id, ch.character_type, ch.user_id, na.assigned_user_id
+FROM characters ch
+LEFT JOIN npc_assignments na ON na.character_id = ch.id
+WHERE ch.id = ANY(sqlc.arg(character_ids)::int[]);
 
 -- name: GetConversationParticipants :many
 SELECT cp.*, u.username, c.name as character_name

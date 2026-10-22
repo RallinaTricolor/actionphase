@@ -46,10 +46,20 @@ response interceptor (`lib/api/client.ts`) replaces axios' own message
 ("Request failed with status code 422") with `userFacingApiMessage()` from
 `lib/errors.ts`: the server's `detail`, or its field-level `errors[]` messages
 when `detail` is the generic "validation failed", or a plain-language line for
-the status. 5xx details are never shown. Network failures (no response) keep
-axios' message. So `error instanceof Error ? error.message : 'Fallback'` is
-safe in components; `extractApiErrorMessage(err) ?? 'Fallback'` is equivalent
-and preferred in new code.
+the status. Network failures (no response) keep axios' message. So
+`error instanceof Error ? error.message : 'Fallback'` is safe in components;
+`extractApiErrorMessage(err) ?? 'Fallback'` is equivalent and preferred in new
+code.
+
+**A 429 or 5xx never shows its detail (since 2026-10-22).** Both read as the
+generic `ERROR_MESSAGES.UNKNOWN_ERROR` ("An unexpected error occurred. Please
+try again."): a 5xx detail may carry internal error text, and a user must never
+learn they were rate limited (it tells a bot how to pace itself). The rule is
+`isWithheldStatus()` in `lib/errors.ts`, and every path applies it:
+`userFacingApiMessage`, `extractApiErrorMessage` (which returns undefined, so a
+caller's own fallback shows), and `mapAuthError`. The backend follows the same
+rule: a rate-limited registration's 400 says only the generic line. Don't add
+copy that mentions rate limiting or "try again later".
 
 Backend validation messages arrive already phrased for people
 ("Description must be at least 10 characters"); see

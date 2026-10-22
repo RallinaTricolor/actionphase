@@ -89,17 +89,11 @@ SELECT
     CASE
         WHEN g.state != 'recruitment' THEN 'game_not_recruiting'
         WHEN g.recruitment_deadline IS NOT NULL AND g.recruitment_deadline < NOW() THEN 'deadline_passed'
-        WHEN COALESCE(pc.player_count, 0) >= g.max_players THEN 'game_full'
+        WHEN game_filled_player_slots(g.id) >= g.max_players THEN 'game_full'
         WHEN EXISTS(SELECT 1 FROM game_participants gp WHERE gp.game_id = $1 AND gp.user_id = $2 AND gp.status = 'active') THEN 'already_joined'
         ELSE 'can_join'
     END as join_status
 FROM games g
-LEFT JOIN (
-    SELECT game_id, COUNT(*) as player_count
-    FROM game_participants
-    WHERE status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
-    GROUP BY game_id
-) pc ON g.id = pc.game_id
 WHERE g.id = $1
 `
 
@@ -445,8 +439,7 @@ func (q *Queries) GetGameCoGMs(ctx context.Context, gameID int32) ([]int32, erro
 }
 
 const getGameParticipantCount = `-- name: GetGameParticipantCount :one
-SELECT COUNT(*) FROM game_participants
-WHERE game_id = $1 AND status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
+SELECT game_filled_player_slots($1::int)::bigint AS count
 `
 
 func (q *Queries) GetGameParticipantCount(ctx context.Context, gameID int32) (int64, error) {
@@ -516,16 +509,10 @@ SELECT
     u.username as gm_username,
     c.name as community_name,
     c.slug as community_slug,
-    COALESCE(pc.player_count, 0) as current_players
+    game_filled_player_slots(g.id)::bigint as current_players
 FROM games g
 LEFT JOIN users u ON g.gm_user_id = u.id
 LEFT JOIN communities c ON c.id = g.community_id
-LEFT JOIN (
-    SELECT game_id, COUNT(*) as player_count
-    FROM game_participants
-    WHERE status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
-    GROUP BY game_id
-) pc ON g.id = pc.game_id
 WHERE g.id = $1
 `
 

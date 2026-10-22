@@ -135,6 +135,48 @@ var messageRules = []messageRule{
 // rather than the location.
 var requiredProperty = regexp.MustCompile(`^expected required property (\S+) to be present$`)
 
+// internalErrorMarkers are fragments that only appear in text written for
+// developers: database errors, and go-playground's validator. A 4xx detail
+// containing one was built from a raw Go error somewhere, and is replaced
+// rather than shown (see politeClientDetail).
+var internalErrorMarkers = []string{
+	"SQLSTATE",
+	"no rows in result set",
+	"duplicate key value",
+	"violates foreign key",
+	"violates check constraint",
+	"Key: '",
+	"Error:Field validation for",
+	"context deadline exceeded",
+	"connection refused",
+}
+
+// genericClientDetail replaces a 4xx detail that turned out to be internal
+// text. The request was still refused for a reason the person can act on, so
+// it says that much.
+const genericClientDetail = "That request couldn't be completed. Please check what you entered and try again."
+
+// politeClientDetail is the last line between a handler and the person reading
+// its 4xx: the detail is shown verbatim by the frontend, so it is made to read
+// as a sentence (Go error strings start lowercase), and a detail that is raw
+// internal text is replaced. A 5xx is left alone; the frontend never shows one.
+//
+// Handlers should still word their own messages. This catches the ones that
+// pass err.Error() through and the error turned out not to be what they
+// expected.
+func politeClientDetail(model *huma.ErrorModel) {
+	if model.Status < 400 || model.Status >= 500 {
+		return
+	}
+	for _, marker := range internalErrorMarkers {
+		if strings.Contains(model.Detail, marker) {
+			model.Detail = genericClientDetail
+			return
+		}
+	}
+	model.Detail = capitalize(model.Detail)
+}
+
 // humanizeValidation rewrites the error details on model in place and, when
 // the detail is huma's generic one, replaces it with a summary of them.
 func humanizeValidation(model *huma.ErrorModel) {

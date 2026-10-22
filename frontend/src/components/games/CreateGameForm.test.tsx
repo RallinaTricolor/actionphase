@@ -485,6 +485,29 @@ describe('CreateGameForm', () => {
       expect(screen.queryByText(/status code/i)).not.toBeInTheDocument();
     });
 
+    it('never shows the GM a server error\'s internal detail', async () => {
+      // Regression: the form showed a 5xx detail verbatim.
+      const user = userEvent.setup({ delay: null });
+      server.use(
+        http.post('/api/v1/games', () =>
+          HttpResponse.json(
+            { title: 'Internal Server Error', status: 500, detail: 'pq: relation "games" does not exist' },
+            { status: 500 }
+          )
+        )
+      );
+      renderWithProviders(<CreateGameForm />);
+
+      await user.type(screen.getByLabelText(/game title/i), 'Test Game');
+      await user.type(screen.getByLabelText(/description/i), 'Test Description');
+      await user.click(screen.getByRole('button', { name: /create game/i }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Failed to create game. Please try again.').length).toBeGreaterThan(0);
+      });
+      expect(screen.queryByText(/relation "games"/)).not.toBeInTheDocument();
+    });
+
     it('displays generic error for network failures', async () => {
       const user = userEvent.setup({ delay: null });
 
@@ -567,7 +590,7 @@ describe('CreateGameForm', () => {
 
       // Wait for error
       await waitFor(() => {
-        expect(screen.getAllByText(/error/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/failed to create game/i).length).toBeGreaterThan(0);
       });
 
       // Button should be re-enabled

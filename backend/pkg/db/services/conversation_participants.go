@@ -29,6 +29,8 @@ import (
 //   - inactive character given a new owner (CharacterService.ReassignCharacter)
 //   - co-GM promoted or demoted, which changes who controls every NPC in the
 //     game (GameService.PromoteToCoGM / DemoteFromCoGM)
+//   - a co-GM or NPC assignee leaving or removed from the game
+//     (GameService.RemovePlayer, which also withdraws their NPC assignments)
 
 // characterControl is what decides who controls and answers for a character:
 // its type, its owner and, for an NPC, the user it is assigned to.

@@ -6,6 +6,9 @@ import { Button, Input } from '@/components/ui';
 import { logger } from '@/services/LoggingService';
 import type { ConversationListItem } from '@/types/conversations';
 
+const FILTER_PARAM = 'conversationFilter';
+const FILTER_URL_WRITE_DELAY_MS = 300;
+
 interface ConversationListProps {
   gameId: number;
   selectedConversationId?: number;
@@ -29,23 +32,31 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
   // Kept in the URL because opening a conversation unmounts this list; the
   // param rides along in each conversation's link, so Back restores the filter.
   // The input reads local state, not the URL, so typing never waits on a
-  // navigation (which can jump the cursor).
-  const [filterParam, setFilterParam] = useUrlParam<string>('conversationFilter', '', { replace: true });
+  // navigation (which can jump the cursor). The URL is written once typing
+  // pauses: each write is a navigation that re-renders the whole game page.
+  const [filterParam, setFilterParam] = useUrlParam<string>(FILTER_PARAM, '', { replace: true });
   const [filter, setFilter] = useState(filterParam);
-  // The URL value the input last agreed with. When the URL moves away from it,
-  // something other than the input changed it (a link without the param, such
-  // as the Messages tab), and the input follows. The input's own writes update
-  // it first, so they never echo back into what is being typed.
-  const [syncedFilterParam, setSyncedFilterParam] = useState(filterParam);
-  if (filterParam !== syncedFilterParam) {
-    setSyncedFilterParam(filterParam);
-    setFilter(filterParam);
+  // The URL value last seen, and the one this input last wrote. When the URL
+  // changes to anything but the input's own write, something else changed it
+  // (a link without the param, such as the Messages tab), and the input
+  // follows, dropping any write still pending.
+  const [seenFilterParam, setSeenFilterParam] = useState(filterParam);
+  const [writtenFilterParam, setWrittenFilterParam] = useState(filterParam);
+  if (filterParam !== seenFilterParam) {
+    setSeenFilterParam(filterParam);
+    if (filterParam !== writtenFilterParam) {
+      setWrittenFilterParam(filterParam);
+      setFilter(filterParam);
+    }
   }
-  const updateFilter = (value: string) => {
-    setFilter(value);
-    setSyncedFilterParam(value);
-    setFilterParam(value);
-  };
+  useEffect(() => {
+    if (filter === filterParam) return;
+    const timer = setTimeout(() => {
+      setWrittenFilterParam(filter);
+      setFilterParam(filter);
+    }, FILTER_URL_WRITE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [filter, filterParam, setFilterParam]);
   const isFiltering = filter.trim() !== '';
 
   const filteredConversations = useMemo(
@@ -56,6 +67,12 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
   const getConversationHref = (conversationId: number) => {
     const params = new URLSearchParams(searchParams);
     params.set('conversation', String(conversationId));
+    // What is typed, not the URL, which may not have caught up yet.
+    if (filter === '') {
+      params.delete(FILTER_PARAM);
+    } else {
+      params.set(FILTER_PARAM, filter);
+    }
     return `?${params.toString()}`;
   };
 
@@ -86,7 +103,7 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
         type="search"
         inputSize="sm"
         value={filter}
-        onChange={(e) => updateFilter(e.target.value)}
+        onChange={(e) => setFilter(e.target.value)}
         placeholder="Filter by title or participant"
         aria-label="Filter conversations"
         data-testid="conversation-filter"
@@ -125,7 +142,7 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
         {filterBar}
         <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
           <p className="text-content-secondary">No conversations match "{filter.trim()}"</p>
-          <Button variant="ghost" size="sm" onClick={() => updateFilter('')}>
+          <Button variant="ghost" size="sm" onClick={() => setFilter('')}>
             Clear filter
           </Button>
         </div>

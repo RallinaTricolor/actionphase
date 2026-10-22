@@ -69,7 +69,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to get phase: %w", err)
 	}
 	if phase.IsActive.Valid && phase.IsActive.Bool {
-		return fmt.Errorf("cannot delete active phase")
+		return fmt.Errorf("%w: it is the active phase", core.ErrCannotDeletePhase)
 	}
 
 	// Check for action submissions
@@ -78,7 +78,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to count action submissions: %w", err)
 	}
 	if submissionsCount > 0 {
-		return fmt.Errorf("cannot delete phase: %d action submission(s) exist for this phase", submissionsCount)
+		return fmt.Errorf("%w: %d action submission(s) exist for this phase", core.ErrCannotDeletePhase, submissionsCount)
 	}
 
 	// Check for action results
@@ -87,7 +87,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to count action results: %w", err)
 	}
 	if resultsCount > 0 {
-		return fmt.Errorf("cannot delete phase: %d action result(s) exist for this phase", resultsCount)
+		return fmt.Errorf("%w: %d action result(s) exist for this phase", core.ErrCannotDeletePhase, resultsCount)
 	}
 
 	// Check for polls
@@ -96,7 +96,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to count polls: %w", err)
 	}
 	if pollsCount > 0 {
-		return fmt.Errorf("cannot delete phase: %d poll(s) exist for this phase", pollsCount)
+		return fmt.Errorf("%w: %d poll(s) exist for this phase", core.ErrCannotDeletePhase, pollsCount)
 	}
 
 	// Check for threads
@@ -105,7 +105,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to count threads: %w", err)
 	}
 	if threadsCount > 0 {
-		return fmt.Errorf("cannot delete phase: %d thread(s) exist for this phase", threadsCount)
+		return fmt.Errorf("%w: %d thread(s) exist for this phase", core.ErrCannotDeletePhase, threadsCount)
 	}
 
 	// Check for messages
@@ -114,7 +114,7 @@ func (ps *PhaseService) CanDeletePhase(ctx context.Context, phaseID int32) error
 		return fmt.Errorf("failed to count messages: %w", err)
 	}
 	if messagesCount > 0 {
-		return fmt.Errorf("cannot delete phase: %d message(s) exist for this phase", messagesCount)
+		return fmt.Errorf("%w: %d message(s) exist for this phase", core.ErrCannotDeletePhase, messagesCount)
 	}
 
 	return nil

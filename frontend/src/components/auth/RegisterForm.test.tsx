@@ -319,7 +319,7 @@ describe('RegisterForm', () => {
       server.use(
         http.post('/api/v1/auth/register', () => {
           return HttpResponse.json(
-            { message: 'Username already taken' },
+            { title: 'Bad Request', status: 400, detail: 'Username is already taken' },
             { status: 400 }
           );
         })
@@ -337,10 +337,10 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
-      // Error should appear AFTER submission (expect mapped error message)
+      // Error should appear AFTER submission
       await waitFor(() => {
         expect(screen.getByTestId('error-message')).toBeInTheDocument();
-        expect(screen.getByText(/this username is already taken/i)).toBeInTheDocument();
+        expect(screen.getByText('Username is already taken')).toBeInTheDocument();
       });
     });
 
@@ -350,7 +350,7 @@ describe('RegisterForm', () => {
       server.use(
         http.post('/api/v1/auth/register', () => {
           return HttpResponse.json(
-            { message: 'Username already taken' },
+            { title: 'Bad Request', status: 400, detail: 'Username is already taken' },
             { status: 400 }
           );
         })
@@ -365,9 +365,9 @@ describe('RegisterForm', () => {
 
       await user.click(screen.getByRole('button', { name: /^register$/i }));
 
-      // Expect mapped error message, not raw error
+      // The backend's own sentence, as the register endpoint words it
       await waitFor(() => {
-        expect(screen.getByText(/this username is already taken/i)).toBeInTheDocument();
+        expect(screen.getByText('Username is already taken')).toBeInTheDocument();
       });
     });
 
@@ -417,9 +417,9 @@ describe('RegisterForm', () => {
       const submitButton = screen.getByRole('button', { name: /^register$/i });
       await user.click(submitButton);
 
-      // Wait for error (500 status shows server error message)
+      // Wait for error (a 500 shows only the generic message)
       await waitFor(() => {
-        expect(screen.getByText(/server error/i)).toBeInTheDocument();
+        expect(screen.getByText(/an unexpected error occurred/i)).toBeInTheDocument();
       });
 
       // Button should be re-enabled

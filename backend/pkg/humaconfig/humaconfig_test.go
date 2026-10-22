@@ -51,7 +51,8 @@ func TestInstallProblemErrorFormat_StampsCorrelationID(t *testing.T) {
 	if model.Status != http.StatusForbidden {
 		t.Errorf("Unexpected status: %d", model.Status)
 	}
-	if model.Detail != "nope" {
+	// The detail is kept, read as a sentence (see politeClientDetail).
+	if model.Detail != "Nope" {
 		t.Errorf("Unexpected detail: %q", model.Detail)
 	}
 }
@@ -257,5 +258,43 @@ func TestCorrelationInstance(t *testing.T) {
 	}
 	if got := CorrelationInstance("abc"); got != "urn:actionphase:correlation:abc" {
 		t.Errorf("Unexpected URI: %q", got)
+	}
+}
+
+// A handler's 4xx detail is shown to the user verbatim, so whatever a handler
+// passes through must read as a sentence and never as internal error text.
+// Regression: registration answered a taken email with Postgres' own
+// "duplicate key value violates unique constraint ... (SQLSTATE 23505)", and a
+// short password with go-playground's "Key: 'User.Password' Error:Field
+// validation for 'Password' failed on the 'min' tag".
+func TestInstallProblemErrorFormat_PoliteClientDetail(t *testing.T) {
+	InstallProblemErrorFormat()
+
+	cases := []struct {
+		name   string
+		err    error
+		detail string
+	}{
+		{"capitalizes a Go-style message", huma.Error400BadRequest("game is not currently recruiting"),
+			"Game is not currently recruiting"},
+		{"replaces database text", huma.Error400BadRequest(`ERROR: duplicate key value violates unique constraint "users_email_unique" (SQLSTATE 23505)`),
+			genericClientDetail},
+		{"replaces validator text", huma.Error400BadRequest("Key: 'User.Password' Error:Field validation for 'Password' failed on the 'min' tag"),
+			genericClientDetail},
+		{"replaces a wrapped no-rows error", huma.Error409Conflict("user is not a participant in this game: no rows in result set"),
+			genericClientDetail},
+		{"leaves a 5xx alone (never shown)", huma.Error500InternalServerError("pq: SQLSTATE 42P01"),
+			"pq: SQLSTATE 42P01"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			model, ok := tc.err.(*huma.ErrorModel)
+			if !ok {
+				t.Fatalf("Expected *huma.ErrorModel, got %T", tc.err)
+			}
+			if model.Detail != tc.detail {
+				t.Errorf("detail = %q, want %q", model.Detail, tc.detail)
+			}
+		})
 	}
 }

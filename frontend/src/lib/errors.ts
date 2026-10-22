@@ -33,10 +33,14 @@ const GENERIC_DETAILS = new Set(['validation failed']);
  * Returns undefined when the body carries no usable message, which lets callers
  * distinguish "server said nothing" from "server said something" — the
  * distinction the 401/403 fallbacks in handleAxiosError depend on.
+ *
+ * Also returns undefined for a 429 or 5xx (see isWithheldStatus), so a caller
+ * falls back to its own generic line instead of showing that detail.
  */
 export function extractApiErrorMessage(error: unknown): string | undefined {
   const body = extractApiErrorBody(error);
   if (!body) return undefined;
+  if (isWithheldStatus(extractApiErrorStatus(error, body))) return undefined;
 
   const detail = typeof body.detail === 'string' ? body.detail.trim() : '';
   if (detail !== '' && !GENERIC_DETAILS.has(detail.toLowerCase())) {
@@ -80,9 +84,7 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
  * failure reads the same whichever one a component goes through.
  */
 export function userFacingApiMessage(status: number, error: unknown): string {
-  // A 5xx detail may carry internal error text, and there is nothing the user
-  // can fix anyway, so it is never shown.
-  if (status >= 500) return ERROR_MESSAGES.SERVER_ERROR;
+  if (isWithheldStatus(status)) return ERROR_MESSAGES.UNKNOWN_ERROR;
   const apiMessage = extractApiErrorMessage(error);
   if (apiMessage) return apiMessage;
   switch (status) {
@@ -92,11 +94,26 @@ export function userFacingApiMessage(status: number, error: unknown): string {
       return ERROR_MESSAGES.UNAUTHORIZED;
     case 404:
       return ERROR_MESSAGES.NOT_FOUND;
-    case 429:
-      return ERROR_MESSAGES.RATE_LIMITED;
     default:
       return ERROR_MESSAGES.UNKNOWN_ERROR;
   }
+}
+
+/**
+ * Statuses whose details are never shown, only the generic
+ * ERROR_MESSAGES.UNKNOWN_ERROR. A 5xx detail may carry internal error text and
+ * there is nothing the user can fix. A 429 must not tell anyone they were rate
+ * limited, since that tells a bot how to pace itself.
+ */
+export function isWithheldStatus(status: number | undefined): boolean {
+  return status !== undefined && (status === 429 || status >= 500);
+}
+
+/** The HTTP status of a failed response: axios' own, else the body's. */
+function extractApiErrorStatus(error: unknown, body: ApiError): number | undefined {
+  const responseStatus = (error as { response?: { status?: unknown } })?.response?.status;
+  if (typeof responseStatus === 'number') return responseStatus;
+  return typeof body.status === 'number' ? body.status : undefined;
 }
 
 /**

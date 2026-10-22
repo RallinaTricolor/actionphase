@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { GameWithDetails, CreateGameRequest } from '../types/games';
 import type { GameFormData } from '@/components/games/GameFormFields';
 import { convertToISO8601, formatDateTimeLocal } from '../lib/utils/dates';
+import { runeLength } from '../lib/utils/runeLength';
 import { useUploadGameBanner, useDeleteGameBanner } from './useGameBanner';
 
 // Mirrors minLength on the backend's create/update game bodies. Checked here
@@ -148,13 +149,13 @@ export function useGameForm(initialData?: GameWithDetails) {
     if (!formData.title.trim()) {
       return { payload: null, error: 'Game title is required' };
     }
-    if (formData.title.trim().length < GAME_TITLE_MIN_LENGTH) {
+    if (runeLength(formData.title.trim()) < GAME_TITLE_MIN_LENGTH) {
       return { payload: null, error: `Game title must be at least ${GAME_TITLE_MIN_LENGTH} characters` };
     }
     if (!formData.description.trim()) {
       return { payload: null, error: 'Game description is required' };
     }
-    if (formData.description.trim().length < GAME_DESCRIPTION_MIN_LENGTH) {
+    if (runeLength(formData.description.trim()) < GAME_DESCRIPTION_MIN_LENGTH) {
       return {
         payload: null,
         error: `Game description must be at least ${GAME_DESCRIPTION_MIN_LENGTH} characters`,

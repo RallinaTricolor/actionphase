@@ -159,7 +159,7 @@ func TestV1ChangePassword(t *testing.T) {
 				return generateTestJWT(t, int(userID))
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "current password is incorrect",
+			expectedError:  "Current password is incorrect",
 		},
 		{
 			name: "passwords don't match",
@@ -175,7 +175,7 @@ func TestV1ChangePassword(t *testing.T) {
 				return generateTestJWT(t, int(userID))
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "passwords do not match",
+			expectedError:  "Passwords do not match",
 		},
 		{
 			name: "weak new password",
@@ -191,7 +191,7 @@ func TestV1ChangePassword(t *testing.T) {
 				return generateTestJWT(t, int(userID))
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "must be at least 8 characters",
+			expectedError:  "Password must be at least 8 characters",
 		},
 	}
 
@@ -365,7 +365,7 @@ func TestV1ResetPassword(t *testing.T) {
 			newPassword:     "NewPass456!",
 			confirmPassword: "NewPass456!",
 			expectedStatus:  http.StatusBadRequest,
-			expectedError:   "invalid or expired reset token",
+			expectedError:   "Invalid or expired reset token",
 		},
 		{
 			name: "expired token",
@@ -385,7 +385,7 @@ func TestV1ResetPassword(t *testing.T) {
 			newPassword:     "NewPass456!",
 			confirmPassword: "NewPass456!",
 			expectedStatus:  http.StatusBadRequest,
-			expectedError:   "invalid or expired reset token",
+			expectedError:   "Invalid or expired reset token",
 		},
 		{
 			name: "passwords don't match",
@@ -405,7 +405,7 @@ func TestV1ResetPassword(t *testing.T) {
 			newPassword:     "NewPass456!",
 			confirmPassword: "DifferentPass456!",
 			expectedStatus:  http.StatusBadRequest,
-			expectedError:   "passwords do not match",
+			expectedError:   "Passwords do not match",
 		},
 	}
 

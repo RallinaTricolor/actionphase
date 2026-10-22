@@ -71,7 +71,9 @@ export function useUrlParam<T>(
         (prev) => {
           const next = new URLSearchParams(prev);
           const serialized = serialize ? serialize(newValue) : String(newValue);
-          if (serialized === '' || serialized === 'null' || newValue === null || newValue === undefined) {
+          // Absence is null/undefined or an empty serialization. Not the text
+          // "null": that is a real value someone may type into a filter.
+          if (serialized === '' || newValue === null || newValue === undefined) {
             next.delete(key);
           } else {
             next.set(key, serialized);

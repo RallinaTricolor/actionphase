@@ -403,7 +403,7 @@ func (h *Handler) humaCreatePost(ctx context.Context, in *createPostInput) (*mes
 		}
 		if errors.Is(err, core.ErrInvalidPostViewers) {
 			h.App.ObsLogger.Warn(ctx, "Create post rejected: invalid viewers", "error", err, "game_id", in.GameID, "user_id", userID)
-			return nil, huma.Error422UnprocessableEntity(err.Error())
+			return nil, huma.Error422UnprocessableEntity(core.UserMessage(err, core.ErrInvalidPostViewers))
 		}
 		if errors.Is(err, core.ErrCharacterNotControlled) {
 			h.App.ObsLogger.Warn(ctx, "Create post rejected: character not controlled by user", "error", err, "user_id", userID)
@@ -582,7 +582,7 @@ func (h *Handler) humaSetPostViewers(ctx context.Context, in *setPostViewersInpu
 		}
 		if errors.Is(err, core.ErrInvalidPostViewers) {
 			h.App.ObsLogger.Warn(ctx, "Set post viewers rejected", "error", err, "post_id", in.PostID, "user_id", userID)
-			return nil, huma.Error422UnprocessableEntity(err.Error())
+			return nil, huma.Error422UnprocessableEntity(core.UserMessage(err, core.ErrInvalidPostViewers))
 		}
 		if core.IsArchivedGameError(err) {
 			return nil, humaErr(core.ErrGameArchived())
@@ -1496,7 +1496,7 @@ func (h *Handler) humaCreateDraftPost(ctx context.Context, in *createDraftPostIn
 	if err != nil {
 		if errors.Is(err, core.ErrInvalidPostViewers) {
 			h.App.ObsLogger.Warn(ctx, "Create draft post rejected: invalid viewers", "error", err, "phase_id", in.ID, "user_id", userID)
-			return nil, huma.Error422UnprocessableEntity(err.Error())
+			return nil, huma.Error422UnprocessableEntity(core.UserMessage(err, core.ErrInvalidPostViewers))
 		}
 		// One draft per phase, so a second create is a conflict rather than an
 		// overwrite.

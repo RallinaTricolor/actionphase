@@ -175,9 +175,11 @@ describe('extractApiErrorMessage against live API payloads', () => {
     ).toBe('admin privileges required');
   });
 
-  it('reads a 429 from the rate limiter', () => {
+  it('withholds a 429 from the rate limiter', () => {
     // tollbooth takes a fixed string, so this body alone carries no
-    // `instance` -- the one emitter that cannot.
+    // `instance` -- the one emitter that cannot. Its detail names the rate
+    // limit, which must never reach a user; the body's own `status` is what
+    // withholds it when the caller passes only the response.
     expect(
       extractApiErrorMessage({
         response: {
@@ -188,10 +190,10 @@ describe('extractApiErrorMessage against live API payloads', () => {
           },
         },
       })
-    ).toBe('Rate limit exceeded. Please try again later.');
+    ).toBeUndefined();
   });
 
-  it('reads a 500 from the panic recovery middleware', () => {
+  it('withholds a 500 from the panic recovery middleware', () => {
     // Shape asserted server-side by
     // TestErrorRecoveryMiddleware_EmitsProblemJSON; there is deliberately no
     // route that panics on demand to capture this from a live server.
@@ -206,7 +208,7 @@ describe('extractApiErrorMessage against live API payloads', () => {
           },
         },
       })
-    ).toBe('Internal server error');
+    ).toBeUndefined();
   });
 
   it('reads a 404 from a huma handler', () => {
@@ -271,7 +273,22 @@ describe('userFacingApiMessage', () => {
 
   it('never shows a 5xx detail, which may carry internal error text', () => {
     expect(userFacingApiMessage(500, failed(500, { detail: 'pq: relation "games" does not exist' })))
-      .toBe(ERROR_MESSAGES.SERVER_ERROR);
+      .toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+  });
+
+  it('never reveals rate limiting', () => {
+    const limited = failed(429, { title: 'Too Many Requests', status: 429, detail: 'Rate limit exceeded. Please try again later.' });
+    expect(userFacingApiMessage(429, limited)).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+    expect(userFacingApiMessage(429, failed(429, ''))).toBe(ERROR_MESSAGES.UNKNOWN_ERROR);
+  });
+
+  // Regression: components that call extractApiErrorMessage directly
+  // (CreateGameForm and ~20 others) showed a 5xx or 429 detail verbatim.
+  it('withholds a 5xx or 429 detail from direct extractApiErrorMessage callers', () => {
+    for (const status of [429, 500, 502, 503]) {
+      expect(extractApiErrorMessage(failed(status, { detail: 'pq: connection refused' })), `status ${status}`)
+        .toBeUndefined();
+    }
   });
 
   // Regression: createAppError worded statuses itself and disagreed with this

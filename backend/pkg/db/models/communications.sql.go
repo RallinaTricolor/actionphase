@@ -40,31 +40,31 @@ func (q *Queries) AddControllersToCharacterConversations(ctx context.Context, ar
 	return err
 }
 
-const addConversationParticipant = `-- name: AddConversationParticipant :one
+const addConversationParticipants = `-- name: AddConversationParticipants :exec
+WITH want AS (
+    SELECT c.character_id, u.user_id
+    FROM unnest($2::int[]) WITH ORDINALITY AS c(character_id, n)
+    JOIN unnest($3::int[]) WITH ORDINALITY AS u(user_id, n) ON u.n = c.n
+)
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
-VALUES ($1, $2, $3)
+SELECT $1::int, want.user_id, want.character_id
+FROM want
 ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
-RETURNING id, conversation_id, user_id, character_id, joined_at, last_read_at
 `
 
-type AddConversationParticipantParams struct {
-	ConversationID int32       `json:"conversation_id"`
-	UserID         int32       `json:"user_id"`
-	CharacterID    pgtype.Int4 `json:"character_id"`
+type AddConversationParticipantsParams struct {
+	ConversationID int32   `json:"conversation_id"`
+	CharacterIds   []int32 `json:"character_ids"`
+	UserIds        []int32 `json:"user_ids"`
 }
 
-func (q *Queries) AddConversationParticipant(ctx context.Context, arg AddConversationParticipantParams) (ConversationParticipant, error) {
-	row := q.db.QueryRow(ctx, addConversationParticipant, arg.ConversationID, arg.UserID, arg.CharacterID)
-	var i ConversationParticipant
-	err := row.Scan(
-		&i.ID,
-		&i.ConversationID,
-		&i.UserID,
-		&i.CharacterID,
-		&i.JoinedAt,
-		&i.LastReadAt,
-	)
-	return i, err
+// Adds one participant row per (@character_ids[i], @user_ids[i]) pair to a new
+// conversation, so creating it costs one insert however many characters and
+// controllers it has. (Zipped by position, as in
+// AddControllersToCharacterConversations.)
+func (q *Queries) AddConversationParticipants(ctx context.Context, arg AddConversationParticipantsParams) error {
+	_, err := q.db.Exec(ctx, addConversationParticipants, arg.ConversationID, arg.CharacterIds, arg.UserIds)
+	return err
 }
 
 const countCharacterPostsAndComments = `-- name: CountCharacterPostsAndComments :one
@@ -241,6 +241,47 @@ DELETE FROM thread_posts WHERE id = $1
 func (q *Queries) DeleteThreadPost(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, deleteThreadPost, id)
 	return err
+}
+
+const getCharacterControlByIDs = `-- name: GetCharacterControlByIDs :many
+SELECT ch.id, ch.character_type, ch.user_id, na.assigned_user_id
+FROM characters ch
+LEFT JOIN npc_assignments na ON na.character_id = ch.id
+WHERE ch.id = ANY($1::int[])
+`
+
+type GetCharacterControlByIDsRow struct {
+	ID             int32       `json:"id"`
+	CharacterType  string      `json:"character_type"`
+	UserID         pgtype.Int4 `json:"user_id"`
+	AssignedUserID pgtype.Int4 `json:"assigned_user_id"`
+}
+
+// GetConversationCharacterControl for characters not yet in a conversation:
+// what decides who controls each of them, in one query.
+func (q *Queries) GetCharacterControlByIDs(ctx context.Context, characterIds []int32) ([]GetCharacterControlByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getCharacterControlByIDs, characterIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCharacterControlByIDsRow
+	for rows.Next() {
+		var i GetCharacterControlByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CharacterType,
+			&i.UserID,
+			&i.AssignedUserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getConversation = `-- name: GetConversation :one

@@ -497,6 +497,59 @@ describe('ConversationList', () => {
       expect(screen.getByTestId('conversation-filter')).toHaveValue('bob')
     })
 
+    // Regression: useUrlParam dropped the text "null" from the URL, and the
+    // input then followed the URL and wiped what was typed.
+    it('keeps the filter text "null"', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('null')
+
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=null'))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('null')
+    })
+
+    // Regression: every keystroke was a router navigation, re-rendering the
+    // whole game page as the filter was typed.
+    it('writes the URL once typing pauses, not on every keystroke', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+      const searches: string[] = []
+      const unsubscribe = router.subscribe((state) => searches.push(state.location.search))
+
+      filterTo('b')
+      filterTo('bo')
+      filterTo('bob')
+
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(2)
+      expect(router.state.location.search).toBe('')
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=bob'))
+      unsubscribe()
+      expect(new Set(searches)).toEqual(new Set(['?conversationFilter=bob']))
+    })
+
+    it('carries what was just typed in conversation links, before the URL catches up', async () => {
+      renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('smuggling')
+
+      const href = screen.getByTestId('conversation-item').closest('a')?.getAttribute('href') ?? ''
+      expect(new URLSearchParams(href.replace(/^\?/, '')).get('conversationFilter')).toBe('smuggling')
+    })
+
+    it('drops a pending URL write when a navigation elsewhere changes the filter', async () => {
+      const { router } = renderList('/?conversationFilter=charlie')
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+
+      filterTo('charlie smuggling')
+      await act(async () => { await router.navigate('/') })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      expect(router.state.location.search).toBe('')
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+    })
+
     // Regression: the empty state checked filter === '', but a whitespace-only
     // filter matches everything, so it showed a no-match message for "".
     it('treats a whitespace-only filter as no filter', async () => {

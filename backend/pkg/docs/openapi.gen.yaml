@@ -4944,6 +4944,7 @@ components:
                     type: string
                 email:
                     description: Email address; a verification mail is sent here
+                    format: email
                     type: string
                 fingerprint:
                     description: Device fingerprint, recorded on the session
@@ -4956,9 +4957,15 @@ components:
                     type: string
                 password:
                     description: Account password
+                    maxLength: 64
+                    minLength: 8
                     type: string
                 username:
                     description: Desired username
+                    maxLength: 50
+                    minLength: 3
+                    pattern: ^[a-zA-Z0-9_-]+$
+                    patternDescription: only letters, numbers, underscores and hyphens
                     type: string
             required:
                 - username
