@@ -160,20 +160,44 @@ func humanizeValidation(model *huma.ErrorModel) {
 		// One sentence per field in the summary. Schema validation and a
 		// Resolve hook can both reject the same field ("Title is required",
 		// "Title must not be blank"), and saying it twice reads as two
-		// problems. errors[] keeps every detail.
-		key := d.Location
+		// problems. Every item of an array counts as the same field, since
+		// blank options[1].text and options[2].text both say "Text is
+		// required". errors[] keeps every detail.
+		key := arrayIndex.ReplaceAllString(d.Location, "[]")
 		if fieldName(key) == "" {
 			key = "message:" + d.Message
 		}
-		if d.Message != "" && !seen[key] {
+		if d.Message != "" && !seen[key] && !seen["message:"+d.Message] {
 			seen[key] = true
+			seen["message:"+d.Message] = true
 			summary = append(summary, d.Message)
 		}
 	}
 
 	if strings.EqualFold(strings.TrimSpace(model.Detail), genericValidationDetail) && len(summary) > 0 {
-		model.Detail = strings.Join(summary, ". ")
+		model.Detail = joinSentences(summary)
 	}
+}
+
+// arrayIndex matches the index in a location such as "body.options[2].text".
+var arrayIndex = regexp.MustCompile(`\[\d+\]`)
+
+// joinSentences joins messages into one detail, adding a full stop between
+// them only where a message doesn't already end in punctuation: a Resolve
+// hook's "Invalid layout." must not become "Invalid layout.. Title is
+// required".
+func joinSentences(messages []string) string {
+	var b strings.Builder
+	for i, m := range messages {
+		if i > 0 {
+			if !strings.ContainsAny(messages[i-1][len(messages[i-1])-1:], ".!?") {
+				b.WriteString(".")
+			}
+			b.WriteString(" ")
+		}
+		b.WriteString(m)
+	}
+	return b.String()
 }
 
 // humanizeMessage renders one validation message for a person.

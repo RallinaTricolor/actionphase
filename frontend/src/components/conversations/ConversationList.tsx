@@ -32,10 +32,21 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
   // navigation (which can jump the cursor).
   const [filterParam, setFilterParam] = useUrlParam<string>('conversationFilter', '', { replace: true });
   const [filter, setFilter] = useState(filterParam);
+  // The URL value the input last agreed with. When the URL moves away from it,
+  // something other than the input changed it (a link without the param, such
+  // as the Messages tab), and the input follows. The input's own writes update
+  // it first, so they never echo back into what is being typed.
+  const [syncedFilterParam, setSyncedFilterParam] = useState(filterParam);
+  if (filterParam !== syncedFilterParam) {
+    setSyncedFilterParam(filterParam);
+    setFilter(filterParam);
+  }
   const updateFilter = (value: string) => {
     setFilter(value);
+    setSyncedFilterParam(value);
     setFilterParam(value);
   };
+  const isFiltering = filter.trim() !== '';
 
   const filteredConversations = useMemo(
     () => conversations.filter((conversation) => matchesFilter(conversation, filter)),
@@ -69,7 +80,7 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
 
   // Shown whenever there is something to filter, and kept while a filter is
   // set so a refresh that briefly empties the list doesn't take the input away.
-  const filterBar = (conversations.length > 0 || filter !== '') && (
+  const filterBar = (conversations.length > 0 || isFiltering) && (
     <div className="sticky top-0 z-10 surface-raised border-b border-theme-default px-4 py-2">
       <Input
         type="search"
@@ -94,7 +105,7 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
     );
   }
 
-  if (conversations.length === 0 && filter === '') {
+  if (conversations.length === 0 && !isFiltering) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
@@ -133,10 +144,7 @@ export function ConversationList({ gameId, selectedConversationId }: Conversatio
             // thread follows the URL. Writing the param from onClick as well
             // ran before the push and replaced the list's own history entry,
             // so Back returned to the conversation instead of the list.
-            // The state tells the thread's back button that the previous
-            // entry is this list, so it can step back instead of adding one.
             to={getConversationHref(conversation.id)}
-            state={{ fromConversationList: true }}
             onClick={() => {
               logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
             }}

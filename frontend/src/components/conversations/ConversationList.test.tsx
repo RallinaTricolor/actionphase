@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '@/test-utils';
 import { makeConversationListItem } from '@/test-utils/factories';
 import { ConversationList } from './ConversationList'
@@ -394,7 +394,7 @@ describe('ConversationList', () => {
           return HttpResponse.json({ conversations })
         })
       )
-      renderWithProviders(
+      return renderWithProviders(
         <ConversationList gameId={123} />,
         { initialRoute }
       )
@@ -466,6 +466,52 @@ describe('ConversationList', () => {
 
       await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
       expect(screen.getByTestId('conversation-filter')).toHaveValue('charlie')
+    })
+
+    // Regression: the input copied the URL only on mount, so a link that drops
+    // the param (the Messages tab) left the list filtered with no filter in the
+    // URL, and conversation links stopped carrying it.
+    it('follows the URL when a navigation elsewhere changes the filter', async () => {
+      const { router } = renderList('/?conversationFilter=charlie')
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(1))
+
+      await act(async () => { await router.navigate('/') })
+
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(3)
+
+      await act(async () => { await router.navigate('/?conversationFilter=dana') })
+
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('dana')
+      expect(screen.getAllByTestId('conversation-item')).toHaveLength(1)
+    })
+
+    it('keeps what is typed in step with the URL', async () => {
+      const { router } = renderList()
+      await waitFor(() => expect(screen.getAllByTestId('conversation-item')).toHaveLength(3))
+
+      filterTo('bo')
+      filterTo('bob')
+
+      await waitFor(() => expect(router.state.location.search).toBe('?conversationFilter=bob'))
+      expect(screen.getByTestId('conversation-filter')).toHaveValue('bob')
+    })
+
+    // Regression: the empty state checked filter === '', but a whitespace-only
+    // filter matches everything, so it showed a no-match message for "".
+    it('treats a whitespace-only filter as no filter', async () => {
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/:gameId/conversations', () => {
+          return HttpResponse.json({ conversations: [] })
+        })
+      )
+      renderWithProviders(
+        <ConversationList gameId={123} />,
+        { initialRoute: '/?conversationFilter=%20' }
+      )
+
+      await waitFor(() => expect(screen.getByText('No conversations yet')).toBeInTheDocument())
+      expect(screen.queryByText(/No conversations match/)).not.toBeInTheDocument()
     })
 
     it('is hidden when there are no conversations at all', async () => {

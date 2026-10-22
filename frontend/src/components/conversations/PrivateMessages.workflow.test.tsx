@@ -607,6 +607,27 @@ describe('PrivateMessages', () => {
           expect(screen.getByRole('button', { name: /back to conversations/i })).toBeInTheDocument();
         });
       });
+
+      // Regression: the back button only stepped back when the conversation's
+      // own entry came from the list. Re-opening it by a notification link
+      // pushed an entry without that mark, so the button replaced it with a
+      // copy of the list, and browser Back from there returned to the
+      // conversation.
+      it('the in-app back button returns to the list entry after a notification re-opens the conversation', async () => {
+        const { user, router } = await openConversationFromList();
+
+        // A notification link pushes the conversation's URL again.
+        await act(async () => { await router.navigate('/?tab=messages&conversation=42'); });
+        await user.click(screen.getByRole('button', { name: /back to conversations/i }));
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
+        });
+        expect(router.state.location.search).toBe('?tab=messages');
+
+        // Back on the original list entry, there is no conversation behind it.
+        await act(async () => { await router.navigate(-1); });
+        expect(screen.queryByRole('button', { name: /back to conversations/i })).not.toBeInTheDocument();
+      });
     });
 
     it('clears conversation param when back button is clicked', async () => {

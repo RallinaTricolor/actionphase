@@ -56,12 +56,17 @@ func text(v pgtype.Text, fallback string) string {
 }
 
 // speaker renders "Character (username)", degrading gracefully when a
-// character was detached (ON DELETE SET NULL) or never set.
+// character was detached (ON DELETE SET NULL) or never set, or has no username
+// to show (an NPC that never spoke in a conversation).
 func speaker(characterName pgtype.Text, username string) string {
-	if name := text(characterName, ""); name != "" {
-		return fmt.Sprintf("%s (%s)", name, username)
+	name := text(characterName, "")
+	switch {
+	case name == "":
+		return username
+	case username == "":
+		return name
 	}
-	return username
+	return fmt.Sprintf("%s (%s)", name, username)
 }
 
 // frontmatter renders a YAML block. Keys are emitted in the given order so

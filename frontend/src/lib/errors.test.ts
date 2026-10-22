@@ -273,4 +273,17 @@ describe('userFacingApiMessage', () => {
     expect(userFacingApiMessage(500, failed(500, { detail: 'pq: relation "games" does not exist' })))
       .toBe(ERROR_MESSAGES.SERVER_ERROR);
   });
+
+  // Regression: createAppError worded statuses itself and disagreed with this
+  // (an empty 404 or 429 read "An unexpected error occurred"), so the text a
+  // user saw depended on which helper a component happened to call.
+  it('agrees with createAppError for every status, with and without a server message', () => {
+    for (const status of [400, 401, 403, 404, 409, 422, 429, 500, 501, 502, 503]) {
+      for (const data of ['', { detail: 'That phase has already ended' }]) {
+        const error = failed(status, data);
+        expect(createAppError(error).context?.userMessage, `status ${status}`)
+          .toBe(userFacingApiMessage(status, error));
+      }
+    }
+  });
 });

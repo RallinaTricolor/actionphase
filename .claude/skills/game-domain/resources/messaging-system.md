@@ -40,10 +40,16 @@ Key columns:
     (`syncCharacterConversationParticipants`,
     `backend/pkg/db/services/conversation_participants.go`)
   - **Holding a row ≠ being notified.** A message notifies, per recipient
-    character, only who *answers* for it (`characterAnswererUserIDs`): a player
+    character, only who *answers* for it (`characterControl.answerers`): a player
     character's owner, an assigned NPC's assignee, or the GM + co-GMs for an
     unassigned NPC. GMs keep assigned NPCs' conversations in their inbox but
     are not notified about them, or they'd be flooded
+  - ❌ A user can hold **several rows per conversation** (the GMs hold one per
+    NPC). Test membership with `EXISTS`, never a join, or the conversation
+    repeats once per row; count participants as distinct characters, never
+    `COUNT(*)`. Rows also can't say who *played* a character: use
+    `private_messages.sender_user_id` for that (see
+    `ListExportConversationParticipants`)
   - ❌ Never write participant rows by hand or snapshot a controller elsewhere;
     a new controller would not see conversations from before the handoff
     (fixed 2026-10-21)

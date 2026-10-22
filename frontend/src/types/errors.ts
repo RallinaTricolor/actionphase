@@ -104,6 +104,8 @@ export const ERROR_MESSAGES = {
   INVALID_GAME_STATE: 'Cannot perform this action in the current game state',
 
   // Generic fallbacks
+  NOT_FOUND: 'The requested item could not be found. It may have been removed.',
+  RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
   UNKNOWN_ERROR: 'An unexpected error occurred. Please try again.',
   SERVER_ERROR: 'Server error occurred. Please try again later.'
 } as const;

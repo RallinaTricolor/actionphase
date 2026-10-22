@@ -73,9 +73,11 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
  * said, or a plain-language line for its status when it said nothing usable
  * (a proxy's HTML 502, an empty 404).
  *
- * Exists because axios' own `error.message` is "Request failed with status
- * code 422", and most components display `error.message` directly. The API
- * client's response interceptor overwrites it with this before rejecting.
+ * The one place a status is worded for people. Axios' own `error.message` is
+ * "Request failed with status code 422", and most components display
+ * `error.message` directly, so the API client's response interceptor
+ * overwrites it with this before rejecting; createAppError uses it too, so a
+ * failure reads the same whichever one a component goes through.
  */
 export function userFacingApiMessage(status: number, error: unknown): string {
   // A 5xx detail may carry internal error text, and there is nothing the user
@@ -89,9 +91,9 @@ export function userFacingApiMessage(status: number, error: unknown): string {
     case 403:
       return ERROR_MESSAGES.UNAUTHORIZED;
     case 404:
-      return 'The requested item could not be found. It may have been removed.';
+      return ERROR_MESSAGES.NOT_FOUND;
     case 429:
-      return 'Too many requests. Please wait a moment and try again.';
+      return ERROR_MESSAGES.RATE_LIMITED;
     default:
       return ERROR_MESSAGES.UNKNOWN_ERROR;
   }
@@ -160,17 +162,11 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
     ? STATUS_CODE_TO_ERROR_TYPE[statusCode as keyof typeof STATUS_CODE_TO_ERROR_TYPE]
     : ErrorType.NETWORK_ERROR;
 
-  let userMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
+  const userMessage = statusCode
+    ? userFacingApiMessage(statusCode, error)
+    : ERROR_MESSAGES.NETWORK_UNAVAILABLE;
   let category: ErrorCategory = ErrorCategory.NON_RECOVERABLE;
   let severity: ErrorSeverity = ErrorSeverity.MEDIUM;
-
-  // Extract user-friendly message from API response.
-  // Note this never falls back to `apiError.status`: under RFC 7807 that is the
-  // numeric status code, and displaying it shows the user a bare "422".
-  const apiMessage = extractApiErrorMessage(error);
-  if (apiMessage) {
-    userMessage = apiMessage;
-  }
 
   // Categorize by status code
   switch (statusCode) {
@@ -180,18 +176,10 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
       severity = ErrorSeverity.LOW;
       break;
     case 401:
-      // Use API error message if available, otherwise use default session expired message
-      if (!apiMessage) {
-        userMessage = ERROR_MESSAGES.SESSION_EXPIRED;
-      }
       category = ErrorCategory.RECOVERABLE;
       severity = ErrorSeverity.HIGH;
       break;
     case 403:
-      // Use API error message if available, otherwise use default unauthorized message
-      if (!apiMessage) {
-        userMessage = ERROR_MESSAGES.UNAUTHORIZED;
-      }
       category = ErrorCategory.NON_RECOVERABLE;
       severity = ErrorSeverity.MEDIUM;
       break;
@@ -203,13 +191,11 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
     case 502:
     case 503:
     case 504:
-      userMessage = ERROR_MESSAGES.SERVER_ERROR;
       category = ErrorCategory.RECOVERABLE;
       severity = ErrorSeverity.HIGH;
       break;
     default:
       if (!statusCode) {
-        userMessage = ERROR_MESSAGES.NETWORK_UNAVAILABLE;
         category = ErrorCategory.RECOVERABLE;
         severity = ErrorSeverity.HIGH;
       }

@@ -338,3 +338,152 @@ func TestNotifyPrivateMessage_OnlyAnswerersOfEachCharacter(t *testing.T) {
 		assert.Equal(t, map[int32]int{gmID: 1, coGMID: 1, audienceID: 1}, got)
 	})
 }
+
+// TestConversationLists_OneEntryPerConversation: the GM and co-GMs hold a
+// participant row for every NPC in a conversation, so a conversation with two
+// NPCs gives the GM two rows. The inbox and the dashboard's unread preview must
+// still list it once; the preview is capped, so a duplicate takes a slot from
+// another conversation. For the same reason, participant_count counts
+// characters, not rows.
+func TestConversationLists_OneEntryPerConversation(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	ctx := context.Background()
+
+	service := NewConversationService(testDB.Pool, nil)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	audience := testDB.CreateTestUser(t, "audience", "audience@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Two NPCs")
+
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(audience.ID), "audience")
+	require.NoError(t, err)
+
+	playerID := int32(player.ID)
+	playerChar, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: &playerID, Name: "Hero", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	assigned, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Innkeeper", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	unassigned, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Mayor", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	require.NoError(t, charService.AssignNPCToUser(ctx, assigned.ID, int32(audience.ID), int32(gm.ID)))
+
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID: game.ID, Title: "Council", CreatedByUserID: playerID,
+		ParticipantIDs: []int32{playerChar.ID, assigned.ID, unassigned.ID},
+	})
+	require.NoError(t, err)
+	_, err = service.SendMessage(ctx, SendMessageRequest{
+		ConversationID: conv.ID, SenderUserID: playerID, SenderCharacterID: playerChar.ID,
+		Content: "Shall we begin?",
+	})
+	require.NoError(t, err)
+
+	gmID := int32(gm.ID)
+
+	t.Run("inbox", func(t *testing.T) {
+		conversations, err := service.GetUserConversations(ctx, game.ID, gmID)
+		require.NoError(t, err)
+		require.Len(t, conversations, 1)
+		assert.Equal(t, conv.ID, conversations[0].ID)
+		assert.EqualValues(t, 3, conversations[0].ParticipantCount, "Hero, Innkeeper and Mayor")
+	})
+
+	t.Run("unread preview", func(t *testing.T) {
+		unread, err := service.GetUserUnreadConversations(ctx, game.ID, gmID, 3)
+		require.NoError(t, err)
+		require.Len(t, unread, 1)
+		assert.Equal(t, conv.ID, unread[0].ID)
+		assert.EqualValues(t, 1, unread[0].UnreadCount)
+		assert.EqualValues(t, 3, unread[0].ParticipantCount, "Hero, Innkeeper and Mayor")
+	})
+}
+
+// TestListExportConversationParticipants_OneEntryPerCharacter: participant rows
+// name whoever controls a character now -- for an NPC, the GM, every co-GM and
+// its assignee -- so they can't say who played it in an archived conversation.
+// The export lists each character once, labelled with the users who actually
+// spoke as it there, so a previous controller is kept and the GM team is not
+// listed against an NPC they never voiced.
+func TestListExportConversationParticipants_OneEntryPerCharacter(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	ctx := context.Background()
+
+	service := NewConversationService(testDB.Pool, nil)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	charService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	coGM := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	first := testDB.CreateTestUser(t, "first_voice", "first@example.com")
+	second := testDB.CreateTestUser(t, "second_voice", "second@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Export")
+
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	for _, u := range []int32{int32(coGM.ID), int32(first.ID), int32(second.ID)} {
+		_, err = gameService.AddGameParticipant(ctx, game.ID, u, "audience")
+		require.NoError(t, err)
+	}
+	require.NoError(t, gameService.PromoteToCoGM(ctx, game.ID, int32(coGM.ID), int32(gm.ID)))
+
+	playerID := int32(player.ID)
+	playerChar, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: &playerID, Name: "Hero", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	handedOff, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Innkeeper", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	silent, err := charService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: nil, Name: "Mayor", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, charService.AssignNPCToUser(ctx, handedOff.ID, int32(first.ID), int32(gm.ID)))
+	conv, err := service.CreateConversation(ctx, CreateConversationRequest{
+		GameID: game.ID, Title: "At the inn", CreatedByUserID: playerID,
+		ParticipantIDs: []int32{playerChar.ID, handedOff.ID, silent.ID},
+	})
+	require.NoError(t, err)
+	send := func(userID, charID int32) {
+		_, err := service.SendMessage(ctx, SendMessageRequest{
+			ConversationID: conv.ID, SenderUserID: userID, SenderCharacterID: charID, Content: "hi",
+		})
+		require.NoError(t, err)
+	}
+	send(int32(first.ID), handedOff.ID)
+	require.NoError(t, charService.AssignNPCToUser(ctx, handedOff.ID, int32(second.ID), int32(gm.ID)))
+	send(int32(second.ID), handedOff.ID)
+
+	rows, err := service.Queries.ListExportConversationParticipants(ctx, game.ID)
+	require.NoError(t, err)
+
+	got := make([]string, 0, len(rows))
+	for _, r := range rows {
+		require.Equal(t, conv.ID, r.ConversationID)
+		got = append(got, r.CharacterName.String+"/"+r.Username)
+	}
+	assert.ElementsMatch(t, []string{
+		"Hero/" + player.Username,
+		"Innkeeper/" + first.Username,
+		"Innkeeper/" + second.Username,
+		"Mayor/",
+	}, got)
+}

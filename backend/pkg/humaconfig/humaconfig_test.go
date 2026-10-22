@@ -148,6 +148,53 @@ func TestInstallProblemErrorFormat_OneSentencePerField(t *testing.T) {
 	}
 }
 
+// TestInstallProblemErrorFormat_SummaryReadsAsProse: the same rule failing on
+// several items of an array is one problem, and a message that already ends in
+// a full stop doesn't get a second one.
+func TestInstallProblemErrorFormat_SummaryReadsAsProse(t *testing.T) {
+	original := huma.NewErrorWithContext
+	t.Cleanup(func() { huma.NewErrorWithContext = original })
+	InstallProblemErrorFormat()
+
+	tests := []struct {
+		name    string
+		details []error
+		want    string
+	}{
+		{
+			name: "one sentence for an array's repeated failure",
+			details: []error{
+				&huma.ErrorDetail{Message: "expected required property text to be present", Location: "body.options[1]"},
+				&huma.ErrorDetail{Message: "expected required property text to be present", Location: "body.options[2]"},
+				&huma.ErrorDetail{Message: "expected length >= 3", Location: "body.question"},
+			},
+			want: "Text is required. Question must be at least 3 characters",
+		},
+		{
+			name: "no doubled full stop",
+			details: []error{
+				&huma.ErrorDetail{Message: "Invalid layout.", Location: "body.layout"},
+				&huma.ErrorDetail{Message: "expected length >= 3", Location: "body.title"},
+			},
+			want: "Invalid layout. Title must be at least 3 characters",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := huma.NewErrorWithContext(stubContext{requestCtx: context.Background()},
+				http.StatusUnprocessableEntity, "validation failed", tt.details...)
+
+			model := err.(*huma.ErrorModel)
+			if model.Detail != tt.want {
+				t.Errorf("Detail = %q, want %q", model.Detail, tt.want)
+			}
+			if len(model.Errors) != len(tt.details) {
+				t.Errorf("errors[] should keep every detail, got %d", len(model.Errors))
+			}
+		})
+	}
+}
+
 // TestInstallProblemErrorFormat_KeepsChosenDetail: only huma's generic detail
 // is replaced. A handler that wrote its own keeps it.
 func TestInstallProblemErrorFormat_KeepsChosenDetail(t *testing.T) {

@@ -112,13 +112,18 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req Create
 	// Add all participants (characters), one row per user who controls each.
 	// The same rule re-syncs these rows whenever control changes; see
 	// conversation_participants.go.
+	gms := newGameGMs(qtx, req.GameID)
 	for _, charID := range req.ParticipantIDs {
 		char, err := qtx.GetCharacter(ctx, charID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get character %d: %w", charID, err)
 		}
 
-		userIDs, err := characterControllerUserIDs(ctx, qtx, char)
+		control, err := loadCharacterControl(ctx, qtx, char)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve controllers of character %d: %w", charID, err)
+		}
+		userIDs, err := control.controllers(ctx, gms)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve controllers of character %d: %w", charID, err)
 		}
@@ -429,12 +434,28 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 	}
 
 	// Notify, per character in the conversation, only the users who answer for
-	// it (characterAnswererUserIDs). Holding a participant row is not enough:
+	// it (characterControl.answerers). Holding a participant row is not enough:
 	// the GMs hold every NPC's rows, and a message to an NPC assigned to someone
 	// else is not theirs to answer. Each user is notified at most once, however
 	// many of their characters are in the conversation, and never for their own
 	// message.
-	answerers := make(map[int32][]int32) // character ID -> users who answer for it
+	controls, err := s.Queries.GetConversationCharacterControl(ctx, conversationID)
+	if err != nil {
+		slog.Error("Failed to get conversation characters for notifications", "error", err, "conversation_id", conversationID)
+		return
+	}
+	gms := newGameGMs(s.Queries, conv.GameID)
+	answerers := make(map[int32][]int32, len(controls)) // character ID -> users who answer for it
+	for _, c := range controls {
+		control := characterControl{characterType: c.CharacterType, ownerUserID: c.UserID, assigneeUserID: c.AssignedUserID}
+		users, err := control.answerers(ctx, gms)
+		if err != nil {
+			slog.Error("Failed to resolve who answers for a character", "error", err, "character_id", c.ID)
+			return
+		}
+		answerers[c.ID] = users
+	}
+
 	notifiedUsers := make(map[int32]bool)
 	for _, participant := range participants {
 		if participant.UserID == senderUserID || notifiedUsers[participant.UserID] {
@@ -442,23 +463,8 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 		}
 		// A row whose character was deleted (ON DELETE SET NULL) has no one
 		// else to answer for it; its user is still in the conversation.
-		if participant.CharacterID.Valid {
-			charID := participant.CharacterID.Int32
-			users, cached := answerers[charID]
-			if !cached {
-				char, err := s.Queries.GetCharacter(ctx, charID)
-				if err == nil {
-					users, err = characterAnswererUserIDs(ctx, s.Queries, char)
-				}
-				if err != nil {
-					slog.Error("Failed to resolve who answers for a character", "error", err, "character_id", charID)
-					continue
-				}
-				answerers[charID] = users
-			}
-			if !slices.Contains(users, participant.UserID) {
-				continue
-			}
+		if participant.CharacterID.Valid && !slices.Contains(answerers[participant.CharacterID.Int32], participant.UserID) {
+			continue
 		}
 		notifiedUsers[participant.UserID] = true
 

@@ -11,26 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addCharacterControllersToConversations = `-- name: AddCharacterControllersToConversations :exec
+const addControllersToCharacterConversations = `-- name: AddControllersToCharacterConversations :exec
+WITH want AS (
+    SELECT c.character_id, u.user_id
+    FROM unnest($1::int[]) WITH ORDINALITY AS c(character_id, n)
+    JOIN unnest($2::int[]) WITH ORDINALITY AS u(user_id, n) ON u.n = c.n
+)
 INSERT INTO conversation_participants (conversation_id, user_id, character_id)
-SELECT DISTINCT cp.conversation_id, controller.user_id, cp.character_id
-FROM conversation_participants cp
-CROSS JOIN unnest($1::int[]) AS controller(user_id)
-WHERE cp.character_id = $2
+SELECT DISTINCT cp.conversation_id, want.user_id, cp.character_id
+FROM want
+JOIN conversation_participants cp ON cp.character_id = want.character_id
 ON CONFLICT (conversation_id, user_id, character_id) DO NOTHING
 `
 
-type AddCharacterControllersToConversationsParams struct {
-	UserIds     []int32     `json:"user_ids"`
-	CharacterID pgtype.Int4 `json:"character_id"`
+type AddControllersToCharacterConversationsParams struct {
+	CharacterIds []int32 `json:"character_ids"`
+	UserIds      []int32 `json:"user_ids"`
 }
 
-// Gives each of @user_ids a participant row for @character_id in every
-// conversation that character is already in. Used when control of a character
-// changes, so its new controller sees the conversations it joined before the
-// handoff (see syncCharacterConversationParticipants).
-func (q *Queries) AddCharacterControllersToConversations(ctx context.Context, arg AddCharacterControllersToConversationsParams) error {
-	_, err := q.db.Exec(ctx, addCharacterControllersToConversations, arg.UserIds, arg.CharacterID)
+// For each (@character_ids[i], @user_ids[i]) pair, gives that user a
+// participant row for that character in every conversation the character is
+// already in. Used when control of characters changes, so a new controller sees
+// the conversations joined before the handoff (see
+// syncConversationControllers). Pass one pair per controller of each character.
+// (The arrays are zipped by position; sqlc can't parse a two-array unnest.)
+func (q *Queries) AddControllersToCharacterConversations(ctx context.Context, arg AddControllersToCharacterConversationsParams) error {
+	_, err := q.db.Exec(ctx, addControllersToCharacterConversations, arg.CharacterIds, arg.UserIds)
 	return err
 }
 
@@ -254,6 +260,49 @@ func (q *Queries) GetConversation(ctx context.Context, id int32) (Conversation, 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getConversationCharacterControl = `-- name: GetConversationCharacterControl :many
+SELECT DISTINCT ch.id, ch.character_type, ch.user_id, na.assigned_user_id
+FROM conversation_participants cp
+JOIN characters ch ON cp.character_id = ch.id
+LEFT JOIN npc_assignments na ON na.character_id = ch.id
+WHERE cp.conversation_id = $1
+`
+
+type GetConversationCharacterControlRow struct {
+	ID             int32       `json:"id"`
+	CharacterType  string      `json:"character_type"`
+	UserID         pgtype.Int4 `json:"user_id"`
+	AssignedUserID pgtype.Int4 `json:"assigned_user_id"`
+}
+
+// The characters in a conversation, with what decides who controls and answers
+// for each (type, owner, NPC assignee; see conversation_participants.go), so a
+// message's recipients resolve in one query however many characters take part.
+func (q *Queries) GetConversationCharacterControl(ctx context.Context, conversationID int32) ([]GetConversationCharacterControlRow, error) {
+	rows, err := q.db.Query(ctx, getConversationCharacterControl, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetConversationCharacterControlRow
+	for rows.Next() {
+		var i GetConversationCharacterControlRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CharacterType,
+			&i.UserID,
+			&i.AssignedUserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getConversationMessages = `-- name: GetConversationMessages :many
@@ -786,7 +835,9 @@ func (q *Queries) GetUnreadMessageCount(ctx context.Context, arg GetUnreadMessag
 
 const getUserConversations = `-- name: GetUserConversations :many
 SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.created_at, c.updated_at,
-       (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
+       -- Characters, not rows; see GetUserUnreadConversations.
+       (SELECT COUNT(DISTINCT character_id) + COUNT(DISTINCT user_id) FILTER (WHERE character_id IS NULL)
+        FROM conversation_participants WHERE conversation_id = c.id)::bigint as participant_count,
        COALESCE(lm.last_message, '') as last_message,
        lm.last_message_at,
        COALESCE(
@@ -820,7 +871,6 @@ SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.cr
        cr.last_read_message_id,
        cr.last_read_at
 FROM conversations c
-JOIN conversation_participants cp ON c.id = cp.conversation_id
 LEFT JOIN conversation_reads cr ON c.id = cr.conversation_id AND cr.user_id = $1
 LEFT JOIN LATERAL (
     SELECT content as last_message, created_at as last_message_at
@@ -831,7 +881,11 @@ LEFT JOIN LATERAL (
     ORDER BY created_at DESC
     LIMIT 1
 ) lm ON true
-WHERE cp.user_id = $1 AND c.game_id = $2
+WHERE EXISTS (
+    SELECT 1 FROM conversation_participants cp
+    WHERE cp.conversation_id = c.id AND cp.user_id = $1
+  )
+  AND c.game_id = $2
 ORDER BY COALESCE(
     (SELECT COUNT(*)
      FROM private_messages pm
@@ -863,6 +917,7 @@ type GetUserConversationsRow struct {
 	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
 }
 
+// Membership is an EXISTS for the reason given on GetUserUnreadConversations.
 func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversationsParams) ([]GetUserConversationsRow, error) {
 	rows, err := q.db.Query(ctx, getUserConversations, arg.GmUserID, arg.GameID)
 	if err != nil {
@@ -900,7 +955,11 @@ func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversat
 
 const getUserUnreadConversations = `-- name: GetUserUnreadConversations :many
 SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.created_at, c.updated_at,
-       (SELECT COUNT(*) FROM conversation_participants WHERE conversation_id = c.id) as participant_count,
+       -- Characters, not rows: each character has a row per user controlling
+       -- it (an NPC one per GM, co-GM and assignee). A row whose character was
+       -- deleted (ON DELETE SET NULL) counts once per user.
+       (SELECT COUNT(DISTINCT character_id) + COUNT(DISTINCT user_id) FILTER (WHERE character_id IS NULL)
+        FROM conversation_participants WHERE conversation_id = c.id)::bigint as participant_count,
        COALESCE(lm.last_message, '') as last_message,
        lm.last_message_at,
        COALESCE(
@@ -925,7 +984,6 @@ SELECT c.id, c.game_id, c.conversation_type, c.title, c.created_by_user_id, c.cr
        cr.last_read_message_id,
        cr.last_read_at
 FROM conversations c
-JOIN conversation_participants cp ON c.id = cp.conversation_id
 LEFT JOIN conversation_reads cr ON c.id = cr.conversation_id AND cr.user_id = $1
 LEFT JOIN LATERAL (
     SELECT content as last_message, created_at as last_message_at
@@ -943,7 +1001,10 @@ LEFT JOIN LATERAL (
       AND pm.created_at > COALESCE(cr.last_read_at, '1970-01-01'::timestamptz)
       AND pm.sender_user_id != $1
 ) unread ON true
-WHERE cp.user_id = $1
+WHERE EXISTS (
+    SELECT 1 FROM conversation_participants cp
+    WHERE cp.conversation_id = c.id AND cp.user_id = $1
+  )
   AND c.game_id = $2
   AND unread.unread_count > 0
 ORDER BY unread.unread_count DESC, c.updated_at DESC
@@ -975,6 +1036,8 @@ type GetUserUnreadConversationsRow struct {
 
 // Get conversations with unread messages for a user in a game, capped at a limit.
 // Used by the dashboard PM preview to avoid fetching the full conversation list.
+// Membership is an EXISTS, not a join: a user holds one row per character they
+// control in the conversation (the GMs one per NPC), and each would repeat it.
 func (q *Queries) GetUserUnreadConversations(ctx context.Context, arg GetUserUnreadConversationsParams) ([]GetUserUnreadConversationsRow, error) {
 	rows, err := q.db.Query(ctx, getUserUnreadConversations, arg.UserID, arg.GameID, arg.MaxResults)
 	if err != nil {
@@ -1559,24 +1622,6 @@ func (q *Queries) ListRecentUnreadCommentsWithParents(ctx context.Context, arg L
 	return items, nil
 }
 
-const removeCharacterControllersFromConversations = `-- name: RemoveCharacterControllersFromConversations :exec
-DELETE FROM conversation_participants
-WHERE character_id = $1
-  AND NOT (user_id = ANY($2::int[]))
-`
-
-type RemoveCharacterControllersFromConversationsParams struct {
-	CharacterID pgtype.Int4 `json:"character_id"`
-	UserIds     []int32     `json:"user_ids"`
-}
-
-// Drops @character_id's participant rows for every user not in @user_ids: the
-// previous controller stops receiving the character's conversations.
-func (q *Queries) RemoveCharacterControllersFromConversations(ctx context.Context, arg RemoveCharacterControllersFromConversationsParams) error {
-	_, err := q.db.Exec(ctx, removeCharacterControllersFromConversations, arg.CharacterID, arg.UserIds)
-	return err
-}
-
 const removeConversationParticipant = `-- name: RemoveConversationParticipant :exec
 DELETE FROM conversation_participants
 WHERE conversation_id = $1 AND user_id = $2 AND
@@ -1591,6 +1636,33 @@ type RemoveConversationParticipantParams struct {
 
 func (q *Queries) RemoveConversationParticipant(ctx context.Context, arg RemoveConversationParticipantParams) error {
 	_, err := q.db.Exec(ctx, removeConversationParticipant, arg.ConversationID, arg.UserID, arg.CharacterID)
+	return err
+}
+
+const removeNonControllersFromCharacterConversations = `-- name: RemoveNonControllersFromCharacterConversations :exec
+WITH want AS (
+    SELECT c.character_id, u.user_id
+    FROM unnest($1::int[]) WITH ORDINALITY AS c(character_id, n)
+    JOIN unnest($2::int[]) WITH ORDINALITY AS u(user_id, n) ON u.n = c.n
+)
+DELETE FROM conversation_participants cp
+WHERE cp.character_id IN (SELECT character_id FROM want)
+  AND NOT EXISTS (
+    SELECT 1 FROM want
+    WHERE want.character_id = cp.character_id AND want.user_id = cp.user_id
+  )
+`
+
+type RemoveNonControllersFromCharacterConversationsParams struct {
+	CharacterIds []int32 `json:"character_ids"`
+	UserIds      []int32 `json:"user_ids"`
+}
+
+// Takes the same pairs as AddControllersToCharacterConversations and drops
+// every row of those characters whose user is not paired with it: a previous
+// controller stops receiving the character's conversations.
+func (q *Queries) RemoveNonControllersFromCharacterConversations(ctx context.Context, arg RemoveNonControllersFromCharacterConversationsParams) error {
+	_, err := q.db.Exec(ctx, removeNonControllersFromCharacterConversations, arg.CharacterIds, arg.UserIds)
 	return err
 }
 

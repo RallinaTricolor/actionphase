@@ -22,80 +22,116 @@ import (
 // member mid-game took none of its conversations with it: the new controller
 // could not see them, even as new messages arrived. Every change of control
 // therefore re-syncs the character's rows through
-// syncCharacterConversationParticipants:
+// syncCharacterConversationParticipants (or, for a whole game's NPCs at once,
+// syncGameNPCConversationParticipants):
 //
 //   - NPC assigned or taken back (CharacterService.AssignNPCToUser)
 //   - inactive character given a new owner (CharacterService.ReassignCharacter)
 //   - co-GM promoted or demoted, which changes who controls every NPC in the
 //     game (GameService.PromoteToCoGM / DemoteFromCoGM)
 
-// characterControllerUserIDs returns the users who control a character, and so
-// hold its participant rows.
+// characterControl is what decides who controls and answers for a character:
+// its type, its owner and, for an NPC, the user it is assigned to.
+type characterControl struct {
+	characterType  string
+	ownerUserID    pgtype.Int4
+	assigneeUserID pgtype.Int4
+}
+
+// isPlayerCharacter reports whether the character belongs to its owner alone.
+// A character with no owner is treated as an NPC, so it is never left without
+// a participant row (which would drop it from the conversation's participant
+// list).
+func (c characterControl) isPlayerCharacter() bool {
+	return c.characterType != "npc" && c.ownerUserID.Valid
+}
+
+// controllers returns the users who control a character, and so hold its
+// participant rows.
 //
 // A player character belongs to its owner alone. An NPC is controlled by the
 // GM, every co-GM and the user it is assigned to, matching
 // core.CanUserControlNPC: an assigned NPC stays in the GM's inbox, since the GM
-// can still send as it. A character with no owner is treated as an NPC so it
-// is never left without a participant row (which would drop it from the
-// conversation's participant list).
-func characterControllerUserIDs(ctx context.Context, q *models.Queries, char models.Character) ([]int32, error) {
-	if char.CharacterType != "npc" && char.UserID.Valid {
-		return []int32{char.UserID.Int32}, nil
+// can still send as it.
+func (c characterControl) controllers(ctx context.Context, gms *gameGMs) ([]int32, error) {
+	if c.isPlayerCharacter() {
+		return []int32{c.ownerUserID.Int32}, nil
 	}
-	gmUserIDs, assignee, err := npcControl(ctx, q, char)
+	gmUserIDs, err := gms.userIDs(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if assignee != nil {
-		gmUserIDs = append(gmUserIDs, *assignee)
+	ids := append([]int32{}, gmUserIDs...)
+	if c.assigneeUserID.Valid {
+		ids = append(ids, c.assigneeUserID.Int32)
 	}
-	return uniqueUserIDs(gmUserIDs), nil
+	return uniqueUserIDs(ids), nil
 }
 
-// characterAnswererUserIDs returns the users who answer for a character, and so
-// are notified of messages to it: a player character's owner, an assigned
-// NPC's assignee, or, for an unassigned NPC, the GM and co-GMs.
+// answerers returns the users who answer for a character, and so are notified
+// of messages to it: a player character's owner, an assigned NPC's assignee,
+// or, for an unassigned NPC, the GM and co-GMs.
 //
-// This is narrower than characterControllerUserIDs on purpose. The GMs keep
-// every NPC conversation so they can step in, but an NPC handed to someone
-// else is theirs to answer, and notifying the GMs of every message to it would
-// bury the ones about NPCs they actually play.
-func characterAnswererUserIDs(ctx context.Context, q *models.Queries, char models.Character) ([]int32, error) {
-	if char.CharacterType != "npc" && char.UserID.Valid {
-		return []int32{char.UserID.Int32}, nil
+// This is narrower than controllers on purpose. The GMs keep every NPC
+// conversation so they can step in, but an NPC handed to someone else is
+// theirs to answer, and notifying the GMs of every message to it would bury
+// the ones about NPCs they actually play.
+func (c characterControl) answerers(ctx context.Context, gms *gameGMs) ([]int32, error) {
+	if c.isPlayerCharacter() {
+		return []int32{c.ownerUserID.Int32}, nil
 	}
-	gmUserIDs, assignee, err := npcControl(ctx, q, char)
-	if err != nil {
-		return nil, err
+	if c.assigneeUserID.Valid {
+		return []int32{c.assigneeUserID.Int32}, nil
 	}
-	if assignee != nil {
-		return []int32{*assignee}, nil
-	}
-	return uniqueUserIDs(gmUserIDs), nil
+	return gms.userIDs(ctx)
 }
 
-// npcControl returns the GM and co-GMs of an NPC's game, and the user the NPC
-// is assigned to (nil when unassigned).
-func npcControl(ctx context.Context, q *models.Queries, char models.Character) ([]int32, *int32, error) {
-	game, err := q.GetGame(ctx, char.GameID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get game: %w", err)
+// loadCharacterControl reads a character's NPC assignment, when it can have
+// one, to complete its characterControl.
+func loadCharacterControl(ctx context.Context, q *models.Queries, char models.Character) (characterControl, error) {
+	c := characterControl{characterType: char.CharacterType, ownerUserID: char.UserID}
+	if c.isPlayerCharacter() {
+		return c, nil
 	}
-	coGMUserIDs, err := q.GetGameCoGMs(ctx, char.GameID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get co-GMs: %w", err)
-	}
-	gmUserIDs := append([]int32{game.GmUserID}, coGMUserIDs...)
-
 	assignment, err := q.GetNPCAssignment(ctx, char.ID)
 	switch {
 	case err == nil:
-		return gmUserIDs, &assignment.AssignedUserID, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		return gmUserIDs, nil, nil
-	default:
-		return nil, nil, fmt.Errorf("failed to get NPC assignment: %w", err)
+		c.assigneeUserID = pgtype.Int4{Int32: assignment.AssignedUserID, Valid: true}
+	case !errors.Is(err, pgx.ErrNoRows):
+		return c, fmt.Errorf("failed to get NPC assignment: %w", err)
 	}
+	return c, nil
+}
+
+// gameGMs is a game's GM and co-GMs, who control every NPC in it. It is
+// fetched on first use and then shared, so resolving many NPCs costs one
+// lookup, and none when every character is a player character.
+type gameGMs struct {
+	q      *models.Queries
+	gameID int32
+	ids    []int32
+	loaded bool
+}
+
+func newGameGMs(q *models.Queries, gameID int32) *gameGMs {
+	return &gameGMs{q: q, gameID: gameID}
+}
+
+func (g *gameGMs) userIDs(ctx context.Context) ([]int32, error) {
+	if g.loaded {
+		return g.ids, nil
+	}
+	game, err := g.q.GetGame(ctx, g.gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get game: %w", err)
+	}
+	coGMUserIDs, err := g.q.GetGameCoGMs(ctx, g.gameID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get co-GMs: %w", err)
+	}
+	g.ids = uniqueUserIDs(append([]int32{game.GmUserID}, coGMUserIDs...))
+	g.loaded = true
+	return g.ids, nil
 }
 
 // syncCharacterConversationParticipants makes a character's participant rows,
@@ -107,40 +143,69 @@ func syncCharacterConversationParticipants(ctx context.Context, q *models.Querie
 	if err != nil {
 		return fmt.Errorf("failed to get character %d: %w", characterID, err)
 	}
-	userIDs, err := characterControllerUserIDs(ctx, q, char)
+	control, err := loadCharacterControl(ctx, q, char)
 	if err != nil {
 		return err
 	}
-
-	charID := pgtype.Int4{Int32: characterID, Valid: true}
-	// Add before removing: the insert finds the character's conversations
-	// through its existing rows.
-	if err := q.AddCharacterControllersToConversations(ctx, models.AddCharacterControllersToConversationsParams{
-		UserIds:     userIDs,
-		CharacterID: charID,
-	}); err != nil {
-		return fmt.Errorf("failed to add conversation participants for character %d: %w", characterID, err)
+	userIDs, err := control.controllers(ctx, newGameGMs(q, char.GameID))
+	if err != nil {
+		return err
 	}
-	if err := q.RemoveCharacterControllersFromConversations(ctx, models.RemoveCharacterControllersFromConversationsParams{
-		CharacterID: charID,
-		UserIds:     userIDs,
-	}); err != nil {
-		return fmt.Errorf("failed to remove conversation participants for character %d: %w", characterID, err)
-	}
-	return nil
+	return syncConversationControllers(ctx, q, map[int32][]int32{characterID: userIDs})
 }
 
 // syncGameNPCConversationParticipants re-syncs every NPC in a game. A co-GM
-// change alters who controls all of them at once.
+// change alters who controls all of them at once, so the NPCs (with their
+// assignments) and the GM team are each read once and the rows rewritten in
+// two statements, however many NPCs the game has.
 func syncGameNPCConversationParticipants(ctx context.Context, q *models.Queries, gameID int32) error {
 	npcs, err := q.GetNPCsByGame(ctx, gameID)
 	if err != nil {
 		return fmt.Errorf("failed to list NPCs: %w", err)
 	}
+	gms := newGameGMs(q, gameID)
+	controllers := make(map[int32][]int32, len(npcs))
 	for _, npc := range npcs {
-		if err := syncCharacterConversationParticipants(ctx, q, npc.ID); err != nil {
+		control := characterControl{
+			characterType:  npc.CharacterType,
+			ownerUserID:    npc.UserID,
+			assigneeUserID: npc.AssignedUserID,
+		}
+		if controllers[npc.ID], err = control.controllers(ctx, gms); err != nil {
 			return err
 		}
+	}
+	return syncConversationControllers(ctx, q, controllers)
+}
+
+// syncConversationControllers gives each character's controllers (character ID
+// -> user IDs) its participant rows in every conversation it is in, and takes
+// them from anyone else.
+func syncConversationControllers(ctx context.Context, q *models.Queries, controllers map[int32][]int32) error {
+	if len(controllers) == 0 {
+		return nil
+	}
+	var characterIDs, userIDs []int32
+	for characterID, users := range controllers {
+		for _, userID := range users {
+			characterIDs = append(characterIDs, characterID)
+			userIDs = append(userIDs, userID)
+		}
+	}
+
+	// Add before removing: the insert finds the characters' conversations
+	// through their existing rows.
+	if err := q.AddControllersToCharacterConversations(ctx, models.AddControllersToCharacterConversationsParams{
+		CharacterIds: characterIDs,
+		UserIds:      userIDs,
+	}); err != nil {
+		return fmt.Errorf("failed to add conversation participants: %w", err)
+	}
+	if err := q.RemoveNonControllersFromCharacterConversations(ctx, models.RemoveNonControllersFromCharacterConversationsParams{
+		CharacterIds: characterIDs,
+		UserIds:      userIDs,
+	}); err != nil {
+		return fmt.Errorf("failed to remove conversation participants: %w", err)
 	}
 	return nil
 }
