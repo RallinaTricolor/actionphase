@@ -17,7 +17,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,
@@ -38,7 +38,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -59,7 +59,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: true,
             isParticipant: false,
@@ -80,7 +80,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: true,
             isParticipant: false,
@@ -101,7 +101,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -124,7 +124,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -146,7 +146,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,
@@ -168,7 +168,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: true,
             isParticipant: false,
@@ -189,7 +189,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -210,7 +210,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'common_room',
             isAudience: false,
             isParticipant: true,
@@ -233,7 +233,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'common_room',
             isAudience: false,
             isParticipant: true,
@@ -255,7 +255,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,
@@ -275,7 +275,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -297,7 +297,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'recruitment',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -319,7 +319,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'recruitment',
             isGM: false,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -342,7 +342,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'setup',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -361,7 +361,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'recruitment',
             isGM: false,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -380,7 +380,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'character_creation',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -399,7 +399,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,
@@ -418,7 +418,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'completed',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -437,7 +437,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'completed',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -460,7 +460,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'completed',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -482,7 +482,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'cancelled',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -500,7 +500,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'common_room',
             isAudience: false,
             isParticipant: true,
@@ -518,7 +518,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'cancelled',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -539,7 +539,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'recruitment',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -559,7 +559,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'recruitment',
             isGM: false,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -578,7 +578,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'character_creation',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -597,7 +597,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -616,7 +616,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'completed',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: true,
@@ -635,7 +635,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'cancelled',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -654,7 +654,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'setup',
             isGM: true,
-            participantCount: 0,
+            playerCount: 0,
             currentPhaseType: undefined,
             isAudience: false,
             isParticipant: false,
@@ -695,7 +695,7 @@ describe('useGameTabs', () => {
     const defaultTabArgs: Parameters<typeof useGameTabs>[0] = {
       gameState: 'in_progress',
       isGM: false,
-      participantCount: 3,
+      playerCount: 3,
       currentPhaseType: 'common_room',
       isAudience: false,
       isParticipant: true,
@@ -826,7 +826,7 @@ describe('useGameTabs', () => {
     const setupTabArgs: Parameters<typeof useGameTabs>[0] = {
       gameState: 'setup',
       isGM: true,
-      participantCount: 0,
+      playerCount: 0,
       currentPhaseType: undefined,
       isAudience: false,
       isParticipant: false,
@@ -887,7 +887,7 @@ describe('useGameTabs', () => {
         const { activeTab } = useGameTabs({
           gameState,
           isGM: true,
-          participantCount: 3,
+          playerCount: 3,
           currentPhaseType: undefined,
           isAudience: false,
           isParticipant: false,
@@ -929,7 +929,7 @@ describe('useGameTabs', () => {
         const { activeTab } = useGameTabs({
           gameState: 'in_progress',
           isGM: false,
-          participantCount: 3,
+          playerCount: 3,
           currentPhaseType: 'interlude',
           isPhaseLoading: false, // phase already resolved
           isAudience: false,
@@ -976,7 +976,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'epilogue',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'common_room',
             isAudience: false,
             isParticipant: true,
@@ -1014,7 +1014,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'common_room',
             isAudience: false,
             isParticipant: true,
@@ -1045,7 +1045,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'epilogue',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: phaseType,
             isPhaseLoading: loading,
             isAudience: false,
@@ -1076,7 +1076,7 @@ describe('useGameTabs', () => {
             useGameTabs({
               gameState: 'epilogue',
               isGM: false,
-              participantCount: 3,
+              playerCount: 3,
               currentPhaseType: 'action',
               isAudience: false,
               isParticipant: true,
@@ -1138,7 +1138,7 @@ describe('useGameTabs', () => {
         () => useGameTabs({
           gameState: 'in_progress',
           isGM: false,
-          participantCount: 3,
+          playerCount: 3,
           currentPhaseType: 'action',
           isAudience: false,
           isParticipant: true,
@@ -1176,7 +1176,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState,
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,
@@ -1194,7 +1194,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState,
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -1214,7 +1214,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -1235,7 +1235,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: true,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: false,
@@ -1256,7 +1256,7 @@ describe('useGameTabs', () => {
           useGameTabs({
             gameState: 'in_progress',
             isGM: false,
-            participantCount: 3,
+            playerCount: 3,
             currentPhaseType: 'action',
             isAudience: false,
             isParticipant: true,

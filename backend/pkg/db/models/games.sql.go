@@ -97,7 +97,7 @@ FROM games g
 LEFT JOIN (
     SELECT game_id, COUNT(*) as player_count
     FROM game_participants
-    WHERE role = 'player' AND status = 'active'
+    WHERE status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
     GROUP BY game_id
 ) pc ON g.id = pc.game_id
 WHERE g.id = $1
@@ -446,7 +446,7 @@ func (q *Queries) GetGameCoGMs(ctx context.Context, gameID int32) ([]int32, erro
 
 const getGameParticipantCount = `-- name: GetGameParticipantCount :one
 SELECT COUNT(*) FROM game_participants
-WHERE game_id = $1 AND role = 'player' AND status = 'active'
+WHERE game_id = $1 AND status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
 `
 
 func (q *Queries) GetGameParticipantCount(ctx context.Context, gameID int32) (int64, error) {
@@ -523,7 +523,7 @@ LEFT JOIN communities c ON c.id = g.community_id
 LEFT JOIN (
     SELECT game_id, COUNT(*) as player_count
     FROM game_participants
-    WHERE role = 'player' AND status = 'active'
+    WHERE status = 'active' AND (role = 'player' OR (role = 'audience' AND is_former_player))
     GROUP BY game_id
 ) pc ON g.id = pc.game_id
 WHERE g.id = $1
