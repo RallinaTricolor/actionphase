@@ -24,6 +24,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -38,6 +39,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
@@ -342,10 +344,17 @@ func (h *Handler) HumaMe(ctx context.Context, _ *struct{}) (*meOutput, error) {
 // Rate limited: register, request-password-reset
 // ---------------------------------------------------------------------------
 
+// genericRegistrationFailure is what a rate-limited registration is told.
+const genericRegistrationFailure = "An unexpected error occurred. Please try again."
+
+// The schema tags restate validateUsername and core.User's validate tags, so a
+// failure is reported by huma's validator, which names each field and rule in
+// a sentence (see humaconfig.humanizeValidation). The handler's own checks
+// still run behind them.
 type registerBody struct {
-	Username      string `json:"username" required:"true" doc:"Desired username"`
-	Email         string `json:"email" required:"true" doc:"Email address; a verification mail is sent here"`
-	Password      string `json:"password" required:"true" doc:"Account password"`
+	Username      string `json:"username" required:"true" minLength:"3" maxLength:"50" pattern:"^[a-zA-Z0-9_-]+$" patternDescription:"only letters, numbers, underscores and hyphens" doc:"Desired username"`
+	Email         string `json:"email" required:"true" format:"email" doc:"Email address; a verification mail is sent here"`
+	Password      string `json:"password" required:"true" minLength:"8" maxLength:"64" doc:"Account password"`
 	Bio           string `json:"bio,omitempty" required:"false"`
 	Fingerprint   string `json:"fingerprint,omitempty" required:"false" maxLength:"512" doc:"Device fingerprint, recorded on the session"`
 	HCaptchaToken string `json:"hcaptcha_token,omitempty" required:"false"`
@@ -392,7 +401,7 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 
 	if err := validateUsername(in.Body.Username); err != nil {
 		h.App.ObsLogger.Warn(ctx, "Invalid v1 register request", "error", err)
-		return nil, huma.Error400BadRequest(err.Error())
+		return nil, asHumaError(err, "Failed to register")
 	}
 
 	ipAddress, userAgent := clientMeta(ctx)
@@ -436,10 +445,11 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 			errorMsg = "Invalid registration attempt detected"
 		case core.BlockReasonCaptchaFailed:
 			errorMsg = "CAPTCHA verification failed. Please try again."
-		case core.BlockReasonRateLimitIP:
-			errorMsg = "Too many registration attempts from this IP address. Please try again later."
-		case core.BlockReasonRateLimitEmail:
-			errorMsg = "Too many registration attempts for this email. Please try again later."
+		case core.BlockReasonRateLimitIP, core.BlockReasonRateLimitEmail:
+			// Deliberately says nothing about rate limiting: telling a caller
+			// they hit the limit tells a bot how to pace itself. It matches the
+			// frontend's generic failure message.
+			errorMsg = genericRegistrationFailure
 		case core.BlockReasonDisposableEmail:
 			errorMsg = "Disposable email addresses are not allowed. Please use a permanent email address."
 		case core.BlockReasonSpammyUsername:
@@ -453,8 +463,19 @@ func (h *Handler) HumaRegister(ctx context.Context, in *registerInput) (*registe
 	h.App.ObsLogger.Info(ctx, "Creating user", "username", in.Body.Username)
 	returnUser, err := h.UserService.CreateUser(user)
 	if err != nil {
-		h.App.ObsLogger.Warn(ctx, "Invalid v1 register request", "error", err)
-		return nil, huma.Error400BadRequest(err.Error())
+		// A taken username or email is the one failure here the person can
+		// fix. Anything else is a database fault, and its text (SQLSTATEs,
+		// constraint names) must not reach the form.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			h.App.ObsLogger.Warn(ctx, "Registration rejected: already in use", "constraint", pgErr.ConstraintName)
+			if strings.Contains(pgErr.ConstraintName, "email") {
+				return nil, huma.Error400BadRequest("Email is already in use")
+			}
+			return nil, huma.Error400BadRequest("Username is already taken")
+		}
+		h.App.ObsLogger.Error(ctx, "Failed to create user", "error", err)
+		return nil, huma.Error500InternalServerError("Failed to register")
 	}
 
 	if h.App.Config.App.RequireRegistrationApproval {
@@ -699,7 +720,7 @@ func (h *Handler) HumaSearchUsers(ctx context.Context, in *searchUsersInput) (*s
 // the given 500 text.
 func asHumaError(err error, serverMsg string) error {
 	if pwdErr, ok := err.(*PasswordValidationError); ok {
-		return huma.Error400BadRequest(pwdErr.Error())
+		return huma.Error400BadRequest(pwdErr.UserMessage())
 	}
 	return huma.Error500InternalServerError(serverMsg)
 }
@@ -756,7 +777,7 @@ func (h *Handler) HumaRequestPasswordReset(ctx context.Context, in *requestPassw
 	passwordService := &PasswordService{DB: h.App.Pool, EmailService: emailService, Logger: h.App.ObsLogger}
 	if err := passwordService.RequestPasswordReset(ctx, &in.Body); err != nil {
 		if pwdErr, ok := err.(*PasswordValidationError); ok {
-			return nil, huma.Error400BadRequest(pwdErr.Error())
+			return nil, huma.Error400BadRequest(pwdErr.UserMessage())
 		}
 		// Internal failures are logged but not revealed, for the same reason.
 		h.App.Logger.Error("Failed to request password reset", "error", err)

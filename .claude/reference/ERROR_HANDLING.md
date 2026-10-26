@@ -160,6 +160,60 @@ func (s *UserService) CreateUser(user *User) (*User, error) {
 
 ### Validation Errors
 
+Request validation lives in huma struct tags (`minLength`, `required`,
+`minimum`, `format:"email"`, `pattern` + `patternDescription`, ...) and
+`Resolve` hooks. Huma's raw wording ("expected length >= 10") is rewritten for
+people by `humanizeValidation` in `backend/pkg/humaconfig/messages.go`. Note
+that this only applies to errors huma's validator raises; prefer tags over
+handler-side checks so a field's rule comes back worded and located:
+
+```json
+{
+  "status": 422,
+  "detail": "Description must be at least 10 characters",
+  "errors": [{ "message": "Description must be at least 10 characters", "location": "body.description" }]
+}
+```
+
+- The field label comes from the JSON name: `max_players` → "Max players",
+  `community_id` → "Community".
+- `detail` summarises the field errors, one sentence per field, replacing
+  huma's generic "validation failed". A detail a handler chose is kept.
+- A missing property is reported at `body.<field>`, not huma's bare `body`.
+- Messages a `Resolve` hook returns should be prose
+  ("deadline must be in the future"); a leading JSON field name is swapped for
+  its label and the first letter capitalised.
+- Assert on the humanized text in tests: it is what users see.
+
+### Handler 4xx Messages (since 2026-10-22)
+
+A handler's 4xx `detail` is shown to the user verbatim. Rules:
+
+- **Never pass an arbitrary `err.Error()` into a 4xx.** Service errors wrap
+  database and library errors (`"...: no rows in result set"`, `SQLSTATE`),
+  and a 400 hands that text to the user. Map the errors the user can fix to a
+  4xx with a written message, and everything else to a 500 (whose detail the
+  frontend never shows).
+- **User-fixable service errors wrap a sentinel** with a reason:
+  `fmt.Errorf("%w: this game already has a co-GM", core.ErrInvalidRoleTransition)`.
+  The handler matches with `errors.Is` and renders
+  `core.UserMessage(err, sentinel)`, which drops the sentinel's prefix and
+  capitalizes the reason ("This game already has a co-GM"). Examples:
+  `ErrInvalidRoleTransition`, `ErrCannotDeletePhase`, `ErrInvalidStagedChain`,
+  `ErrInvalidPostViewers`.
+- **Auth's `PasswordValidationError`** renders with `UserMessage()`, never
+  `Error()` (which is `"password: must ..."` for logs).
+- **Unique violations** are matched on `pgconn.PgError` code `23505` and the
+  constraint name, and worded ("Username is already taken"); see `HumaRegister`.
+- **Backstop:** `politeClientDetail` (humaconfig) runs on every error built by
+  `huma.NewError`, which is every `huma.ErrorNNN` a handler returns. It
+  capitalizes a 4xx detail, and replaces one containing database or
+  go-playground text (`SQLSTATE`, `no rows in result set`, `Key: '`, ...) with
+  a generic sentence. It is a safety net, not the mechanism: a replaced message
+  tells the user nothing specific, so word the message at the source.
+
+Older pattern, still used in some services:
+
 ```go
 func validateGameRequest(req CreateGameRequest) error {
     if req.Title == "" {

@@ -13,6 +13,8 @@ import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	dbsvc "actionphase/pkg/db/services"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // These tests exercise HumaRegister against a mocked bot-prevention service, so
@@ -101,9 +103,8 @@ func validRegistrationBody() map[string]any {
 	}
 }
 
-// Each blocked reason must reach the user as its own message. A reason that
-// falls through to the default would tell someone rate-limited that their
-// registration is simply "not allowed", with no hint to retry later.
+// Each blocked reason must reach the user as its own message, except rate
+// limiting, which must not be revealed (see notRateLimit below).
 func TestHumaRegister_BlockedReasonMessages(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -112,8 +113,8 @@ func TestHumaRegister_BlockedReasonMessages(t *testing.T) {
 	}{
 		{"honeypot", core.BlockReasonHoneypot, "Invalid registration attempt detected"},
 		{"captcha", core.BlockReasonCaptchaFailed, "CAPTCHA verification failed"},
-		{"ip rate limit", core.BlockReasonRateLimitIP, "Too many registration attempts from this IP"},
-		{"email rate limit", core.BlockReasonRateLimitEmail, "Too many registration attempts for this email"},
+		{"ip rate limit", core.BlockReasonRateLimitIP, genericRegistrationFailure},
+		{"email rate limit", core.BlockReasonRateLimitEmail, genericRegistrationFailure},
 		{"disposable email", core.BlockReasonDisposableEmail, "Disposable email addresses are not allowed"},
 		{"spammy username", core.BlockReasonSpammyUsername, "This username is not allowed"},
 		{"unknown reason", "something_new", "Registration not allowed at this time"},
@@ -140,6 +141,13 @@ func TestHumaRegister_BlockedReasonMessages(t *testing.T) {
 			}
 			if !strings.Contains(w.Body.String(), tt.wantContain) {
 				t.Errorf("body = %s, want it to contain %q", w.Body.String(), tt.wantContain)
+			}
+			// Being told you hit the limit tells a bot how to pace itself, so
+			// no blocked registration may mention it.
+			for _, notRateLimit := range []string{"too many", "rate limit", "try again later"} {
+				if strings.Contains(strings.ToLower(w.Body.String()), notRateLimit) {
+					t.Errorf("body = %s, must not reveal rate limiting (%q)", w.Body.String(), notRateLimit)
+				}
 			}
 		})
 	}
@@ -271,3 +279,116 @@ func TestHumaRegister_PendingApprovalSkipsSuccessLog(t *testing.T) {
 // Guard against the mock drifting out of sync with the real service.
 var _ core.BotPreventionServiceInterface = (*BotPreventionService)(nil)
 var _ = models.CreateRegistrationAttemptParams{}
+
+// allowAllBot lets every registration through the bot check.
+func allowAllBot() *core.MockBotPreventionService {
+	return &core.MockBotPreventionService{
+		CheckRegistrationAttemptFunc: func(context.Context, *core.RegistrationCheckRequest) (*core.RegistrationCheckResult, error) {
+			return &core.RegistrationCheckResult{Allowed: true}, nil
+		},
+	}
+}
+
+// Regression: registration answered with go-playground's "Key: 'User.Password'
+// Error:Field validation for 'Password' failed on the 'min' tag" and with
+// "username: username must be at least 3 characters long". Every rejected
+// field must come back as a sentence naming it.
+func TestHumaRegister_ValidationMessagesAreSentences(t *testing.T) {
+	users := &stubUserService{
+		createUser: func(*core.User) (*core.User, error) {
+			t.Fatal("CreateUser must not be called for an invalid registration")
+			return nil, nil
+		},
+	}
+	h := newRegisterTestHandler(t, allowAllBot(), users)
+
+	tests := []struct {
+		name string
+		body map[string]any
+		want []string
+	}{
+		{"short password", map[string]any{"username": "legituser", "email": "legit@example.com", "password": "short"},
+			[]string{"Password must be at least 8 characters"}},
+		{"bad email", map[string]any{"username": "legituser", "email": "not-an-email", "password": "SuperSecret123!"},
+			[]string{"Email must be a valid email address"}},
+		{"short username", map[string]any{"username": "ab", "email": "legit@example.com", "password": "SuperSecret123!"},
+			[]string{"Username must be at least 3 characters"}},
+		{"username characters", map[string]any{"username": "bad name!", "email": "legit@example.com", "password": "SuperSecret123!"},
+			[]string{"Username must be only letters, numbers, underscores and hyphens"}},
+		{"several at once", map[string]any{"username": "a", "email": "legit@example.com", "password": "short"},
+			[]string{"Username must be at least 3 characters", "Password must be at least 8 characters"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := postRegister(t, h, tt.body)
+
+			if w.Code != http.StatusUnprocessableEntity {
+				t.Fatalf("status = %d, want 422 (body: %s)", w.Code, w.Body.String())
+			}
+			var body struct {
+				Detail string `json:"detail"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(body.Detail, want) {
+					t.Errorf("detail = %q, want it to contain %q", body.Detail, want)
+				}
+			}
+			for _, raw := range []string{"Key: '", "expected ", "username: "} {
+				if strings.Contains(body.Detail, raw) {
+					t.Errorf("detail = %q, must not contain raw validator text %q", body.Detail, raw)
+				}
+			}
+		})
+	}
+}
+
+// Regression: a taken username or email came back as Postgres' own
+// "duplicate key value violates unique constraint ... (SQLSTATE 23505)".
+func TestHumaRegister_TakenUsernameOrEmail(t *testing.T) {
+	tests := []struct {
+		constraint string
+		want       string
+	}{
+		{"users_username_key", "Username is already taken"},
+		{"users_email_unique", "Email is already in use"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.constraint, func(t *testing.T) {
+			users := &stubUserService{
+				createUser: func(*core.User) (*core.User, error) {
+					return nil, &pgconn.PgError{Code: "23505", ConstraintName: tt.constraint,
+						Message: "duplicate key value violates unique constraint"}
+				},
+			}
+			w := postRegister(t, newRegisterTestHandler(t, allowAllBot(), users), validRegistrationBody())
+
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400 (body: %s)", w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), tt.want) {
+				t.Errorf("body = %s, want it to contain %q", w.Body.String(), tt.want)
+			}
+			if strings.Contains(w.Body.String(), "SQLSTATE") || strings.Contains(w.Body.String(), "duplicate key") {
+				t.Errorf("body = %s, must not contain database text", w.Body.String())
+			}
+		})
+	}
+}
+
+// Any other CreateUser failure is a server fault, not something the person
+// registering can fix.
+func TestHumaRegister_CreateUserFaultIs500(t *testing.T) {
+	users := &stubUserService{
+		createUser: func(*core.User) (*core.User, error) {
+			return nil, context.DeadlineExceeded
+		},
+	}
+	w := postRegister(t, newRegisterTestHandler(t, allowAllBot(), users), validRegistrationBody())
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body: %s)", w.Code, w.Body.String())
+	}
+}

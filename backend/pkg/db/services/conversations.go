@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"actionphase/pkg/core"
@@ -108,78 +109,41 @@ func (s *ConversationService) CreateConversation(ctx context.Context, req Create
 		return nil, fmt.Errorf("failed to create conversation: %w", err)
 	}
 
-	// Add all participants (characters)
+	// Add all participants (characters), one row per user who controls each.
+	// The same rule re-syncs these rows whenever control changes; see
+	// conversation_participants.go.
+	rows, err := qtx.GetCharacterControlByIDs(ctx, req.ParticipantIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get participant characters: %w", err)
+	}
+	controls := make(map[int32]characterControl, len(rows))
+	for _, row := range rows {
+		controls[row.ID] = characterControl{characterType: row.CharacterType, ownerUserID: row.UserID, assigneeUserID: row.AssignedUserID}
+	}
+
+	gms := newGameGMs(qtx, req.GameID)
+	var characterIDs, userIDs []int32
 	for _, charID := range req.ParticipantIDs {
-		// Get character to find the user_id
-		char, err := qtx.GetCharacter(ctx, charID)
+		control, ok := controls[charID]
+		if !ok {
+			return nil, fmt.Errorf("failed to get character %d: %w", charID, pgx.ErrNoRows)
+		}
+		controllers, err := control.controllers(ctx, gms)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get character %d: %w", charID, err)
+			return nil, fmt.Errorf("failed to resolve controllers of character %d: %w", charID, err)
 		}
-
-		// Determine the user ID for this participant
-		var participantUserID int32
-		if char.UserID.Valid {
-			// Player character - use the character's user_id
-			participantUserID = char.UserID.Int32
-			slog.Info("Using player character user ID", "character_id", charID, "user_id", participantUserID)
-		} else {
-			// NPC - check if assigned to a user (e.g., audience member)
-			assignment, err := qtx.GetNPCAssignment(ctx, charID)
-			if err == nil {
-				// NPC is assigned to a user - use that user's ID
-				participantUserID = assignment.AssignedUserID
-				slog.Info("Using NPC assignment", "character_id", charID, "assigned_user_id", participantUserID)
-			} else {
-				// NPC is not assigned - add both GM and all co-GMs as participants
-				slog.Info("NPC not assigned, adding GM and co-GMs as participants", "character_id", charID, "assignment_error", err)
-
-				game, err := qtx.GetGame(ctx, req.GameID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to get game: %w", err)
-				}
-
-				// Add primary GM
-				_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
-					ConversationID: conv.ID,
-					UserID:         game.GmUserID,
-					CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
-				})
-				if err != nil {
-					return nil, fmt.Errorf("failed to add GM as participant: %w", err)
-				}
-				slog.Info("Added primary GM for unassigned NPC", "character_id", charID, "user_id", game.GmUserID)
-
-				// Add all co-GMs
-				coGMUserIDs, err := qtx.GetGameCoGMs(ctx, req.GameID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to get co-GMs: %w", err)
-				}
-
-				for _, coGMUserID := range coGMUserIDs {
-					_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
-						ConversationID: conv.ID,
-						UserID:         coGMUserID,
-						CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
-					})
-					if err != nil {
-						return nil, fmt.Errorf("failed to add co-GM %d as participant: %w", coGMUserID, err)
-					}
-					slog.Info("Added co-GM for unassigned NPC", "character_id", charID, "user_id", coGMUserID)
-				}
-
-				// Skip the normal participant addition since we already added GM/co-GMs
-				continue
-			}
+		for _, userID := range controllers {
+			characterIDs = append(characterIDs, charID)
+			userIDs = append(userIDs, userID)
 		}
+	}
 
-		_, err = qtx.AddConversationParticipant(ctx, models.AddConversationParticipantParams{
-			ConversationID: conv.ID,
-			UserID:         participantUserID,
-			CharacterID:    pgtype.Int4{Int32: charID, Valid: true},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to add participant: %w", err)
-		}
+	if err := qtx.AddConversationParticipants(ctx, models.AddConversationParticipantsParams{
+		CharacterIds:   characterIDs,
+		UserIds:        userIDs,
+		ConversationID: conv.ID,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to add conversation participants: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -475,15 +439,40 @@ func (s *ConversationService) notifyPrivateMessage(ctx context.Context, conversa
 		return
 	}
 
-	// Notify each participant except the sender, deduplicating by user so that
-	// a user controlling multiple characters in the conversation gets at most one notification.
+	// Notify, per character in the conversation, only the users who answer for
+	// it (characterControl.answerers). Holding a participant row is not enough:
+	// the GMs hold every NPC's rows, and a message to an NPC assigned to someone
+	// else is not theirs to answer. Each user is notified at most once, however
+	// many of their characters are in the conversation, and never for their own
+	// message.
+	controls, err := s.Queries.GetConversationCharacterControl(ctx, conversationID)
+	if err != nil {
+		slog.Error("Failed to get conversation characters for notifications", "error", err, "conversation_id", conversationID)
+		return
+	}
+	gms := newGameGMs(s.Queries, conv.GameID)
+	answerers := make(map[int32][]int32, len(controls)) // character ID -> users who answer for it
+	for _, c := range controls {
+		control := characterControl{characterType: c.CharacterType, ownerUserID: c.UserID, assigneeUserID: c.AssignedUserID}
+		users, err := control.answerers(ctx, gms)
+		if err != nil {
+			// Skip only this character: the others' answerers are unaffected
+			// and still get their notifications.
+			slog.Error("Failed to resolve who answers for a character", "error", err, "character_id", c.ID)
+			continue
+		}
+		answerers[c.ID] = users
+	}
+
 	notifiedUsers := make(map[int32]bool)
 	for _, participant := range participants {
-		if participant.UserID == senderUserID {
-			continue // Don't notify the sender
+		if participant.UserID == senderUserID || notifiedUsers[participant.UserID] {
+			continue
 		}
-		if notifiedUsers[participant.UserID] {
-			continue // Already notified this user for another character they control
+		// A row whose character was deleted (ON DELETE SET NULL) has no one
+		// else to answer for it; its user is still in the conversation.
+		if participant.CharacterID.Valid && !slices.Contains(answerers[participant.CharacterID.Int32], participant.UserID) {
+			continue
 		}
 		notifiedUsers[participant.UserID] = true
 

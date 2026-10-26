@@ -348,6 +348,67 @@ func TestGameService_CurrentPlayersExcludesAudience(t *testing.T) {
 		"current_players should count only players, not audience members")
 }
 
+// TestGameService_CurrentPlayersCountsFormerPlayers verifies that a player moved
+// to audience by permadeath still fills a player slot. Excluding them made a
+// game's count shrink as characters died, and in an anonymous game the
+// participants list reports former players as players to unprivileged viewers,
+// so the smaller count disclosed the very deaths anonymity hides.
+func TestGameService_CurrentPlayersCountsFormerPlayers(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "games", "game_participants", "sessions", "users")
+
+	fixtures := testDB.SetupFixtures(t)
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	ctx := context.Background()
+	gmID := int32(fixtures.TestUser.ID)
+
+	game, err := gameService.CreateGame(ctx, core.CreateGameRequest{
+		Title:       "Former Player Count Test Game",
+		Description: "Test that former players still count toward player slots",
+		GMUserID:    gmID,
+		CommunityID: int32(fixtures.TestCommunity.ID),
+		MaxPlayers:  5,
+	})
+	require.NoError(t, err)
+
+	player := testDB.CreateTestUser(t, "former_count_player", "former_count_player@test.com")
+	formerPlayer := testDB.CreateTestUser(t, "former_count_former", "former_count_former@test.com")
+	audience := testDB.CreateTestUser(t, "former_count_audience", "former_count_audience@test.com")
+
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(formerPlayer.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(audience.ID), "audience")
+	require.NoError(t, err)
+	require.NoError(t, gameService.TransitionPlayerToAudience(ctx, game.ID, int32(formerPlayer.ID), gmID))
+
+	result, err := gameService.GetFilteredGames(ctx, core.GameListingFilters{
+		UserID:   &gmID,
+		PageSize: 100,
+		Page:     1,
+	})
+	require.NoError(t, err)
+
+	var found *core.EnrichedGameListItem
+	for _, g := range result.Games {
+		if g.ID == game.ID {
+			found = g
+			break
+		}
+	}
+	require.NotNil(t, found, "game should appear in listing")
+	assert.Equal(t, int32(2), found.CurrentPlayers,
+		"listing current_players should count the player and the former player, not the audience member")
+
+	details, err := gameService.GetGameWithDetails(ctx, game.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), details.CurrentPlayers,
+		"details current_players should count the player and the former player, not the audience member")
+}
+
 // TestGameService_UserRelationshipDistinguishesRoles verifies that the listing
 // query reports the viewer's actual participant role. It previously reported
 // every active participant as "participant", which made the games-list badge

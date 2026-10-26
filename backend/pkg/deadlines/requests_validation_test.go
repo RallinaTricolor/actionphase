@@ -64,7 +64,7 @@ func TestDeadlineRequestValidation(t *testing.T) {
 		w := post(t, fmt.Sprintf(`{"description": "d", "deadline": %q}`, future))
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Missing title should be rejected")
-		if !bytes.Contains(w.Body.Bytes(), []byte("required property title")) {
+		if !bytes.Contains(w.Body.Bytes(), []byte(`"detail":"Title is required"`)) {
 			t.Errorf("expected a missing-title message, got %q", w.Body.String())
 		}
 	})
@@ -85,7 +85,7 @@ func TestDeadlineRequestValidation(t *testing.T) {
 		w := post(t, `{"title": "No date", "description": "d"}`)
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Missing deadline should be rejected")
-		if !bytes.Contains(w.Body.Bytes(), []byte("required property deadline")) {
+		if !bytes.Contains(w.Body.Bytes(), []byte(`"detail":"Deadline is required"`)) {
 			t.Errorf("expected a missing-deadline message, got %q", w.Body.String())
 		}
 	})
@@ -106,7 +106,7 @@ func TestDeadlineRequestValidation(t *testing.T) {
 			strings.Repeat("a", 150), future))
 
 		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Over-length title should be rejected")
-		if !bytes.Contains(w.Body.Bytes(), []byte("expected length <= 100")) {
+		if !bytes.Contains(w.Body.Bytes(), []byte("Title must be at most 100 characters")) {
 			t.Errorf("expected a max-length message, got %q", w.Body.String())
 		}
 	})

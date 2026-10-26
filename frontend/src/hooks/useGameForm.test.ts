@@ -23,6 +23,30 @@ describe('useGameForm — buildApiPayload', () => {
     expect(error).toMatch(/description/i);
   });
 
+  // Regression: the minimum was checked in UTF-16 units, so a two-emoji title
+  // (length 4) passed here and was then rejected by the server, which counts
+  // runes. Each emoji is one character.
+  it('counts the title minimum in characters, as the server does', () => {
+    const { result } = renderHook(() => useGameForm());
+    act(() => {
+      result.current.handleChange('title', '🐉🐉');
+      result.current.handleChange('description', 'A description');
+    });
+    expect(result.current.buildApiPayload().error).toBe('Game title must be at least 3 characters');
+
+    act(() => result.current.handleChange('title', '🐉🐉🐉'));
+    expect(result.current.buildApiPayload().error).toBeNull();
+  });
+
+  it('counts the description minimum in characters, as the server does', () => {
+    const { result } = renderHook(() => useGameForm());
+    act(() => {
+      result.current.handleChange('title', 'My Game');
+      result.current.handleChange('description', '🐉'.repeat(9));
+    });
+    expect(result.current.buildApiPayload().error).toBe('Game description must be at least 10 characters');
+  });
+
   it('returns a payload when title and description are set and no schedule', () => {
     const { result } = renderHook(() => useGameForm());
     act(() => {

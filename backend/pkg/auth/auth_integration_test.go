@@ -245,7 +245,7 @@ func TestAuthFlow_InvalidCredentials(t *testing.T) {
 				"email":    "test@example.com",
 				"password": "weak", // too short
 			},
-			expectedStatus: 400,
+			expectedStatus: 422,
 			description:    "Registration with weak password should fail",
 		},
 	}

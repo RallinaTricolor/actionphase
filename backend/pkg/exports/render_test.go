@@ -303,6 +303,23 @@ func TestRenderConversation_FallsBackWhenCharacterDetached(t *testing.T) {
 	assert.NotContains(t, out, "()", "must not render an empty parenthetical")
 }
 
+func TestRenderConversation_NPCPlayedByTwoAndOneSilent(t *testing.T) {
+	// ListExportConversationParticipants labels a character with everyone who
+	// spoke as it, so an NPC handed off mid-conversation appears once per voice,
+	// and one that never spoke has no username at all.
+	conv := models.ListExportConversationsRow{ID: 5, ConversationType: "group", CreatedAt: tstz(0)}
+	parts := []models.ListExportConversationParticipantsRow{
+		{ConversationID: 5, Username: "first_voice", CharacterName: txt("Innkeeper")},
+		{ConversationID: 5, Username: "second_voice", CharacterName: txt("Innkeeper")},
+		{ConversationID: 5, Username: "", CharacterName: txt("Mayor")},
+	}
+
+	out := RenderConversation(conv, parts, nil)
+
+	assert.Contains(t, out, "participants: Innkeeper (first_voice), Innkeeper (second_voice), Mayor\n")
+	assert.NotContains(t, out, "()", "must not render an empty parenthetical")
+}
+
 func TestRenderActionFile_WithAndWithoutResult(t *testing.T) {
 	sub := models.ListExportActionSubmissionsRow{
 		ID: 7, PhaseID: 5, Content: "I search the cellar.",

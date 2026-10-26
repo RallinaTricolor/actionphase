@@ -4,7 +4,8 @@
  */
 
 import { logger } from '@/services/LoggingService';
-import { extractApiErrorMessage } from '@/lib/errors';
+import { extractApiErrorMessage, isWithheldStatus } from '@/lib/errors';
+import { ERROR_MESSAGES } from '@/types/errors';
 
 interface ErrorResponse {
   response?: {
@@ -16,12 +17,39 @@ interface ErrorResponse {
   message?: string;
 }
 
+/** Huma's validator wording, which is written for API clients, not people. */
+const RAW_SCHEMA_TEXT = /^(expected |unexpected property)/i;
+
 /**
  * Maps authentication-related errors to user-friendly messages
  */
 export function mapAuthError(error: ErrorResponse | unknown): string {
   // Handle different error formats
   const rawError = error as ErrorResponse;
+
+  // A 429 or 5xx says nothing about why, whatever its message: the API
+  // client's interceptor has already replaced that with the generic line, and
+  // matching words in it would only reword it.
+  if (isWithheldStatus(rawError?.response?.status)) {
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+
+  // 400 (could not parse) and 422 (parsed, failed validation) are both "your
+  // input was wrong", and the backend words those for people, naming every
+  // field ("Username must be at least 3 characters. Password must be at least
+  // 8 characters"), so show what it said. The keyword matching below would
+  // reword it to one field and drop the rest. Raw validator text ("expected
+  // length >= 8 (body.password: x)") is still refused, should it ever get
+  // through unphrased.
+  const status = rawError?.response?.status;
+  if (status === 400 || status === 422) {
+    const apiMessage = extractApiErrorMessage(error);
+    if (apiMessage && !RAW_SCHEMA_TEXT.test(apiMessage)) {
+      return apiMessage;
+    }
+    return 'Invalid request. Please check your information and try again.';
+  }
+
   const errorMessage =
     rawError?.response?.data?.message ||
     extractApiErrorMessage(error) ||
@@ -114,11 +142,9 @@ export function mapAuthError(error: ErrorResponse | unknown): string {
     }
   }
 
-  // Rate limiting errors
-  if (lowerMessage.includes('rate limit') ||
-      lowerMessage.includes('too many') ||
-      lowerMessage.includes('try again later')) {
-    return 'Too many attempts. Please wait a few minutes before trying again.';
+  // Rate limiting is never revealed, even when a message mentions it.
+  if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many')) {
+    return ERROR_MESSAGES.UNKNOWN_ERROR;
   }
 
   // Network errors
@@ -129,14 +155,6 @@ export function mapAuthError(error: ErrorResponse | unknown): string {
   // HTTP status code errors
   if (rawError?.response?.status) {
     const status = rawError.response.status;
-    // 400 (could not parse) and 422 (parsed, failed validation) are both
-    // "your input was wrong". The specific-message branches above already
-    // caught anything we can phrase well; reaching here means the message is
-    // raw server text -- for 422 that is a schema error like
-    // "expected length >= 8 (body.password: x)", which must not be shown.
-    if (status === 400 || status === 422) {
-      return 'Invalid request. Please check your information and try again.';
-    }
     if (status === 401) {
       return 'Authentication failed. Please check your credentials.';
     }
@@ -148,12 +166,6 @@ export function mapAuthError(error: ErrorResponse | unknown): string {
     }
     if (status === 409) {
       return 'Conflict. The information you provided conflicts with existing data.';
-    }
-    if (status === 429) {
-      return 'Too many requests. Please wait a moment before trying again.';
-    }
-    if (status >= 500) {
-      return 'Server error. Please try again later or contact support if the problem persists.';
     }
   }
 

@@ -17,10 +17,11 @@ import (
 // schema tags huma enforces before the handler runs, plus the trimming each
 // body does in Resolve.
 //
-// The assertions check which field was rejected rather than the exact wording,
-// because the two layers phrase it differently -- huma's schema says "expected
-// length >= 1", Resolve says "content is required" -- and pinning the phrasing
-// would break on a huma upgrade without any behaviour changing.
+// Most assertions check which field was rejected rather than the exact
+// wording, because the two layers phrase it differently and pinning the
+// phrasing would break on a huma upgrade without any behaviour changing. Both
+// are rewritten by humaconfig into "Content is required", which the blank
+// content cases do pin: that sentence is what the user sees.
 //
 // Content is the field worth pinning down: the create modal marks it required
 // in its label but enforces nothing, because the editor is not a native input
@@ -67,7 +68,7 @@ func TestHandoutRequestValidation(t *testing.T) {
 		// Only Resolve can catch this one: minLength counts raw characters, so
 		// "   \n  " satisfies the schema.
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
-		assert.Contains(t, rec.Body.String(), "content is required")
+		assert.Contains(t, rec.Body.String(), "Content is required")
 	})
 
 	t.Run("rejects a handout with a missing title", func(t *testing.T) {
@@ -104,6 +105,6 @@ func TestHandoutRequestValidation(t *testing.T) {
 		rec := send(t, http.MethodPost, commentsPath, `{"content": "  "}`)
 
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
-		assert.Contains(t, rec.Body.String(), "content is required")
+		assert.Contains(t, rec.Body.String(), "Content is required")
 	})
 }

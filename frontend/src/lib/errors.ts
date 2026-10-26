@@ -15,9 +15,15 @@ import {
 import { logger } from '@/services/LoggingService';
 
 /**
+ * Details that say only that something failed, not what. Huma sends
+ * "validation failed" alongside the field errors that explain it.
+ */
+const GENERIC_DETAILS = new Set(['validation failed']);
+
+/**
  * Pulls a displayable message out of an RFC 7807 problem document
  * (see `ApiError`), preferring `detail`, then field-level `errors[]`, then
- * `title`.
+ * `title`. A generic detail ("validation failed") ranks below `errors[]`.
  *
  * Deliberately never returns `status`: under RFC 7807 it is the numeric status
  * code, so falling back to it renders a bare `403` as the user's error message,
@@ -27,24 +33,34 @@ import { logger } from '@/services/LoggingService';
  * Returns undefined when the body carries no usable message, which lets callers
  * distinguish "server said nothing" from "server said something" — the
  * distinction the 401/403 fallbacks in handleAxiosError depend on.
+ *
+ * Also returns undefined for a 429 or 5xx (see isWithheldStatus), so a caller
+ * falls back to its own generic line instead of showing that detail.
  */
 export function extractApiErrorMessage(error: unknown): string | undefined {
   const body = extractApiErrorBody(error);
   if (!body) return undefined;
+  if (isWithheldStatus(extractApiErrorStatus(error, body))) return undefined;
 
-  if (typeof body.detail === 'string' && body.detail.trim() !== '') {
-    return body.detail;
+  const detail = typeof body.detail === 'string' ? body.detail.trim() : '';
+  if (detail !== '' && !GENERIC_DETAILS.has(detail.toLowerCase())) {
+    return detail;
   }
 
-  // Field-level validation failures. `detail` for these is generic
-  // ("validation failed"), so the individual messages are what a user can act
-  // on; join them rather than surfacing only the first.
+  // Field-level validation failures. The backend summarises these into
+  // `detail`, but should a generic detail ("validation failed") ever reach us,
+  // the individual messages are what a user can act on; join them rather than
+  // surfacing only the first.
   const details = Array.isArray(body.errors) ? body.errors : [];
   const messages = details
-    .map((detail: ApiErrorDetail) => detail?.message)
+    .map((errorDetail: ApiErrorDetail) => errorDetail?.message)
     .filter((message): message is string => typeof message === 'string' && message.trim() !== '');
   if (messages.length > 0) {
     return messages.join('. ');
+  }
+
+  if (detail !== '') {
+    return detail;
   }
 
   // `title` is a static summary of the error class rather than of this
@@ -54,6 +70,50 @@ export function extractApiErrorMessage(error: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * The message to show a person for a failed API response: what the server
+ * said, or a plain-language line for its status when it said nothing usable
+ * (a proxy's HTML 502, an empty 404).
+ *
+ * The one place a status is worded for people. Axios' own `error.message` is
+ * "Request failed with status code 422", and most components display
+ * `error.message` directly, so the API client's response interceptor
+ * overwrites it with this before rejecting; createAppError uses it too, so a
+ * failure reads the same whichever one a component goes through.
+ */
+export function userFacingApiMessage(status: number, error: unknown): string {
+  if (isWithheldStatus(status)) return ERROR_MESSAGES.UNKNOWN_ERROR;
+  const apiMessage = extractApiErrorMessage(error);
+  if (apiMessage) return apiMessage;
+  switch (status) {
+    case 401:
+      return ERROR_MESSAGES.SESSION_EXPIRED;
+    case 403:
+      return ERROR_MESSAGES.UNAUTHORIZED;
+    case 404:
+      return ERROR_MESSAGES.NOT_FOUND;
+    default:
+      return ERROR_MESSAGES.UNKNOWN_ERROR;
+  }
+}
+
+/**
+ * Statuses whose details are never shown, only the generic
+ * ERROR_MESSAGES.UNKNOWN_ERROR. A 5xx detail may carry internal error text and
+ * there is nothing the user can fix. A 429 must not tell anyone they were rate
+ * limited, since that tells a bot how to pace itself.
+ */
+export function isWithheldStatus(status: number | undefined): boolean {
+  return status !== undefined && (status === 429 || status >= 500);
+}
+
+/** The HTTP status of a failed response: axios' own, else the body's. */
+function extractApiErrorStatus(error: unknown, body: ApiError): number | undefined {
+  const responseStatus = (error as { response?: { status?: unknown } })?.response?.status;
+  if (typeof responseStatus === 'number') return responseStatus;
+  return typeof body.status === 'number' ? body.status : undefined;
 }
 
 /**
@@ -119,17 +179,11 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
     ? STATUS_CODE_TO_ERROR_TYPE[statusCode as keyof typeof STATUS_CODE_TO_ERROR_TYPE]
     : ErrorType.NETWORK_ERROR;
 
-  let userMessage: string = ERROR_MESSAGES.UNKNOWN_ERROR;
+  const userMessage = statusCode
+    ? userFacingApiMessage(statusCode, error)
+    : ERROR_MESSAGES.NETWORK_UNAVAILABLE;
   let category: ErrorCategory = ErrorCategory.NON_RECOVERABLE;
   let severity: ErrorSeverity = ErrorSeverity.MEDIUM;
-
-  // Extract user-friendly message from API response.
-  // Note this never falls back to `apiError.status`: under RFC 7807 that is the
-  // numeric status code, and displaying it shows the user a bare "422".
-  const apiMessage = extractApiErrorMessage(error);
-  if (apiMessage) {
-    userMessage = apiMessage;
-  }
 
   // Categorize by status code
   switch (statusCode) {
@@ -139,18 +193,10 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
       severity = ErrorSeverity.LOW;
       break;
     case 401:
-      // Use API error message if available, otherwise use default session expired message
-      if (!apiMessage) {
-        userMessage = ERROR_MESSAGES.SESSION_EXPIRED;
-      }
       category = ErrorCategory.RECOVERABLE;
       severity = ErrorSeverity.HIGH;
       break;
     case 403:
-      // Use API error message if available, otherwise use default unauthorized message
-      if (!apiMessage) {
-        userMessage = ERROR_MESSAGES.UNAUTHORIZED;
-      }
       category = ErrorCategory.NON_RECOVERABLE;
       severity = ErrorSeverity.MEDIUM;
       break;
@@ -162,13 +208,11 @@ function handleAxiosError(error: AxiosError, baseContext: ErrorContext): AppErro
     case 502:
     case 503:
     case 504:
-      userMessage = ERROR_MESSAGES.SERVER_ERROR;
       category = ErrorCategory.RECOVERABLE;
       severity = ErrorSeverity.HIGH;
       break;
     default:
       if (!statusCode) {
-        userMessage = ERROR_MESSAGES.NETWORK_UNAVAILABLE;
         category = ErrorCategory.RECOVERABLE;
         severity = ErrorSeverity.HIGH;
       }

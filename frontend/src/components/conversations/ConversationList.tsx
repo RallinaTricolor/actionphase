@@ -1,21 +1,78 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useConversation } from '@/contexts/ConversationContext';
+import { useUrlParam } from '@/hooks/useUrlParam';
+import { Button, Input } from '@/components/ui';
 import { logger } from '@/services/LoggingService';
+import type { ConversationListItem } from '@/types/conversations';
+
+const FILTER_PARAM = 'conversationFilter';
+const FILTER_URL_WRITE_DELAY_MS = 300;
 
 interface ConversationListProps {
   gameId: number;
-  onSelectConversation: (conversationId: number) => void;
   selectedConversationId?: number;
 }
 
-export function ConversationList({ gameId, onSelectConversation, selectedConversationId }: ConversationListProps) {
+// A conversation matches when every word of the filter appears in its title or
+// participant names, ignoring case, so "bob mill" finds the Old Mill conversation
+// with Bob. Message text is deliberately not searched: the list only carries the
+// latest message, and matching on that alone would be misleading.
+function matchesFilter(conversation: ConversationListItem, filter: string): boolean {
+  const words = filter.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const haystack = `${conversation.title ?? ''} ${conversation.participant_names}`.toLowerCase();
+  return words.every((word) => haystack.includes(word));
+}
+
+export function ConversationList({ gameId, selectedConversationId }: ConversationListProps) {
   const { conversations, loadingConversations, loadConversations } = useConversation();
   const [searchParams] = useSearchParams();
+
+  // Kept in the URL because opening a conversation unmounts this list; the
+  // param rides along in each conversation's link, so Back restores the filter.
+  // The input reads local state, not the URL, so typing never waits on a
+  // navigation (which can jump the cursor). The URL is written once typing
+  // pauses: each write is a navigation that re-renders the whole game page.
+  const [filterParam, setFilterParam] = useUrlParam<string>(FILTER_PARAM, '', { replace: true });
+  const [filter, setFilter] = useState(filterParam);
+  // The URL value last seen, and the one this input last wrote. When the URL
+  // changes to anything but the input's own write, something else changed it
+  // (a link without the param, such as the Messages tab), and the input
+  // follows, dropping any write still pending.
+  const [seenFilterParam, setSeenFilterParam] = useState(filterParam);
+  const [writtenFilterParam, setWrittenFilterParam] = useState(filterParam);
+  if (filterParam !== seenFilterParam) {
+    setSeenFilterParam(filterParam);
+    if (filterParam !== writtenFilterParam) {
+      setWrittenFilterParam(filterParam);
+      setFilter(filterParam);
+    }
+  }
+  useEffect(() => {
+    if (filter === filterParam) return;
+    const timer = setTimeout(() => {
+      setWrittenFilterParam(filter);
+      setFilterParam(filter);
+    }, FILTER_URL_WRITE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [filter, filterParam, setFilterParam]);
+  const isFiltering = filter.trim() !== '';
+
+  const filteredConversations = useMemo(
+    () => conversations.filter((conversation) => matchesFilter(conversation, filter)),
+    [conversations, filter]
+  );
 
   const getConversationHref = (conversationId: number) => {
     const params = new URLSearchParams(searchParams);
     params.set('conversation', String(conversationId));
+    // What is typed, not the URL, which may not have caught up yet.
+    if (filter === '') {
+      params.delete(FILTER_PARAM);
+    } else {
+      params.set(FILTER_PARAM, filter);
+    }
     return `?${params.toString()}`;
   };
 
@@ -38,15 +95,34 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     return date.toLocaleDateString();
   };
 
+  // Shown whenever there is something to filter, and kept while a filter is
+  // set so a refresh that briefly empties the list doesn't take the input away.
+  const filterBar = (conversations.length > 0 || isFiltering) && (
+    <div className="sticky top-0 z-10 surface-raised border-b border-theme-default px-4 py-2">
+      <Input
+        type="search"
+        inputSize="sm"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter by title or participant"
+        aria-label="Filter conversations"
+        data-testid="conversation-filter"
+      />
+    </div>
+  );
+
   if (loadingConversations) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-content-secondary">Loading conversations...</div>
-      </div>
+      <>
+        {filterBar}
+        <div className="flex items-center justify-center p-8">
+          <div className="text-content-secondary">Loading conversations...</div>
+        </div>
+      </>
     );
   }
 
-  if (conversations.length === 0) {
+  if (conversations.length === 0 && !isFiltering) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
@@ -60,91 +136,110 @@ export function ConversationList({ gameId, onSelectConversation, selectedConvers
     );
   }
 
+  if (filteredConversations.length === 0) {
+    return (
+      <>
+        {filterBar}
+        <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+          <p className="text-content-secondary">No conversations match "{filter.trim()}"</p>
+          <Button variant="ghost" size="sm" onClick={() => setFilter('')}>
+            Clear filter
+          </Button>
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div className="space-y-1">
-      {conversations.map((conversation) => (
-        <Link
-          key={conversation.id}
-          to={getConversationHref(conversation.id)}
-          onClick={(e) => {
-            if (e.ctrlKey || e.metaKey) return;
-            logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
-            onSelectConversation(conversation.id);
-          }}
-          className={`block w-full text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
-            selectedConversationId === conversation.id
-              ? 'bg-interactive-primary-subtle border-l-interactive-primary'
-              : 'border-l-transparent hover:border-l-border-primary'
-          }`}
-          data-testid="conversation-item"
-          data-faro-user-action-name="open-conversation"
-        >
-          {/* Mobile: Vertical Stack Layout */}
-          <div className="md:hidden w-full">
-            {/* Title + Timestamp row */}
-            <div className="flex items-baseline justify-between gap-2 mb-1">
-              <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
-                {conversation.title || 'Untitled Conversation'}
-              </h3>
-              {conversation.last_message_at && (
-                <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
-                  {formatDate(conversation.last_message_at)}
-                </span>
+    <>
+      {filterBar}
+      <div className="space-y-1">
+        {filteredConversations.map((conversation) => (
+          <Link
+            key={conversation.id}
+            // The link alone opens the conversation, by pushing its URL; the
+            // thread follows the URL. Writing the param from onClick as well
+            // ran before the push and replaced the list's own history entry,
+            // so Back returned to the conversation instead of the list.
+            to={getConversationHref(conversation.id)}
+            onClick={() => {
+              logger.debug('Conversation clicked', { conversationId: conversation.id, gameId, title: conversation.title });
+            }}
+            className={`block w-full text-left hover:bg-surface-raised transition-colors rounded-none border-l-4 px-4 py-3 border-b border-theme-subtle ${
+              selectedConversationId === conversation.id
+                ? 'bg-interactive-primary-subtle border-l-interactive-primary'
+                : 'border-l-transparent hover:border-l-border-primary'
+            }`}
+            data-testid="conversation-item"
+            data-faro-user-action-name="open-conversation"
+          >
+            {/* Mobile: Vertical Stack Layout */}
+            <div className="md:hidden w-full">
+              {/* Title + Timestamp row */}
+              <div className="flex items-baseline justify-between gap-2 mb-1">
+                <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
+                  {conversation.title || 'Untitled Conversation'}
+                </h3>
+                {conversation.last_message_at && (
+                  <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
+                    {formatDate(conversation.last_message_at)}
+                  </span>
+                )}
+              </div>
+
+              {/* Participants + Unread Badge */}
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
+                  {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
+                </p>
+                {conversation.unread_count > 0 && (
+                  <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                  </span>
+                )}
+              </div>
+
+              {/* Last Message preview if available */}
+              {conversation.last_message && (
+                <p className="text-sm text-content-tertiary truncate">
+                  {conversation.last_message}
+                </p>
               )}
             </div>
 
-            {/* Participants + Unread Badge */}
-            <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
-                {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
-              </p>
-              {conversation.unread_count > 0 && (
-                <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                  {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                </span>
+            {/* Desktop: Horizontal Layout */}
+            <div className="hidden md:block w-full">
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
+                  {conversation.title || 'Untitled Conversation'}
+                </h3>
+                {conversation.last_message_at && (
+                  <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
+                    {formatDate(conversation.last_message_at)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
+                  {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
+                </p>
+                {conversation.unread_count > 0 && (
+                  <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
+                    {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                  </span>
+                )}
+              </div>
+
+              {conversation.last_message && (
+                <p className="text-sm text-content-tertiary truncate">
+                  {conversation.last_message}
+                </p>
               )}
             </div>
-
-            {/* Last Message preview if available */}
-            {conversation.last_message && (
-              <p className="text-sm text-content-tertiary truncate">
-                {conversation.last_message}
-              </p>
-            )}
-          </div>
-
-          {/* Desktop: Horizontal Layout */}
-          <div className="hidden md:block w-full">
-            <div className="flex items-baseline justify-between gap-3 mb-1">
-              <h3 className="font-semibold text-base text-content-primary truncate flex-1 min-w-0">
-                {conversation.title || 'Untitled Conversation'}
-              </h3>
-              {conversation.last_message_at && (
-                <span className="text-xs text-content-tertiary flex-shrink-0 whitespace-nowrap">
-                  {formatDate(conversation.last_message_at)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-sm text-content-secondary truncate flex-1 min-w-0">
-                {conversation.participant_names || `${conversation.participant_count} ${conversation.participant_count === 1 ? 'participant' : 'participants'}`}
-              </p>
-              {conversation.unread_count > 0 && (
-                <span className="bg-semantic-danger text-white text-xs font-bold rounded-full px-2 py-0.5 flex-shrink-0 min-w-[1.5rem] text-center">
-                  {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-                </span>
-              )}
-            </div>
-
-            {conversation.last_message && (
-              <p className="text-sm text-content-tertiary truncate">
-                {conversation.last_message}
-              </p>
-            )}
-          </div>
-        </Link>
-      ))}
-    </div>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }

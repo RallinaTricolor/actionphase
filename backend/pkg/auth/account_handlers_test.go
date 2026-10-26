@@ -96,7 +96,7 @@ func TestV1VerifyEmail(t *testing.T) {
 				return "invalid-token-12345"
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid or expired verification token",
+			expectedError:  "Invalid or expired verification token",
 		},
 		{
 			name: "expired token",
@@ -115,7 +115,7 @@ func TestV1VerifyEmail(t *testing.T) {
 				return verifyToken.Token
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid or expired verification token",
+			expectedError:  "Invalid or expired verification token",
 		},
 	}
 
@@ -188,7 +188,7 @@ func TestV1ChangeUsername(t *testing.T) {
 			},
 			newUsername:    "ab",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "username must be at least 3 characters long",
+			expectedError:  "Username must be at least 3 characters long",
 		},
 		{
 			name: "username already taken",
@@ -199,7 +199,7 @@ func TestV1ChangeUsername(t *testing.T) {
 			},
 			newUsername:    "existinguser",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "username is already taken",
+			expectedError:  "Username is already taken",
 		},
 	}
 
@@ -277,13 +277,13 @@ func TestV1RequestEmailChange(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "invalid email format",
+			name: "Invalid email format",
 			setupUser: func() int32 {
 				return createTestUser(t, pool, "oldemail2@test.com", "emailuser2", "TestPass123!")
 			},
 			newEmail:       "not-an-email",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid email format",
+			expectedError:  "Invalid email format",
 		},
 		{
 			name: "email already in use",
@@ -294,7 +294,7 @@ func TestV1RequestEmailChange(t *testing.T) {
 			},
 			newEmail:       "existing@test.com",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "email is already in use",
+			expectedError:  "Email is already in use",
 		},
 	}
 
@@ -604,7 +604,7 @@ func TestV1RevokeSession(t *testing.T) {
 				return sessionID
 			},
 			expectedStatus: http.StatusNotFound, // Handler returns 404 for session not found
-			expectedError:  "session not found",
+			expectedError:  "Session not found",
 		},
 	}
 
