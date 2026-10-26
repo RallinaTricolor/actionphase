@@ -331,6 +331,20 @@ describe('RecentResultsSection', () => {
       expect(markdownPreviews).toHaveLength(2);
     });
 
+    // jsdom has no layout, so assert the wrapping rules: a flex item's min-width
+    // defaults to its longest word, so an unbroken URL in the collapsed preview
+    // stretched the card past the screen edge.
+    it('wraps a long URL in the collapsed preview instead of overflowing', () => {
+      const longUrl = 'https://docs.google.com/document/d/1WW4Mo17av59bBRnr72V2jiBKaPNvH3r8DfpulA1RgT/edit';
+      renderWithRouter(
+        <RecentResultsSection {...defaultProps} results={[{ ...mockResults[0], content: longUrl }]} />
+      );
+
+      const preview = screen.getByText(longUrl);
+      expect(preview).toHaveClass('break-words');
+      expect(preview.parentElement).toHaveClass('min-w-0');
+    });
+
     it('should maintain independent expansion state for each result', () => {
       renderWithRouter(<RecentResultsSection {...defaultProps} />);
 
