@@ -546,7 +546,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   }, [hoveredSheetRefId]);
 
   return (
-    <div className={`markdown-preview prose ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
+    <div className={`markdown-preview prose break-words ${fullWidth ? 'max-w-none' : 'max-w-prose'} text-content-primary dark:text-white ${className}`}>
       <MarkdownContent containerRef={containerRef} htmlContent={htmlContent} />
 
       {hoveredCharacter && tooltipPosition && (
