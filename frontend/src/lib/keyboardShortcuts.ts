@@ -20,12 +20,12 @@ export const HELP_KEY = '?';
 export const UNREAD_KEY = 'n';
 
 /** Marker for an element `n` should stop at. Set it only while the item is unread. */
-export const UNREAD_ANCHOR_ATTR = 'data-unread-anchor';
+const UNREAD_ANCHOR_ATTR = 'data-unread-anchor';
 
 /** Stand-in for Ctrl (Windows/Linux) or ⌘ (macOS) in `SHORTCUT_GROUPS`. */
 export const MOD = 'Mod';
 
-export interface ShortcutEntry {
+interface ShortcutEntry {
   /** Keys pressed together. `MOD` renders per platform via `keyLabel`. */
   keys: string[];
   description: string;
@@ -70,7 +70,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   },
 ];
 
-export function isMacPlatform(): boolean {
+function isMacPlatform(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
 }

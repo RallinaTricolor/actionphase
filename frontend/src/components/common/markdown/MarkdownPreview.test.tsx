@@ -660,6 +660,15 @@ describe('MarkdownPreview', () => {
   });
 
   describe('Edge Cases', () => {
+    // jsdom has no layout, so assert the wrapping rule itself: without it an
+    // unbroken URL renders past its card and scrolls the page sideways.
+    it('wraps long unbroken words such as URLs', () => {
+      const { container } = render(
+        <MarkdownPreview content="https://docs.google.com/document/d/1WW4Mo17av59bBRnr72V2jiBKaPNvH3r8DfpulA1RgT/edit" />
+      );
+      expect(container.querySelector('.markdown-preview')).toHaveClass('break-words');
+    });
+
     it('handles empty content', () => {
       const { container } = render(<MarkdownPreview content="" />);
       expect(container.querySelector('.markdown-preview')).toBeInTheDocument();
