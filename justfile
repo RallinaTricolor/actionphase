@@ -989,7 +989,9 @@ relock-frontend:
   #!/usr/bin/env bash
   set -euo pipefail
   echo "🔒 Regenerating frontend/package-lock.json in node:24 (linux)..."
-  workdir=$(mktemp -d)
+  # Under $HOME, not mktemp's default /var/folders: Colima only shares $HOME
+  # with containers, so a /var/folders mount shows up empty (ENOENT).
+  workdir=$(mktemp -d "$HOME/.relock-frontend.XXXXXX")
   trap 'rm -rf "$workdir"' EXIT
   cp frontend/package.json frontend/package-lock.json "$workdir/"
   docker run --rm -v "$workdir":/app -w /app node:24 \
