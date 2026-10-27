@@ -120,7 +120,7 @@ export function RecentResultsSection({
                   className="flex items-start justify-between cursor-pointer"
                   onClick={() => expandedResults.toggle(result.id)}
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-content-primary">
                         {result.username || 'Result'}
@@ -134,7 +134,7 @@ export function RecentResultsSection({
 
                     {/* Preview (first 150 characters) */}
                     {!isResultExpanded && (
-                      <p className="text-sm text-content-secondary line-clamp-2">
+                      <p className="text-sm text-content-secondary line-clamp-2 break-words">
                         {result.content.slice(0, 150)}
                         {result.content.length > 150 ? '...' : ''}
                       </p>
