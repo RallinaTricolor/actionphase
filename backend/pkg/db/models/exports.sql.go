@@ -208,7 +208,7 @@ const getGameExport = `-- name: GetGameExport :one
 SELECT ge.id, ge.game_id, ge.requested_by_user_id, ge.status, ge.content_fingerprint, ge.storage_path, ge.size_bytes, ge.file_count, ge.error_message, ge.progress_note, ge.started_at, ge.completed_at, ge.created_at, ge.expires_at, g.title AS game_title
 FROM game_exports ge
 JOIN games g ON g.id = ge.game_id
-WHERE ge.id = $1
+WHERE ge.id = $1 AND g.deleted_at IS NULL
 `
 
 type GetGameExportRow struct {

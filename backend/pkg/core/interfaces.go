@@ -345,8 +345,11 @@ type GameServiceInterface interface {
 	// sheet layout. Returns an error wrapping ErrGameReadOnly for an archived game.
 	UpdateGameCharacterSheet(ctx context.Context, gameID int32, config CharacterSheetConfig) (*models.Game, error)
 
-	// DeleteGame removes a game from the system (only allowed for GMs on cancelled games)
-	DeleteGame(ctx context.Context, gameID, userID int32) error
+	// DeleteGame soft-deletes a game in any state. Only the primary GM, or a
+	// site admin in admin mode (isAdminMode), may delete it. A deleted game is
+	// absent from GetGame and every listing; restoring it is a manual DB update.
+	// Returns ErrGameNotFound or ErrGameDeleteForbidden.
+	DeleteGame(ctx context.Context, gameID, userID int32, isAdminMode bool) error
 
 	// LeaveGame allows a user to leave a game
 	LeaveGame(ctx context.Context, gameID, userID int32) error

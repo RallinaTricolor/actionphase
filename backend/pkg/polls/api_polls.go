@@ -2,6 +2,7 @@ package polls
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	db "actionphase/pkg/db/models"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/jackc/pgx/v5"
 )
 
 // anonymousVoterName is the display name used for audience votes, which are never
@@ -241,6 +243,13 @@ type pollViewAccess struct {
 	// results of a poll flagged hide_results_from_players — and for any viewer of
 	// a public-archive game (completed or epilogue), which grants audience-level access.
 	isPrivileged bool
+}
+
+// isPollGameMissing reports whether err came from a poll's game lookup finding
+// no game -- which, since the poll itself was found, means the game was
+// soft-deleted. Handlers answer 404 for it rather than 403 or 500.
+func isPollGameMissing(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
 }
 
 // checkPollViewAccess determines what visibility level an authenticated user gets for

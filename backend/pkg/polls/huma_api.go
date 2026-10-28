@@ -333,6 +333,9 @@ func (h *Handler) getPoll(ctx context.Context, in *pollIDInput) (*pollOutput, er
 	}
 
 	access, err := h.checkPollViewAccess(ctx, pollWithOptions.Poll.GameID, userID)
+	if isPollGameMissing(err) {
+		return nil, huma.Error404NotFound("poll not found")
+	}
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
 		return nil, huma.Error500InternalServerError("Failed to check poll view access")
@@ -385,6 +388,9 @@ func (h *Handler) getPollResults(ctx context.Context, in *pollIDInput) (*pollRes
 	}
 
 	access, err := h.checkPollViewAccess(ctx, poll.GameID, userID)
+	if isPollGameMissing(err) {
+		return nil, huma.Error404NotFound("poll not found")
+	}
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
 		return nil, huma.Error500InternalServerError("Failed to check poll view access")
@@ -493,14 +499,17 @@ func (h *Handler) submitVote(ctx context.Context, in *submitVoteInput) (*voteOut
 	}
 
 	if err := h.verifyUserInGame(ctx, poll.GameID, userID); err != nil {
+		if isPollGameMissing(err) {
+			return nil, huma.Error404NotFound("poll not found")
+		}
 		h.App.ObsLogger.Warn(ctx, "User is not in the game", "error", err)
 		return nil, huma.Error403Forbidden(err.Error())
 	}
 
 	game, err := h.GameService.GetGame(ctx, poll.GameID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
-		return nil, huma.Error500InternalServerError("Failed to get game")
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", poll.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	isGM := game.GmUserID == userID
@@ -567,6 +576,9 @@ func (h *Handler) updatePoll(ctx context.Context, in *updatePollInput) (*pollOut
 	}
 
 	if err := h.verifyUserIsGM(ctx, poll.GameID, userID); err != nil {
+		if isPollGameMissing(err) {
+			return nil, huma.Error404NotFound("poll not found")
+		}
 		h.App.ObsLogger.Warn(ctx, "User is not GM of the game", "error", err)
 		return nil, huma.Error403Forbidden(err.Error())
 	}
@@ -610,6 +622,9 @@ func (h *Handler) deletePoll(ctx context.Context, in *pollIDInput) (*struct{}, e
 	}
 
 	if err := h.verifyUserIsGM(ctx, poll.GameID, userID); err != nil {
+		if isPollGameMissing(err) {
+			return nil, huma.Error404NotFound("poll not found")
+		}
 		h.App.ObsLogger.Warn(ctx, "User is not GM of the game", "error", err)
 		return nil, huma.Error403Forbidden(err.Error())
 	}

@@ -2484,6 +2484,7 @@ WITH favorite_comments AS (
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
     WHERE f.user_id = $1::int
+      AND g.deleted_at IS NULL
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
       AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))

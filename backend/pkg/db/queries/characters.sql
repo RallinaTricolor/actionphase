@@ -19,7 +19,7 @@ ORDER BY c.character_type, c.name;
 SELECT c.*, g.title as game_title
 FROM characters c
 JOIN games g ON c.game_id = g.id
-WHERE c.user_id = $1
+WHERE c.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY c.created_at DESC;
 
 -- name: GetPlayerCharactersByGame :many
@@ -86,7 +86,7 @@ SELECT c.*, g.title as game_title
 FROM characters c
 JOIN games g ON c.game_id = g.id
 JOIN npc_assignments na ON c.id = na.character_id
-WHERE na.assigned_user_id = $1
+WHERE na.assigned_user_id = $1 AND g.deleted_at IS NULL
 ORDER BY g.title, c.name;
 
 -- name: CreateCharacterData :one
@@ -218,6 +218,7 @@ LEFT JOIN users au ON na.assigned_user_id = au.id
 LEFT JOIN game_participants gp ON c.game_id = gp.game_id AND gp.user_id = $1 AND gp.role = 'co_gm'
 LEFT JOIN game_participants gp_role ON c.game_id = gp_role.game_id AND gp_role.user_id = $1
 WHERE g.state = 'in_progress'
+  AND g.deleted_at IS NULL
   -- Characters deactivated when a player leaves a game are not "currently played".
   AND c.is_active = true
   AND (

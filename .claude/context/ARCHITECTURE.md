@@ -569,6 +569,29 @@ Both columns are nullable and were **not** backfilled, so pre-existing
 notifications keep one-at-a-time behaviour. New notification types opt in by
 setting the context pair in their `Notify*` helper.
 
+### Soft-Deleted Games (added 2026-10-28)
+
+`DELETE /games/{id}` sets `games.deleted_at` (+ `deleted_by_user_id`); nothing
+else changes, so a restore is `UPDATE games SET deleted_at = NULL`. Primary GM
+or admin-in-admin-mode only, any state. There is no restore endpoint.
+
+**Two layers keep a deleted game invisible:**
+
+1. **`GetGame` / `GetGameWithDetails` filter `deleted_at IS NULL`.** Every
+   `/games/{id}/...` route goes through `GameMiddleware` -> `GetGame`, and the
+   top-level `/characters/{id}`, `/phases/{id}`, `/polls/{id}`, `/handouts/{id}`
+   routes resolve their game the same way -- so they 404 by default. A handler
+   that looks up a resource's game must map `pgx.ErrNoRows` to 404
+   (`core.NotFoundOr500` / `core.HandleDBErrorWithID`), not 500.
+2. **Every cross-game query filters it explicitly**: games list/counts, profile
+   games, dashboard, "my games", characters/handouts/favorites/deadlines/
+   applications across games, notifications (list AND unread counts), and the
+   background workers (`GetScheduledPhasesToActivate`, `GetDueStagedParts`).
+
+**A new query that lists across games must add `g.deleted_at IS NULL`.** Queries
+scoped to one `game_id` don't need it -- the route already 404'd.
+`TestSoftDeletedGameHiddenFromCrossGameQueries` is the regression net.
+
 ### Hidden NPCs (added 2026-09-22)
 
 `characters.is_hidden` conceals an NPC from regular players. It is a column, not

@@ -41,7 +41,7 @@ SELECT
     g.state AS game_state
 FROM game_applications ga
 JOIN games g ON ga.game_id = g.id
-WHERE ga.user_id = $1
+WHERE ga.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY ga.applied_at DESC;
 
 -- name: UpdateGameApplicationStatus :one

@@ -1087,3 +1087,41 @@ func TestGetCharacter_ReportsOwnerUsername(t *testing.T) {
 	}
 	core.AssertEqual(t, true, isActive, "a live character reports is_active=true")
 }
+
+// TestCharacterAPI_SoftDeletedGameAnswers404 verifies that a character in a
+// soft-deleted game 404s on the top-level /characters/{id} route. The route
+// resolves the game itself (not through GameMiddleware), and used to answer 500
+// when that lookup found nothing.
+func TestCharacterAPI_SoftDeletedGameAnswers404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+	ctx := context.Background()
+
+	character, err := dbmodels.New(testDB.Pool).CreateCharacter(ctx, dbmodels.CreateCharacterParams{
+		GameID: fixtures.TestGame.ID, Name: "Doomed NPC", CharacterType: "npc", Status: "approved",
+	})
+	core.AssertNoError(t, err, "creating character should succeed")
+
+	gmToken, err := createTestAuthToken(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	get := func() int {
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d", character.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	core.AssertEqual(t, http.StatusOK, get(), "character should be readable while its game is live")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	core.AssertNoError(t, gameService.DeleteGame(ctx, fixtures.TestGame.ID, int32(fixtures.TestUser.ID), false), "delete game")
+
+	core.AssertEqual(t, http.StatusNotFound, get(), "character in a deleted game should 404, not 500")
+}

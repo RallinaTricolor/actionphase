@@ -139,12 +139,14 @@ func (m *SimpleMockGameRepository) UpdateGameState(ctx context.Context, params d
 	return db.Game{}, errors.New("game not found")
 }
 
-func (m *SimpleMockGameRepository) DeleteGame(ctx context.Context, id int32) error {
-	if _, exists := m.games[id]; exists {
-		delete(m.games, id)
-		return nil
+// SoftDeleteGame drops the game from the in-memory store, which is what a
+// soft delete looks like to every reader: GetGame no longer finds it.
+func (m *SimpleMockGameRepository) SoftDeleteGame(ctx context.Context, params db.SoftDeleteGameParams) (int64, error) {
+	if _, exists := m.games[params.ID]; exists {
+		delete(m.games, params.ID)
+		return 1, nil
 	}
-	return errors.New("game not found")
+	return 0, nil
 }
 
 // Stub implementations for methods we don't need in basic tests

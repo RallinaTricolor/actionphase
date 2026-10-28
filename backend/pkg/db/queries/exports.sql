@@ -28,7 +28,7 @@ RETURNING *;
 SELECT ge.*, g.title AS game_title
 FROM game_exports ge
 JOIN games g ON g.id = ge.game_id
-WHERE ge.id = $1;
+WHERE ge.id = $1 AND g.deleted_at IS NULL;
 
 -- name: GetLatestGameExport :one
 -- Newest export for a game in any state, for status polling.

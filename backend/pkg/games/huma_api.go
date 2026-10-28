@@ -955,10 +955,6 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 func (h *Handler) humaDeleteGame(ctx context.Context, in *gameScopedInput) (*noContentOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_delete_game")()
 
-	if err := h.requireGMFlag(ctx, "only the GM can delete this game", "Delete game forbidden"); err != nil {
-		return nil, err
-	}
-
 	game, err := gameFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -968,21 +964,17 @@ func (h *Handler) humaDeleteGame(ctx context.Context, in *gameScopedInput) (*noC
 		return nil, err
 	}
 
-	if err := h.GameService.DeleteGame(ctx, game.ID, user.ID); err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to delete game", "error", err, "game_id", game.ID)
-		// The service reports these as plain strings, so they are matched by
-		// text. strings.HasPrefix replaces the chi version's manual slice, which
-		// would panic on any message shorter than the prefix.
-		errMsg := err.Error()
+	// Not requireGMFlag: is_gm admits co-GMs, and deletion is for the primary
+	// GM (or an admin in admin mode) only. The service enforces the same rule.
+	isAdminMode := user.IsAdmin && core.GetAdminMode(ctx)
+	if err := h.GameService.DeleteGame(ctx, game.ID, user.ID, isAdminMode); err != nil {
 		switch {
-		case errMsg == "game not found":
-			return nil, h.logAndErr(ctx, core.ErrNotFound(errMsg), "Delete game not found")
-		case errMsg == "only the game master can delete this game":
-			return nil, h.logAndErr(ctx, core.ErrForbidden(errMsg), "Delete game forbidden")
-		case strings.HasPrefix(errMsg, "only cancelled games can be deleted"):
-			return nil, h.logAndErr(ctx, core.ErrBadRequest(err), "Bad delete game request", "error", err)
+		case errors.Is(err, core.ErrGameNotFound):
+			return nil, h.logAndErr(ctx, core.ErrNotFound(core.CapitalizeSentence(err.Error())), "Delete game not found", "game_id", game.ID)
+		case errors.Is(err, core.ErrGameDeleteForbidden):
+			return nil, h.logAndErr(ctx, core.ErrForbidden(core.CapitalizeSentence(err.Error())), "Delete game forbidden", "game_id", game.ID)
 		default:
-			return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete game", "error", err)
+			return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete game", "error", err, "game_id", game.ID)
 		}
 	}
 
@@ -2969,14 +2961,13 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Method:      http.MethodDelete,
 		Path:        "/",
 		Summary:     "Delete a game",
-		Description: "Permanently deletes a cancelled game. GM only.",
+		Description: "Soft-deletes a game in any state: it disappears from every listing and its routes answer 404. Primary GM, or a site admin in admin mode, only; co-GMs cannot delete.",
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
-			"400": {Description: "The game is not cancelled and so cannot be deleted"},
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "Only the GM can delete this game"},
+			"403": {Description: "Only the game's GM can delete it"},
 			"404": {Description: "Game not found"},
 		},
 	}, h.humaDeleteGame)

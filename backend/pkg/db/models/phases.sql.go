@@ -711,7 +711,9 @@ SELECT r.id, r.game_id, r.user_id, r.phase_id, r.character_id, r.gm_user_id,
        r.parent_result_id, r.reveal_delay_minutes
 FROM action_results r
 JOIN action_results parent ON r.parent_result_id = parent.id
+JOIN games g ON g.id = r.game_id
 WHERE r.is_published = TRUE
+  AND g.deleted_at IS NULL
   AND r.released_at IS NULL
   AND parent.released_at IS NOT NULL
   AND parent.released_at + make_interval(mins => r.reveal_delay_minutes) <= NOW()
@@ -741,10 +743,14 @@ type GetDueStagedPartsRow struct {
 // comes back on the next tick, and there is no in-memory timer to lose or
 // double-fire.
 //
-// Deliberately does NOT join game_phases or games. A chain owns its own clock —
-// phase advancement and game completion do not force, delay, or cancel a
-// release. Adding a phase or state filter here would break that; see "Chain
+// Deliberately does NOT filter on phase or game state. A chain owns its own
+// clock — phase advancement and game completion do not force, delay, or cancel
+// a release. Adding a phase or state filter here would break that; see "Chain
 // Independence" in the planning doc.
+//
+// The one game filter is soft deletion: a deleted game must not keep revealing
+// results and notifying its players. Its parts stay pending, so a restored
+// game's chains resume where they stopped.
 // Oldest chains first, and parents before children within a chain: id ordering
 // means a chain inserted in part order releases in part order even if several
 // parts come due in the same tick.
@@ -1383,6 +1389,7 @@ WHERE gp.is_active = false
   AND gp.start_time <= NOW()
   AND gp.end_time IS NULL
   AND g.state = 'in_progress'
+  AND g.deleted_at IS NULL
 ORDER BY gp.start_time ASC
 `
 

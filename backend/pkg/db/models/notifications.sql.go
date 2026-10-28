@@ -160,8 +160,10 @@ func (q *Queries) GetGameNotifications(ctx context.Context, arg GetGameNotificat
 const getUnreadNotificationCount = `-- name: GetUnreadNotificationCount :one
 SELECT COUNT(*) FROM notifications
 WHERE user_id = $1 AND is_read = false
+  AND NOT EXISTS (SELECT 1 FROM games g WHERE g.id = notifications.game_id AND g.deleted_at IS NOT NULL)
 `
 
+// Must agree with GetUnreadNotifications, or the badge counts hidden rows.
 func (q *Queries) GetUnreadNotificationCount(ctx context.Context, userID int32) (int64, error) {
 	row := q.db.QueryRow(ctx, getUnreadNotificationCount, userID)
 	var count int64
@@ -173,7 +175,7 @@ const getUnreadNotifications = `-- name: GetUnreadNotifications :many
 SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.is_read, n.created_at, n.link_url, n.read_at, n.context_type, n.context_id, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
-WHERE n.user_id = $1 AND n.is_read = false
+WHERE n.user_id = $1 AND n.is_read = false AND g.deleted_at IS NULL
 ORDER BY n.created_at DESC
 `
 
@@ -235,7 +237,7 @@ const getUserNotifications = `-- name: GetUserNotifications :many
 SELECT n.id, n.user_id, n.game_id, n.type, n.title, n.content, n.related_type, n.related_id, n.is_read, n.created_at, n.link_url, n.read_at, n.context_type, n.context_id, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
-WHERE n.user_id = $1
+WHERE n.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY n.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -264,6 +266,8 @@ type GetUserNotificationsRow struct {
 	GameTitle   pgtype.Text        `json:"game_title"`
 }
 
+// A soft-deleted game's notifications are hidden: they would only open a 404.
+// g.deleted_at is also NULL when the notification has no game, so those stay.
 func (q *Queries) GetUserNotifications(ctx context.Context, arg GetUserNotificationsParams) ([]GetUserNotificationsRow, error) {
 	rows, err := q.db.Query(ctx, getUserNotifications, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {

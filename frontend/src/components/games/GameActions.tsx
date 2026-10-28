@@ -81,7 +81,10 @@ export function GameActions({
   // Count menu items to determine if we should show the menu
   const hasEditAction = canEditGame && isGameWritable(game.state);
   const hasStateActions = isGM && stateActions.length > 0;
-  const hasDeleteAction = isGM && game.state === 'cancelled' && onDeleteGame;
+  // Any state: deletion is a soft delete. canEditGame, not isGM: like Edit Game,
+  // it is the primary GM's (or an admin in admin mode's) call, and the endpoint
+  // refuses co-GMs.
+  const hasDeleteAction = canEditGame && !!onDeleteGame;
   // isGM here includes co-GMs, unlike Edit Game: sheet layout is ordinary game
   // setup, and the endpoint admits them.
   const hasCustomizeSheetAction = isGM && isGameWritable(game.state) && !!onCustomizeSheet;

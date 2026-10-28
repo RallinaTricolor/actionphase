@@ -592,63 +592,51 @@ func (gs *GameService) UpdateGameBannerURL(ctx context.Context, gameID int32, ba
 	return err
 }
 
-// DeleteGame - Delete a cancelled game (GM-only)
-// Only games in 'cancelled' state can be deleted, and only by the GM
-func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32) error {
-	gs.Logger.Info(ctx, "Game deletion requested",
-		"game_id", gameID,
-		"user_id", userID,
-	)
-
+// DeleteGame soft-deletes a game in any state. Only the primary GM, or a site
+// admin in admin mode, may delete it; co-GMs may not, because deleting removes
+// the game for every participant.
+//
+// Nothing but deleted_at/deleted_by_user_id changes, so restoring the game is a
+// manual column flip (see the soft_delete_games migration).
+func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32, isAdminMode bool) error {
 	queries := models.New(gs.DB)
 
-	// Fetch the game to verify it exists, check state, and verify GM
 	game, err := queries.GetGame(ctx, gameID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return core.ErrGameNotFound
+	}
 	if err != nil {
-		gs.Logger.LogError(ctx, err, "Game not found for deletion",
-			"game_id", gameID,
-			"user_id", userID,
-		)
-		return fmt.Errorf("game not found")
+		return fmt.Errorf("failed to load game for deletion: %w", err)
 	}
 
-	// Verify the user is the GM or Co-GM
-	if game.GmUserID != userID && !core.IsUserCoGM(ctx, gs.DB, gameID, userID) {
+	if game.GmUserID != userID && !isAdminMode {
 		gs.Logger.Warn(ctx, "Unauthorized game deletion attempt",
 			"game_id", gameID,
 			"user_id", userID,
 			"gm_user_id", game.GmUserID,
 		)
-		return fmt.Errorf("only the game master or co-GM can delete this game")
+		return core.ErrGameDeleteForbidden
 	}
 
-	// Verify the game is in cancelled state
-	if game.State != core.GameStateCancelled {
-		gs.Logger.Warn(ctx, "Cannot delete game: not in cancelled state",
-			"game_id", gameID,
-			"current_state", game.State,
-			"required_state", core.GameStateCancelled,
-		)
-		return fmt.Errorf("only cancelled games can be deleted (current state: %s)", game.State)
-	}
-
-	// Delete the game (SQL query enforces cancelled state as well)
-	err = queries.DeleteGame(ctx, gameID)
+	rows, err := queries.SoftDeleteGame(ctx, models.SoftDeleteGameParams{
+		ID:              gameID,
+		DeletedByUserID: pgtype.Int4{Int32: userID, Valid: true},
+	})
 	if err != nil {
-		gs.Logger.LogError(ctx, err, "Failed to delete game",
-			"game_id", gameID,
-			"title", game.Title,
-		)
 		return fmt.Errorf("failed to delete game: %w", err)
 	}
+	// Zero rows: a concurrent request deleted it between the read and here.
+	if rows == 0 {
+		return core.ErrGameNotFound
+	}
 
-	gs.Logger.Info(ctx, "Game deleted successfully",
+	gs.Logger.Info(ctx, "Game soft-deleted",
 		"game_id", gameID,
 		"title", game.Title,
-		"gm_user_id", game.GmUserID,
-		"reason", "cancelled",
+		"state", game.State,
+		"deleted_by_user_id", userID,
+		"admin_mode", isAdminMode,
 	)
-
 	return nil
 }
 

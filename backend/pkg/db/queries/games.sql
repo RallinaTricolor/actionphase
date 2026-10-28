@@ -14,17 +14,20 @@ INSERT INTO games (
 ) RETURNING *;
 
 -- name: GetGame :one
-SELECT * FROM games WHERE id = $1;
+-- Soft-deleted games are treated as absent here, and this is the load-bearing
+-- filter: GameMiddleware and every resource route that resolves its game go
+-- through this query, so a deleted game 404s everywhere by default.
+SELECT * FROM games WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: GetGamesByGM :many
-SELECT * FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC;
+SELECT * FROM games WHERE gm_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC;
 
 -- name: GetGamesByUser :many
 SELECT g.*, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
-WHERE gp.user_id = $1 AND gp.status = 'active'
+WHERE gp.user_id = $1 AND gp.status = 'active' AND g.deleted_at IS NULL
 ORDER BY g.updated_at DESC;
 
 -- name: UpdateGameState :one
@@ -60,10 +63,13 @@ SET banner_url = $2, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteGame :exec
--- Only allow deletion of cancelled games
--- Foreign key constraints will cascade delete related data
-DELETE FROM games WHERE id = $1 AND state = 'cancelled';
+-- name: SoftDeleteGame :execrows
+-- Marks a game deleted, in any state. Nothing else changes, so restoring is a
+-- single column flip (see the soft_delete_games migration). Zero rows means
+-- the game does not exist or is already deleted.
+UPDATE games
+SET deleted_at = NOW(), deleted_by_user_id = sqlc.arg(deleted_by_user_id)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 
 -- name: GetGameParticipants :many
 SELECT gp.*, u.username, u.avatar_url
@@ -124,7 +130,7 @@ SELECT
 FROM games g
 LEFT JOIN users u ON g.gm_user_id = u.id
 LEFT JOIN communities c ON c.id = g.community_id
-WHERE g.id = $1;
+WHERE g.id = $1 AND g.deleted_at IS NULL;
 
 -- name: CanUserJoinGame :one
 SELECT
@@ -136,7 +142,7 @@ SELECT
         ELSE 'can_join'
     END as join_status
 FROM games g
-WHERE g.id = $1;
+WHERE g.id = $1 AND g.deleted_at IS NULL;
 
 -- Player Management Queries
 
@@ -183,7 +189,7 @@ RETURNING *;
 -- Audience Participation Queries
 
 -- name: GetGameAutoAcceptAudience :one
-SELECT auto_accept_audience FROM games WHERE id = $1;
+SELECT auto_accept_audience FROM games WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: UpdateGameCharacterSheet :one
 -- The Character Sheet editor's write. Replaces the whole document: the service
@@ -228,7 +234,7 @@ SELECT EXISTS(
     WHERE game_id = $1 AND user_id = $2 AND role IN ('audience', 'co_gm') AND status = 'active'
 ) OR EXISTS(
     SELECT 1 FROM games
-    WHERE id = $1 AND gm_user_id = $2
+    WHERE id = $1 AND gm_user_id = $2 AND deleted_at IS NULL
 );
 
 -- Co-GM Management Queries

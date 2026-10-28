@@ -121,7 +121,7 @@ type MockGameRepository struct {
 	GetGameWithDetailsFn func(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error)
 	UpdateGameFn         func(ctx context.Context, params db.UpdateGameParams) (db.Game, error)
 	UpdateGameStateFn    func(ctx context.Context, params db.UpdateGameStateParams) (db.Game, error)
-	DeleteGameFn         func(ctx context.Context, id int32) error
+	SoftDeleteGameFn     func(ctx context.Context, params db.SoftDeleteGameParams) (int64, error)
 }
 
 func (m *MockGameRepository) CreateGame(ctx context.Context, params db.CreateGameParams) (db.Game, error) {
@@ -173,11 +173,11 @@ func (m *MockGameRepository) UpdateGameState(ctx context.Context, params db.Upda
 	return db.Game{}, nil
 }
 
-func (m *MockGameRepository) DeleteGame(ctx context.Context, id int32) error {
-	if m.DeleteGameFn != nil {
-		return m.DeleteGameFn(ctx, id)
+func (m *MockGameRepository) SoftDeleteGame(ctx context.Context, params db.SoftDeleteGameParams) (int64, error) {
+	if m.SoftDeleteGameFn != nil {
+		return m.SoftDeleteGameFn(ctx, params)
 	}
-	return nil
+	return 1, nil
 }
 
 // MockGameParticipantRepository provides a mock implementation of GameParticipantRepository
