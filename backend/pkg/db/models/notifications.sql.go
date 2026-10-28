@@ -500,6 +500,7 @@ type NotifyGMParams struct {
 	GmUserID    int32       `json:"gm_user_id"`
 }
 
+// soft-delete: one game, notified from a request that already loaded it.
 func (q *Queries) NotifyGM(ctx context.Context, arg NotifyGMParams) error {
 	_, err := q.db.Exec(ctx, notifyGM,
 		arg.GameID,

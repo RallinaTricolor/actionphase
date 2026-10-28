@@ -166,6 +166,7 @@ type ListWebhooksForGameStateParams struct {
 	State string `json:"state"`
 }
 
+// soft-delete: runs after a state transition on a game the caller loaded through GetGame.
 // The dispatch lookup, run after every game state transition.
 //
 // Resolves game -> community -> enabled webhooks subscribed to this state in

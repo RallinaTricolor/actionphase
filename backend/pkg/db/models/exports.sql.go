@@ -177,6 +177,7 @@ type GetGameContentFingerprintRow struct {
 // =============================================================================
 // CONTENT FINGERPRINT
 // =============================================================================
+// soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 // Cheap change-detection across every table the archive draws from. Completed
 // games are mostly immutable, but a GM can still edit after completion, so a
 // cached artifact is only reusable while this value is unchanged.
@@ -860,6 +861,7 @@ type ListExportParticipantsRow struct {
 	Username       string             `json:"username"`
 }
 
+// soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 // Roster for the archive README.
 //
 // The primary GM is games.gm_user_id and is NOT guaranteed to have a

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"actionphase/pkg/core"
+
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-chi/jwtauth/v5"
 )
@@ -71,7 +73,8 @@ func (h *Handler) requireEditPermission(ctx context.Context, characterID int32) 
 	}
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, characterID, userID)
 	if err != nil {
-		return huma.Error500InternalServerError("Failed to check permissions")
+		// 404 when the character, or its soft-deleted game, is gone.
+		return core.NotFoundOr500(err, "character")
 	}
 	if !canEdit {
 		return huma.Error403Forbidden("You don't have permission to modify this character's avatar")

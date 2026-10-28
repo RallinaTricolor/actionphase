@@ -601,15 +601,22 @@ func (gs *GameService) UpdateGameBannerURL(ctx context.Context, gameID int32, ba
 func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32, isAdminMode bool) error {
 	queries := models.New(gs.DB)
 
-	game, err := queries.GetGame(ctx, gameID)
+	// One statement checks permission and writes, so there is no window for
+	// the game to change between the two.
+	deleted, err := queries.SoftDeleteGame(ctx, models.SoftDeleteGameParams{
+		ID:              gameID,
+		DeletedByUserID: pgtype.Int4{Int32: userID, Valid: true},
+		IsAdminMode:     isAdminMode,
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrGameNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("failed to load game for deletion: %w", err)
-	}
-
-	if game.GmUserID != userID && !isAdminMode {
+		// Nothing was written. Look the game up only now, to say why.
+		game, lookupErr := queries.GetGame(ctx, gameID)
+		if errors.Is(lookupErr, pgx.ErrNoRows) {
+			return core.ErrGameNotFound
+		}
+		if lookupErr != nil {
+			return fmt.Errorf("failed to load game after refused deletion: %w", lookupErr)
+		}
 		gs.Logger.Warn(ctx, "Unauthorized game deletion attempt",
 			"game_id", gameID,
 			"user_id", userID,
@@ -617,23 +624,14 @@ func (gs *GameService) DeleteGame(ctx context.Context, gameID, userID int32, isA
 		)
 		return core.ErrGameDeleteForbidden
 	}
-
-	rows, err := queries.SoftDeleteGame(ctx, models.SoftDeleteGameParams{
-		ID:              gameID,
-		DeletedByUserID: pgtype.Int4{Int32: userID, Valid: true},
-	})
 	if err != nil {
 		return fmt.Errorf("failed to delete game: %w", err)
-	}
-	// Zero rows: a concurrent request deleted it between the read and here.
-	if rows == 0 {
-		return core.ErrGameNotFound
 	}
 
 	gs.Logger.Info(ctx, "Game soft-deleted",
 		"game_id", gameID,
-		"title", game.Title,
-		"state", game.State,
+		"title", deleted.Title,
+		"state", deleted.State,
 		"deleted_by_user_id", userID,
 		"admin_mode", isAdminMode,
 	)

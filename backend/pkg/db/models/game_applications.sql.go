@@ -64,6 +64,7 @@ type CanUserApplyToGameParams struct {
 	UserID int32 `json:"user_id"`
 }
 
+// soft-delete: scoped to one game, resolved by its route.
 func (q *Queries) CanUserApplyToGame(ctx context.Context, arg CanUserApplyToGameParams) (string, error) {
 	row := q.db.QueryRow(ctx, canUserApplyToGame, arg.GameID, arg.UserID)
 	var status string

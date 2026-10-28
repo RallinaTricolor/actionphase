@@ -890,8 +890,8 @@ func (h *Handler) humaRenameCharacter(ctx context.Context, in *renameCharacterIn
 	// edit-permission check rather than a GM check.
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, in.ID, authUser.ID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
+		return nil, core.NotFoundOr500(err, "character")
 	}
 	if !canEdit {
 		h.App.ObsLogger.Warn(ctx, "Character rename permission denied", "character_id", in.ID, "user_id", authUser.ID)
@@ -970,8 +970,8 @@ func (h *Handler) humaSetCharacterData(ctx context.Context, in *setCharacterData
 
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, in.ID, userID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
+		return nil, core.NotFoundOr500(err, "character")
 	}
 	if !canEdit {
 		h.App.ObsLogger.Warn(ctx, "Character edit permission denied", "character_id", in.ID, "user_id", userID)

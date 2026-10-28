@@ -886,6 +886,7 @@ type GetUserControllableCharactersRow struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+// soft-delete: scoped to one game ($1), which its route has already resolved through GetGame.
 // Get all characters a user can control in a game:
 // 1. Their own player characters (where user_id matches)
 // 2. NPCs assigned to them via npc_assignments

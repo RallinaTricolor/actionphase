@@ -109,6 +109,7 @@ FROM game_participants gp
 WHERE gp.game_id = $1 AND gp.status = 'active' AND gp.user_id != $8;
 
 -- name: NotifyGM :exec
+-- soft-delete: one game, notified from a request that already loaded it.
 INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
 SELECT g.gm_user_id, $1, $2, $3, $4, $5, $6, $7
 FROM games g

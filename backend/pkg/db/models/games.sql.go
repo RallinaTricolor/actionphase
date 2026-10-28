@@ -110,12 +110,17 @@ func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams
 }
 
 const checkAudienceAccess = `-- name: CheckAudienceAccess :one
-SELECT EXISTS(
-    SELECT 1 FROM game_participants
-    WHERE game_id = $1 AND user_id = $2 AND role IN ('audience', 'co_gm') AND status = 'active'
-) OR EXISTS(
-    SELECT 1 FROM games
-    WHERE id = $1 AND gm_user_id = $2 AND deleted_at IS NULL
+SELECT EXISTS(SELECT 1 FROM games g WHERE g.id = $1::int AND g.deleted_at IS NULL)
+AND (
+    EXISTS(
+        SELECT 1 FROM game_participants
+        WHERE game_id = $1::int AND user_id = $2::int
+          AND role IN ('audience', 'co_gm') AND status = 'active'
+    ) OR EXISTS(
+        SELECT 1 FROM games g2
+        WHERE g2.id = $1::int AND g2.gm_user_id = $2::int
+          AND g2.deleted_at IS NULL
+    )
 )
 `
 
@@ -124,6 +129,8 @@ type CheckAudienceAccessParams struct {
 	UserID int32 `json:"user_id"`
 }
 
+// A soft-deleted game grants no one access. The filter wraps both branches: a
+// co-GM or audience member is a game_participants row, which outlives the game.
 func (q *Queries) CheckAudienceAccess(ctx context.Context, arg CheckAudienceAccessParams) (pgtype.Bool, error) {
 	row := q.db.QueryRow(ctx, checkAudienceAccess, arg.GameID, arg.UserID)
 	var column_1 pgtype.Bool
@@ -931,26 +938,38 @@ func (q *Queries) RestoreParticipant(ctx context.Context, arg RestoreParticipant
 	return i, err
 }
 
-const softDeleteGame = `-- name: SoftDeleteGame :execrows
+const softDeleteGame = `-- name: SoftDeleteGame :one
 UPDATE games
 SET deleted_at = NOW(), deleted_by_user_id = $1
-WHERE id = $2 AND deleted_at IS NULL
+WHERE id = $2
+  AND deleted_at IS NULL
+  AND (gm_user_id = $1 OR $3::bool)
+RETURNING title, state
 `
 
 type SoftDeleteGameParams struct {
 	DeletedByUserID pgtype.Int4 `json:"deleted_by_user_id"`
 	ID              int32       `json:"id"`
+	IsAdminMode     bool        `json:"is_admin_mode"`
+}
+
+type SoftDeleteGameRow struct {
+	Title string `json:"title"`
+	State string `json:"state"`
 }
 
 // Marks a game deleted, in any state. Nothing else changes, so restoring is a
-// single column flip (see the soft_delete_games migration). Zero rows means
-// the game does not exist or is already deleted.
-func (q *Queries) SoftDeleteGame(ctx context.Context, arg SoftDeleteGameParams) (int64, error) {
-	result, err := q.db.Exec(ctx, softDeleteGame, arg.DeletedByUserID, arg.ID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+// single column flip (see the soft_delete_games migration).
+//
+// The permission rule (primary GM, or an admin in admin mode) is part of the
+// WHERE, so checking and writing are one atomic statement. No row means the
+// game is missing, already deleted, or not the caller's to delete; the service
+// tells those apart only on that failure path.
+func (q *Queries) SoftDeleteGame(ctx context.Context, arg SoftDeleteGameParams) (SoftDeleteGameRow, error) {
+	row := q.db.QueryRow(ctx, softDeleteGame, arg.DeletedByUserID, arg.ID, arg.IsAdminMode)
+	var i SoftDeleteGameRow
+	err := row.Scan(&i.Title, &i.State)
+	return i, err
 }
 
 const transitionParticipantToAudience = `-- name: TransitionParticipantToAudience :one

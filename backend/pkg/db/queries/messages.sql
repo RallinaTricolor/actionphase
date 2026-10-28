@@ -965,12 +965,15 @@ WHERE f.user_id = sqlc.arg(viewer_user_id)::int
 -- name: GetFavoriteCommentIDsForUser :many
 -- Returns every favorited comment ID for a user, across all games.
 -- Powers star state on non-game-scoped surfaces (e.g. character profile).
--- Excludes soft-deleted comments for the same reason as the per-game set.
+-- Excludes soft-deleted comments for the same reason as the per-game set, and
+-- soft-deleted games to agree with ListFavoriteCommentsWithParents.
 SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
 JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = m.game_id
 WHERE f.user_id = sqlc.arg(viewer_user_id)::int
+  AND g.deleted_at IS NULL
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
   AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, sqlc.arg(viewer_user_id)::int));
@@ -1100,6 +1103,7 @@ ORDER BY fc.favorited_at DESC, fc.id DESC;
 -- 20261006184500_add_thread_visibility_functions).
 
 -- name: GetViewerRestrictedPostContext :one
+-- soft-delete: scoped to one game; every caller is a game-scoped route.
 -- Everything ResolveViewerScope needs to decide whether a viewer bypasses the
 -- allowlists in one game. viewer_role is '' for a non-participant; the primary
 -- GM is not a game_participants row, so Go compares gm_user_id itself.
@@ -1117,6 +1121,8 @@ WHERE g.id = sqlc.arg(game_id);
 -- message's OWN root post and that post's game -- never from IDs in the URL.
 -- The root's game, not m.game_id: a comment filed under another game (rows
 -- from before CreateComment checked) must not let that game's role decide.
+-- Callers include the comment-favorite route, which is not game-scoped, so a
+-- soft-deleted game's message resolves to no row (hidden).
 SELECT root.game_id,
        root.is_restricted AS root_is_restricted,
        root.is_draft AS root_is_draft,
@@ -1131,7 +1137,8 @@ SELECT root.game_id,
 FROM messages m
 JOIN messages root ON root.id = m.root_post_id
 JOIN games g ON g.id = root.game_id
-WHERE m.id = sqlc.arg(message_id);
+WHERE m.id = sqlc.arg(message_id)
+  AND g.deleted_at IS NULL;
 
 -- name: GetMessageRootPostID :one
 SELECT root_post_id FROM messages WHERE id = $1;

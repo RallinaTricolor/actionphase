@@ -105,6 +105,7 @@ SELECT EXISTS(
 );
 
 -- name: CanUserApplyToGame :one
+-- soft-delete: scoped to one game, resolved by its route.
 SELECT CASE
     -- Banned first: a banned user is not merely ineligible for this game, they
     -- are excluded from the whole community, and that is the reason the UI

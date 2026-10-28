@@ -230,3 +230,39 @@ func TestSoftDeletedGameHiddenFromCrossGameQueries(t *testing.T) {
 		assertKeptOnly(t, ids)
 	})
 }
+
+// CheckAudienceAccess has two routes to "yes": the primary GM via games, and
+// co-GMs/audience via game_participants. Only the first used to check
+// deleted_at, so a deleted game denied its GM but admitted everyone else.
+func TestCheckAudienceAccess_SoftDeletedGameDeniesEveryRole(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_participants", "games", "sessions", "users")
+
+	ctx := context.Background()
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "caa_gm", "caa_gm@example.com")
+	coGM := testDB.CreateTestUser(t, "caa_cogm", "caa_cogm@example.com")
+	audience := testDB.CreateTestUser(t, "caa_audience", "caa_audience@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Audience Access", "in_progress")
+	testDB.AddTestGameParticipant(t, game.ID, int32(coGM.ID), "co_gm")
+	testDB.AddTestGameParticipant(t, game.ID, int32(audience.ID), "audience")
+
+	roles := map[string]int32{"gm": int32(gm.ID), "co_gm": int32(coGM.ID), "audience": int32(audience.ID)}
+
+	for role, userID := range roles {
+		ok, err := gameService.CheckAudienceAccess(ctx, game.ID, userID)
+		require.NoError(t, err)
+		require.True(t, ok, "%s has access to a live game", role)
+	}
+
+	require.NoError(t, gameService.DeleteGame(ctx, game.ID, int32(gm.ID), false))
+
+	for role, userID := range roles {
+		ok, err := gameService.CheckAudienceAccess(ctx, game.ID, userID)
+		require.NoError(t, err)
+		assert.False(t, ok, "%s must have no access to a deleted game", role)
+	}
+}

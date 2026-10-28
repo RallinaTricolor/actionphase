@@ -453,3 +453,44 @@ func TestMessageService_GetFavoriteCommentIDs(t *testing.T) {
 		assert.Empty(t, gameIDs)
 	})
 }
+
+// A soft-deleted game's favorites disappear from every favorites read path at
+// once. The cross-game ID set once missed the game filter the listing had, so
+// a star would fill on a comment /favorites/comments no longer showed.
+func TestMessageService_FavoritesHideSoftDeletedGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	env := setupFavoriteTest(t, testDB)
+	ctx := context.Background()
+
+	_, keptComment := env.createPostWithComment(t, env.gameA.ID, env.charA, "kept game")
+	_, goneComment := env.createPostWithComment(t, env.gameB.ID, env.charB, "deleted game")
+	require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, keptComment.ID, true))
+	require.NoError(t, env.service.SetCommentFavorite(ctx, env.player, goneComment.ID, true))
+
+	_, err := env.service.DB.Exec(ctx, "UPDATE games SET deleted_at = NOW() WHERE id = $1", env.gameB.ID)
+	require.NoError(t, err)
+
+	favorites, _, err := env.service.ListFavoriteComments(ctx, env.player, 50, nil)
+	require.NoError(t, err)
+	var listed []int32
+	for _, f := range favorites {
+		listed = append(listed, f.ID)
+	}
+	assert.Equal(t, []int32{keptComment.ID}, listed, "listing shows only the live game's favorite")
+
+	allIDs, err := env.service.GetFavoriteCommentIDsForUser(ctx, env.player)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, listed, allIDs, "cross-game ID set must agree with the listing")
+
+	// Starring goes through CanUserViewMessage on a route that is not
+	// game-scoped, so it must treat a deleted game's comment as hidden.
+	visible, err := env.service.CanUserViewMessage(ctx, goneComment.ID, env.player)
+	require.NoError(t, err)
+	assert.False(t, visible, "a deleted game's comment is not viewable")
+
+	visible, err = env.service.CanUserViewMessage(ctx, keptComment.ID, env.player)
+	require.NoError(t, err)
+	assert.True(t, visible, "a live game's comment is still viewable")
+}

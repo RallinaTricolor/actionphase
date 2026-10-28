@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -140,13 +141,16 @@ func (m *SimpleMockGameRepository) UpdateGameState(ctx context.Context, params d
 }
 
 // SoftDeleteGame drops the game from the in-memory store, which is what a
-// soft delete looks like to every reader: GetGame no longer finds it.
-func (m *SimpleMockGameRepository) SoftDeleteGame(ctx context.Context, params db.SoftDeleteGameParams) (int64, error) {
-	if _, exists := m.games[params.ID]; exists {
-		delete(m.games, params.ID)
-		return 1, nil
+// soft delete looks like to every reader: GetGame no longer finds it. Like the
+// real query, it writes only for the primary GM or an admin in admin mode, and
+// answers pgx.ErrNoRows otherwise.
+func (m *SimpleMockGameRepository) SoftDeleteGame(ctx context.Context, params db.SoftDeleteGameParams) (db.SoftDeleteGameRow, error) {
+	game, exists := m.games[params.ID]
+	if !exists || (game.GmUserID != params.DeletedByUserID.Int32 && !params.IsAdminMode) {
+		return db.SoftDeleteGameRow{}, pgx.ErrNoRows
 	}
-	return 0, nil
+	delete(m.games, params.ID)
+	return db.SoftDeleteGameRow{Title: game.Title, State: game.State}, nil
 }
 
 // Stub implementations for methods we don't need in basic tests

@@ -60,6 +60,7 @@ type CanUserSubmitToPhaseParams struct {
 	UserID int32 `json:"user_id"`
 }
 
+// soft-delete: SubmitAction loads the game through GetGame before calling this.
 func (q *Queries) CanUserSubmitToPhase(ctx context.Context, arg CanUserSubmitToPhaseParams) (bool, error) {
 	row := q.db.QueryRow(ctx, canUserSubmitToPhase, arg.ID, arg.UserID)
 	var can_submit bool

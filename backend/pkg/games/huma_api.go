@@ -2610,7 +2610,7 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, in.CharacterID, user.ID)
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to check character edit permission", "error", err)
+		return nil, h.logAndErr(ctx, core.HandleDBErrorWithID(err, "character", in.CharacterID), "Failed to check character edit permission", "error", err)
 	}
 	if !canEdit {
 		return nil, h.logAndErr(ctx, core.ErrForbidden("you cannot edit this character"),

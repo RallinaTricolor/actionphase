@@ -2150,6 +2150,10 @@ type CharacterServiceInterface interface {
 	GetCharacterData(ctx context.Context, characterID int32) ([]models.CharacterDatum, error)
 	GetCharacterDataByModule(ctx context.Context, characterID int32, moduleType string) ([]models.CharacterDatum, error)
 	GetPublicCharacterData(ctx context.Context, characterID int32) ([]models.CharacterDatum, error)
+	// CanUserEditCharacter reports whether userID may edit the character: its
+	// owner, the game's GM or co-GM, or an NPC's assignee. A missing character,
+	// or one whose game is soft-deleted, returns an error wrapping
+	// pgx.ErrNoRows, which callers answer with 404 (core.NotFoundOr500).
 	CanUserEditCharacter(ctx context.Context, characterID, userID int32) (bool, error)
 	ReassignCharacter(ctx context.Context, characterID, newOwnerUserID int32) (*models.Character, error)
 	ListInactiveCharacters(ctx context.Context, gameID int32) ([]models.ListInactiveCharactersRow, error)

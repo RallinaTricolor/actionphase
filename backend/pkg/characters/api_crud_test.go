@@ -15,10 +15,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // setupCharacterTestRouter creates a test router with auth middleware
@@ -1124,4 +1126,66 @@ func TestCharacterAPI_SoftDeletedGameAnswers404(t *testing.T) {
 	core.AssertNoError(t, gameService.DeleteGame(ctx, fixtures.TestGame.ID, int32(fixtures.TestUser.ID), false), "delete game")
 
 	core.AssertEqual(t, http.StatusNotFound, get(), "character in a deleted game should 404, not 500")
+}
+
+// TestCharacterAPI_SoftDeletedGameBlocksEdits verifies that no one can edit a
+// character in a soft-deleted game. CanUserEditCharacter used to grant the
+// owner before it looked up the game, so the owner could still rename and
+// write the sheet; the GM, whose path did look up the game, got a 500.
+func TestCharacterAPI_SoftDeletedGameBlocksEdits(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "character_data", "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "sdedit_gm", "sdedit_gm@example.com")
+	player := testDB.CreateTestUser(t, "sdedit_player", "sdedit_player@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Soft Delete Edits", "in_progress")
+	testDB.AddTestGameParticipant(t, game.ID, int32(player.ID), "player")
+
+	character, err := dbmodels.New(testDB.Pool).CreateCharacter(ctx, dbmodels.CreateCharacterParams{
+		GameID: game.ID, UserID: pgtype.Int4{Int32: int32(player.ID), Valid: true},
+		Name: "Original Name", CharacterType: "player_character", Status: "approved",
+	})
+	core.AssertNoError(t, err, "creating character should succeed")
+
+	gmToken, err := createTestAuthToken(app, gm)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+	playerToken, err := createTestAuthToken(app, player)
+	core.AssertNoError(t, err, "player token creation should succeed")
+
+	send := func(method, path, token, body string) int {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	renamePath := fmt.Sprintf("/api/v1/characters/%d/rename", character.ID)
+	dataPath := fmt.Sprintf("/api/v1/characters/%d/data", character.ID)
+	sheetWrite := `{"module_type":"bio","field_name":"background","field_value":"x","field_type":"text"}`
+
+	// Live game: the owner may edit, so the 404s below are about deletion.
+	core.AssertEqual(t, http.StatusNoContent, send("POST", dataPath, playerToken, sheetWrite),
+		"owner can write the sheet while the game is live")
+
+	_, err = testDB.Pool.Exec(ctx, "UPDATE games SET deleted_at = NOW() WHERE id = $1", game.ID)
+	core.AssertNoError(t, err, "soft-delete game")
+
+	core.AssertEqual(t, http.StatusNotFound, send("PUT", renamePath, playerToken, `{"name":"Owner Rename"}`),
+		"owner rename in a deleted game should 404")
+	core.AssertEqual(t, http.StatusNotFound, send("PUT", renamePath, gmToken, `{"name":"GM Rename"}`),
+		"GM rename in a deleted game should 404, not 500")
+	core.AssertEqual(t, http.StatusNotFound, send("POST", dataPath, playerToken, sheetWrite),
+		"owner sheet write in a deleted game should 404")
+	core.AssertEqual(t, http.StatusNotFound, send("POST", dataPath, gmToken, sheetWrite),
+		"GM sheet write in a deleted game should 404, not 500")
+
+	after, err := dbmodels.New(testDB.Pool).GetCharacter(ctx, character.ID)
+	core.AssertNoError(t, err, "reload character")
+	core.AssertEqual(t, "Original Name", after.Name, "name must be unchanged")
 }

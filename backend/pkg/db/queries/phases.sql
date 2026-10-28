@@ -624,6 +624,7 @@ LEFT JOIN action_submissions acts ON gp.user_id = acts.user_id AND acts.phase_id
 WHERE ph.id = $1 AND gp.role = 'player';
 
 -- name: CanUserSubmitToPhase :one
+-- soft-delete: SubmitAction loads the game through GetGame before calling this.
 SELECT
     CASE
         WHEN ph.phase_type != 'action' THEN false
