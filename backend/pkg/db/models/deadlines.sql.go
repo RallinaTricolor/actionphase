@@ -277,6 +277,7 @@ FROM game_deadlines gd
 JOIN games g ON gd.game_id = g.id
 LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1
 WHERE gd.deleted_at IS NULL
+  AND g.deleted_at IS NULL
   AND gd.deadline > NOW()
   AND (
     g.gm_user_id = $1  -- User is GM

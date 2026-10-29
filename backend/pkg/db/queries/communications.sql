@@ -94,6 +94,7 @@ WHERE c.id = $1
   );
 
 -- name: GetUserUnreadConversations :many
+-- soft-delete: scoped to one game; the games join only names participants.
 -- Get conversations with unread messages for a user in a game, capped at a limit.
 -- Used by the dashboard PM preview to avoid fetching the full conversation list.
 -- Membership is an EXISTS, not a join: a user holds one row per character they
@@ -155,6 +156,7 @@ ORDER BY unread.unread_count DESC, c.updated_at DESC
 LIMIT sqlc.arg(max_results);
 
 -- name: GetUserConversations :many
+-- soft-delete: scoped to one game; the games join only names participants.
 -- Membership is an EXISTS for the reason given on GetUserUnreadConversations.
 SELECT c.*,
        -- Characters, not rows; see GetUserUnreadConversations.

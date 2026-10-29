@@ -1020,7 +1020,9 @@ SELECT f.comment_id
 FROM user_comment_favorites f
 JOIN messages m ON m.id = f.comment_id
 JOIN messages root ON root.id = m.root_post_id
+JOIN games g ON g.id = m.game_id
 WHERE f.user_id = $1::int
+  AND g.deleted_at IS NULL
   AND m.is_deleted = false
   AND m.deleted_at IS NULL
   AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))
@@ -1028,7 +1030,8 @@ WHERE f.user_id = $1::int
 
 // Returns every favorited comment ID for a user, across all games.
 // Powers star state on non-game-scoped surfaces (e.g. character profile).
-// Excludes soft-deleted comments for the same reason as the per-game set.
+// Excludes soft-deleted comments for the same reason as the per-game set, and
+// soft-deleted games to agree with ListFavoriteCommentsWithParents.
 func (q *Queries) GetFavoriteCommentIDsForUser(ctx context.Context, viewerUserID int32) ([]int32, error) {
 	rows, err := q.db.Query(ctx, getFavoriteCommentIDsForUser, viewerUserID)
 	if err != nil {
@@ -1393,6 +1396,7 @@ FROM messages m
 JOIN messages root ON root.id = m.root_post_id
 JOIN games g ON g.id = root.game_id
 WHERE m.id = $2
+  AND g.deleted_at IS NULL
 `
 
 type GetMessageVisibilityContextParams struct {
@@ -1415,6 +1419,8 @@ type GetMessageVisibilityContextRow struct {
 // message's OWN root post and that post's game -- never from IDs in the URL.
 // The root's game, not m.game_id: a comment filed under another game (rows
 // from before CreateComment checked) must not let that game's role decide.
+// Callers include the comment-favorite route, which is not game-scoped, so a
+// soft-deleted game's message resolves to no row (hidden).
 func (q *Queries) GetMessageVisibilityContext(ctx context.Context, arg GetMessageVisibilityContextParams) (GetMessageVisibilityContextRow, error) {
 	row := q.db.QueryRow(ctx, getMessageVisibilityContext, arg.UserID, arg.MessageID)
 	var i GetMessageVisibilityContextRow
@@ -2292,6 +2298,7 @@ type GetViewerRestrictedPostContextRow struct {
 // scope as viewer_sees_all; cross-game ones call the SQL function
 // restricted_thread_visible_to_user (migration
 // 20261006184500_add_thread_visibility_functions).
+// soft-delete: scoped to one game; every caller is a game-scoped route.
 // Everything ResolveViewerScope needs to decide whether a viewer bypasses the
 // allowlists in one game. viewer_role is ” for a non-participant; the primary
 // GM is not a game_participants row, so Go compares gm_user_id itself.
@@ -2484,6 +2491,7 @@ WITH favorite_comments AS (
     JOIN users u ON m.author_id = u.id
     LEFT JOIN characters c ON m.character_id = c.id
     WHERE f.user_id = $1::int
+      AND g.deleted_at IS NULL
       AND m.is_deleted = false
       AND m.deleted_at IS NULL
       AND (root.is_restricted = false OR restricted_thread_visible_to_user(root.id, $1::int))

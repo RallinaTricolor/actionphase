@@ -170,8 +170,8 @@ export class GameDetailsPage {
 
   /**
    * Delete the game (GM only)
-   * Handles confirmation modal
-   * Only available for cancelled games
+   * Handles the type-'delete'-to-confirm modal
+   * Available in any state, to the primary GM only
    */
   async deleteGame() {
     // Open the kebab menu and click the Delete Game item using its stable testid
@@ -183,9 +183,12 @@ export class GameDetailsPage {
     await expect(deleteMenuItem).toBeVisible({ timeout: 5000 });
     await deleteMenuItem.click();
 
-    // Wait for confirm button to be visible before clicking
+    // The confirm button stays disabled until 'delete' is typed
+    const confirmInput = this.page.getByPlaceholder('delete');
+    await confirmInput.waitFor({ state: 'visible', timeout: 5000 });
+    await confirmInput.fill('delete');
+
     const confirmButton = this.page.getByTestId('delete-game-confirm-button');
-    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
     await clickAndWaitForMutation(this.page, confirmButton, API.deleteGame);
   }
 

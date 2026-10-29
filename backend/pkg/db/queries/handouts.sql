@@ -131,6 +131,7 @@ JOIN games g ON h.game_id = g.id
 LEFT JOIN game_participants gp
   ON gp.game_id = g.id AND gp.user_id = $1 AND gp.removed_at IS NULL AND gp.status = 'active'
 WHERE g.state = 'in_progress'
+  AND g.deleted_at IS NULL
   AND h.status = 'published'
   AND (g.gm_user_id = $1 OR gp.user_id IS NOT NULL)
 ORDER BY game_title, g.id, h.created_at DESC;

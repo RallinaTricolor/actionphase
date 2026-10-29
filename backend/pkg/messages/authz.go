@@ -29,7 +29,7 @@ func requireGMOrCoGM(ctx context.Context, app *core.App, gameID, userID int32) r
 	queries := models.New(app.Pool)
 	game, err := queries.GetGame(ctx, gameID)
 	if err != nil {
-		return core.ErrInternalError(err)
+		return core.HandleDBErrorWithID(err, "game", gameID)
 	}
 	isAdmin := false
 	if user := core.GetAuthenticatedUser(ctx); user != nil && user.ID == userID {

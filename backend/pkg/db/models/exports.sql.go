@@ -177,6 +177,7 @@ type GetGameContentFingerprintRow struct {
 // =============================================================================
 // CONTENT FINGERPRINT
 // =============================================================================
+// soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 // Cheap change-detection across every table the archive draws from. Completed
 // games are mostly immutable, but a GM can still edit after completion, so a
 // cached artifact is only reusable while this value is unchanged.
@@ -208,7 +209,7 @@ const getGameExport = `-- name: GetGameExport :one
 SELECT ge.id, ge.game_id, ge.requested_by_user_id, ge.status, ge.content_fingerprint, ge.storage_path, ge.size_bytes, ge.file_count, ge.error_message, ge.progress_note, ge.started_at, ge.completed_at, ge.created_at, ge.expires_at, g.title AS game_title
 FROM game_exports ge
 JOIN games g ON g.id = ge.game_id
-WHERE ge.id = $1
+WHERE ge.id = $1 AND g.deleted_at IS NULL
 `
 
 type GetGameExportRow struct {
@@ -860,6 +861,7 @@ type ListExportParticipantsRow struct {
 	Username       string             `json:"username"`
 }
 
+// soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 // Roster for the archive README.
 //
 // The primary GM is games.gm_user_id and is NOT guaranteed to have a
