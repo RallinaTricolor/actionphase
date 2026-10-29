@@ -7,6 +7,7 @@ import (
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -514,6 +515,69 @@ func TestCharacterService_CanUserEditCharacter(t *testing.T) {
 		_, err := characterService.CanUserEditCharacter(context.Background(), 99999, int32(player.ID))
 		core.AssertError(t, err, "Should fail for nonexistent character")
 	})
+}
+
+// A soft-deleted game must deny every role, the owner included. The owner
+// check used to run before the game was loaded, so an owner could still rename
+// a character or change its avatar after the game was deleted. The error must
+// wrap pgx.ErrNoRows: that is how callers know to answer 404, not 500.
+func TestCharacterService_CanUserEditCharacter_SoftDeletedGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	app := core.NewTestApp(testDB.Pool)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "npc_assignments", "characters", "game_participants", "games", "sessions", "users")
+
+	ctx := context.Background()
+	characterService := &CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	gameService := &GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	gm := testDB.CreateTestUser(t, "cue_gm", "cue_gm@example.com")
+	coGM := testDB.CreateTestUser(t, "cue_cogm", "cue_cogm@example.com")
+	owner := testDB.CreateTestUser(t, "cue_owner", "cue_owner@example.com")
+	npcUser := testDB.CreateTestUser(t, "cue_npc", "cue_npc@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Deleted Edit Game", "in_progress")
+	testDB.AddTestGameParticipant(t, game.ID, int32(coGM.ID), "co_gm")
+	testDB.AddTestGameParticipant(t, game.ID, int32(owner.ID), "player")
+
+	pc, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, UserID: core.Int32Ptr(int32(owner.ID)),
+		Name: "Owned PC", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	npc, err := characterService.CreateCharacter(ctx, CreateCharacterRequest{
+		GameID: game.ID, Name: "Assigned NPC", CharacterType: "npc",
+	})
+	require.NoError(t, err)
+	require.NoError(t, characterService.AssignNPCToUser(ctx, npc.ID, int32(npcUser.ID), int32(gm.ID)))
+
+	cases := []struct {
+		role        string
+		characterID int32
+		userID      int32
+	}{
+		{"owner", pc.ID, int32(owner.ID)},
+		{"gm", pc.ID, int32(gm.ID)},
+		{"co_gm", pc.ID, int32(coGM.ID)},
+		{"assigned npc user", npc.ID, int32(npcUser.ID)},
+	}
+
+	// Every role can edit while the game is live, so a denial below can only
+	// come from the deletion.
+	for _, c := range cases {
+		canEdit, err := characterService.CanUserEditCharacter(ctx, c.characterID, c.userID)
+		require.NoError(t, err, c.role)
+		require.True(t, canEdit, "%s can edit in a live game", c.role)
+	}
+
+	require.NoError(t, gameService.DeleteGame(ctx, game.ID, int32(gm.ID), false))
+
+	for _, c := range cases {
+		t.Run(c.role, func(t *testing.T) {
+			canEdit, err := characterService.CanUserEditCharacter(ctx, c.characterID, c.userID)
+			assert.False(t, canEdit)
+			assert.ErrorIs(t, err, pgx.ErrNoRows, "callers map ErrNoRows to 404")
+		})
+	}
 }
 
 func TestCharacterService_GetPlayerCharacters(t *testing.T) {
