@@ -41,6 +41,7 @@ WHERE community_id = $1 AND status = 'published'
 ORDER BY sort_order ASC, id ASC;
 
 -- name: ListPublishedCommunityDocumentsForGame :many
+-- soft-delete: scoped to one game, resolved by its route.
 -- The Info tab's list, resolved from a GAME rather than a community.
 --
 -- Inner join through games.community_id, so a LEGACY GAME (community_id IS

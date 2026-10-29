@@ -345,8 +345,11 @@ type GameServiceInterface interface {
 	// sheet layout. Returns an error wrapping ErrGameReadOnly for an archived game.
 	UpdateGameCharacterSheet(ctx context.Context, gameID int32, config CharacterSheetConfig) (*models.Game, error)
 
-	// DeleteGame removes a game from the system (only allowed for GMs on cancelled games)
-	DeleteGame(ctx context.Context, gameID, userID int32) error
+	// DeleteGame soft-deletes a game in any state. Only the primary GM, or a
+	// site admin in admin mode (isAdminMode), may delete it. A deleted game is
+	// absent from GetGame and every listing; restoring it is a manual DB update.
+	// Returns ErrGameNotFound or ErrGameDeleteForbidden.
+	DeleteGame(ctx context.Context, gameID, userID int32, isAdminMode bool) error
 
 	// LeaveGame allows a user to leave a game
 	LeaveGame(ctx context.Context, gameID, userID int32) error
@@ -2147,6 +2150,10 @@ type CharacterServiceInterface interface {
 	GetCharacterData(ctx context.Context, characterID int32) ([]models.CharacterDatum, error)
 	GetCharacterDataByModule(ctx context.Context, characterID int32, moduleType string) ([]models.CharacterDatum, error)
 	GetPublicCharacterData(ctx context.Context, characterID int32) ([]models.CharacterDatum, error)
+	// CanUserEditCharacter reports whether userID may edit the character: its
+	// owner, the game's GM or co-GM, or an NPC's assignee. A missing character,
+	// or one whose game is soft-deleted, returns an error wrapping
+	// pgx.ErrNoRows, which callers answer with 404 (core.NotFoundOr500).
 	CanUserEditCharacter(ctx context.Context, characterID, userID int32) (bool, error)
 	ReassignCharacter(ctx context.Context, characterID, newOwnerUserID int32) (*models.Character, error)
 	ListInactiveCharacters(ctx context.Context, gameID int32) ([]models.ListInactiveCharactersRow, error)

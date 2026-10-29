@@ -98,7 +98,7 @@ func (h *Handler) loadPhaseGame(ctx context.Context, phaseID int32, authUser *co
 
 	game, err := h.GameService.GetGame(ctx, phase.GameID)
 	if err != nil {
-		return h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game", "error", err)
+		return h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", phase.GameID), "Failed to get game", "error", err)
 	}
 
 	// The Ctx form of the same check the chi handlers made through
@@ -974,7 +974,7 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 
 	game, err := h.GameService.GetGame(ctx, gameID)
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game", "error", err)
+		return nil, h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", gameID), "Failed to get game", "error", err)
 	}
 
 	isAudience := core.IsUserAudience(ctx, h.App.Pool, gameID, authUser.ID)

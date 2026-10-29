@@ -670,3 +670,68 @@ func TestPollAPI_AdminMode_CreatePoll(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code, "primary GM should still work normally")
 	})
 }
+
+// TestPollCRUD_SoftDeletedGameAnswers404 covers the top-level /polls/{id}
+// routes, which resolve the poll's game themselves rather than through
+// GameMiddleware. Once the game is soft-deleted that lookup finds nothing, and
+// every route must answer 404 -- not the 403 or 500 the lookup used to become
+// -- for the GM and players alike.
+func TestPollCRUD_SoftDeletedGameAnswers404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "poll_votes", "poll_options", "common_room_polls", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupPollCRUDTestRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+	gameService := &dbservices.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+
+	pollID := createTestPoll(t, router, game.ID, gmToken)
+	require.NoError(t, gameService.DeleteGame(context.Background(), game.ID, int32(gm.ID), false))
+
+	update, err := json.Marshal(UpdatePollRequest{Question: "Changed?", Deadline: time.Now().Add(48 * time.Hour)})
+	require.NoError(t, err)
+	vote := []byte(`{"selected_option_id": 1}`)
+	pollPath := fmt.Sprintf("/api/v1/polls/%d", pollID)
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   []byte
+		token  string
+	}{
+		{"get poll (GM)", "GET", pollPath, nil, gmToken},
+		{"get poll (player)", "GET", pollPath, nil, playerToken},
+		{"get results", "GET", pollPath + "/results", nil, playerToken},
+		{"submit vote", "POST", pollPath + "/vote", vote, playerToken},
+		{"update poll", "PUT", pollPath, update, gmToken},
+		{"delete poll", "DELETE", pollPath, nil, gmToken},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest(c.method, c.path, bytes.NewBuffer(c.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+c.token)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		})
+	}
+
+	// The 404s did not touch the poll: it is hidden, not deleted.
+	var isDeleted bool
+	require.NoError(t, testDB.Pool.QueryRow(context.Background(),
+		"SELECT is_deleted FROM common_room_polls WHERE id = $1", pollID).Scan(&isDeleted))
+	assert.False(t, isDeleted, "delete on a deleted game's poll must not run")
+}

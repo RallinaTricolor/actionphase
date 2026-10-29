@@ -147,8 +147,8 @@ func (h *Handler) loadCharacterGame(ctx context.Context, characterID int32) (*mo
 
 	game, err := h.GameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
-		return nil, nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
+		return nil, nil, core.NotFoundOr500(err, "game")
 	}
 	return character, game, nil
 }
@@ -684,8 +684,8 @@ func (h *Handler) humaDeleteCharacter(ctx context.Context, in *characterIDInput)
 
 	game, err := h.GameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	if !core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
@@ -851,8 +851,8 @@ func (h *Handler) humaReassignCharacter(ctx context.Context, in *reassignCharact
 
 	game, err := h.GameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	if !core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
@@ -890,8 +890,8 @@ func (h *Handler) humaRenameCharacter(ctx context.Context, in *renameCharacterIn
 	// edit-permission check rather than a GM check.
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, in.ID, authUser.ID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
+		return nil, core.NotFoundOr500(err, "character")
 	}
 	if !canEdit {
 		h.App.ObsLogger.Warn(ctx, "Character rename permission denied", "character_id", in.ID, "user_id", authUser.ID)
@@ -970,8 +970,8 @@ func (h *Handler) humaSetCharacterData(ctx context.Context, in *setCharacterData
 
 	canEdit, err := h.CharacterService.CanUserEditCharacter(ctx, in.ID, userID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to check character edit permission", "error", err, "character_id", in.ID)
+		return nil, core.NotFoundOr500(err, "character")
 	}
 	if !canEdit {
 		h.App.ObsLogger.Warn(ctx, "Character edit permission denied", "character_id", in.ID, "user_id", userID)
@@ -986,8 +986,8 @@ func (h *Handler) humaSetCharacterData(ctx context.Context, in *setCharacterData
 	}
 	game, err := queries.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game for sheet write", "error", err, "game_id", character.GameID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game for sheet write", "error", err, "game_id", character.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	// Checked after edit permission so a caller who cannot edit the character
@@ -1139,8 +1139,8 @@ func (h *Handler) humaGetCharacterStats(ctx context.Context, in *characterIDInpu
 
 	game, err := h.GameService.GetGame(ctx, character.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game for stats", "error", err, "game_id", character.GameID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game for stats", "error", err, "game_id", character.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	authUser := core.GetAuthenticatedUser(ctx)
@@ -1276,8 +1276,8 @@ func (h *Handler) humaGetGameCharacterData(ctx context.Context, in *gameIDInput)
 	// here.
 	game, err := h.GameService.GetGame(ctx, in.GameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", in.GameID)
-		return nil, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", in.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 	isGM := core.IsUserGameMasterCtx(ctx, userID, authUser.IsAdmin, *game, h.App.Pool)
 	userRole := h.resolveUserRole(ctx, in.GameID, userID, isGM)

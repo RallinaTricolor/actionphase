@@ -230,3 +230,49 @@ describe('GameActions - Customize Character Sheet', () => {
     expect(screen.queryByTestId('game-actions-menu')).not.toBeInTheDocument();
   });
 });
+
+describe('GameActions - Delete Game', () => {
+  const openMenu = async () => {
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByTestId('game-actions-menu'));
+    return user;
+  };
+
+  // Deletion is a soft delete, so it is no longer limited to cancelled games.
+  it.each(['setup', 'recruitment', 'in_progress', 'paused', 'completed', 'cancelled'] as const)(
+    'offers Delete to the primary GM when the game is %s, and calls onDeleteGame',
+    async (state) => {
+      const onDeleteGame = vi.fn();
+      render(
+        <GameActions
+          {...defaultProps}
+          game={{ ...baseGame, state }}
+          isGM
+          canEditGame
+          onDeleteGame={onDeleteGame}
+          slot="menu-actions"
+        />,
+      );
+      const user = await openMenu();
+      await user.click(screen.getByTestId('delete-game-button'));
+      expect(onDeleteGame).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  // A co-GM has GM powers (isGM) but not canEditGame; the endpoint refuses them.
+  it('does not offer Delete to a co-GM', async () => {
+    render(
+      <GameActions
+        {...defaultProps}
+        game={{ ...baseGame, state: 'in_progress' }}
+        isGM
+        canEditGame={false}
+        onDeleteGame={vi.fn()}
+        onCustomizeSheet={vi.fn()}
+        slot="menu-actions"
+      />,
+    );
+    await openMenu();
+    expect(screen.queryByTestId('delete-game-button')).not.toBeInTheDocument();
+  });
+});

@@ -266,6 +266,33 @@ func TestReleaseDueStagedParts(t *testing.T) {
 		assert.True(t, env.getResult(t, chain[1].ID).ReleasedAt.Valid, "part 2 should now be visible")
 	})
 
+	// A soft-deleted game must go quiet: releasing a part notifies the player,
+	// and the game it points at would 404. The part stays pending, so restoring
+	// the game resumes the chain.
+	t.Run("holds parts of a soft-deleted game until it is restored", func(t *testing.T) {
+		env := setupStagedTest(t)
+
+		chain, err := env.actionService.CreateStagedResultChain(ctx, env.chainRequest(0, 15))
+		require.NoError(t, err)
+		env.backdateRelease(t, chain[0].ID, 16)
+
+		_, err = env.testDB.Pool.Exec(ctx, "UPDATE games SET deleted_at = NOW() WHERE id = $1", env.gameID)
+		require.NoError(t, err)
+
+		examined, released, err := env.actionService.ReleaseDueStagedParts(ctx)
+		require.NoError(t, err)
+		assert.Zero(t, examined, "a deleted game's due part must not be picked up")
+		assert.Zero(t, released)
+		assert.False(t, env.getResult(t, chain[1].ID).ReleasedAt.Valid, "part 2 should still be pending")
+
+		_, err = env.testDB.Pool.Exec(ctx, "UPDATE games SET deleted_at = NULL WHERE id = $1", env.gameID)
+		require.NoError(t, err)
+
+		_, released, err = env.actionService.ReleaseDueStagedParts(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 1, released, "restoring the game resumes the chain")
+	})
+
 	t.Run("a three-part chain releases strictly in order, one tick at a time", func(t *testing.T) {
 		env := setupStagedTest(t)
 

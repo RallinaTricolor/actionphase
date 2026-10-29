@@ -4,10 +4,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetUserNotifications :many
+-- A soft-deleted game's notifications are hidden: they would only open a 404.
+-- g.deleted_at is also NULL when the notification has no game, so those stay.
 SELECT n.*, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
-WHERE n.user_id = $1
+WHERE n.user_id = $1 AND g.deleted_at IS NULL
 ORDER BY n.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -15,12 +17,14 @@ LIMIT $2 OFFSET $3;
 SELECT n.*, g.title as game_title
 FROM notifications n
 LEFT JOIN games g ON n.game_id = g.id
-WHERE n.user_id = $1 AND n.is_read = false
+WHERE n.user_id = $1 AND n.is_read = false AND g.deleted_at IS NULL
 ORDER BY n.created_at DESC;
 
 -- name: GetUnreadNotificationCount :one
+-- Must agree with GetUnreadNotifications, or the badge counts hidden rows.
 SELECT COUNT(*) FROM notifications
-WHERE user_id = $1 AND is_read = false;
+WHERE user_id = $1 AND is_read = false
+  AND NOT EXISTS (SELECT 1 FROM games g WHERE g.id = notifications.game_id AND g.deleted_at IS NOT NULL);
 
 -- name: MarkNotificationUnread :one
 UPDATE notifications
@@ -105,6 +109,7 @@ FROM game_participants gp
 WHERE gp.game_id = $1 AND gp.status = 'active' AND gp.user_id != $8;
 
 -- name: NotifyGM :exec
+-- soft-delete: one game, notified from a request that already loaded it.
 INSERT INTO notifications (user_id, game_id, type, title, content, related_type, related_id, link_url)
 SELECT g.gm_user_id, $1, $2, $3, $4, $5, $6, $7
 FROM games g

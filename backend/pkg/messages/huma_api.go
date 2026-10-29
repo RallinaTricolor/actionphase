@@ -282,8 +282,8 @@ func (h *Handler) authUser(ctx context.Context) (int32, error) {
 func (h *Handler) showUsernames(ctx context.Context, gameID int32) (bool, error) {
 	game, err := models.New(h.App.Pool).GetGame(ctx, gameID)
 	if err != nil {
-		h.App.ObsLogger.Error(ctx, "Failed to get game", "error", err, "game_id", gameID)
-		return false, huma.Error500InternalServerError(err.Error())
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", gameID)
+		return false, core.NotFoundOr500(err, "game")
 	}
 	// Unauthenticated callers get userID 0, which no game grants privilege to.
 	userID, _ := core.GetUserIDFromJWT(ctx, h.UserService)

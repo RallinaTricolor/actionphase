@@ -2,7 +2,6 @@ package polls
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"actionphase/pkg/core"
@@ -171,33 +170,38 @@ func strPtr(s string) *string {
 	return &s
 }
 
-// verifyUserIsGM checks if a user is the GM or Co-GM of a game
+// verifyUserIsGM checks if a user is the GM or Co-GM of a game.
+//
+// It returns the huma error to send: 403 for a non-GM, 404 when the game is
+// gone (a poll's game is only missing once soft-deleted, so the poll answers
+// "not found"), 500 for a failed lookup.
 // Uses the unified permission check for GM, Co-GM, and admin mode support
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) error {
 	game, err := h.GameService.GetGame(ctx, gameID)
 	if err != nil {
-		return fmt.Errorf("failed to get game: %w", err)
+		return core.NotFoundOr500(err, "poll")
 	}
 
 	// Get user to check admin status
 	user, err := h.UserService.GetUserByID(int(userID))
 	if err != nil {
-		return fmt.Errorf("failed to get user: %w", err)
+		return huma.Error500InternalServerError("failed to get user")
 	}
 
 	// Check if user is GM, Co-GM, or admin with admin mode enabled
 	if !core.IsUserGameMasterCtx(ctx, userID, user.IsAdmin, *game, h.App.Pool) {
-		return fmt.Errorf("only GM or Co-GM can perform this action")
+		return huma.Error403Forbidden("only GM or Co-GM can perform this action")
 	}
 
 	return nil
 }
 
-// verifyUserInGame checks if a user is a participant in a game (GM, Co-GM, or player)
+// verifyUserInGame checks if a user is a participant in a game (GM, Co-GM, or
+// player). Its errors are huma errors, with the same statuses as verifyUserIsGM.
 func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int32) error {
 	game, err := h.GameService.GetGame(ctx, gameID)
 	if err != nil {
-		return fmt.Errorf("failed to get game: %w", err)
+		return core.NotFoundOr500(err, "poll")
 	}
 
 	// Check if user is GM or Co-GM
@@ -212,7 +216,7 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 		UserID: userID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to check participant status: %w", err)
+		return huma.Error500InternalServerError("failed to check participant status")
 	}
 	if isParticipant {
 		return nil
@@ -221,7 +225,7 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 	// Check if user has any characters in the game
 	characters, err := h.CharacterService.GetCharactersByGame(ctx, gameID)
 	if err != nil {
-		return fmt.Errorf("failed to list characters: %w", err)
+		return huma.Error500InternalServerError("failed to list characters")
 	}
 
 	for _, char := range characters {
@@ -230,7 +234,7 @@ func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int
 		}
 	}
 
-	return fmt.Errorf("user is not a participant in this game")
+	return huma.Error403Forbidden("user is not a participant in this game")
 }
 
 // pollViewAccess holds the result of checking whether a user can view polls for a game.
@@ -255,7 +259,8 @@ type pollViewAccess struct {
 func (h *Handler) checkPollViewAccess(ctx context.Context, gameID int32, userID int32) (pollViewAccess, error) {
 	game, err := h.GameService.GetGame(ctx, gameID)
 	if err != nil {
-		return pollViewAccess{}, fmt.Errorf("failed to get game: %w", err)
+		// A huma error: 404 for a missing (soft-deleted) game, else 500.
+		return pollViewAccess{}, core.NotFoundOr500(err, "poll")
 	}
 
 	// GM, Co-GM and audience always see full results, and remain privileged even

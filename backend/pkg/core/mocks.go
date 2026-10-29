@@ -158,7 +158,7 @@ type MockGameService struct {
 	GetGamesByUserFunc        func(ctx context.Context, userID int32) ([]models.GetGamesByUserRow, error)
 	UpdateGameStateFunc       func(ctx context.Context, gameID int32, newState string) (*models.Game, error)
 	UpdateGameFunc            func(ctx context.Context, req UpdateGameRequest) (*models.Game, error)
-	DeleteGameFunc            func(ctx context.Context, gameID int32) error
+	DeleteGameFunc            func(ctx context.Context, gameID, userID int32, isAdminMode bool) error
 	LeaveGameFunc             func(ctx context.Context, gameID, userID int32) error
 	GetUserRoleFunc           func(ctx context.Context, gameID, userID int32) (string, error)
 	IsUserInGameFunc          func(ctx context.Context, gameID, userID int32) (bool, error)
@@ -204,9 +204,9 @@ func (m *MockGameService) UpdateGame(ctx context.Context, req UpdateGameRequest)
 	return nil, nil
 }
 
-func (m *MockGameService) DeleteGame(ctx context.Context, gameID int32) error {
+func (m *MockGameService) DeleteGame(ctx context.Context, gameID, userID int32, isAdminMode bool) error {
 	if m.DeleteGameFunc != nil {
-		return m.DeleteGameFunc(ctx, gameID)
+		return m.DeleteGameFunc(ctx, gameID, userID, isAdminMode)
 	}
 	return nil
 }
