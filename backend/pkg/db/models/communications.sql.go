@@ -958,6 +958,7 @@ type GetUserConversationsRow struct {
 	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
 }
 
+// soft-delete: scoped to one game; the games join only names participants.
 // Membership is an EXISTS for the reason given on GetUserUnreadConversations.
 func (q *Queries) GetUserConversations(ctx context.Context, arg GetUserConversationsParams) ([]GetUserConversationsRow, error) {
 	rows, err := q.db.Query(ctx, getUserConversations, arg.GmUserID, arg.GameID)
@@ -1075,6 +1076,7 @@ type GetUserUnreadConversationsRow struct {
 	LastReadAt        pgtype.Timestamptz `json:"last_read_at"`
 }
 
+// soft-delete: scoped to one game; the games join only names participants.
 // Get conversations with unread messages for a user in a game, capped at a limit.
 // Used by the dashboard PM preview to avoid fetching the full conversation list.
 // Membership is an EXISTS, not a join: a user holds one row per character they

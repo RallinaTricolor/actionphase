@@ -172,7 +172,7 @@ func TestGameAPI_CompleteGameLifecycle(t *testing.T) {
 		})
 	}
 
-	// Step 6: Cancel game (required before deletion)
+	// Step 6: Cancel game
 	t.Run("cancel_game", func(t *testing.T) {
 		stateData := map[string]string{"state": core.GameStateCancelled}
 

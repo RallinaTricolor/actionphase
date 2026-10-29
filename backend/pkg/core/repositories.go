@@ -37,7 +37,7 @@ type GameRepository interface {
 	GetGameWithDetails(ctx context.Context, id int32) (db.GetGameWithDetailsRow, error)
 	UpdateGame(ctx context.Context, params db.UpdateGameParams) (db.Game, error)
 	UpdateGameState(ctx context.Context, params db.UpdateGameStateParams) (db.Game, error)
-	DeleteGame(ctx context.Context, id int32) error
+	SoftDeleteGame(ctx context.Context, params db.SoftDeleteGameParams) (db.SoftDeleteGameRow, error)
 }
 
 // GameParticipantRepository defines the contract for game participant operations

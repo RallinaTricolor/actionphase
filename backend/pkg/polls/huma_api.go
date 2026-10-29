@@ -172,7 +172,7 @@ func (h *Handler) createPoll(ctx context.Context, in *createPollInput) (*pollOut
 
 	if err := h.verifyUserIsGM(ctx, in.GameID, userID); err != nil {
 		h.App.ObsLogger.Warn(ctx, "User is not GM of the game", "error", err)
-		return nil, huma.Error403Forbidden(err.Error())
+		return nil, err
 	}
 
 	// Omitted display_order means submission order (0-based, as the UI sends).
@@ -272,8 +272,8 @@ func (h *Handler) listGamePolls(ctx context.Context, in *listGamePollsInput) (*p
 
 	access, err := h.checkPollViewAccess(ctx, in.GameID, userID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
-		return nil, huma.Error500InternalServerError("Failed to check poll view access")
+		h.App.ObsLogger.Warn(ctx, "Failed to check poll view access", "error", err)
+		return nil, err
 	}
 	if !access.allowed {
 		return nil, huma.Error403Forbidden("user is not a participant in this game")
@@ -298,8 +298,8 @@ func (h *Handler) listPhasePolls(ctx context.Context, in *listPhasePollsInput) (
 
 	access, err := h.checkPollViewAccess(ctx, in.GameID, userID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
-		return nil, huma.Error500InternalServerError("Failed to check poll view access")
+		h.App.ObsLogger.Warn(ctx, "Failed to check poll view access", "error", err)
+		return nil, err
 	}
 	if !access.allowed {
 		return nil, huma.Error403Forbidden("user is not a participant in this game")
@@ -334,8 +334,8 @@ func (h *Handler) getPoll(ctx context.Context, in *pollIDInput) (*pollOutput, er
 
 	access, err := h.checkPollViewAccess(ctx, pollWithOptions.Poll.GameID, userID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
-		return nil, huma.Error500InternalServerError("Failed to check poll view access")
+		h.App.ObsLogger.Warn(ctx, "Failed to check poll view access", "error", err)
+		return nil, err
 	}
 	if !access.allowed {
 		return nil, huma.Error403Forbidden("user is not a participant in this game")
@@ -386,8 +386,8 @@ func (h *Handler) getPollResults(ctx context.Context, in *pollIDInput) (*pollRes
 
 	access, err := h.checkPollViewAccess(ctx, poll.GameID, userID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to check poll view access")
-		return nil, huma.Error500InternalServerError("Failed to check poll view access")
+		h.App.ObsLogger.Warn(ctx, "Failed to check poll view access", "error", err)
+		return nil, err
 	}
 	if !access.allowed {
 		return nil, huma.Error403Forbidden("user is not a participant in this game")
@@ -494,13 +494,13 @@ func (h *Handler) submitVote(ctx context.Context, in *submitVoteInput) (*voteOut
 
 	if err := h.verifyUserInGame(ctx, poll.GameID, userID); err != nil {
 		h.App.ObsLogger.Warn(ctx, "User is not in the game", "error", err)
-		return nil, huma.Error403Forbidden(err.Error())
+		return nil, err
 	}
 
 	game, err := h.GameService.GetGame(ctx, poll.GameID)
 	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
-		return nil, huma.Error500InternalServerError("Failed to get game")
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", poll.GameID)
+		return nil, core.NotFoundOr500(err, "game")
 	}
 
 	isGM := game.GmUserID == userID
@@ -568,7 +568,7 @@ func (h *Handler) updatePoll(ctx context.Context, in *updatePollInput) (*pollOut
 
 	if err := h.verifyUserIsGM(ctx, poll.GameID, userID); err != nil {
 		h.App.ObsLogger.Warn(ctx, "User is not GM of the game", "error", err)
-		return nil, huma.Error403Forbidden(err.Error())
+		return nil, err
 	}
 
 	updatedPoll, err := h.PollService.UpdatePoll(ctx, in.PollID, core.UpdatePollRequest{
@@ -611,7 +611,7 @@ func (h *Handler) deletePoll(ctx context.Context, in *pollIDInput) (*struct{}, e
 
 	if err := h.verifyUserIsGM(ctx, poll.GameID, userID); err != nil {
 		h.App.ObsLogger.Warn(ctx, "User is not GM of the game", "error", err)
-		return nil, huma.Error403Forbidden(err.Error())
+		return nil, err
 	}
 
 	if err := h.PollService.DeletePoll(ctx, in.PollID); err != nil {

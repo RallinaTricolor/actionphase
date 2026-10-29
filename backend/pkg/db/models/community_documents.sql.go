@@ -196,6 +196,7 @@ WHERE g.id = $1 AND d.status = 'published'
 ORDER BY d.sort_order ASC, d.id ASC
 `
 
+// soft-delete: scoped to one game, resolved by its route.
 // The Info tab's list, resolved from a GAME rather than a community.
 //
 // Inner join through games.community_id, so a LEGACY GAME (community_id IS

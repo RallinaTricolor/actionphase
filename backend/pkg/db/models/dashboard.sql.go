@@ -15,7 +15,8 @@ const countUserGames = `-- name: CountUserGames :one
 SELECT COUNT(DISTINCT g.id) as game_count
 FROM games g
 LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1 AND gp.status = 'active'
-WHERE (gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1
+WHERE ((gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1)
+  AND g.deleted_at IS NULL
 `
 
 // Count total games user participates in OR is GM of
@@ -30,6 +31,8 @@ const getDashboardUnreadCount = `-- name: GetDashboardUnreadCount :one
 SELECT COUNT(*) as count
 FROM notifications
 WHERE user_id = $1 AND is_read = false
+  -- A soft-deleted game's notifications are hidden (they would open a 404).
+  AND NOT EXISTS (SELECT 1 FROM games g WHERE g.id = notifications.game_id AND g.deleted_at IS NOT NULL)
 `
 
 // Get count of all unread notifications for user (dashboard-specific)
@@ -73,6 +76,7 @@ LEFT JOIN (
 LEFT JOIN user_common_room_reads ucr ON ucr.post_id = ac.root_post_id AND ucr.user_id = $2::int
 LEFT JOIN user_comment_reads ucmr ON ucmr.comment_id = ac.id AND ucmr.user_id = $2::int
 WHERE ((part.user_id = $2::int AND part.status = 'active') OR g.gm_user_id = $2::int)
+  AND g.deleted_at IS NULL
 GROUP BY g.id
 `
 
@@ -164,6 +168,7 @@ LEFT JOIN game_phases current_phase ON g.id = current_phase.game_id AND current_
 LEFT JOIN users gm_user ON g.gm_user_id = gm_user.id
 WHERE ((gp.user_id = $1 AND gp.status = 'active') OR g.gm_user_id = $1)
   AND g.state != 'completed'
+  AND g.deleted_at IS NULL
 ORDER BY
   -- Urgent games first: action phases with pending submissions and near deadlines
   CASE
@@ -271,6 +276,7 @@ LEFT JOIN game_participants gp ON g.id = gp.game_id AND gp.user_id = $1::int AND
 INNER JOIN users author ON m.author_id = author.id
 LEFT JOIN characters character ON m.character_id = character.id
 WHERE ((gp.user_id = $1::int AND gp.status = 'active' AND gp.role != 'audience') OR g.gm_user_id = $1::int)
+  AND g.deleted_at IS NULL
   AND m.created_at > NOW() - INTERVAL '7 days'
   AND m.author_id != $1::int
   AND m.is_deleted = false
@@ -342,6 +348,8 @@ const getUserUnreadNotificationsByType = `-- name: GetUserUnreadNotificationsByT
 SELECT type, COUNT(*) as count
 FROM notifications
 WHERE user_id = $1 AND is_read = false
+  -- A soft-deleted game's notifications are hidden (they would open a 404).
+  AND NOT EXISTS (SELECT 1 FROM games g WHERE g.id = notifications.game_id AND g.deleted_at IS NOT NULL)
 GROUP BY type
 ORDER BY count DESC
 `
@@ -398,6 +406,7 @@ FROM game_phases gp
 INNER JOIN games g ON gp.game_id = g.id
 LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = $1 AND part.status = 'active'
 WHERE ((part.user_id = $1 AND part.status = 'active' AND part.role != 'audience') OR g.gm_user_id = $1)
+  AND g.deleted_at IS NULL
   AND gp.is_active = true
   AND gp.deadline IS NOT NULL
   AND gp.deadline > NOW()
@@ -420,6 +429,7 @@ FROM game_deadlines gd
 INNER JOIN games g ON gd.game_id = g.id
 LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = $1 AND part.status = 'active'
 WHERE ((part.user_id = $1 AND part.status = 'active' AND part.role != 'audience') OR g.gm_user_id = $1)
+  AND g.deleted_at IS NULL
   AND gd.deleted_at IS NULL
   AND gd.deadline > NOW()
 
@@ -441,6 +451,7 @@ FROM common_room_polls crp
 INNER JOIN games g ON crp.game_id = g.id
 LEFT JOIN game_participants part ON g.id = part.game_id AND part.user_id = $1 AND part.status = 'active'
 WHERE ((part.user_id = $1 AND part.status = 'active' AND part.role != 'audience') OR g.gm_user_id = $1)
+  AND g.deleted_at IS NULL
   AND crp.is_deleted = false
   AND crp.deadline IS NOT NULL
   AND crp.deadline > NOW()

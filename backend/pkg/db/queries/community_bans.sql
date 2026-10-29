@@ -47,6 +47,7 @@ SELECT EXISTS(
 ) AS banned;
 
 -- name: IsUserBannedFromGameCommunity :one
+-- soft-delete: callers check one game they have already loaded.
 -- Enforcement for a path that knows a game but not a community.
 --
 -- The join is INNER on communities via games.community_id, so a game with

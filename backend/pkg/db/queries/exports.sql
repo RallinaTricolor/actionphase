@@ -28,7 +28,7 @@ RETURNING *;
 SELECT ge.*, g.title AS game_title
 FROM game_exports ge
 JOIN games g ON g.id = ge.game_id
-WHERE ge.id = $1;
+WHERE ge.id = $1 AND g.deleted_at IS NULL;
 
 -- name: GetLatestGameExport :one
 -- Newest export for a game in any state, for status polling.
@@ -135,6 +135,7 @@ WHERE status = 'running'
 -- =============================================================================
 
 -- name: GetGameContentFingerprint :one
+-- soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 -- Cheap change-detection across every table the archive draws from. Completed
 -- games are mostly immutable, but a GM can still edit after completion, so a
 -- cached artifact is only reusable while this value is unchanged.
@@ -407,6 +408,7 @@ WHERE p.game_id = $1
 ORDER BY v.poll_id, v.created_at;
 
 -- name: ListExportParticipants :many
+-- soft-delete: one game's export job; downloads go through GetGameExport, which filters deleted games.
 -- Roster for the archive README.
 --
 -- The primary GM is games.gm_user_id and is NOT guaranteed to have a

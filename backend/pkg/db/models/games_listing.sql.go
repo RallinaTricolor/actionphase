@@ -17,8 +17,10 @@ FROM games g
 WHERE
   -- No visibility predicate -- see GetFilteredGames above. This clause list must
   -- keep mirroring that query exactly or the count and the page disagree.
+  g.deleted_at IS NULL
+
   -- Filter by states (optional array of states)
-  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (
@@ -75,7 +77,7 @@ func (q *Queries) CountFilteredGames(ctx context.Context, arg CountFilteredGames
 
 const countPublicGames = `-- name: CountPublicGames :one
 
-SELECT COUNT(*) FROM games
+SELECT COUNT(*) FROM games WHERE deleted_at IS NULL
 `
 
 // Parameters:
@@ -105,6 +107,7 @@ const getAvailableStates = `-- name: GetAvailableStates :many
 
 SELECT DISTINCT state
 FROM games
+WHERE deleted_at IS NULL
 ORDER BY state ASC
 `
 
@@ -216,8 +219,11 @@ WHERE
   -- games.is_public. Access is governed by state, participation and community
   -- bans, not by a row flag -- so there is no visibility predicate here, and
   -- the admin-mode bypass that used to sit beside it is gone with it.
+  -- The one exception is a soft-deleted game, which is never listed.
+  g.deleted_at IS NULL
+
   -- Filter by states (optional array of states)
-  ($2::text[] IS NULL OR g.state = ANY($2::text[]))
+  AND ($2::text[] IS NULL OR g.state = ANY($2::text[]))
 
   -- Filter by user participation (optional)
   AND (

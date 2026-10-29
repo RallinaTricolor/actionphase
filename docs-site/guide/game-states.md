@@ -41,7 +41,9 @@ The game has ended. All content is preserved as a public archive — anyone can 
 
 The game was cancelled before or during play. Content is preserved and the game remains as visible as it was before cancellation. No new content can be created.
 
-**GM:** Cancelled games can be permanently deleted from the game actions menu. This removes all game data and cannot be undone.
+## Deleting a Game
+
+**GM:** A game can be deleted in any state from the game actions menu (you'll be asked to type `delete` to confirm). Only the game's GM can delete it — co-GMs cannot. A deleted game disappears from the games list, the dashboard and every profile, and its pages can no longer be opened by anyone, including the GM. There is no way to undo this from the app, so use it for test games and mistakes rather than for finished campaigns.
 
 ## State Transitions
 

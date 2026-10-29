@@ -474,6 +474,19 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 		return false, err
 	}
 
+	// Loaded before any grant, owner included: GetGame hides a soft-deleted
+	// game, and its pgx.ErrNoRows is how callers learn to answer 404 rather
+	// than let the owner keep editing a game that no longer exists.
+	game, err := queries.GetGame(ctx, character.GameID)
+	if err != nil {
+		cs.Logger.Warn(ctx, "Failed to get game for permission check",
+			"error", err,
+			"character_id", characterID,
+			"game_id", character.GameID,
+		)
+		return false, err
+	}
+
 	// Character owner can edit
 	if character.UserID.Valid && character.UserID.Int32 == userID {
 		cs.Logger.Debug(ctx, "Authorization granted: character owner",
@@ -485,14 +498,6 @@ func (cs *CharacterService) CanUserEditCharacter(ctx context.Context, characterI
 	}
 
 	// GM can edit any character in their game
-	game, err := queries.GetGame(ctx, character.GameID)
-	if err != nil {
-		cs.Logger.LogError(ctx, err, "Failed to get game for permission check",
-			"character_id", characterID,
-			"game_id", character.GameID,
-		)
-		return false, err
-	}
 
 	// Check if user is GM or Co-GM
 	if game.GmUserID == userID || core.IsUserCoGM(ctx, cs.DB, character.GameID, userID) {

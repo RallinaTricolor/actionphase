@@ -413,3 +413,54 @@ func TestAvatarDelete_RetainsFile(t *testing.T) {
 	assert.Contains(t, storage.uploads, uploadedPath,
 		"removing an avatar must not delete the file: posts that pinned it would lose their image")
 }
+
+// A soft-deleted game is read-only for everyone, the character's owner
+// included. The permission check used to grant the owner before looking at the
+// game, so the upload reached storage and the delete cleared the URL.
+func TestAvatar_SoftDeletedGame_404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	storage := newTestStorage()
+	app.Storage = storage
+	router := setupAvatarTestRouter(app, testDB)
+
+	_, _, char, ownerToken, _ := setupAvatarTestData(t, testDB, app)
+
+	ctx := context.Background()
+	const existingURL = "http://test.storage/avatars/characters/1/old.jpg"
+	queries := dbmodels.New(testDB.Pool)
+	_, err := queries.UpdateCharacterAvatar(ctx, dbmodels.UpdateCharacterAvatarParams{
+		ID:        char.ID,
+		AvatarUrl: pgtype.Text{String: existingURL, Valid: true},
+	})
+	require.NoError(t, err)
+	_, err = testDB.Pool.Exec(ctx, "UPDATE games SET deleted_at = NOW() WHERE id = $1", char.GameID)
+	require.NoError(t, err)
+
+	t.Run("upload answers 404 and stores nothing", func(t *testing.T) {
+		body, contentType := buildAvatarUpload(t, "avatar.jpg", "image/jpeg", smallJPEG())
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/characters/%d/avatar", char.ID), body)
+		req.Header.Set("Authorization", "Bearer "+ownerToken)
+		req.Header.Set("Content-Type", contentType)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		assert.Empty(t, storage.uploads, "nothing may reach storage")
+	})
+
+	t.Run("delete answers 404 and keeps the avatar", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/characters/%d/avatar", char.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+ownerToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		updated, err := queries.GetCharacter(ctx, char.ID)
+		require.NoError(t, err)
+		assert.Equal(t, existingURL, updated.AvatarUrl.String, "avatar must be unchanged")
+	})
+}

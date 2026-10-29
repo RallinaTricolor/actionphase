@@ -314,3 +314,56 @@ func TestPhaseAPI_UpdatePhaseDeadline(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 }
+
+// TestPhaseAPI_SoftDeletedGameAnswers404 covers the top-level /phases/{id}
+// routes, which resolve the phase's game themselves (loadPhaseGame) rather than
+// through GameMiddleware, plus the game-scoped results list. Once the game is
+// soft-deleted every one must answer 404, even for its GM -- not the 500 the
+// failed game lookup used to become -- and must leave the phase untouched.
+func TestPhaseAPI_SoftDeletedGameAnswers404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "game_phases", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupFullPhaseAPITestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Test Game", "in_progress")
+	phase := testDB.CreateTestPhase(t, game.ID, "action", "Doomed Phase")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	require.NoError(t, gameService.DeleteGame(ctx, game.ID, int32(gm.ID), false))
+
+	phasePath := fmt.Sprintf("/api/v1/phases/%d", phase.ID)
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+	}{
+		{"activate", "POST", phasePath + "/activate", ""},
+		{"update deadline", "PUT", phasePath + "/deadline", `{"deadline":"2030-12-31T23:59:00Z"}`},
+		{"update phase", "PUT", phasePath, `{"title":"Renamed"}`},
+		{"delete phase", "DELETE", phasePath, ""},
+		{"list game results", "GET", fmt.Sprintf("/api/v1/games/%d/results", game.ID), ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := httptest.NewRequest(c.method, c.path, bytes.NewBufferString(c.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+gmToken)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+		})
+	}
+
+	var title string
+	require.NoError(t, testDB.Pool.QueryRow(ctx, "SELECT title FROM game_phases WHERE id = $1", phase.ID).Scan(&title))
+	assert.Equal(t, "Doomed Phase", title, "phase must be unchanged and not deleted")
+}

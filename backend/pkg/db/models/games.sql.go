@@ -94,7 +94,7 @@ SELECT
         ELSE 'can_join'
     END as join_status
 FROM games g
-WHERE g.id = $1
+WHERE g.id = $1 AND g.deleted_at IS NULL
 `
 
 type CanUserJoinGameParams struct {
@@ -110,12 +110,17 @@ func (q *Queries) CanUserJoinGame(ctx context.Context, arg CanUserJoinGameParams
 }
 
 const checkAudienceAccess = `-- name: CheckAudienceAccess :one
-SELECT EXISTS(
-    SELECT 1 FROM game_participants
-    WHERE game_id = $1 AND user_id = $2 AND role IN ('audience', 'co_gm') AND status = 'active'
-) OR EXISTS(
-    SELECT 1 FROM games
-    WHERE id = $1 AND gm_user_id = $2
+SELECT EXISTS(SELECT 1 FROM games g WHERE g.id = $1::int AND g.deleted_at IS NULL)
+AND (
+    EXISTS(
+        SELECT 1 FROM game_participants
+        WHERE game_id = $1::int AND user_id = $2::int
+          AND role IN ('audience', 'co_gm') AND status = 'active'
+    ) OR EXISTS(
+        SELECT 1 FROM games g2
+        WHERE g2.id = $1::int AND g2.gm_user_id = $2::int
+          AND g2.deleted_at IS NULL
+    )
 )
 `
 
@@ -124,6 +129,8 @@ type CheckAudienceAccessParams struct {
 	UserID int32 `json:"user_id"`
 }
 
+// A soft-deleted game grants no one access. The filter wraps both branches: a
+// co-GM or audience member is a game_participants row, which outlives the game.
 func (q *Queries) CheckAudienceAccess(ctx context.Context, arg CheckAudienceAccessParams) (pgtype.Bool, error) {
 	row := q.db.QueryRow(ctx, checkAudienceAccess, arg.GameID, arg.UserID)
 	var column_1 pgtype.Bool
@@ -211,7 +218,7 @@ INSERT INTO games (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
     $14, $15, $16, $17, $18, $19
-) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id
 `
 
 type CreateGameParams struct {
@@ -284,19 +291,10 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
-}
-
-const deleteGame = `-- name: DeleteGame :exec
-DELETE FROM games WHERE id = $1 AND state = 'cancelled'
-`
-
-// Only allow deletion of cancelled games
-// Foreign key constraints will cascade delete related data
-func (q *Queries) DeleteGame(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteGame, id)
-	return err
 }
 
 const disableAnonymousMode = `-- name: DisableAnonymousMode :exec
@@ -365,9 +363,12 @@ func (q *Queries) GetActiveParticipants(ctx context.Context, gameID int32) ([]Ge
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id FROM games WHERE id = $1
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id FROM games WHERE id = $1 AND deleted_at IS NULL
 `
 
+// Soft-deleted games are treated as absent here, and this is the load-bearing
+// filter: GameMiddleware and every resource route that resolves its game go
+// through this query, so a deleted game 404s everywhere by default.
 func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 	row := q.db.QueryRow(ctx, getGame, id)
 	var i Game
@@ -396,13 +397,15 @@ func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
 }
 
 const getGameAutoAcceptAudience = `-- name: GetGameAutoAcceptAudience :one
 
-SELECT auto_accept_audience FROM games WHERE id = $1
+SELECT auto_accept_audience FROM games WHERE id = $1 AND deleted_at IS NULL
 `
 
 // Audience Participation Queries
@@ -505,7 +508,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 
 const getGameWithDetails = `-- name: GetGameWithDetails :one
 SELECT
-    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id,
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id,
     u.username as gm_username,
     c.name as community_name,
     c.slug as community_slug,
@@ -513,7 +516,7 @@ SELECT
 FROM games g
 LEFT JOIN users u ON g.gm_user_id = u.id
 LEFT JOIN communities c ON c.id = g.community_id
-WHERE g.id = $1
+WHERE g.id = $1 AND g.deleted_at IS NULL
 `
 
 type GetGameWithDetailsRow struct {
@@ -541,6 +544,8 @@ type GetGameWithDetailsRow struct {
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
 	CharacterSheet          []byte             `json:"character_sheet"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
+	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
+	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
 	GmUsername              pgtype.Text        `json:"gm_username"`
 	CommunityName           pgtype.Text        `json:"community_name"`
 	CommunitySlug           pgtype.Text        `json:"community_slug"`
@@ -581,6 +586,8 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 		&i.GmUsername,
 		&i.CommunityName,
 		&i.CommunitySlug,
@@ -590,7 +597,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 }
 
 const getGamesByGM = `-- name: GetGamesByGM :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id FROM games WHERE gm_user_id = $1 ORDER BY created_at DESC
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id FROM games WHERE gm_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC
 `
 
 func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, error) {
@@ -627,6 +634,8 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 			&i.ScheduleTimezone,
 			&i.CharacterSheet,
 			&i.CommunityID,
+			&i.DeletedAt,
+			&i.DeletedByUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -639,11 +648,11 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 }
 
 const getGamesByUser = `-- name: GetGamesByUser :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, gp.role as user_role, u.username as gm_username
+SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
-WHERE gp.user_id = $1 AND gp.status = 'active'
+WHERE gp.user_id = $1 AND gp.status = 'active' AND g.deleted_at IS NULL
 ORDER BY g.updated_at DESC
 `
 
@@ -672,6 +681,8 @@ type GetGamesByUserRow struct {
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
 	CharacterSheet          []byte             `json:"character_sheet"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
+	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
+	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
 	UserRole                string             `json:"user_role"`
 	GmUsername              string             `json:"gm_username"`
 }
@@ -710,6 +721,8 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 			&i.ScheduleTimezone,
 			&i.CharacterSheet,
 			&i.CommunityID,
+			&i.DeletedAt,
+			&i.DeletedByUserID,
 			&i.UserRole,
 			&i.GmUsername,
 		); err != nil {
@@ -925,6 +938,40 @@ func (q *Queries) RestoreParticipant(ctx context.Context, arg RestoreParticipant
 	return i, err
 }
 
+const softDeleteGame = `-- name: SoftDeleteGame :one
+UPDATE games
+SET deleted_at = NOW(), deleted_by_user_id = $1
+WHERE id = $2
+  AND deleted_at IS NULL
+  AND (gm_user_id = $1 OR $3::bool)
+RETURNING title, state
+`
+
+type SoftDeleteGameParams struct {
+	DeletedByUserID pgtype.Int4 `json:"deleted_by_user_id"`
+	ID              int32       `json:"id"`
+	IsAdminMode     bool        `json:"is_admin_mode"`
+}
+
+type SoftDeleteGameRow struct {
+	Title string `json:"title"`
+	State string `json:"state"`
+}
+
+// Marks a game deleted, in any state. Nothing else changes, so restoring is a
+// single column flip (see the soft_delete_games migration).
+//
+// The permission rule (primary GM, or an admin in admin mode) is part of the
+// WHERE, so checking and writing are one atomic statement. No row means the
+// game is missing, already deleted, or not the caller's to delete; the service
+// tells those apart only on that failure path.
+func (q *Queries) SoftDeleteGame(ctx context.Context, arg SoftDeleteGameParams) (SoftDeleteGameRow, error) {
+	row := q.db.QueryRow(ctx, softDeleteGame, arg.DeletedByUserID, arg.ID, arg.IsAdminMode)
+	var i SoftDeleteGameRow
+	err := row.Scan(&i.Title, &i.State)
+	return i, err
+}
+
 const transitionParticipantToAudience = `-- name: TransitionParticipantToAudience :one
 UPDATE game_participants
 SET role = 'audience', is_former_player = TRUE
@@ -973,7 +1020,7 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     -- UpdateGameCharacterSheet, so a settings save can never reset it.
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id
 `
 
 type UpdateGameParams struct {
@@ -1046,6 +1093,8 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
 }
@@ -1070,7 +1119,7 @@ const updateGameBannerURL = `-- name: UpdateGameBannerURL :one
 UPDATE games
 SET banner_url = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id
 `
 
 type UpdateGameBannerURLParams struct {
@@ -1106,6 +1155,8 @@ func (q *Queries) UpdateGameBannerURL(ctx context.Context, arg UpdateGameBannerU
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
 }
@@ -1114,7 +1165,7 @@ const updateGameCharacterSheet = `-- name: UpdateGameCharacterSheet :one
 UPDATE games
 SET character_sheet = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id
 `
 
 type UpdateGameCharacterSheetParams struct {
@@ -1152,6 +1203,8 @@ func (q *Queries) UpdateGameCharacterSheet(ctx context.Context, arg UpdateGameCh
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
 }
@@ -1160,7 +1213,7 @@ const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id
 `
 
 type UpdateGameStateParams struct {
@@ -1196,6 +1249,8 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.ScheduleTimezone,
 		&i.CharacterSheet,
 		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
 	)
 	return i, err
 }

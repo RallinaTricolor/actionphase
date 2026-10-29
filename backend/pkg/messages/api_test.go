@@ -17,6 +17,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -1847,5 +1848,79 @@ func TestMessageAPI_ListFavoriteComments(t *testing.T) {
 		for _, f := range page2.Favorites {
 			assert.NotEqual(t, page1.Favorites[0].ID, f.ID, "cursor must not repeat a row")
 		}
+	})
+}
+
+// TestMessageAPI_SoftDeletedGame covers the message routes that are not under
+// GameMiddleware and so resolve a game themselves. A soft-deleted game must
+// read as absent: 404 where the route reports a missing resource (it used to
+// be 500 "no rows in result set"), and the favorite endpoint's own "invalid
+// target" 422 where it does not.
+func TestMessageAPI_SoftDeletedGame(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "user_comment_favorites", "messages", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
+	require.NoError(t, err)
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	char, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(player.ID)), Name: "Player Char", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	post, err := messageService.CreatePost(ctx, core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID, Content: "post", Visibility: "game",
+	})
+	require.NoError(t, err)
+	comment, err := messageService.CreateComment(ctx, core.CreateCommentRequest{
+		GameID: game.ID, AuthorID: int32(player.ID), CharacterID: char.ID, ParentID: post.ID, Content: "comment", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	send := func(method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+playerToken)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+	commentsPath := fmt.Sprintf("/api/v1/characters/%d/comments", char.ID)
+	favoritePath := fmt.Sprintf("/api/v1/comments/%d/favorite", comment.ID)
+
+	// Live game: both routes work, so the failures below are about deletion.
+	require.Equal(t, http.StatusOK, send("GET", commentsPath, "").Code)
+	rec := send("PUT", favoritePath, `{"favorite":true}`)
+	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+	require.NoError(t, messageService.SetCommentFavorite(ctx, int32(player.ID), comment.ID, false))
+
+	require.NoError(t, gameService.DeleteGame(ctx, game.ID, int32(gm.ID), false))
+
+	t.Run("character comments answer 404", func(t *testing.T) {
+		rec := send("GET", commentsPath, "")
+		assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+	})
+
+	t.Run("starring a deleted game's comment is rejected", func(t *testing.T) {
+		rec := send("PUT", favoritePath, `{"favorite":true}`)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+
+		var count int
+		require.NoError(t, testDB.Pool.QueryRow(ctx,
+			"SELECT COUNT(*) FROM user_comment_favorites WHERE comment_id = $1", comment.ID).Scan(&count))
+		assert.Zero(t, count, "no favorite row may be written")
 	})
 }

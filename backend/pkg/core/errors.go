@@ -122,6 +122,16 @@ var ErrCommunityDocumentNotFound = errors.New("community document not found")
 // "draft" nor "published". Handlers translate it to 400.
 var ErrInvalidDocumentStatus = errors.New("document status must be draft or published")
 
+// ErrGameNotFound is returned by GameService.DeleteGame when the game does not
+// exist or is already soft-deleted. Handlers translate it to 404.
+var ErrGameNotFound = errors.New("game not found")
+
+// ErrGameDeleteForbidden is returned by GameService.DeleteGame when the caller
+// is neither the game's primary GM nor a site admin in admin mode. Co-GMs are
+// deliberately excluded: deleting a game removes it for every participant.
+// Handlers translate it to 403.
+var ErrGameDeleteForbidden = errors.New("only the game's GM can delete it")
+
 // ErrGameReadOnly is wrapped by ValidateGameNotCompleted for a completed or
 // cancelled game, so a handler can map it to a 4xx with errors.Is instead of
 // matching the message.

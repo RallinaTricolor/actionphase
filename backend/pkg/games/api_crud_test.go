@@ -459,33 +459,59 @@ func TestSplitCommaSeparated(t *testing.T) {
 	}
 }
 
-// TestDeleteGame_NonCancelledGame verifies that deleting a game that is not in
-// "cancelled" state returns 400. Silent failure here lets GMs destroy active games.
-func TestDeleteGame_NonCancelledGame(t *testing.T) {
+// TestDeleteGame_SoftDeletesInAnyState verifies the delete endpoint: the
+// primary GM can delete a game in any state (here in_progress), after which the
+// game 404s; co-GMs and players are refused and the game survives.
+func TestDeleteGame_SoftDeletesInAnyState(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
-	defer testDB.CleanupTables(t, "games", "users")
+	defer testDB.CleanupTables(t, "game_participants", "games", "users")
 
 	app := core.NewTestApp(testDB.Pool)
 	router := setupGameTestRouter(app, testDB)
 
 	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
-	if err != nil {
-		t.Fatalf("failed to create token: %v", err)
+	coGM := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Running Game", core.GameStateInProgress)
+	testDB.AddTestGameParticipant(t, game.ID, int32(coGM.ID), "co_gm")
+	testDB.AddTestGameParticipant(t, game.ID, int32(player.ID), "player")
+
+	do := func(method string, user *core.User) *httptest.ResponseRecorder {
+		t.Helper()
+		token, err := core.CreateTestJWTTokenForUser(app, user)
+		if err != nil {
+			t.Fatalf("failed to create token: %v", err)
+		}
+		req := httptest.NewRequest(method, fmt.Sprintf("/api/v1/games/%d", game.ID), nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
 	}
 
-	game := testDB.CreateTestGame(t, int32(gm.ID), "Active Game")
+	for _, refused := range []struct {
+		name string
+		user *core.User
+	}{{"co-GM", coGM}, {"player", player}} {
+		rec := do(http.MethodDelete, refused.user)
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("%s delete: expected 403, got %d (body: %s)", refused.name, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := do(http.MethodGet, gm); rec.Code != http.StatusOK {
+		t.Fatalf("game should survive refused deletes, GET got %d", rec.Code)
+	}
 
-	// Game starts in "setup" state, which is not "cancelled"
-	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/v1/games/%d", game.ID), nil)
-	req.Header.Set("Authorization", "Bearer "+gmToken)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	// Must reject deletion of non-cancelled games
-	if rec.Code != http.StatusBadRequest && rec.Code != http.StatusConflict {
-		t.Errorf("expected 400 or 409 for deleting non-cancelled game, got %d (body: %s)", rec.Code, rec.Body.String())
+	if rec := do(http.MethodDelete, gm); rec.Code != http.StatusNoContent {
+		t.Fatalf("GM delete of an in-progress game: expected 204, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	if rec := do(http.MethodGet, gm); rec.Code != http.StatusNotFound {
+		t.Errorf("deleted game should 404 even for its GM, got %d", rec.Code)
+	}
+	if rec := do(http.MethodDelete, gm); rec.Code != http.StatusNotFound {
+		t.Errorf("deleting an already-deleted game should 404, got %d", rec.Code)
 	}
 }
 

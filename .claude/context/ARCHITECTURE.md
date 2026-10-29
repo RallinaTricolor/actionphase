@@ -569,6 +569,40 @@ Both columns are nullable and were **not** backfilled, so pre-existing
 notifications keep one-at-a-time behaviour. New notification types opt in by
 setting the context pair in their `Notify*` helper.
 
+### Soft-Deleted Games (added 2026-10-28)
+
+`DELETE /games/{id}` sets `games.deleted_at` (+ `deleted_by_user_id`); nothing
+else changes, so a restore is `UPDATE games SET deleted_at = NULL`. Primary GM
+or admin-in-admin-mode only, any state. There is no restore endpoint. The
+permission rule lives in `SoftDeleteGame`'s WHERE, so check and write are one
+statement.
+
+**Two layers keep a deleted game invisible:**
+
+1. **`GetGame` / `GetGameWithDetails` filter `deleted_at IS NULL`.** Every
+   `/games/{id}/...` route goes through `GameMiddleware` -> `GetGame`. The
+   top-level routes that resolve a resource's game themselves --
+   `/characters/{id}/...` (incl. avatar, rename, sheet data, comments),
+   `/phases/{id}/...` (incl. draft posts), `/polls/{id}/...` -- call `GetGame`
+   too, so they 404 as long as the handler maps `pgx.ErrNoRows` to 404
+   (`core.NotFoundOr500` / `core.HandleDBErrorWithID`), not 500. A permission
+   helper must load the game **before** granting anything: `CanUserEditCharacter`
+   once granted the owner first and let them edit a deleted game's character.
+2. **Cross-game queries filter it explicitly**: games list/counts, profile
+   games, dashboard, "my games", characters/handouts/deadlines/applications
+   across games, both favorites reads (list AND ID set), notifications (list
+   AND unread counts), `CheckAudienceAccess`, `GetMessageVisibilityContext`
+   (the comment-favorite route isn't game-scoped), and the background workers
+   (`GetScheduledPhasesToActivate`, `GetDueStagedParts`).
+
+**Every query that reads `games` must filter `<alias>.deleted_at` or say why
+not** with a `-- soft-delete: <reason>` comment (normally: scoped to one game
+its route already resolved). `TestEveryGamesQueryHandlesSoftDelete`
+(`pkg/db/services/soft_delete_query_guard_test.go`) enforces this. It cannot
+see a cross-game query that never joins `games` -- e.g. one keyed only by
+`user_id` -- so join `games` and filter when you write one.
+`TestSoftDeletedGameHiddenFromCrossGameQueries` pins the cross-game behaviour.
+
 ### Hidden NPCs (added 2026-09-22)
 
 `characters.is_hidden` conceals an NPC from regular players. It is a column, not

@@ -296,3 +296,31 @@ func TestDraftPostAPI_NotVisibleInGamePosts(t *testing.T) {
 		assert.Empty(t, posts, "draft posts must not appear in game posts list")
 	})
 }
+
+// TestDraftPostAPI_SoftDeletedGameAnswers404 verifies the /phases/{id}/draft-post
+// routes, which resolve the game from the phase (requireGMOrCoGM) rather than
+// through GameMiddleware, answer 404 for a soft-deleted game instead of 500.
+func TestDraftPostAPI_SoftDeletedGameAnswers404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupDraftPostRouter(app, testDB)
+
+	gm := testDB.CreateTestUser(t, "gm_draft_sd", "gm_draft_sd@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Draft Post Deleted Game")
+	phase := testDB.CreateTestPhase(t, game.ID, "common_room", "Test Phase")
+	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
+	require.NoError(t, err)
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	require.NoError(t, gameService.DeleteGame(context.Background(), game.ID, int32(gm.ID), false))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/phases/"+strconv.Itoa(int(phase.ID))+"/draft-post", nil)
+	req.Header.Set("Authorization", "Bearer "+gmToken)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+}

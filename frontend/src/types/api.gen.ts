@@ -1422,7 +1422,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a game
-         * @description Permanently deletes a cancelled game. GM only.
+         * @description Soft-deletes a game in any state: it disappears from every listing and its routes answer 404. Primary GM, or a site admin in admin mode, only; co-GMs cannot delete.
          */
         delete: operations["deleteGame"];
         options?: never;
@@ -10650,13 +10650,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The game is not cancelled and so cannot be deleted */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
@@ -10664,7 +10657,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Only the GM can delete this game */
+            /** @description Only the game's GM can delete it */
             403: {
                 headers: {
                     [name: string]: unknown;

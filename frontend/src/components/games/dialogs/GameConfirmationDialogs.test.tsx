@@ -24,7 +24,32 @@ describe('DeleteGameConfirmationDialog', () => {
     expect(screen.getByTestId('delete-game-confirm-button')).toBeInTheDocument();
   });
 
-  it('calls onConfirm and closes when confirmed', async () => {
+  it('keeps Delete disabled until "delete" is typed', async () => {
+    const user = userEvent.setup({ delay: null });
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    renderWithProviders(
+      <DeleteGameConfirmationDialog
+        isOpen
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        gameTitle="Test Campaign"
+      />
+    );
+    const confirm = screen.getByTestId('delete-game-confirm-button');
+    expect(confirm).toBeDisabled();
+
+    // Typing the game's title, or most of the word, is not enough.
+    const input = screen.getByPlaceholderText('delete');
+    await user.type(input, 'delet');
+    expect(confirm).toBeDisabled();
+    await user.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    await user.type(input, 'e');
+    expect(confirm).toBeEnabled();
+  });
+
+  it('calls onConfirm and closes once confirmed by typing "delete"', async () => {
     const user = userEvent.setup({ delay: null });
     const onConfirm = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
@@ -36,6 +61,7 @@ describe('DeleteGameConfirmationDialog', () => {
         gameTitle="Test Campaign"
       />
     );
+    await user.type(screen.getByPlaceholderText('delete'), 'delete');
     await user.click(screen.getByTestId('delete-game-confirm-button'));
     await waitFor(() => {
       expect(onConfirm).toHaveBeenCalledOnce();
