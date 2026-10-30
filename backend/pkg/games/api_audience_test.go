@@ -506,61 +506,6 @@ func TestGameAPI_ListAllActionSubmissions(t *testing.T) {
 	})
 }
 
-// TestGameAPI_ListAudienceNPCs tests GET /api/v1/games/{id}/characters/audience-npcs
-func TestGameAPI_ListAudienceNPCs(t *testing.T) {
-	testDB := core.NewTestDatabase(t)
-	defer testDB.Close()
-	defer testDB.CleanupTables(t, "npc_assignments", "characters", "game_participants", "games", "users")
-
-	app := core.NewTestApp(testDB.Pool)
-	router := setupGameTestRouter(app, testDB)
-
-	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
-	player := testDB.CreateTestUser(t, "player", "player@example.com")
-
-	gmToken, err := core.CreateTestJWTTokenForUser(app, gm)
-	require.NoError(t, err)
-	playerToken, err := core.CreateTestJWTTokenForUser(app, player)
-	require.NoError(t, err)
-
-	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
-	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
-	_, err = gameService.AddGameParticipant(context.Background(), game.ID, int32(player.ID), "player")
-	require.NoError(t, err)
-
-	t.Run("returns 200 with empty list when no audience NPCs exist", func(t *testing.T) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/audience-npcs", game.ID), nil)
-		req.Header.Set("Authorization", "Bearer "+gmToken)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var body map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-		_, ok := body["npcs"]
-		assert.True(t, ok, "response should contain 'npcs' key")
-	})
-
-	t.Run("authenticated player can list audience NPCs", func(t *testing.T) {
-		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/games/%d/characters/audience-npcs", game.ID), nil)
-		req.Header.Set("Authorization", "Bearer "+playerToken)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-
-		assert.Equal(t, http.StatusOK, rec.Code)
-	})
-
-	t.Run("invalid game ID returns 400", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/v1/games/notanumber/characters/audience-npcs", nil)
-		req.Header.Set("Authorization", "Bearer "+gmToken)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-	})
-}
-
 // TestGameAPI_ConversationFilter_RepeatedQueryParams covers the HTTP query-parsing
 // layer of the audience participant filter, which the service-level AND-semantics
 // test in pkg/db/services/messages could not: it calls the service directly and so
@@ -691,5 +636,121 @@ func TestGameAPI_ConversationFilter_RepeatedQueryParams(t *testing.T) {
 		}
 		assert.ElementsMatch(t, []string{"Alpha", "Beta"}, names,
 			"only Alpha-Beta matches both, so Gamma must not be offered")
+	})
+}
+
+// TestGameAPI_AudienceOversight_AccessByRole pins who may use the audience
+// oversight endpoints. They expose every private conversation, every action
+// submission and who controls each NPC, so "is in the game" is not enough: a
+// regular player of an active game must be refused. GM, co-GM and audience
+// may read them, and so may anyone once the game is a public archive.
+func TestGameAPI_AudienceOversight_AccessByRole(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "private_messages", "conversation_participants", "conversations",
+		"npc_assignments", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player1 := testDB.CreateTestUser(t, "player1", "player1@example.com")
+	player2 := testDB.CreateTestUser(t, "player2", "player2@example.com")
+	coGM := testDB.CreateTestUser(t, "cogm", "cogm@example.com")
+	audience := testDB.CreateTestUser(t, "audience", "audience@example.com")
+	outsider := testDB.CreateTestUser(t, "outsider", "outsider@example.com")
+
+	token := func(u *core.User) string {
+		tok, err := core.CreateTestJWTTokenForUser(app, u)
+		require.NoError(t, err)
+		return tok
+	}
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	conversationService := db.NewConversationService(testDB.Pool, nil)
+
+	// newGame builds a game with two players talking privately, a co-GM and an
+	// audience member, and returns it with the conversation's ID.
+	newGame := func(title string) (int32, int32) {
+		game := testDB.SetGameStateDirectly(t, testDB.CreateTestGame(t, int32(gm.ID), title).ID, core.GameStateInProgress)
+		for user, role := range map[*core.User]string{player1: "player", player2: "player", coGM: "co_gm", audience: "audience"} {
+			_, err := gameService.AddGameParticipant(ctx, game.ID, int32(user.ID), role)
+			require.NoError(t, err)
+		}
+		p1, p2 := int32(player1.ID), int32(player2.ID)
+		c1, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{GameID: game.ID, UserID: &p1, Name: "Char1", CharacterType: "player_character"})
+		require.NoError(t, err)
+		c2, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{GameID: game.ID, UserID: &p2, Name: "Char2", CharacterType: "player_character"})
+		require.NoError(t, err)
+		conv, err := conversationService.CreateConversation(ctx, db.CreateConversationRequest{
+			GameID: game.ID, Title: "Secret chat", CreatedByUserID: p1, ParticipantIDs: []int32{c1.ID, c2.ID},
+		})
+		require.NoError(t, err)
+		_, err = conversationService.SendMessage(ctx, db.SendMessageRequest{
+			ConversationID: conv.ID, SenderUserID: p1, SenderCharacterID: c1.ID, Content: "the secret plan",
+		})
+		require.NoError(t, err)
+		return game.ID, conv.ID
+	}
+
+	activeGameID, activeConvID := newGame("Active Game")
+	archiveGameID, archiveConvID := newGame("Archive Game")
+	testDB.SetGameStateDirectly(t, archiveGameID, core.GameStateCompleted)
+
+	paths := func(gameID, convID int32) []string {
+		return []string{
+			fmt.Sprintf("/api/v1/games/%d/private-messages/all", gameID),
+			fmt.Sprintf("/api/v1/games/%d/private-messages/participants", gameID),
+			fmt.Sprintf("/api/v1/games/%d/private-messages/conversations/%d", gameID, convID),
+			fmt.Sprintf("/api/v1/games/%d/action-submissions/all", gameID),
+		}
+	}
+
+	cases := []struct {
+		name   string
+		user   *core.User
+		gameID int32
+		convID int32
+		want   int
+	}{
+		{"player in active game is refused", player1, activeGameID, activeConvID, http.StatusForbidden},
+		{"outsider to active game is refused", outsider, activeGameID, activeConvID, http.StatusForbidden},
+		{"GM of active game is allowed", gm, activeGameID, activeConvID, http.StatusOK},
+		{"co-GM of active game is allowed", coGM, activeGameID, activeConvID, http.StatusOK},
+		{"audience of active game is allowed", audience, activeGameID, activeConvID, http.StatusOK},
+		{"player in public archive is allowed", player1, archiveGameID, archiveConvID, http.StatusOK},
+		{"outsider to public archive is allowed", outsider, archiveGameID, archiveConvID, http.StatusOK},
+	}
+	for _, c := range cases {
+		for _, path := range paths(c.gameID, c.convID) {
+			t.Run(c.name+" "+path, func(t *testing.T) {
+				req := httptest.NewRequest("GET", path, nil)
+				req.Header.Set("Authorization", "Bearer "+token(c.user))
+				rec := httptest.NewRecorder()
+				router.ServeHTTP(rec, req)
+				assert.Equal(t, c.want, rec.Code, rec.Body.String())
+			})
+		}
+	}
+
+	// A caller with access to one game must not read another game's
+	// conversation by putting its ID under their own game's URL. Here the
+	// archive is open to everyone, and the target conversation is in the
+	// active game the outsider has no part in.
+	t.Run("conversation from another game is not readable through this game's URL", func(t *testing.T) {
+		path := fmt.Sprintf("/api/v1/games/%d/private-messages/conversations/%d", archiveGameID, activeConvID)
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Authorization", "Bearer "+token(outsider))
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.NotContains(t, rec.Body.String(), "the secret plan")
+		if rec.Code == http.StatusOK {
+			var response map[string]interface{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+			assert.Empty(t, response["messages"])
+		}
 	})
 }

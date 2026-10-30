@@ -149,11 +149,6 @@ export class CharactersApi extends BaseApiClient {
     return this.client.get<InactiveCharacter[]>(`/api/v1/games/${gameId}/characters/inactive`);
   }
 
-  // Audience Participation endpoints
-  async listAudienceNPCs(gameId: number) {
-    return this.client.get<{ npcs: Character[] }>(`/api/v1/games/${gameId}/characters/audience-npcs`);
-  }
-
   async getCharacterStats(characterId: number) {
     return this.client.get<CharacterActivityStats>(`/api/v1/characters/${characterId}/stats`);
   }

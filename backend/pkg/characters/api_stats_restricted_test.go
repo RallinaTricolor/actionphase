@@ -49,6 +49,10 @@ func TestCharacterStats_RestrictedPosts(t *testing.T) {
 		GameID: game.ID, UserID: &aID, Name: "Alice", CharacterType: "player_character",
 	})
 	require.NoError(t, err)
+	// Approved, as a character playing in a running game is: another
+	// player's pending character answers 404 on its profile.
+	aChar, err = characters.ApproveCharacter(ctx, aChar.ID)
+	require.NoError(t, err)
 
 	// Alice has one comment in a public thread and one in a thread restricted
 	// to her player.

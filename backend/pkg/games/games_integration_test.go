@@ -657,7 +657,7 @@ func setupGameTestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux {
 				//Routes with game ID parameter
 				r.Route("/{gameID}", func(r chi.Router) {
 					r.Use(gameHandler.GameMiddleware())
-					RegisterHumaGameScoped(humaconfig.New(r, "ActionPhase API", "1.0.0"), &gameHandler)
+					RegisterHumaGameScoped(newGatedGameAPI(r, app), &gameHandler)
 				})
 			})
 		})

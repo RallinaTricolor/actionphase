@@ -12,6 +12,7 @@ import (
 )
 
 const assignNPCToAudience = `-- name: AssignNPCToAudience :one
+
 INSERT INTO npc_assignments (character_id, assigned_user_id, assigned_by_user_id)
 VALUES ($1, $2, $3)
 ON CONFLICT (character_id)
@@ -25,6 +26,7 @@ type AssignNPCToAudienceParams struct {
 	AssignedByUserID int32 `json:"assigned_by_user_id"`
 }
 
+// Audience Participation Queries
 func (q *Queries) AssignNPCToAudience(ctx context.Context, arg AssignNPCToAudienceParams) (NpcAssignment, error) {
 	row := q.db.QueryRow(ctx, assignNPCToAudience, arg.CharacterID, arg.AssignedUserID, arg.AssignedByUserID)
 	var i NpcAssignment
@@ -1134,72 +1136,6 @@ func (q *Queries) HasApprovedCharacterInGame(ctx context.Context, arg HasApprove
 	var has_approved_character bool
 	err := row.Scan(&has_approved_character)
 	return has_approved_character, err
-}
-
-const listAudienceNPCs = `-- name: ListAudienceNPCs :many
-
-SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
-FROM characters c
-LEFT JOIN users u ON c.user_id = u.id
-LEFT JOIN npc_assignments na ON c.id = na.character_id
-LEFT JOIN users au ON na.assigned_user_id = au.id
-WHERE c.game_id = $1 AND c.character_type = 'npc'
-ORDER BY c.name
-`
-
-type ListAudienceNPCsRow struct {
-	ID                  int32              `json:"id"`
-	GameID              int32              `json:"game_id"`
-	UserID              pgtype.Int4        `json:"user_id"`
-	Name                string             `json:"name"`
-	CharacterType       string             `json:"character_type"`
-	Status              string             `json:"status"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	AvatarUrl           pgtype.Text        `json:"avatar_url"`
-	IsActive            bool               `json:"is_active"`
-	OriginalOwnerUserID pgtype.Int4        `json:"original_owner_user_id"`
-	IsHidden            bool               `json:"is_hidden"`
-	OwnerUsername       pgtype.Text        `json:"owner_username"`
-	AssignedUserID      pgtype.Int4        `json:"assigned_user_id"`
-	AssignedUsername    pgtype.Text        `json:"assigned_username"`
-}
-
-// Audience Participation Queries
-func (q *Queries) ListAudienceNPCs(ctx context.Context, gameID int32) ([]ListAudienceNPCsRow, error) {
-	rows, err := q.db.Query(ctx, listAudienceNPCs, gameID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAudienceNPCsRow
-	for rows.Next() {
-		var i ListAudienceNPCsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.GameID,
-			&i.UserID,
-			&i.Name,
-			&i.CharacterType,
-			&i.Status,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.AvatarUrl,
-			&i.IsActive,
-			&i.OriginalOwnerUserID,
-			&i.IsHidden,
-			&i.OwnerUsername,
-			&i.AssignedUserID,
-			&i.AssignedUsername,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listInactiveCharacters = `-- name: ListInactiveCharacters :many

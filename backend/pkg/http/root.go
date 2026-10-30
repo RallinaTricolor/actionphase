@@ -1,6 +1,7 @@
 package http
 
 import (
+	"actionphase/pkg/access"
 	"actionphase/pkg/admin"
 	"actionphase/pkg/auth"
 	"actionphase/pkg/avatars"
@@ -217,7 +218,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 	// generatedSpecFor keys by mount prefix, so a second API on the same prefix
 	// would be dropped from the served spec.
 	var gameScopedAPI huma.API
-	var gamesAPI, gamesPublicListAPI, gamesPublicGameAPI huma.API
+	var gamesAPI, gamesPublicListAPI huma.API
 	gamesRouter.Route("/", func(r chi.Router) {
 		gameHandler := games.Handler{
 			App:                     h.App,
@@ -231,6 +232,7 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			GameStatsService:        &db.GameStatsService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 		}
 		userService := &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger}
+		gameAccessChecker := &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger}
 
 		// Public routes (authentication optional - will enrich if present)
 		tokenAuth := h.getTokenAuth()
@@ -240,18 +242,8 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			// an anonymous caller.
 			r.Use(jwtauth.Verifier(tokenAuth))
 
-			// Two APIs, not one, because the applicants route additionally needs
-			// GameMiddleware to load the game and the listing must not have it.
-			// A huma API binds to one router, so a differing middleware stack
-			// needs its own (gotcha 19).
 			gamesPublicListAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
 			games.RegisterHumaGamesPublicList(gamesPublicListAPI, &gameHandler)
-
-			r.Group(func(r chi.Router) {
-				r.Use(gameHandler.GameMiddleware())
-				gamesPublicGameAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
-				games.RegisterHumaGamesPublicApplicants(gamesPublicGameAPI, &gameHandler)
-			})
 		})
 
 		// All routes below require authentication
@@ -279,6 +271,11 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				// Shared by every converted package registering on this
 				// subrouter; see the declaration for why it must be one API.
 				gameScopedAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+				// Enforces each operation's declared x-access level (pkg/access).
+				// Installed before any Register, for the same reason as above.
+				gameScopedAPI.UseMiddleware(access.Middleware(gameScopedAPI, h.App, gameAccessChecker))
+				// Then refuses any child ID in the path that names another game's row.
+				gameScopedAPI.UseMiddleware(access.ChildScope(gameScopedAPI, h.App, childParams, h.childOwnerOf()))
 
 				// huma / type-first -- shares gameScopedAPI with the other
 				// packages registering on this same /{gameID} subrouter.
@@ -359,14 +356,12 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				// Registers the comment operations too.
 				handouts.RegisterHumaGameHandouts(gameScopedAPI, handoutHandler)
 
-				// The Info tab's community document list (req 8). Gated on
-				// CanUserViewGame rather than community standing: a player
-				// reads their game's community rules without moderating it.
+				// The Info tab's community document list (req 8). Open to any
+				// logged-in user, like the community's own document list.
 				communities.RegisterHumaGameCommunityDocuments(gameScopedAPI, &communities.Handler{
 					App:              h.App,
 					UserService:      &db.UserService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 					CommunityService: &dbcommunities.CommunityService{DB: h.App.Pool, Logger: h.App.ObsLogger},
-					GameService:      &db.GameService{DB: h.App.Pool, Logger: h.App.ObsLogger},
 				})
 
 				// Game archive exports (completed games only). Read access is
@@ -443,6 +438,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			// avatars both register onto it, because generatedSpecFor keys by
 			// mount prefix and a second API here would be dropped.
 			charactersAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+			// Declared x-access levels, resolved from the row the path names
+			// (pkg/access). Before any Register, as on gameScopedAPI.
+			h.gateResource(charactersAPI, h.characterResource())
 
 			// huma / type-first -- registers the cross-game /controllable list
 			// and every per-character operation.
@@ -496,6 +494,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			// Both pkg/phases and pkg/messages register on this one API, since
 			// they share the router and its middleware (gotcha 3).
 			phasesAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+			// Declared x-access levels, resolved from the row the path names
+			// (pkg/access). Before any Register, as on gameScopedAPI.
+			h.gateResource(phasesAPI, h.phaseResource())
 			phases.RegisterHumaPhases(phasesAPI, &phaseHandler)
 			messages.RegisterHumaPhaseDraftPosts(phasesAPI, &messageHandler)
 		})
@@ -525,6 +526,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 
 			// Deadline management (huma / type-first)
 			deadlinesAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+			// Declared x-access levels, resolved from the row the path names
+			// (pkg/access). Before any Register, as on gameScopedAPI.
+			h.gateResource(deadlinesAPI, h.deadlineResource())
 			deadlines.RegisterHumaDeadlines(deadlinesAPI, &deadlineHandler)
 		})
 	})
@@ -585,6 +589,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 			r.Use(core.AdminModeMiddleware)
 
 			exportDownloadsAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+			// Declared x-access levels, resolved from the row the path names
+			// (pkg/access). Before any Register, as on gameScopedAPI.
+			h.gateResource(exportDownloadsAPI, h.exportResource())
 			exports.RegisterHumaExportDownloads(exportDownloadsAPI, exportHandler)
 		})
 	})
@@ -615,6 +622,9 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 
 			// Poll management
 			pollsAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+			// Declared x-access levels, resolved from the row the path names
+			// (pkg/access). Before any Register, as on gameScopedAPI.
+			h.gateResource(pollsAPI, h.pollResource())
 			polls.RegisterHumaPolls(pollsAPI, pollHandler)
 		})
 	})
@@ -668,6 +678,8 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 		r.Use(core.RequireAuthenticationMiddleware(userService))
 
 		favoritesAPI = newHumaAPI(r, "ActionPhase API", "1.0.0")
+		// No access middleware: a favorite is the caller's own row, and the
+		// set handler runs the comment's visibility check itself.
 		messages.RegisterHumaFavorites(favoritesAPI, &favoritesHandler)
 	})
 
@@ -826,12 +838,11 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				"/handouts":       {handoutsAPI},
 				"/phases":         {phasesAPI},
 				"/games/{gameID}": {gameScopedAPI},
-				// Three APIs, one mount: the /games routes split across chi
+				// Two APIs, one mount: the /games routes split across chi
 				// groups with different middleware (the public listing runs
-				// Verifier only, the public applicants list adds GameMiddleware,
-				// and the collection routes are fully authenticated). Their
-				// paths are disjoint.
-				"/games": {gamesAPI, gamesPublicListAPI, gamesPublicGameAPI},
+				// Verifier only; the collection routes are fully
+				// authenticated). Their paths are disjoint.
+				"/games": {gamesAPI, gamesPublicListAPI},
 				// Four APIs, one mount: /auth's routes split across chi groups
 				// with different middleware (rate-limited, public, Verifier-only
 				// probe, fully protected). Their paths are disjoint.

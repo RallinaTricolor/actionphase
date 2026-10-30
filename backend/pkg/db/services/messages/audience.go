@@ -76,10 +76,16 @@ func (ms *MessageService) GetConversationParticipantCharacters(ctx context.Conte
 
 // GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
 // Returns messages with sender information and character details
-func (ms *MessageService) GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error) {
+//
+// gameID scopes the read: a conversation belonging to another game returns no
+// messages, so access checked against one game can't be borrowed for another.
+func (ms *MessageService) GetAudienceConversationMessages(ctx context.Context, gameID, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error) {
 	queries := models.New(ms.DB)
 
-	messages, err := queries.GetAudienceConversationMessages(ctx, conversationID)
+	messages, err := queries.GetAudienceConversationMessages(ctx, models.GetAudienceConversationMessagesParams{
+		ConversationID: conversationID,
+		GameID:         gameID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conversation messages: %w", err)
 	}

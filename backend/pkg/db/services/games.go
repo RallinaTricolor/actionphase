@@ -411,6 +411,13 @@ func (gs *GameService) GetUserRole(ctx context.Context, gameID, userID int32) (s
 	return role, nil
 }
 
+// IsActiveParticipant reports whether the user has an active participant row
+// of any role. Unlike IsUserInGame it does not load the game to test the
+// primary GM, for callers that already hold the game (pkg/access).
+func (gs *GameService) IsActiveParticipant(ctx context.Context, gameID, userID int32) (bool, error) {
+	return models.New(gs.DB).IsUserInGame(ctx, models.IsUserInGameParams{GameID: gameID, UserID: userID})
+}
+
 func (gs *GameService) IsUserInGame(ctx context.Context, gameID, userID int32) (bool, error) {
 	queries := models.New(gs.DB)
 

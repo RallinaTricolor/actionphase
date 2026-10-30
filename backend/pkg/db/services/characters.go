@@ -727,23 +727,6 @@ func (cs *CharacterService) characterHasActionSubmissions(ctx context.Context, c
 	return count > 0, nil
 }
 
-// ============================================================================
-// Audience Participation Methods (NPC Assignment)
-// ============================================================================
-
-// ListAudienceNPCs retrieves all audience NPCs for a game with assignment information
-// Returns NPCs with owner information and current assignment status
-func (cs *CharacterService) ListAudienceNPCs(ctx context.Context, gameID int32) ([]models.ListAudienceNPCsRow, error) {
-	queries := models.New(cs.DB)
-
-	npcs, err := queries.ListAudienceNPCs(ctx, gameID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list audience NPCs: %w", err)
-	}
-
-	return npcs, nil
-}
-
 // GetCharacterActivityStats returns public and private message counts for a
 // character. The public count leaves out restricted threads the viewer can't
 // see; viewer must be resolved for the character's game.

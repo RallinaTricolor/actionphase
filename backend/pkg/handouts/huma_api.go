@@ -7,6 +7,7 @@ package handouts
 // /handouts.
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"net/http"
 
@@ -489,6 +490,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createHandout",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/handouts",
 		Summary:       "Create a handout",
@@ -506,6 +508,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listHandouts",
+		Extensions:  access.PublicRoute("published handouts are open to any logged-in user; drafts are GM-only"),
 		Method:      http.MethodGet,
 		Path:        "/handouts",
 		Summary:     "List game handouts",
@@ -519,6 +522,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getHandout",
+		Extensions:  access.PublicRoute("published handouts are open to any logged-in user; drafts are GM-only"),
 		Method:      http.MethodGet,
 		Path:        "/handouts/{handoutId}",
 		Summary:     "Get a handout",
@@ -534,6 +538,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateHandout",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/handouts/{handoutId}",
 		Summary:     "Update a handout",
@@ -550,6 +555,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "deleteHandout",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodDelete,
 		Path:          "/handouts/{handoutId}",
 		Summary:       "Delete a handout",
@@ -566,6 +572,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "publishHandout",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/handouts/{handoutId}/publish",
 		Summary:     "Publish a handout",
@@ -581,6 +588,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "unpublishHandout",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/handouts/{handoutId}/unpublish",
 		Summary:     "Unpublish a handout",
@@ -596,6 +604,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createHandoutComment",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/handouts/{handoutId}/comments",
 		Summary:       "Comment on a handout",
@@ -613,6 +622,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listHandoutComments",
+		Extensions:  access.PublicRoute("comments on a published handout are open to any logged-in user; drafts are GM-only"),
 		Method:      http.MethodGet,
 		Path:        "/handouts/{handoutId}/comments",
 		Summary:     "List handout comments",
@@ -628,6 +638,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateHandoutComment",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPatch,
 		Path:        "/handouts/{handoutId}/comments/{commentId}",
 		Summary:     "Edit a handout comment",
@@ -643,6 +654,7 @@ func RegisterHumaGameHandouts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "deleteHandoutComment",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodDelete,
 		Path:          "/handouts/{handoutId}/comments/{commentId}",
 		Summary:       "Delete a handout comment",
