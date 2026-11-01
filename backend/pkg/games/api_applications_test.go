@@ -10,9 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync/atomic"
 	"testing"
-
-	"actionphase/pkg/humaconfig"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
@@ -40,32 +39,55 @@ func setupApplicationsTestRouter(app *core.App, testDB *core.TestDatabase) *chi.
 				ActionSubmissionService: &dbactions.ActionSubmissionService{DB: testDB.Pool, Logger: app.ObsLogger, NotificationService: db.NewNotificationService(testDB.Pool, app.ObsLogger)},
 			}
 
-			// Public routes (no authentication required), mirroring
-			// production's grouping: Verifier without Authenticator, plus
-			// GameMiddleware for the game-scoped route.
+			// Authenticated routes. The applicant list is among them: it is
+			// open to any logged-in user, but not to anonymous callers.
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(tokenAuth))
-				r.Group(func(r chi.Router) {
-					r.Use(gameHandler.GameMiddleware())
-					RegisterHumaGamesPublicApplicants(humaconfig.New(r, "ActionPhase API", "1.0.0"), &gameHandler)
-				})
-			})
-
-			// Authenticated routes
-			r.Group(func(r chi.Router) {
-				r.Use(jwtauth.Verifier(tokenAuth))
+				r.Use(jwtauth.Authenticator(tokenAuth))
 				r.Use(core.RequireAuthenticationMiddleware(userService))
 				r.Use(core.AdminModeMiddleware)
 
 				r.Route("/{gameID}", func(r chi.Router) {
 					r.Use(gameHandler.GameMiddleware())
-					RegisterHumaGameScoped(humaconfig.New(r, "ActionPhase API", "1.0.0"), &gameHandler)
+					RegisterHumaGameScoped(newGatedGameAPI(r, app), &gameHandler)
 				})
 			})
 		})
 	})
 
 	return r
+}
+
+var applicantViewerCount atomic.Int32
+
+// asLoggedInUser authenticates req as a fresh user with no part in the game:
+// the applicant list is open to any logged-in user, not just participants.
+func asLoggedInUser(t *testing.T, app *core.App, testDB *core.TestDatabase, req *http.Request) {
+	t.Helper()
+	n := applicantViewerCount.Add(1)
+	viewer := testDB.CreateTestUser(t, "applicant_viewer_"+strconv.Itoa(int(n)), "applicant_viewer_"+strconv.Itoa(int(n))+"@example.com")
+	token, err := core.CreateTestJWTTokenForUser(app, viewer)
+	core.AssertNoError(t, err, "Viewer token creation should succeed")
+	req.Header.Set("Authorization", "Bearer "+token)
+}
+
+// TestGetPublicGameApplicants_RequiresLogin: a recruiting game's applicant list
+// is not readable anonymously.
+func TestGetPublicGameApplicants_RequiresLogin(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupApplicationsTestRouter(app, testDB)
+	gm := testDB.CreateTestUser(t, "applicants_login_gm", "applicants_login_gm@example.com")
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Recruiting Game")
+	testDB.SetGameStateDirectly(t, game.ID, core.GameStateRecruitment)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	core.AssertEqual(t, http.StatusUnauthorized, w.Code, "Anonymous caller should get 401")
 }
 
 // The local PublicApplicantResponse this file used to declare is gone: the
@@ -137,8 +159,9 @@ func TestGetPublicGameApplicants_Success(t *testing.T) {
 	})
 	core.AssertNoError(t, err, "Application 2 creation should succeed")
 
-	// Make request without authentication (public endpoint)
+	// Make request as a logged-in non-participant
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -240,8 +263,9 @@ func TestGetPublicGameApplicants_ForbiddenWhenNotRecruiting(t *testing.T) {
 				testDB.SetGameStateDirectly(t, game.ID, tt.gameState)
 			}
 
-			// Make request without authentication
+			// Make request as a logged-in non-participant
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+			asLoggedInUser(t, app, testDB, req)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -287,8 +311,9 @@ func TestGetPublicGameApplicants_EmptyList(t *testing.T) {
 	_, err = gameService.UpdateGameState(context.Background(), game.ID, core.GameStateRecruitment)
 	core.AssertNoError(t, err, "Game state update should succeed")
 
-	// Make request without authentication
+	// Make request as a logged-in non-participant
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -356,6 +381,7 @@ func TestGetPublicGameApplicants_NoStatusExposed(t *testing.T) {
 
 	// Make request to public endpoint
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -449,6 +475,7 @@ func TestGetPublicGameApplicants_OrderedByAppliedAt(t *testing.T) {
 
 	// Make request
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/"+strconv.Itoa(int(game.ID))+"/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -479,6 +506,7 @@ func TestGetPublicGameApplicants_InvalidGameID(t *testing.T) {
 
 	// Make request with invalid game ID
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/invalid/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -498,6 +526,7 @@ func TestGetPublicGameApplicants_NonexistentGame(t *testing.T) {
 
 	// Make request with nonexistent game ID
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/games/99999/applicants", nil)
+	asLoggedInUser(t, app, testDB, req)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

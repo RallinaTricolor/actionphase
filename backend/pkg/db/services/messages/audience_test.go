@@ -299,7 +299,7 @@ func TestGetAudienceConversationMessages(t *testing.T) {
 	core.AssertNoError(t, err, "Failed to send message")
 
 	t.Run("get_audience_conversation_messages_nonexistent", func(t *testing.T) {
-		messages, err := msgService.GetAudienceConversationMessages(context.Background(), 99999)
+		messages, err := msgService.GetAudienceConversationMessages(context.Background(), gameID, 99999)
 
 		// Should succeed but return empty list for nonexistent conversation
 		core.AssertNoError(t, err, "Should not error on nonexistent conversation")
@@ -308,7 +308,7 @@ func TestGetAudienceConversationMessages(t *testing.T) {
 
 	t.Run("get_audience_conversation_messages_valid_id", func(t *testing.T) {
 		// Use the actual conversation ID
-		messages, err := msgService.GetAudienceConversationMessages(context.Background(), conversation.ID)
+		messages, err := msgService.GetAudienceConversationMessages(context.Background(), gameID, conversation.ID)
 
 		// Function should execute without error
 		core.AssertNoError(t, err, "Should execute successfully")
@@ -319,6 +319,15 @@ func TestGetAudienceConversationMessages(t *testing.T) {
 		if len(messages) > 0 {
 			core.AssertEqual(t, "Test conversation message", messages[0].Content, "Message content should match what was sent")
 		}
+	})
+
+	t.Run("get_audience_conversation_messages_other_game", func(t *testing.T) {
+		otherGame := testDB.CreateTestGame(t, int32(fixtures.TestUser.ID), "Other Game")
+
+		messages, err := msgService.GetAudienceConversationMessages(context.Background(), otherGame.ID, conversation.ID)
+
+		core.AssertNoError(t, err, "Should not error for a conversation outside the game")
+		core.AssertEqual(t, 0, len(messages), "A conversation from another game must not be readable")
 	})
 }
 

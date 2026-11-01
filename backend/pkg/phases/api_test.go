@@ -67,7 +67,7 @@ func setupPhaseAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.Mux 
 				// game-scoped set rather than the three this file exercises
 				// keeps the router a copy of production rather than a subset,
 				// which is what makes the assertions describe the real API.
-				RegisterHumaGamePhases(humaconfig.New(r, "ActionPhase API", "1.0.0"), &phaseHandler)
+				RegisterHumaGamePhases(newGatedGameAPI(r, app), &phaseHandler)
 			})
 		})
 

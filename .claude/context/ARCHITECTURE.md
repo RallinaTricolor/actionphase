@@ -204,6 +204,56 @@ huma.Register(api, huma.Operation{
 }, h.humaCreateCharacter)
 ```
 
+**Every route under `/games/{gameID}` declares who may call it** via
+`Extensions: access.GMOnly()` / `access.AudienceOnly()` / `access.MembersOnly()` /
+`access.PublicRoute(reason)` / `access.CheckedInHandler(reason)`
+(`backend/pkg/access`). The access
+middleware enforces it before the handler runs; an undeclared route is refused
+with a 500 and fails `TestGameScopedOperationsDeclareAccess`. Pick `audience`,
+not a participant check, for anything showing other players' secrets: any
+player is a participant. The level is a floor; the handler may be stricter
+(primary GM only, row filtering, scoping child IDs to the game).
+`member` means an *active* participant (or the GM flag, or anyone once the game
+is a public archive): a removed player is refused. The GM flag (`is_gm`: GM,
+co-GM, or a site admin in admin mode) passes every level, `audience` included. Use `public` for game info,
+Common Room reads and the caller's own records (shared reasons:
+`access.ReasonGameInfo` / `ReasonCommonRoom` / `ReasonOwnRecords`); every write
+to shared content is `member` or stricter. `TestDeclaredAccessLevelsAreEnforced`
+drives every declared route through the real router as gm, player, audience,
+outsider, removed player and admin in admin mode. Don't restate a level's rule
+inline in the handler: the middleware is the gate. Package test routers that
+register game-scoped routes install it too (`newGatedGameAPI` in the games and
+phases tests).
+
+Routes that name a game's row by its own ID, with no `{gameID}` in the path
+(`/characters/{id}`, `/phases/{id}`, `/polls/{pollId}`, `/deadlines/{deadlineId}`,
+`/exports/{exportID}`), declare levels the same way. `access.ResourceMiddleware`
+reads the game from that row on every route that names it, Public included (404
+if the row or its game is gone), then applies the same rule. It puts the game
+and `is_gm` in the context under GameMiddleware's keys: handlers read them via
+`core.GameForRequest` / `core.IsRequestGameMaster` rather than loading them
+again. Favorites (`/comments/{commentId}/favorite`, `/favorites/*`) are the
+caller's own rows and run no access middleware. A new mount must be listed
+in `resourceRoutePrefixes` (wired with `gateResource` in `root.go`) or
+`nonGameRoutePrefixes` in `pkg/http/access_spec_test.go`; the spec test fails
+on a path in neither.
+
+**Child IDs under `/games/{gameID}` must belong to that game.** After the level
+check, `access.ChildScope` looks up every other ID in the path (`handoutId`,
+`resultId`, `conversationId`, ...) and answers 404 "<kind> not found in this
+game" unless the row is in `{gameID}`. A nested ID (`InParent`) must also
+belong to the ID before it: a comment to its thread's root post, a private
+message to its conversation, a handout comment to its handout, a character
+update to its result. Lookups are keyed by path *shape* in
+`childParams` (`pkg/http/access_resources.go`), because one parameter name can
+mean different tables (`commentId` under `/handouts` vs `/posts`); the queries
+live in `pkg/db/queries/access_scope.sql`. A new child-ID route needs a
+`childParams` entry, or it answers 500 and fails the spec test.
+`TestChildIDsMustBelongToTheGame` calls every such route with another game's
+IDs, and every nested route with a child from a sibling parent in the same
+game. IDs in request *bodies* (e.g. `character_id`) are not covered by this;
+handlers still check those.
+
 **Request validation lives in schema tags**, enforced by huma before the handler
 runs (422, with the field named). The same tags are published in the spec, so
 validation and documentation cannot drift:

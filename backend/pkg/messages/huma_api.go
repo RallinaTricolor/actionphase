@@ -7,6 +7,7 @@ package messages
 // under /characters, and the phase draft-post routes under /phases.
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -965,6 +966,16 @@ func (h *Handler) humaListRecentComments(ctx context.Context, in *recentComments
 	}}, nil
 }
 
+// loadGame reads one game, for core.GameForRequest when the request's
+// middleware has not already loaded it. A soft-deleted game is pgx.ErrNoRows.
+func (h *Handler) loadGame(ctx context.Context, id int32) (*models.Game, error) {
+	game, err := models.New(h.App.Pool).GetGame(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &game, nil
+}
+
 func (h *Handler) humaGetCharacterComments(ctx context.Context, in *characterCommentsInput) (*characterMessagesOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_character_comments")()
 
@@ -975,6 +986,21 @@ func (h *Handler) humaGetCharacterComments(ctx context.Context, in *characterCom
 	character, err := queries.GetCharacter(ctx, in.ID)
 	if err != nil {
 		h.App.ObsLogger.Warn(ctx, "Failed to get character", "error", err, "character_id", in.ID)
+		return nil, huma.Error404NotFound("character not found")
+	}
+
+	// Post history is part of the character's profile: a hidden NPC, or
+	// another player's unapproved character in a running game, 404s here
+	// exactly as its record and stats do, or probing IDs would reveal it.
+	game, err := core.GameForRequest(ctx, character.GameID, h.loadGame)
+	if err != nil {
+		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", character.GameID)
+		return nil, core.NotFoundOr500(err, "game")
+	}
+	authUser := core.GetAuthenticatedUser(ctx)
+	isGM := authUser != nil && core.IsRequestGameMaster(ctx, h.App.Pool, authUser, *game)
+	if !core.CanUserSeeCharacterProfile(ctx, h.App.Pool, character, *game, authUser, isGM) {
+		h.App.ObsLogger.Warn(ctx, "Concealed character not found", "character_id", character.ID)
 		return nil, huma.Error404NotFound("character not found")
 	}
 
@@ -1609,6 +1635,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "createPost",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/posts",
 		Summary:     "Create a common room post",
@@ -1628,6 +1655,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGamePosts",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/posts",
 		Summary:     "List common room posts",
@@ -1642,23 +1670,25 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePost",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPatch,
 		Path:        "/posts/{postId}",
 		Summary:     "Edit a post",
-		Description: "Replaces a post's content. Authors only.",
+		Description: "Replaces a post's content. Authors only: a co-GM cannot edit another GM's post, and an author keeps the right after leaving the GM role.",
 		Tags:        commonRoom,
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "Not the post's author"},
+			"403": {Description: "Not the post's author, or not a participant"},
 			"404": {Description: "Not found, or in a thread hidden from the caller"},
 		},
 	}, h.humaUpdatePost)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "setPostViewers",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/posts/{postId}/viewers",
 		Summary:     "Set who can see a post",
@@ -1679,6 +1709,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "createComment",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPost,
 		Path:        "/posts/{postId}/comments",
 		Summary:     "Comment on a post or another comment",
@@ -1700,6 +1731,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listPostComments",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/posts/{postId}/comments",
 		Summary:     "List a post's comments",
@@ -1716,6 +1748,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listPostCommentsWithThreads",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/posts/{postId}/comments-with-threads",
 		Summary:     "List a post's comments with nested replies",
@@ -1734,6 +1767,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateComment",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPatch,
 		Path:        "/posts/{postId}/comments/{commentId}",
 		Summary:     "Edit a comment",
@@ -1752,6 +1786,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteComment",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/posts/{postId}/comments/{commentId}",
 		Summary:     "Delete a comment",
@@ -1769,6 +1804,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getMessage",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/messages/{messageId}",
 		Summary:     "Get one message",
@@ -1784,6 +1820,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getMessageThreadContext",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/messages/{messageId}/thread-context",
 		Summary:     "Get a message with its ancestor chain",
@@ -1801,6 +1838,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listRecentComments",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/comments/recent",
 		Summary:     "List recent comments with their parents",
@@ -1818,6 +1856,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "markPostRead",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodPost,
 		Path:        "/posts/{postId}/mark-read",
 		Summary:     "Mark a post read",
@@ -1834,6 +1873,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameReadMarkers",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/read-markers",
 		Summary:     "List the caller's read markers",
@@ -1847,6 +1887,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getPostsUnreadInfo",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/posts-unread-info",
 		Summary:     "Per-post comment metadata for unread badges",
@@ -1861,6 +1902,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getUnreadCommentIDs",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/unread-comment-ids",
 		Summary:     "Unread comment IDs per post",
@@ -1874,6 +1916,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "toggleCommentRead",
+		Extensions:    access.PublicRoute(access.ReasonOwnRecords),
 		Method:        http.MethodPost,
 		Path:          "/posts/{postId}/comments/{commentId}/toggle-read",
 		Summary:       "Mark one comment read or unread",
@@ -1890,6 +1933,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getManualReadCommentIDs",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/manual-read-comment-ids",
 		Summary:     "Comment IDs the caller marked read",
@@ -1903,6 +1947,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "markAllCommentsRead",
+		Extensions:    access.PublicRoute(access.ReasonOwnRecords),
 		Method:        http.MethodPost,
 		Path:          "/phases/{phaseId}/mark-all-comments-read",
 		Summary:       "Mark every comment in a phase read",
@@ -1918,6 +1963,7 @@ func RegisterHumaGameMessages(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGameFavoriteCommentIDs",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/favorite-comment-ids",
 		Summary:     "Comment IDs the caller starred in this game",
@@ -1994,6 +2040,7 @@ func RegisterHumaFavorites(api huma.API, h *Handler) {
 func RegisterHumaCharacterMessages(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listCharacterComments",
+		Extensions:  access.PublicRoute(access.ReasonCommonRoom),
 		Method:      http.MethodGet,
 		Path:        "/{id}/comments",
 		Summary:     "List a character's posts and comments",
@@ -2019,6 +2066,7 @@ func RegisterHumaPhaseDraftPosts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getDraftPost",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/{id}/draft-post",
 		Summary:     "Get a phase's draft post",
@@ -2036,6 +2084,7 @@ func RegisterHumaPhaseDraftPosts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createDraftPost",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/{id}/draft-post",
 		Summary:       "Create a phase's draft post",
@@ -2055,6 +2104,7 @@ func RegisterHumaPhaseDraftPosts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateDraftPost",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{id}/draft-post",
 		Summary:     "Replace a phase's draft post",
@@ -2072,6 +2122,7 @@ func RegisterHumaPhaseDraftPosts(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteDraftPost",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/{id}/draft-post",
 		Summary:     "Delete a phase's draft post",

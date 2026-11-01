@@ -1189,3 +1189,58 @@ func TestCharacterAPI_SoftDeletedGameBlocksEdits(t *testing.T) {
 	core.AssertNoError(t, err, "reload character")
 	core.AssertEqual(t, "Original Name", after.Name, "name must be unchanged")
 }
+
+// TestCharacterAPI_SoftDeletedGameGMRoutes404 covers the /characters/{id}
+// routes that load the game themselves after the character: delete, reassign
+// and stats. Each used to answer 500 when the game was deleted; each must 404
+// and leave the character as it was.
+func TestCharacterAPI_SoftDeletedGameGMRoutes404(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "characters", "game_participants", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupCharacterTestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "sdgm_gm", "sdgm_gm@example.com")
+	player := testDB.CreateTestUser(t, "sdgm_player", "sdgm_player@example.com")
+	newOwner := testDB.CreateTestUser(t, "sdgm_new", "sdgm_new@example.com")
+	game := testDB.CreateTestGameWithState(t, int32(gm.ID), "Soft Delete GM Routes", "in_progress")
+	testDB.AddTestGameParticipant(t, game.ID, int32(player.ID), "player")
+	testDB.AddTestGameParticipant(t, game.ID, int32(newOwner.ID), "player")
+
+	character, err := dbmodels.New(testDB.Pool).CreateCharacter(ctx, dbmodels.CreateCharacterParams{
+		GameID: game.ID, UserID: pgtype.Int4{Int32: int32(player.ID), Valid: true},
+		Name: "Kept Hero", CharacterType: "player_character", Status: "approved",
+	})
+	core.AssertNoError(t, err, "creating character should succeed")
+
+	gmToken, err := createTestAuthToken(app, gm)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	send := func(method, path, body string) int {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	base := fmt.Sprintf("/api/v1/characters/%d", character.ID)
+	statsPath := base + "/stats"
+	reassignBody := fmt.Sprintf(`{"new_owner_user_id":%d}`, newOwner.ID)
+
+	core.AssertEqual(t, http.StatusOK, send("GET", statsPath, ""), "GM can read stats while the game is live")
+
+	_, err = testDB.Pool.Exec(ctx, "UPDATE games SET deleted_at = NOW() WHERE id = $1", game.ID)
+	core.AssertNoError(t, err, "soft-delete game")
+
+	core.AssertEqual(t, http.StatusNotFound, send("GET", statsPath, ""), "stats in a deleted game should 404, not 500")
+	core.AssertEqual(t, http.StatusNotFound, send("PUT", base+"/reassign", reassignBody), "reassign in a deleted game should 404, not 500")
+	core.AssertEqual(t, http.StatusNotFound, send("DELETE", base, ""), "delete in a deleted game should 404, not 500")
+
+	after, err := dbmodels.New(testDB.Pool).GetCharacter(ctx, character.ID)
+	core.AssertNoError(t, err, "character must still exist")
+	core.AssertEqual(t, int32(player.ID), after.UserID.Int32, "owner must be unchanged")
+}

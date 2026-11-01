@@ -8,6 +8,7 @@ package games
 // fully authenticated.
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"encoding/json"
 	"errors"
@@ -98,25 +99,6 @@ func (h *Handler) requireGMFlag(ctx context.Context, forbiddenMsg, logMsg string
 		return h.logAndErr(ctx, core.ErrForbidden(forbiddenMsg), logMsg)
 	}
 	return nil
-}
-
-// requireCanViewGame is the read gate the audience endpoints share. It admits
-// participants and, for a completed game, any authenticated user.
-func (h *Handler) requireCanViewGame(ctx context.Context, gameID int32, logMsg string) (*core.AuthenticatedUser, error) {
-	authUser, err := h.requireAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	canView, err := h.GameService.CanUserViewGame(ctx, gameID, authUser.ID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to check game view access",
-			"error", err, "game_id", gameID, "user_id", authUser.ID)
-	}
-	if !canView {
-		return nil, h.logAndErr(ctx, core.ErrForbidden("you do not have permission to view this game's content"), logMsg)
-	}
-	return authUser, nil
 }
 
 // requireSheetTab rejects a tab key the game's character sheet doesn't have,
@@ -630,12 +612,6 @@ type participantOutput struct {
 
 type audienceMembersOutput struct {
 	Body *ListAudienceMembersResponse
-}
-
-type audienceNPCsOutput struct {
-	Body struct {
-		NPCs any `json:"npcs"`
-	}
 }
 
 type privateConversationsOutput struct {
@@ -1836,7 +1812,7 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 		return nil, err
 	}
 	// Reuse the row the middleware already loaded rather than issuing a second
-	// query on this unauthenticated endpoint.
+	// query.
 	game, err := gameFromCtx(ctx)
 	if err != nil {
 		return nil, err
@@ -1853,7 +1829,7 @@ func (h *Handler) humaGetPublicGameApplicants(ctx context.Context, in *gameScope
 	}
 
 	// Username and role only — no status, no review information. This endpoint
-	// is readable by anyone.
+	// is readable by any logged-in user, not just the GM.
 	response := make([]PublicApplicantResponse, 0)
 	for _, applicant := range applicants {
 		item := PublicApplicantResponse{
@@ -1984,24 +1960,6 @@ func (h *Handler) humaUpdateAutoAcceptAudience(ctx context.Context, in *autoAcce
 	return out, nil
 }
 
-func (h *Handler) humaListAudienceNPCs(ctx context.Context, in *gameScopedInput) (*audienceNPCsOutput, error) {
-	defer h.App.ObsLogger.LogOperation(ctx, "api_list_audience_npcs")()
-
-	gameID, err := gameIDFromCtx(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	npcs, err := h.CharacterService.ListAudienceNPCs(ctx, gameID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to list audience NPCs", "error", err, "game_id", gameID)
-	}
-
-	out := &audienceNPCsOutput{}
-	out.Body.NPCs = npcs
-	return out, nil
-}
-
 // listConversationsInput's limit and offset are strings for the same reason as
 // filteredGamesInput: the chi handler ignored unparseable and out-of-range
 // values rather than rejecting them (gotcha 18).
@@ -2025,9 +1983,6 @@ func (h *Handler) humaListAllPrivateConversations(ctx context.Context, in *listC
 
 	gameID, err := gameIDFromCtx(ctx)
 	if err != nil {
-		return nil, err
-	}
-	if _, err := h.requireCanViewGame(ctx, gameID, "List all private conversations forbidden"); err != nil {
 		return nil, err
 	}
 
@@ -2118,11 +2073,8 @@ func (h *Handler) humaGetAudienceConversationMessages(ctx context.Context, in *c
 	if err != nil {
 		return nil, err
 	}
-	if _, err := h.requireCanViewGame(ctx, gameID, "Get audience conversation messages forbidden"); err != nil {
-		return nil, err
-	}
 
-	messages, err := h.MessageService.GetAudienceConversationMessages(ctx, in.ConversationID)
+	messages, err := h.MessageService.GetAudienceConversationMessages(ctx, gameID, in.ConversationID)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get conversation messages", "error", err, "conversation_id", in.ConversationID)
 	}
@@ -2173,9 +2125,6 @@ func (h *Handler) humaGetConversationParticipants(ctx context.Context, in *conve
 	if err != nil {
 		return nil, err
 	}
-	if _, err := h.requireCanViewGame(ctx, gameID, "Get conversation participants forbidden"); err != nil {
-		return nil, err
-	}
 
 	characters, err := h.MessageService.GetConversationParticipantCharacters(ctx, gameID, in.Selected)
 	if err != nil {
@@ -2199,9 +2148,6 @@ func (h *Handler) humaListAllActionSubmissions(ctx context.Context, in *actionSu
 
 	gameID, err := gameIDFromCtx(ctx)
 	if err != nil {
-		return nil, err
-	}
-	if _, err := h.requireCanViewGame(ctx, gameID, "List all action submissions forbidden"); err != nil {
 		return nil, err
 	}
 
@@ -2330,30 +2276,12 @@ func (h *Handler) humaGetGameStats(ctx context.Context, in *gameScopedInput) (*g
 		return nil, err
 	}
 
-	// Checked before the view permission so an in-progress game reports the
-	// actual reason rather than a 403.
+	// The only gate: the numbers aggregate over private messages, so they
+	// are withheld from everyone, the GM included, until the game is over.
+	// Once it is, they are public to any logged-in user.
 	if game.State != core.GameStateCompleted {
 		return nil, h.logAndErr(ctx, core.ErrConflict("statistics are only available for completed games"),
 			"Game stats requested for non-completed game", "game_id", gameID, "state", game.State)
-	}
-
-	authUser := core.GetAuthenticatedUser(ctx)
-	if authUser == nil {
-		// 403 rather than 401, matching the chi handler.
-		return nil, h.logAndErr(ctx, core.ErrForbidden("authentication required"),
-			"Unauthenticated game stats request", "game_id", gameID)
-	}
-
-	// Reuse the canonical read check rather than hand-rolling a participant
-	// test: it already encodes public archive mode for completed games.
-	canView, err := h.GameService.CanUserViewGame(ctx, gameID, authUser.ID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to check game view permission for stats",
-			"error", err, "game_id", gameID, "user_id", authUser.ID)
-	}
-	if !canView {
-		return nil, h.logAndErr(ctx, core.ErrForbidden("you do not have access to this game"),
-			"Forbidden game stats request", "game_id", gameID, "user_id", authUser.ID)
 	}
 
 	stats, err := h.GameStatsService.GetGameStats(ctx, gameID)
@@ -2837,26 +2765,6 @@ func RegisterHumaGamesPublicList(api huma.API, h *Handler) {
 	}, h.humaGetFilteredGames)
 }
 
-// RegisterHumaGamesPublicApplicants registers the public applicant list.
-//
-// Separate from the listing because this one additionally needs GameMiddleware
-// to load the game, and a huma API binds to a single router.
-func RegisterHumaGamesPublicApplicants(api huma.API, h *Handler) {
-	huma.Register(api, huma.Operation{
-		OperationID: "listPublicGameApplicants",
-		Method:      http.MethodGet,
-		Path:        "/{gameID}/applicants",
-		Summary:     "List public applicants",
-		Description: "Usernames and roles of a recruiting game's applicants. No status or review information, and readable without authentication.",
-		Tags:        []string{"Game Applications"},
-		Responses: map[string]*huma.Response{
-			"422": {Description: "Request failed validation"},
-			"403": {Description: "The game is not recruiting"},
-			"404": {Description: "Game not found"},
-		},
-	}, h.humaGetPublicGameApplicants)
-}
-
 // RegisterHumaGamesCollection registers the operation that needs no game
 // context: game creation. It lives on the /games router itself, outside the
 // /{gameID} subrouter.
@@ -2896,6 +2804,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGame",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/",
 		Summary:     "Get a game",
@@ -2910,6 +2819,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGameDetails",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/details",
 		Summary:     "Get a game with details",
@@ -2924,6 +2834,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateGame",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/",
 		Summary:     "Update a game",
@@ -2941,6 +2852,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateGameCharacterSheet",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/character-sheet",
 		Summary:     "Customise the character sheet",
@@ -2958,6 +2870,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteGame",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/",
 		Summary:     "Delete a game",
@@ -2974,6 +2887,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateGameState",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/state",
 		Summary:     "Update game state",
@@ -2991,6 +2905,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "uploadGameBanner",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/banner",
 		Summary:     "Upload a game banner",
@@ -3007,6 +2922,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteGameBanner",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/banner",
 		Summary:     "Remove a game banner",
@@ -3024,6 +2940,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameParticipants",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/participants",
 		Summary:     "List participants",
@@ -3037,6 +2954,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "leaveGame",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodDelete,
 		Path:        "/leave",
 		Summary:     "Leave a game",
@@ -3052,6 +2970,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "addParticipantDirectly",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/participants/direct-add",
 		Summary:       "Add a participant directly",
@@ -3070,6 +2989,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "removePlayer",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/participants/{userId}",
 		Summary:     "Remove a player",
@@ -3086,6 +3006,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "promoteToCoGM",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/participants/{userId}/promote-to-co-gm",
 		Summary:     "Promote to co-GM",
@@ -3102,6 +3023,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "demoteFromCoGM",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/participants/{userId}/demote-from-co-gm",
 		Summary:     "Demote a co-GM",
@@ -3118,6 +3040,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "transitionPlayerToAudience",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/participants/{userId}/to-audience",
 		Summary:     "Move a player to the audience",
@@ -3136,6 +3059,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "applyToGame",
+		Extensions:    access.PublicRoute(access.ReasonOwnRecords),
 		Method:        http.MethodPost,
 		Path:          "/apply",
 		Summary:       "Apply to a game",
@@ -3152,7 +3076,25 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 	}, h.humaApplyToGame)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "listPublicGameApplicants",
+		Extensions:  access.PublicRoute("the recruitment roster is open to any logged-in user while the game recruits"),
+		Method:      http.MethodGet,
+		Path:        "/applicants",
+		Summary:     "List public applicants",
+		Description: "Usernames and roles of a recruiting game's applicants. No status or review information. Open to any authenticated user.",
+		Tags:        []string{"Game Applications"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "The game is not recruiting"},
+			"404": {Description: "Game not found"},
+		},
+	}, h.humaGetPublicGameApplicants)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "listGameApplications",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/applications",
 		Summary:     "List applications",
@@ -3167,6 +3109,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getMyGameApplication",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/application/mine",
 		Summary:     "Get my application",
@@ -3180,6 +3123,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "reviewGameApplication",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/applications/{applicationId}/review",
 		Summary:     "Review an application",
@@ -3196,6 +3140,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "withdrawGameApplication",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodDelete,
 		Path:        "/application",
 		Summary:     "Withdraw my application",
@@ -3214,6 +3159,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listAudienceMembers",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/audience",
 		Summary:     "List audience members",
@@ -3226,20 +3172,8 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 	}, h.humaListAudienceMembers)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "listAudienceNPCs",
-		Method:      http.MethodGet,
-		Path:        "/characters/audience-npcs",
-		Summary:     "List audience NPCs",
-		Description: "Lists the game's audience-controlled NPCs.",
-		Tags:        []string{"Audience"},
-		Security:    bearer,
-		Responses: map[string]*huma.Response{
-			"401": {Description: "Not authenticated"},
-		},
-	}, h.humaListAudienceNPCs)
-
-	huma.Register(api, huma.Operation{
 		OperationID: "updateAutoAcceptAudience",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/settings/auto-accept-audience",
 		Summary:     "Set auto-accept for audience",
@@ -3254,8 +3188,14 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		},
 	}, h.humaUpdateAutoAcceptAudience)
 
+	// The audience oversight reads. The declared Audience level is their only
+	// gate, and deliberately stricter than Member: a player of an active game
+	// must not read the other players' secrets. Everyone it admits may also
+	// see usernames in an anonymous game and hidden NPCs, so these handlers
+	// need no per-row scrubbing.
 	huma.Register(api, huma.Operation{
 		OperationID: "listAllPrivateConversations",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/private-messages/all",
 		Summary:     "List all private conversations",
@@ -3265,12 +3205,13 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"400": {Description: "participant_ids contained a non-integer"},
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "The caller cannot view this game's content"},
+			"403": {Description: "The caller is not the GM, a co-GM or an audience member, and the game is not a public archive"},
 		},
 	}, h.humaListAllPrivateConversations)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listConversationParticipants",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/private-messages/participants",
 		Summary:     "List conversation participants",
@@ -3280,36 +3221,38 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Responses: map[string]*huma.Response{
 			"400": {Description: "selected[] contained a non-integer"},
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "The caller cannot view this game's content"},
+			"403": {Description: "The caller is not the GM, a co-GM or an audience member, and the game is not a public archive"},
 		},
 	}, h.humaGetConversationParticipants)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getAudienceConversationMessages",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/private-messages/conversations/{conversationId}",
 		Summary:     "Read a private conversation",
-		Description: "Returns one private conversation's messages, for GMs and the audience.",
+		Description: "Returns one private conversation's messages, for GMs and the audience. Also open to any authenticated user once the game is a public archive.",
 		Tags:        []string{"Audience"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "The caller cannot view this game's content"},
+			"403": {Description: "The caller is not the GM, a co-GM or an audience member, and the game is not a public archive"},
 		},
 	}, h.humaGetAudienceConversationMessages)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listAllActionSubmissions",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/action-submissions/all",
 		Summary:     "List all action submissions",
-		Description: "Lists every action submission in the game, for GMs and the audience.",
+		Description: "Lists every action submission in the game, for GMs and the audience. Also open to any authenticated user once the game is a public archive.",
 		Tags:        []string{"Audience"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "The caller cannot view this game's content"},
+			"403": {Description: "The caller is not the GM, a co-GM or an audience member, and the game is not a public archive"},
 		},
 	}, h.humaListAllActionSubmissions)
 
@@ -3317,6 +3260,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGameLogs",
+		Extensions:  access.CheckedInHandler("GM only while the game runs; open once it is completed or cancelled"),
 		Method:      http.MethodGet,
 		Path:        "/logs",
 		Summary:     "Get the game log",
@@ -3331,6 +3275,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGameStats",
+		Extensions:  access.PublicRoute("statistics are public once the game is completed, and withheld from everyone until then"),
 		Method:      http.MethodGet,
 		Path:        "/stats",
 		Summary:     "Get post-game statistics",
@@ -3338,7 +3283,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 		Tags:        []string{"Games"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
-			"403": {Description: "Not authenticated, or the caller cannot view this game"},
+			"401": {Description: "Not authenticated"},
 			"409": {Description: "The game is not completed"},
 		},
 	}, h.humaGetGameStats)
@@ -3347,6 +3292,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listLootTables",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/loot-tables",
 		Summary:     "List loot tables",
@@ -3361,6 +3307,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "createLootTable",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/loot-tables",
 		Summary:     "Create a loot table",
@@ -3377,6 +3324,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateLootTable",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/loot-tables/{tableId}",
 		Summary:     "Rename a loot table",
@@ -3393,6 +3341,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteLootTable",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/loot-tables/{tableId}",
 		Summary:     "Delete a loot table",
@@ -3408,6 +3357,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listLootTableContents",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/loot-tables/{tableId}/contents",
 		Summary:     "List loot table contents",
@@ -3423,6 +3373,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "replaceLootTableContents",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/loot-tables/{tableId}/contents",
 		Summary:     "Replace loot table contents",
@@ -3439,6 +3390,7 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "rollLootForCharacter",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/loot-tables/{tableId}/random/{characterId}",
 		Summary:     "Roll random loot",
