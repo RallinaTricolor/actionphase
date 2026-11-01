@@ -225,7 +225,7 @@ func setupFullPhaseAPITestRouter(app *core.App, testDB *core.TestDatabase) *chi.
 				r.Use(gameHandler.GameMiddleware())
 
 				// huma / type-first, mirroring root.go.
-				RegisterHumaGamePhases(humaconfig.New(r, "ActionPhase API", "1.0.0"), &phaseHandler)
+				RegisterHumaGamePhases(newGatedGameAPI(r, app), &phaseHandler)
 			})
 		})
 

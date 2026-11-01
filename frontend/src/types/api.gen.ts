@@ -1439,7 +1439,7 @@ export interface paths {
         };
         /**
          * List all action submissions
-         * @description Lists every action submission in the game, for GMs and the audience.
+         * @description Lists every action submission in the game, for GMs and the audience. Also open to any authenticated user once the game is a public archive.
          */
         get: operations["listAllActionSubmissions"];
         put?: never;
@@ -1503,7 +1503,7 @@ export interface paths {
         };
         /**
          * List public applicants
-         * @description Usernames and roles of a recruiting game's applicants. No status or review information, and readable without authentication.
+         * @description Usernames and roles of a recruiting game's applicants. No status or review information. Open to any authenticated user.
          */
         get: operations["listPublicGameApplicants"];
         put?: never;
@@ -1702,26 +1702,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/games/{gameID}/characters/audience-npcs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List audience NPCs
-         * @description Lists the game's audience-controlled NPCs.
-         */
-        get: operations["listAudienceNPCs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/games/{gameID}/characters/controllable": {
         parameters: {
             query?: never;
@@ -1831,7 +1811,7 @@ export interface paths {
         };
         /**
          * List the published documents of the game's community
-         * @description Backs the Info tab. Requires access to the GAME, not standing in the community. A game with no community returns an empty list rather than 404, so legacy games simply render no community section.
+         * @description Backs the Info tab. Open to any authenticated user, like the community's own document list. A game with no community returns an empty list rather than 404, so legacy games simply render no community section.
          */
         get: operations["listGameCommunityDocuments"];
         put?: never;
@@ -2697,7 +2677,7 @@ export interface paths {
         head?: never;
         /**
          * Edit a post
-         * @description Replaces a post's content. Authors only.
+         * @description Replaces a post's content. Authors only: a co-GM cannot edit another GM's post, and an author keeps the right after leaving the GM role.
          */
         patch: operations["updatePost"];
         trace?: never;
@@ -2859,7 +2839,7 @@ export interface paths {
         };
         /**
          * Read a private conversation
-         * @description Returns one private conversation's messages, for GMs and the audience.
+         * @description Returns one private conversation's messages, for GMs and the audience. Also open to any authenticated user once the game is a public archive.
          */
         get: operations["getAudienceConversationMessages"];
         put?: never;
@@ -3848,9 +3828,6 @@ export interface components {
             sender_user_id: number | null;
             sender_username: string;
             updated_at: string;
-        };
-        AudienceNPCsOutputBody: {
-            npcs: unknown;
         };
         AuthUser: {
             Token: string;
@@ -10715,7 +10692,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The caller cannot view this game's content */
+            /** @description The caller is not the GM, a co-GM or an audience member, and the game is not a public archive */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -10866,6 +10843,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicApplicantResponse"][];
                 };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description The game is not recruiting */
             403: {
@@ -11398,36 +11382,6 @@ export interface operations {
             };
         };
     };
-    listAudienceNPCs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Game ID */
-                gameID: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AudienceNPCsOutputBody"];
-                };
-            };
-            /** @description Not authenticated */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     listControllableCharacters: {
         parameters: {
             query?: never;
@@ -11483,13 +11437,6 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The caller cannot view this game's content */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11633,13 +11580,6 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Caller cannot view this game */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14119,7 +14059,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Not the post's author */
+            /** @description Not the post's author, or not a participant */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14646,7 +14586,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The caller cannot view this game's content */
+            /** @description The caller is not the GM, a co-GM or an audience member, and the game is not a public archive */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14685,7 +14625,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The caller cannot view this game's content */
+            /** @description The caller is not the GM, a co-GM or an audience member, and the game is not a public archive */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14739,7 +14679,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The caller cannot view this game's content */
+            /** @description The caller is not the GM, a co-GM or an audience member, and the game is not a public archive */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15750,8 +15690,8 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Not authenticated, or the caller cannot view this game */
-            403: {
+            /** @description Not authenticated */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -177,7 +177,7 @@ func strPtr(s string) *string {
 // "not found"), 500 for a failed lookup.
 // Uses the unified permission check for GM, Co-GM, and admin mode support
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) error {
-	game, err := h.GameService.GetGame(ctx, gameID)
+	game, err := core.GameForRequest(ctx, gameID, h.GameService.GetGame)
 	if err != nil {
 		return core.NotFoundOr500(err, "poll")
 	}
@@ -199,7 +199,7 @@ func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32
 // verifyUserInGame checks if a user is a participant in a game (GM, Co-GM, or
 // player). Its errors are huma errors, with the same statuses as verifyUserIsGM.
 func (h *Handler) verifyUserInGame(ctx context.Context, gameID int32, userID int32) error {
-	game, err := h.GameService.GetGame(ctx, gameID)
+	game, err := core.GameForRequest(ctx, gameID, h.GameService.GetGame)
 	if err != nil {
 		return core.NotFoundOr500(err, "poll")
 	}
@@ -257,7 +257,7 @@ type pollViewAccess struct {
 //   - Everyone else: only once the game is a public archive (completed or
 //     epilogue) — see core.IsPublicArchive
 func (h *Handler) checkPollViewAccess(ctx context.Context, gameID int32, userID int32) (pollViewAccess, error) {
-	game, err := h.GameService.GetGame(ctx, gameID)
+	game, err := core.GameForRequest(ctx, gameID, h.GameService.GetGame)
 	if err != nil {
 		// A huma error: 404 for a missing (soft-deleted) game, else 500.
 		return pollViewAccess{}, core.NotFoundOr500(err, "poll")

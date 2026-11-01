@@ -1,6 +1,7 @@
 package polls
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"fmt"
 	"net/http"
@@ -71,6 +72,7 @@ type voteOutput struct {
 func RegisterHumaGamePolls(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "createPoll",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/polls",
 		Summary:     "Create a poll",
@@ -80,6 +82,7 @@ func RegisterHumaGamePolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGamePolls",
+		Extensions:  access.PublicRoute(access.ReasonPolls),
 		Method:      http.MethodGet,
 		Path:        "/polls",
 		Summary:     "List game polls",
@@ -88,6 +91,7 @@ func RegisterHumaGamePolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listPhasePolls",
+		Extensions:  access.PublicRoute(access.ReasonPolls),
 		Method:      http.MethodGet,
 		Path:        "/phases/{phaseId}/polls",
 		Summary:     "List polls for a phase",
@@ -99,6 +103,7 @@ func RegisterHumaGamePolls(api huma.API, h *Handler) {
 func RegisterHumaPolls(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "getPoll",
+		Extensions:  access.PublicRoute(access.ReasonPolls),
 		Method:      http.MethodGet,
 		Path:        "/{pollId}",
 		Summary:     "Get a poll",
@@ -107,6 +112,7 @@ func RegisterHumaPolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getPollResults",
+		Extensions:  access.PublicRoute(access.ReasonPolls),
 		Method:      http.MethodGet,
 		Path:        "/{pollId}/results",
 		Summary:     "Get poll results",
@@ -117,6 +123,7 @@ func RegisterHumaPolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "submitVote",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPost,
 		Path:        "/{pollId}/vote",
 		Summary:     "Submit a vote",
@@ -125,6 +132,7 @@ func RegisterHumaPolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePoll",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{pollId}",
 		Summary:     "Update a poll",
@@ -133,6 +141,7 @@ func RegisterHumaPolls(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deletePoll",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/{pollId}",
 		Summary:     "Delete a poll",
@@ -497,7 +506,7 @@ func (h *Handler) submitVote(ctx context.Context, in *submitVoteInput) (*voteOut
 		return nil, err
 	}
 
-	game, err := h.GameService.GetGame(ctx, poll.GameID)
+	game, err := core.GameForRequest(ctx, poll.GameID, h.GameService.GetGame)
 	if err != nil {
 		h.App.ObsLogger.Warn(ctx, "Failed to get game", "error", err, "game_id", poll.GameID)
 		return nil, core.NotFoundOr500(err, "game")

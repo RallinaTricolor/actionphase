@@ -63,7 +63,7 @@ func toDeadlineWithGameResponse(d *core.DeadlineWithGame) *DeadlineWithGameRespo
 // Returns the game if verification succeeds, or an error response if it fails
 // Uses the unified permission check for GM, Co-GM, and admin mode support
 func (h *Handler) verifyUserIsGM(ctx context.Context, gameID int32, userID int32) (*models.Game, render.Renderer) {
-	game, err := h.GameService.GetGame(ctx, gameID)
+	game, err := core.GameForRequest(ctx, gameID, h.GameService.GetGame)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to get game")
 		return nil, core.ErrNotFound("Game not found")

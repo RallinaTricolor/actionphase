@@ -848,14 +848,18 @@ WHERE c.game_id = sqlc.arg(game_id)
   );
 
 -- name: GetAudienceConversationMessages :many
--- Get all messages in a specific conversation (for audience/GM)
+-- Get all messages in a specific conversation (for audience/GM).
+-- Scoped to the game: the caller's access was checked against game_id, so a
+-- conversation from any other game must come back empty rather than readable.
 SELECT pm.*,
        u.username as sender_username,
        c.name as sender_character_name
 FROM private_messages pm
+JOIN conversations conv ON conv.id = pm.conversation_id
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
-WHERE pm.conversation_id = $1
+WHERE pm.conversation_id = sqlc.arg(conversation_id)
+  AND conv.game_id = sqlc.arg(game_id)
 ORDER BY pm.created_at ASC;
 
 -- name: CountMessagesByCharacter :one

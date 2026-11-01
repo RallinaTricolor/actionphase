@@ -713,6 +713,18 @@ func TestSetRandomLootForCharacterAuthorization(t *testing.T) {
 		core.AssertNoError(t, err, "Should fetch attacker NPC data")
 		core.AssertEqual(t, 0, len(data), "No loot should be granted on a cross-game roll")
 	})
+
+	// The permission check is the first lookup of the character, so a bad ID
+	// surfaces there; it used to come back as a 500.
+	t.Run("rolling onto a missing character 404s", func(t *testing.T) {
+		path := fmt.Sprintf("/api/v1/games/%d/loot-tables/%d/random/%d", fixtures.TestGame.ID, created.ID, 999999)
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewBuffer(nil))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		core.AssertEqual(t, http.StatusNotFound, w.Code, "missing character should 404, got "+w.Body.String())
+	})
 }
 
 // These cases cover the constraints the loot request types declare as huma schema

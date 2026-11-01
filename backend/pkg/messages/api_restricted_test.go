@@ -114,6 +114,10 @@ func newRestrictedAPIScenario(t *testing.T, prefix string) *restrictedAPIScenari
 			GameID: s.game.ID, UserID: &ownerID, Name: prefix + " " + name, CharacterType: "player_character",
 		})
 		require.NoError(t, err)
+		// Approved, as a character playing in a running game is: another
+		// player's pending character answers 404 on its profile.
+		c, err = characters.ApproveCharacter(ctx, c.ID)
+		require.NoError(t, err)
 		return c
 	}
 	s.gmChar, s.aChar, s.bChar = character(gm, "Narrator"), character(a, "Alice"), character(b, "Bob")

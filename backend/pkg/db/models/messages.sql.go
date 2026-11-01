@@ -667,11 +667,18 @@ SELECT pm.id, pm.conversation_id, pm.sender_user_id, pm.sender_character_id, pm.
        u.username as sender_username,
        c.name as sender_character_name
 FROM private_messages pm
+JOIN conversations conv ON conv.id = pm.conversation_id
 JOIN users u ON pm.sender_user_id = u.id
 LEFT JOIN characters c ON pm.sender_character_id = c.id
 WHERE pm.conversation_id = $1
+  AND conv.game_id = $2
 ORDER BY pm.created_at ASC
 `
+
+type GetAudienceConversationMessagesParams struct {
+	ConversationID int32 `json:"conversation_id"`
+	GameID         int32 `json:"game_id"`
+}
 
 type GetAudienceConversationMessagesRow struct {
 	ID                  int32              `json:"id"`
@@ -690,9 +697,11 @@ type GetAudienceConversationMessagesRow struct {
 	SenderCharacterName pgtype.Text        `json:"sender_character_name"`
 }
 
-// Get all messages in a specific conversation (for audience/GM)
-func (q *Queries) GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]GetAudienceConversationMessagesRow, error) {
-	rows, err := q.db.Query(ctx, getAudienceConversationMessages, conversationID)
+// Get all messages in a specific conversation (for audience/GM).
+// Scoped to the game: the caller's access was checked against game_id, so a
+// conversation from any other game must come back empty rather than readable.
+func (q *Queries) GetAudienceConversationMessages(ctx context.Context, arg GetAudienceConversationMessagesParams) ([]GetAudienceConversationMessagesRow, error) {
+	rows, err := q.db.Query(ctx, getAudienceConversationMessages, arg.ConversationID, arg.GameID)
 	if err != nil {
 		return nil, err
 	}

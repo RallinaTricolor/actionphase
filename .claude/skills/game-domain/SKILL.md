@@ -267,7 +267,25 @@ What *does* stay hidden: drafts (`is_draft`) and soft-deleted content
 normal permission rules, keeping both restrictions above.
 
 **Always reuse `CanUserViewGame` for read authorization rather than
-hand-rolling a participant check.**
+hand-rolling a participant check** — except for the audience oversight
+endpoints above (all PMs, all action submissions).
+`CanUserViewGame` admits every *player*, so those declare
+`Extensions: access.AudienceOnly()` (`backend/pkg/access`): GM, co-GM, audience,
+an admin in admin mode, or a public archive, enforced before the handler runs. Any endpoint that reads by a child ID (e.g. a conversation)
+must also scope that ID to the URL's game, or access to one game unlocks all.
+
+**What any logged-in user may read in a running game** (confirmed by the
+owner, 2026-10-29): the game page, roster and participants, phases, deadlines,
+polls (not individual votes), published handouts, and the whole Common Room
+except restricted posts. These routes declare `access.PublicRoute(...)`.
+Writing to any of it, and every conversation route, is `access.MembersOnly()`,
+which means an *active* participant: a removed player loses access.
+The same holds for a single character's page (profile, public sheet fields,
+stats, post history): public, with hidden NPCs, and other players' unapproved
+characters while the game is running, answering 404 on all four alike
+(`core.CanViewCharacterProfile`). Editing a
+character (rename, sheet, avatar) and voting are member-only, so a removed
+player can no longer edit the character they still own.
 
 ---
 

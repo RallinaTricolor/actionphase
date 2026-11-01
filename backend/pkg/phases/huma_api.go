@@ -8,6 +8,7 @@ package phases
 // /phases.
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"errors"
 	"fmt"
@@ -96,15 +97,14 @@ func (h *Handler) loadPhaseGame(ctx context.Context, phaseID int32, authUser *co
 		return h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get phase", "error", err)
 	}
 
-	game, err := h.GameService.GetGame(ctx, phase.GameID)
+	// The access middleware on /phases/{id} has usually loaded the game and
+	// resolved is_gm already; these reuse that rather than querying again.
+	game, err := core.GameForRequest(ctx, phase.GameID, h.GameService.GetGame)
 	if err != nil {
 		return h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", phase.GameID), "Failed to get game", "error", err)
 	}
 
-	// The Ctx form of the same check the chi handlers made through
-	// core.IsUserGameMaster, which is itself only a *http.Request wrapper
-	// around this. Admin mode is read from the context either way.
-	if !core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
+	if !core.IsRequestGameMaster(ctx, h.App.Pool, authUser, *game) {
 		return h.logAndErr(ctx, core.ErrForbidden(forbiddenMsg), logMsg,
 			"phase_id", phaseID, "game_id", phase.GameID, "user_id", authUser.ID)
 	}
@@ -962,37 +962,10 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 		return nil, err
 	}
 
-	authUser, err := h.requireAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	canManage, err := h.PhaseService.CanUserManagePhases(ctx, gameID, authUser.ID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to check phase management permission", "error", err)
-	}
-
-	game, err := h.GameService.GetGame(ctx, gameID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", gameID), "Failed to get game", "error", err)
-	}
-
-	isAudience := core.IsUserAudience(ctx, h.App.Pool, gameID, authUser.ID)
-
-	// Allow access if: GM, audience, or the game is a public archive.
-	//
-	// The archive branch deliberately has no membership check -- a public-archive
-	// game (completed OR epilogue) is readable by any authenticated user. It is
-	// broader than the other two arms, which are scoped to a role: this one
-	// admits non-participants.
-	//
-	// Epilogue must be included: a player writing an epilogue needs to see what
+	// Gated by the declared Audience level alone: the GM, co-GMs, audience
+	// members, or anyone once the game is a public archive. Epilogue counts as
+	// an archive on purpose: a player writing an epilogue needs to see what
 	// happened to everyone else, which is the whole reason that state exists.
-	if !canManage && !isAudience && !core.IsPublicArchive(game.State) {
-		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM, audience, or any user of a public archive game can view all action results"),
-			"Get game action results forbidden")
-	}
-
 	results, err := h.ActionSubmissionService.GetGameResults(ctx, gameID)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game action results", "error", err)
@@ -1566,6 +1539,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createPhase",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/phases",
 		Summary:       "Create a phase",
@@ -1583,6 +1557,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCurrentPhase",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/current-phase",
 		Summary:     "Get the active phase",
@@ -1596,6 +1571,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGamePhases",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/phases",
 		Summary:     "List game phases",
@@ -1609,6 +1585,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "submitAction",
+		Extensions:    access.MembersOnly(),
 		Method:        http.MethodPost,
 		Path:          "/actions",
 		Summary:       "Submit an action",
@@ -1626,6 +1603,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameActions",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/actions",
 		Summary:     "List all game actions",
@@ -1640,6 +1618,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listMyActions",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/actions/mine",
 		Summary:     "List my action submissions",
@@ -1653,6 +1632,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createActionResult",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results",
 		Summary:       "Create an action result",
@@ -1670,6 +1650,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createStagedResultChain",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/staged",
 		Summary:       "Create a staged result chain",
@@ -1687,6 +1668,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameActionResults",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results",
 		Summary:     "List all game action results",
@@ -1701,6 +1683,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listMyActionResults",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/results/mine",
 		Summary:     "List my action results",
@@ -1714,6 +1697,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}",
 		Summary:     "Update an action result",
@@ -1730,6 +1714,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}",
 		Summary:     "Delete a draft action result",
@@ -1745,6 +1730,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "cancelPendingStagedPart",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}/pending",
 		Summary:     "Cancel a pending staged part",
@@ -1762,6 +1748,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "appendStagedPart",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/{resultId}/parts",
 		Summary:       "Append a staged part",
@@ -1781,6 +1768,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateStagedPartDelay",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}/delay",
 		Summary:     "Retime a staged part",
@@ -1799,6 +1787,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "publishActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/results/{resultId}/publish",
 		Summary:     "Publish an action result",
@@ -1814,6 +1803,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "publishAllPhaseResults",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/phases/{phaseId}/results/publish",
 		Summary:     "Publish all results for a phase",
@@ -1829,6 +1819,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getUnpublishedResultsCount",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/phases/{phaseId}/results/unpublished-count",
 		Summary:     "Count unpublished results",
@@ -1844,6 +1835,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createDraftCharacterUpdate",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/{resultId}/character-updates",
 		Summary:       "Create a draft character update",
@@ -1862,6 +1854,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listDraftCharacterUpdates",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results/{resultId}/character-updates",
 		Summary:     "List draft character updates",
@@ -1879,6 +1872,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getDraftUpdateCount",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results/{resultId}/character-updates/count",
 		Summary:     "Count draft character updates",
@@ -1896,6 +1890,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateDraftCharacterUpdate",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}/character-updates/{draftId}",
 		Summary:     "Update a draft character update",
@@ -1913,6 +1908,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteDraftCharacterUpdate",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}/character-updates/{draftId}",
 		Summary:     "Delete a draft character update",
@@ -1939,6 +1935,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "activatePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/{id}/activate",
 		Summary:     "Activate a phase",
@@ -1954,6 +1951,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePhaseDeadline",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{id}/deadline",
 		Summary:     "Update a phase deadline",
@@ -1970,6 +1968,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{id}",
 		Summary:     "Update a phase",
@@ -1986,6 +1985,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deletePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/{id}",
 		Summary:     "Delete a phase",

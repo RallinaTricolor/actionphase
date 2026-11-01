@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"actionphase/pkg/access"
 	"actionphase/pkg/core"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -144,6 +145,7 @@ func (h *Handler) HumaDeleteCharacterAvatar(ctx context.Context, in *deleteAvata
 func RegisterHumaAvatars(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "uploadCharacterAvatar",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPost,
 		Path:        "/{id}/avatar",
 		Summary:     "Upload a character avatar",
@@ -161,6 +163,7 @@ func RegisterHumaAvatars(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "deleteCharacterAvatar",
+		Extensions:    access.MembersOnly(),
 		Method:        http.MethodDelete,
 		Path:          "/{id}/avatar",
 		Summary:       "Delete a character avatar",

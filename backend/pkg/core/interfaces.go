@@ -947,8 +947,9 @@ type MessageServiceInterface interface {
 	// selectedCharacterIDs is non-empty.
 	GetConversationParticipantCharacters(ctx context.Context, gameID int32, selectedCharacterIDs []int32) ([]ConversationParticipantCharacter, error)
 
-	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM)
-	GetAudienceConversationMessages(ctx context.Context, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
+	// GetAudienceConversationMessages retrieves all messages in a conversation (for audience/GM).
+	// A conversation outside gameID returns no messages.
+	GetAudienceConversationMessages(ctx context.Context, gameID, conversationID int32) ([]models.GetAudienceConversationMessagesRow, error)
 
 	// ListRecentCommentsWithParents retrieves recent comments with their parent messages/posts
 	// for the "New Comments" view. Supports pagination via limit/offset. Comments in
@@ -2159,7 +2160,6 @@ type CharacterServiceInterface interface {
 	ListInactiveCharacters(ctx context.Context, gameID int32) ([]models.ListInactiveCharactersRow, error)
 	DeactivatePlayerCharacters(ctx context.Context, gameID, userID int32) error
 	DeleteCharacter(ctx context.Context, characterID int32) error
-	ListAudienceNPCs(ctx context.Context, gameID int32) ([]models.ListAudienceNPCsRow, error)
 	// The public counts leave out restricted threads the viewer can't see.
 	GetCharacterActivityStats(ctx context.Context, characterID int32, viewer ViewerScope) (*CharacterActivityStats, error)
 	GetCharacterActivityStatsByGame(ctx context.Context, gameID int32, viewer ViewerScope) (map[int32]*CharacterActivityStats, error)

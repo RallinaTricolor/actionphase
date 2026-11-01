@@ -3,6 +3,7 @@ package deadlines
 // Huma (type-first) implementation of the deadline API.
 
 import (
+	"actionphase/pkg/access"
 	"context"
 	"net/http"
 	"time"
@@ -237,6 +238,7 @@ func (h *Handler) HumaGetUpcomingDeadlines(ctx context.Context, in *upcomingDead
 func RegisterHumaGameDeadlines(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID:   "createGameDeadline",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/deadlines",
 		Summary:       "Create a deadline for a game",
@@ -253,6 +255,7 @@ func RegisterHumaGameDeadlines(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameDeadlines",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/deadlines",
 		Summary:     "List all deadlines for a game",
@@ -273,6 +276,7 @@ func RegisterHumaGameDeadlines(api huma.API, h *Handler) {
 func RegisterHumaDeadlines(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "getUpcomingDeadlines",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/upcoming",
 		Summary:     "List upcoming deadlines across all the user's games",
@@ -285,6 +289,7 @@ func RegisterHumaDeadlines(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateDeadline",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPatch,
 		Path:        "/{deadlineId}",
 		Summary:     "Update a deadline",
@@ -300,6 +305,7 @@ func RegisterHumaDeadlines(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "deleteDeadline",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodDelete,
 		Path:          "/{deadlineId}",
 		Summary:       "Delete a deadline",
