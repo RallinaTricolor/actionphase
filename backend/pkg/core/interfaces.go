@@ -2207,3 +2207,21 @@ type ConversationServiceInterface interface {
 	// authorized.
 	DeleteConversation(ctx context.Context, conversationID int32, userID int32) error
 }
+
+// GmBoardServiceInterface stores board and settings items.
+type GmBoardServiceInterface interface {
+	// ListBoardItems returns a phase's live items, or with since set, every
+	// item (tombstones included) changed after that seq. ErrGmBoardNotActionPhase
+	// for a phase that isn't an action phase; pgx.ErrNoRows for no phase.
+	ListBoardItems(ctx context.Context, phaseID int32, since *int64) (*GmBoardItems, error)
+	// ApplyBoardChanges applies a batch to a phase's board, all or nothing. It
+	// returns the items as written (new version and seq). Don't advance a poll
+	// cursor from their seq: it could skip another editor's earlier write.
+	ApplyBoardChanges(ctx context.Context, phaseID, userID int32, changes []GmBoardChange) ([]GmBoardItem, error)
+	// ListSettingsItems and ApplySettingsChanges are the same for a game's
+	// settings items.
+	ListSettingsItems(ctx context.Context, gameID int32, since *int64) (*GmBoardItems, error)
+	ApplySettingsChanges(ctx context.Context, gameID, userID int32, changes []GmBoardChange) ([]GmBoardItem, error)
+	// SetShareGmBoard turns read-only sharing of the game's boards on or off.
+	SetShareGmBoard(ctx context.Context, gameID int32, share bool) (bool, error)
+}

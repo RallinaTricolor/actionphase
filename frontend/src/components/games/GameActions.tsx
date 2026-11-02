@@ -30,6 +30,8 @@ interface GameActionsProps {
   onDeleteGame?: () => void;
   /** Opens the Character Sheet editor. GM or co-GM, while the game is writable. */
   onCustomizeSheet?: () => void;
+  /** Opens the results board's game setup (codex, names, reward lists). */
+  onBoardSetup?: () => void;
   // Controls which portion to render — allows splitting player CTAs from the GM kebab menu
   slot?: 'player-actions' | 'menu-actions' | 'all';
 }
@@ -59,6 +61,7 @@ export function GameActions({
   onLeaveGame: _onLeaveGame,
   onDeleteGame,
   onCustomizeSheet,
+  onBoardSetup,
   slot = 'all',
 }: GameActionsProps) {
   const [showMenu, setShowMenu] = useState(false);
@@ -88,7 +91,10 @@ export function GameActions({
   // isGM here includes co-GMs, unlike Edit Game: sheet layout is ordinary game
   // setup, and the endpoint admits them.
   const hasCustomizeSheetAction = isGM && isGameWritable(game.state) && !!onCustomizeSheet;
-  const hasMenuItems = hasEditAction || hasStateActions || hasDeleteAction || hasCustomizeSheetAction;
+  // Same rule as the sheet: game setup, open to co-GMs, in any writable state
+  // (including before the first phase, when the results area doesn't show).
+  const hasBoardSetupAction = isGM && isGameWritable(game.state) && !!onBoardSetup;
+  const hasMenuItems = hasEditAction || hasStateActions || hasDeleteAction || hasCustomizeSheetAction || hasBoardSetupAction;
 
   // A stale application is a leftover 'approved' record with no active membership behind it —
   // e.g. (for accounts affected before the backend fix that now deletes an audience application
@@ -228,11 +234,24 @@ export function GameActions({
                   </button>
                 </>
               )}
+              {hasBoardSetupAction && (
+                <button
+                  onClick={() => {
+                    onBoardSetup?.();
+                    setShowMenu(false);
+                  }}
+                  disabled={actionLoading}
+                  className="w-full text-left px-4 py-2 text-sm text-content-primary hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="results-board-setup-button"
+                >
+                  Results Board Setup
+                </button>
+              )}
 
               {/* Delete Game */}
               {hasDeleteAction && (
                 <>
-                  {(hasEditAction || hasStateActions || hasCustomizeSheetAction) && (
+                  {(hasEditAction || hasStateActions || hasCustomizeSheetAction || hasBoardSetupAction) && (
                     <div className="border-t border-theme-default my-1" />
                   )}
                   <button

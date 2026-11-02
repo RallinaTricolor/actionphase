@@ -11,6 +11,7 @@ import { ActionSubmission } from '@/components/actions/ActionSubmission';
 import { ActionsList } from '@/components/actions/ActionsList';
 import { ActionResultsList } from '@/components/actions/ActionResultsList';
 import { GameResultsManager } from '@/components/actions/GameResultsManager';
+import { OpenResultsBoardButton } from '@/components/gm-board/OpenResultsBoardButton';
 import { CommonRoom } from '@/components/messages/CommonRoom';
 import { PrivateMessages } from '@/components/conversations/PrivateMessages';
 import { HistoryView } from '@/components/phases/HistoryView';
@@ -284,6 +285,7 @@ export function GameTabContent({
       <>
         {isGM ? (
           <>
+            <OpenResultsBoardButton gameId={gameId} phase={currentPhaseData?.phase} />
             <ActionsList
               gameId={gameId}
               currentPhase={currentPhaseData?.phase}

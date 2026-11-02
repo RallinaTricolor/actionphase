@@ -231,6 +231,39 @@ describe('GameActions - Customize Character Sheet', () => {
   });
 });
 
+describe('GameActions - Results Board Setup', () => {
+  const openMenu = async () => {
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByTestId('game-actions-menu'));
+    return user;
+  };
+
+  // The setup page is needed before any action phase exists, when the results
+  // area (the board's other entry point) doesn't show, so the menu offers it
+  // in every writable state.
+  it.each(['setup', 'recruitment', 'in_progress', 'epilogue'] as const)('offers it to a co-GM in %s, and opens setup', async (state) => {
+    const onBoardSetup = vi.fn();
+    render(<GameActions {...defaultProps} game={{ ...baseGame, state }} isGM onBoardSetup={onBoardSetup} slot="menu-actions" />);
+
+    const user = await openMenu();
+    await user.click(screen.getByRole('button', { name: 'Results Board Setup' }));
+    expect(onBoardSetup).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['completed', 'cancelled'] as const)('does not offer it once the game is %s', async (state) => {
+    render(
+      <GameActions {...defaultProps} game={{ ...baseGame, state }} isGM onDeleteGame={vi.fn()} onBoardSetup={vi.fn()} slot="menu-actions" />,
+    );
+    if (screen.queryByTestId('game-actions-menu')) await openMenu();
+    expect(screen.queryByRole('button', { name: 'Results Board Setup' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer it to a player', () => {
+    render(<GameActions {...defaultProps} onBoardSetup={vi.fn()} slot="menu-actions" />);
+    expect(screen.queryByTestId('game-actions-menu')).not.toBeInTheDocument();
+  });
+});
+
 describe('GameActions - Delete Game', () => {
   const openMenu = async () => {
     const user = userEvent.setup({ delay: null });

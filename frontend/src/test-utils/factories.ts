@@ -31,6 +31,7 @@ import type { useAuth } from '../contexts/AuthContext';
 import type { useAuth as useAuthHook } from '../hooks/useAuth';
 import type { User } from '../types/auth';
 import type { Character } from '../types/characters';
+import type { GmItem } from '../types/gmBoard';
 import type {
   DashboardDeadline,
   DashboardGameCard,
@@ -589,6 +590,22 @@ export function makeGamePhase(overrides: Partial<GamePhase> = {}): GamePhase {
     is_expired: false,
     is_published: false,
     created_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/**
+ * One stored GM board or settings item. A live item at version 1 by default;
+ * pass `deleted: true` (and no `doc`) for a tombstone.
+ */
+export function makeGmItem(overrides: Partial<GmItem> & Pick<GmItem, 'kind' | 'key'>): GmItem {
+  return {
+    version: 1,
+    seq: 1,
+    deleted: false,
+    doc: {},
+    updated_at: '2026-11-02T00:00:00Z',
+    updated_by: 1,
     ...overrides,
   };
 }

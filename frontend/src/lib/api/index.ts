@@ -62,6 +62,7 @@ import { DeadlinesApi } from './deadlines';
 import { PollsApi } from './polls';
 import { UsersApi } from './users';
 import { ExportsApi } from './exports';
+import { GmBoardApi } from './gmBoard';
 
 class ApiClient extends BaseApiClient {
   public auth: AuthApi;
@@ -78,6 +79,7 @@ class ApiClient extends BaseApiClient {
   public polls: PollsApi;
   public users: UsersApi;
   public exports: ExportsApi;
+  public gmBoard: GmBoardApi;
 
   constructor() {
     super();
@@ -97,6 +99,7 @@ class ApiClient extends BaseApiClient {
     this.polls = new PollsApi();
     this.users = new UsersApi();
     this.exports = new ExportsApi();
+    this.gmBoard = new GmBoardApi();
   }
 }
 

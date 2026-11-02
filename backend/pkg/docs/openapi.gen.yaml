@@ -348,6 +348,36 @@ components:
                 - status
                 - applied_at
             type: object
+        ApplyBoardChangesRequest:
+            additionalProperties: false
+            properties:
+                changes:
+                    description: The changes, applied all or nothing
+                    items:
+                        $ref: '#/components/schemas/BoardItemChange'
+                    maxItems: 500
+                    minItems: 1
+                    type:
+                        - array
+                        - "null"
+            required:
+                - changes
+            type: object
+        ApplySettingsChangesRequest:
+            additionalProperties: false
+            properties:
+                changes:
+                    description: The changes, applied all or nothing
+                    items:
+                        $ref: '#/components/schemas/SettingsItemChange'
+                    maxItems: 500
+                    minItems: 1
+                    type:
+                        - array
+                        - "null"
+            required:
+                - changes
+            type: object
         ApplyToGameBody:
             additionalProperties: false
             properties:
@@ -563,6 +593,42 @@ components:
                     type: string
             required:
                 - banner_url
+            type: object
+        BoardItemChange:
+            additionalProperties: false
+            properties:
+                base_version:
+                    description: The version this change is based on; 0 when the item is new (or was deleted)
+                    format: int32
+                    minimum: 0
+                    type: integer
+                deleted:
+                    description: Delete the item
+                    type: boolean
+                doc:
+                    description: The item's new content. Required unless deleted is true
+                key:
+                    description: Item key, unique within its kind
+                    maxLength: 128
+                    minLength: 1
+                    pattern: ^[A-Za-z0-9_.:|-]+$
+                    type: string
+                kind:
+                    description: Item kind
+                    enum:
+                        - card
+                        - scene
+                        - chunk
+                        - cluster
+                        - stance
+                        - progress
+                        - flag
+                        - notes
+                    type: string
+            required:
+                - kind
+                - key
+                - base_version
             type: object
         ChangeEmailRequest:
             additionalProperties: false
@@ -3410,6 +3476,116 @@ components:
                 - created_at
                 - updated_at
             type: object
+        GmBoardConflictResponse:
+            additionalProperties: false
+            properties:
+                conflicts:
+                    description: The current copy of each conflicting item; absent when the game is archived
+                    items:
+                        $ref: '#/components/schemas/GmItemResponse'
+                    type: array
+                detail:
+                    description: What happened
+                    type: string
+                instance:
+                    description: Correlation ID for support
+                    type: string
+                status:
+                    description: HTTP status code
+                    format: int64
+                    type: integer
+                title:
+                    description: Short summary
+                    type: string
+            required:
+                - status
+                - title
+                - detail
+            type: object
+        GmItemResponse:
+            additionalProperties: false
+            properties:
+                deleted:
+                    description: 'A tombstone: the item was deleted'
+                    type: boolean
+                doc:
+                    description: The item's content; absent on a tombstone
+                key:
+                    description: Item key
+                    type: string
+                kind:
+                    description: Item kind
+                    type: string
+                seq:
+                    description: When the item last changed, on the board's poll cursor
+                    format: int64
+                    type: integer
+                updated_at:
+                    description: Absent for an item that does not exist
+                    format: date-time
+                    type: string
+                updated_by:
+                    description: User who last changed it; absent if unknown
+                    format: int32
+                    type: integer
+                version:
+                    description: Send this as base_version on the next change. 0 for an item that does not exist
+                    format: int32
+                    type: integer
+            required:
+                - kind
+                - key
+                - version
+                - seq
+                - deleted
+            type: object
+        GmItemsResponse:
+            additionalProperties: false
+            properties:
+                cursor:
+                    description: Poll with since=cursor to get what changes next
+                    format: int64
+                    type: integer
+                items:
+                    description: A full load has live items only; a poll (since) includes tombstones
+                    items:
+                        $ref: '#/components/schemas/GmItemResponse'
+                    type: array
+            required:
+                - items
+                - cursor
+            type: object
+        GmItemsWrittenResponse:
+            additionalProperties: false
+            properties:
+                items:
+                    description: 'Each change as written, with its new version. Don''t advance a poll cursor from these: that could skip another editor''s write'
+                    items:
+                        $ref: '#/components/schemas/GmItemResponse'
+                    type: array
+            required:
+                - items
+            type: object
+        GmSettingsResponse:
+            additionalProperties: false
+            properties:
+                cursor:
+                    description: Poll with since=cursor to get what changes next
+                    format: int64
+                    type: integer
+                items:
+                    description: A full load has live items only; a poll (since) includes tombstones
+                    items:
+                        $ref: '#/components/schemas/GmItemResponse'
+                    type: array
+                share_gm_board:
+                    description: Whether the GM shares the results boards read-only
+                    type: boolean
+            required:
+                - items
+                - cursor
+                - share_gm_board
+            type: object
         HandoutCommentResponse:
             additionalProperties: false
             properties:
@@ -5088,6 +5264,58 @@ components:
                     uniqueItems: true
             required:
                 - restricted
+            type: object
+        SetSharingRequest:
+            additionalProperties: false
+            properties:
+                share:
+                    description: 'Share the results boards read-only: with the audience while the game runs, and with everyone once it is a public archive'
+                    type: boolean
+            required:
+                - share
+            type: object
+        SettingsItemChange:
+            additionalProperties: false
+            properties:
+                base_version:
+                    description: The version this change is based on; 0 when the item is new (or was deleted)
+                    format: int32
+                    minimum: 0
+                    type: integer
+                deleted:
+                    description: Delete the item
+                    type: boolean
+                doc:
+                    description: The item's new content. Required unless deleted is true
+                key:
+                    description: Item key, unique within its kind
+                    maxLength: 128
+                    minLength: 1
+                    pattern: ^[A-Za-z0-9_.:|-]+$
+                    type: string
+                kind:
+                    description: Item kind
+                    enum:
+                        - codex
+                        - names
+                        - template
+                        - groups
+                        - scales
+                        - prefs
+                    type: string
+            required:
+                - kind
+                - key
+                - base_version
+            type: object
+        SharingResponse:
+            additionalProperties: false
+            properties:
+                share_gm_board:
+                    description: Whether the GM shares the results boards read-only
+                    type: boolean
+            required:
+                - share_gm_board
             type: object
         StagedPartBody:
             additionalProperties: false
@@ -10361,6 +10589,132 @@ paths:
                 - Common Room
             x-access: public
             x-access-reason: reads or changes only the caller's own records
+    /games/{gameID}/gm-settings:
+        get:
+            description: The codex, character names, reward template and similar game-level setup, plus whether the boards are shared. Same viewers as the board.
+            operationId: getGmSettings
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+                - description: Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load
+                  explode: false
+                  in: query
+                  name: since
+                  schema:
+                    description: Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load
+                    format: int64
+                    minimum: 0
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GmSettingsResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Not the GM, and the game doesn't share its boards with this viewer
+                "422":
+                    description: Request failed validation
+            security:
+                - bearerAuth: []
+            summary: Load the game's results board settings
+            tags:
+                - Results Board
+            x-access: audience
+    /games/{gameID}/gm-settings/changes:
+        post:
+            description: Same rules as saving board changes. Works before the game has any phase. GM only.
+            operationId: applyGmSettingsChanges
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ApplySettingsChangesRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GmItemsWrittenResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can change the results board
+                "409":
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/GmBoardConflictResponse'
+                    description: Another editor changed an item in the batch (conflicts holds their copies), or the game is archived (no conflicts). Nothing was written
+                "422":
+                    description: Request failed validation, an item is too large, or the board is full
+            security:
+                - bearerAuth: []
+            summary: Save changes to the game's results board settings
+            tags:
+                - Results Board
+            x-access: gm
+    /games/{gameID}/gm-settings/sharing:
+        put:
+            description: 'Read-only sharing: with the audience while the game runs, and with everyone once it is a public archive. Allowed in any game state, so a finished game''s boards can be shared. GM only.'
+            operationId: setGmBoardSharing
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetSharingRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SharingResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can change sharing
+                "422":
+                    description: Request failed validation
+            security:
+                - bearerAuth: []
+            summary: Share the results boards, or stop sharing them
+            tags:
+                - Results Board
+            x-access: gm
     /games/{gameID}/handouts:
         get:
             description: Lists the game's handouts. GMs and Co-GMs also see drafts; everyone else sees only published ones.
@@ -11598,6 +11952,115 @@ paths:
             summary: Create a phase
             tags:
                 - Phases
+            x-access: gm
+    /games/{gameID}/phases/{phaseId}/gm-board:
+        get:
+            description: Returns the board's live items and a cursor, or with since, every item changed after that cursor (tombstones included). GM, or a viewer the board is shared with.
+            operationId: getGmBoard
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+                - description: Action phase ID
+                  in: path
+                  name: phaseId
+                  required: true
+                  schema:
+                    description: Action phase ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+                - description: Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load
+                  explode: false
+                  in: query
+                  name: since
+                  schema:
+                    description: Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load
+                    format: int64
+                    minimum: 0
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GmItemsResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Not the GM, and the game doesn't share its boards with this viewer
+                "404":
+                    description: No such action phase in this game
+                "422":
+                    description: Request failed validation
+            security:
+                - bearerAuth: []
+            summary: Load a phase's results board
+            tags:
+                - Results Board
+            x-access: audience
+    /games/{gameID}/phases/{phaseId}/gm-board/changes:
+        post:
+            description: Applies a batch of item changes in one transaction. If any change names a stale base_version, nothing is written and the 409 carries the current copy of each conflicting item. GM only.
+            operationId: applyGmBoardChanges
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+                - description: Action phase ID
+                  in: path
+                  name: phaseId
+                  required: true
+                  schema:
+                    description: Action phase ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ApplyBoardChangesRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GmItemsWrittenResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can change the results board
+                "404":
+                    description: No such action phase in this game
+                "409":
+                    content:
+                        application/problem+json:
+                            schema:
+                                $ref: '#/components/schemas/GmBoardConflictResponse'
+                    description: Another editor changed an item in the batch (conflicts holds their copies), or the game is archived (no conflicts). Nothing was written
+                "422":
+                    description: Request failed validation, an item is too large, or the board is full
+            security:
+                - bearerAuth: []
+            summary: Save changes to a phase's results board
+            tags:
+                - Results Board
             x-access: gm
     /games/{gameID}/phases/{phaseId}/mark-all-comments-read:
         post:
@@ -14277,6 +14740,8 @@ tags:
       name: Action Results
     - description: Character sheet changes staged against an unpublished action result
       name: Draft Character Updates
+    - description: The GM's workspace for resolving an action phase, saved item by item, and its game-level setup
+      name: Results Board
     - description: Threaded discussion posts and comments in the common room
       name: Common Room
     - description: Private, per-user starred comments, spanning every game

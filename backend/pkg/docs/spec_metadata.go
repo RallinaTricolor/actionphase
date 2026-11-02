@@ -133,6 +133,7 @@ func specTags() []any {
 		{"Actions", "Player action submission during action phases"},
 		{"Action Results", "GM responses to player actions"},
 		{"Draft Character Updates", "Character sheet changes staged against an unpublished action result"},
+		{"Results Board", "The GM's workspace for resolving an action phase, saved item by item, and its game-level setup"},
 		{"Common Room", "Threaded discussion posts and comments in the common room"},
 		{"Favorites", "Private, per-user starred comments, spanning every game"},
 		{"Conversations", "Private in-character messaging between players"},
