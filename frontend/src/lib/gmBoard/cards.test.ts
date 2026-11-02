@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeBoard, makeCard } from '@/test-utils/factories';
-import { autoLabel, cardLabel, isIF, isWaiting, needsCause, newCard, nextChunkId, OUTCOMES, splitCard, textField } from './cards';
+import { autoLabel, cardDoc, cardLabel, isIF, isWaiting, needsCause, newCard, nextChunkId, OUTCOMES, splitCard, textField } from './cards';
 
 const chunks = makeBoard().chunks;
 
@@ -47,6 +47,12 @@ describe('IF cards and outcomes', () => {
     expect(needsCause('pending')).toBe(false);
     expect(needsCause('happened')).toBe(false);
     expect(['partial', 'failed', 'interrupted', 'moot'].every((o) => needsCause(o as never))).toBe(true);
+  });
+
+  it('stores a card without its id, which is the item key', () => {
+    const doc = cardDoc(makeCard({ id: 'c1', characterId: 2, quote: 'I wait.' }));
+    expect(doc).not.toHaveProperty('id');
+    expect(doc).toMatchObject({ characterId: 2, quote: 'I wait.' });
   });
 
   it('starts a new card unresolved with no causes', () => {

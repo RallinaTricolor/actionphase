@@ -140,6 +140,11 @@ const handlers = [
     return HttpResponse.json([]);
   }),
 
+  // GmSettingsResponse (gmBoard.ts getSettings): an empty board setup.
+  http.get('/api/v1/games/:gameId/gm-settings', () => {
+    return HttpResponse.json({ items: [], cursor: 0, share_gm_board: false });
+  }),
+
   http.get('/api/v1/games/:gameId/phases', () => {
     return HttpResponse.json([]);
   }),

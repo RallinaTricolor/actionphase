@@ -107,7 +107,7 @@ export interface BoardDoc {
   notes: string;
 }
 
-type CodexType = 'Location' | 'NPC' | 'Item' | 'Faction' | 'Objective' | 'Secret' | 'Other';
+export type CodexType = 'Location' | 'NPC' | 'Item' | 'Faction' | 'Objective' | 'Secret' | 'Other';
 
 export interface CodexEntry {
   id: string;

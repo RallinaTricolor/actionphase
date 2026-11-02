@@ -48,7 +48,7 @@ import type {
   GameWithDetails,
 } from '../types/games';
 import type { CommentWithDepth, Message } from '../types/messages';
-import type { GamePhase } from '../types/phases';
+import type { ActionWithDetails, GamePhase } from '../types/phases';
 
 /**
  * One participant row. `src/types/conversations.ts` deliberately stopped
@@ -591,6 +591,21 @@ export function makeGamePhase(overrides: Partial<GamePhase> = {}): GamePhase {
     is_expired: false,
     is_published: false,
     created_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/** A submitted action, as the GM's list of a game's actions returns it. */
+export function makeActionWithDetails(overrides: Partial<ActionWithDetails> = {}): ActionWithDetails {
+  return {
+    id: 1,
+    game_id: 1,
+    phase_id: 1,
+    user_id: 100,
+    username: 'testuser',
+    content: '',
+    submitted_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
     ...overrides,
   };
 }

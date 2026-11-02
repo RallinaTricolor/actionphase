@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Card, CardBody, Spinner } from '@/components/ui';
+import { useQuery } from '@tanstack/react-query';
+import { Alert, Button, Card, CardBody, Drawer, Spinner } from '@/components/ui';
 import { TabNavigation } from '@/components/layout/TabNavigation';
+import { useGameContext } from '@/contexts/GameContext';
 import { useGmBoard, useGmBoardStore } from '@/hooks/useGmBoard';
+import { apiClient } from '@/lib/api';
+import { boardCast } from '@/lib/gmBoard/cast';
 import { NOTES_KEY } from '@/lib/gmBoard/store';
 import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath, type BoardStep } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
+import { GmBoardRead } from './GmBoardRead';
 import { GmBoardSaveStatus } from './GmBoardSaveStatus';
+import { GmCodexManager } from './GmCodexManager';
 
 interface GmBoardProps {
   gameId: number;
@@ -25,13 +31,29 @@ const STEP_INTROS: Record<BoardStep, string> = {
 
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
- * steps, with the step in the URL (`?step=`). The steps are empty for now.
+ * steps, with the step in the URL (`?step=`). Read is built; the rest are
+ * still empty.
  */
 export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const step = parseBoardStep(params.get('step'));
   const [notesOpen, setNotesOpen] = useState(false);
+  const [codex, setCodex] = useState<{ name: string } | null>(null);
+  const { allGameCharacters } = useGameContext();
+  const players = useMemo(() => boardCast(allGameCharacters).filter((c) => !c.npc), [allGameCharacters]);
+  const phases = useQuery({
+    queryKey: ['gamePhases', gameId],
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then((res) => res.data),
+    enabled: gameId > 0,
+  });
+  const actionPhases = useMemo(
+    () =>
+      (phases.data ?? [])
+        .filter((p) => p.phase_type === 'action')
+        .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}` })),
+    [phases.data],
+  );
 
   const { board, isLoading, error } = useGmBoard(gameId, phase.id);
   const store = useGmBoardStore(gameId, phase.id);
@@ -55,6 +77,9 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
         </div>
         <div className="flex items-center gap-2">
           <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />
+          <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
+            Codex
+          </Button>
           <Button type="button" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
             Notes
           </Button>
@@ -81,6 +106,14 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
         <Alert variant="danger" title="The board didn’t load">
           Try reloading the page.
         </Alert>
+      ) : step === 'read' ? (
+        <GmBoardRead
+          gameId={gameId}
+          phase={phase}
+          board={board}
+          onOpenCodex={(name = '') => setCodex({ name })}
+          onGoToMap={() => goToStep('map')}
+        />
       ) : (
         <Card variant="bordered" padding="md" data-testid={`gm-board-step-${step}`}>
           <CardBody>
@@ -99,6 +132,19 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
           </CardBody>
         </Card>
       )}
+
+      <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
+        {codex !== null && (
+          <GmCodexManager
+            key={codex.name}
+            gameId={gameId}
+            phases={actionPhases}
+            players={players}
+            phaseId={phase.id}
+            initialName={codex.name}
+          />
+        )}
+      </Drawer>
 
       {board && (
         <GmBoardNotesDrawer

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { characterNames, defaultNames, escapeRegExp, plainText, termIn, truncate } from './text';
+import { characterNames, defaultNames, escapeRegExp, plainText, splitList, termIn, truncate } from './text';
 
 describe('termIn', () => {
   it('matches a single word case-sensitively and only as a whole word', () => {
@@ -48,5 +48,12 @@ describe('names', () => {
 
   it('escapes every regex metacharacter', () => {
     expect(new RegExp(escapeRegExp('a.b*c?')).test('a.b*c?')).toBe(true);
+  });
+});
+
+describe('splitList', () => {
+  it('splits a typed list on commas, dropping blanks', () => {
+    expect(splitList(' mill,  the stalls ,, ')).toEqual(['mill', 'the stalls']);
+    expect(splitList('')).toEqual([]);
   });
 });

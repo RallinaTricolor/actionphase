@@ -105,3 +105,10 @@ export function splitCard(card: Card, at: number, chunks: Chunk[], newId: string
   };
   return { kept, added };
 }
+
+/** A card as its stored item's doc: everything but the id, which is the item's key. */
+export function cardDoc(card: Card): Omit<Card, 'id'> {
+  const doc: Partial<Card> = { ...card };
+  delete doc.id;
+  return doc as Omit<Card, 'id'>;
+}

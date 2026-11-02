@@ -93,3 +93,7 @@ export { HelpTooltip } from './HelpTooltip';
 // Drawer
 export { Drawer } from './Drawer';
 export type { DrawerProps } from './Drawer';
+
+// Combobox
+export { Combobox } from './Combobox';
+export type { ComboboxProps, ComboboxOption, ComboboxSize } from './Combobox';

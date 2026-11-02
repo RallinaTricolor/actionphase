@@ -75,6 +75,17 @@ export interface ChangeRequest {
 
 export const itemId = (kind: string, key: string) => `${kind}/${key}`;
 
+/**
+ * A key for a new card, scene, codex entry and so on: time first, so keys
+ * sort in the order items were made, then a random tail so two editors
+ * creating at the same moment don't collide. Fits the server's key rule.
+ */
+export function newItemKey(prefix: string, now: number = Date.now(), random: () => number = Math.random): string {
+  const time = now.toString(36).padStart(9, '0');
+  const tail = Math.floor(random() * 36 ** 5).toString(36).padStart(5, '0');
+  return `${prefix}-${time}${tail}`;
+}
+
 export function loadState(items: GmItem[], cursor: number): StoreState {
   const state: StoreState = { server: {}, dirty: {}, cursor: 0, saving: false, saveError: null, lost: [] };
   return mergeServerItems(state, items, cursor);

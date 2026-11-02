@@ -799,3 +799,24 @@
     margin-top: 1rem;
   }
 }
+
+/*
+ * GM results board: highlights painted over a rendered submission with the
+ * CSS Custom Highlight API (SubmissionReader), so the submission's HTML is
+ * never rewritten. Browsers without the API just show no highlights.
+ */
+::highlight(gm-carded) {
+  background-color: rgb(var(--color-semantic-success-subtle));
+}
+::highlight(gm-name) {
+  color: rgb(var(--color-interactive-primary));
+}
+::highlight(gm-codex) {
+  text-decoration: underline dotted rgb(var(--color-interactive-primary));
+}
+::highlight(gm-codex-location) {
+  text-decoration: underline dotted rgb(var(--color-semantic-success));
+}
+::highlight(gm-codex-secret) {
+  background-color: rgb(var(--color-semantic-danger-subtle));
+}

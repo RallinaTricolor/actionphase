@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Drawer, Textarea } from '@/components/ui';
+import { useBoundText } from '@/hooks/useBoundText';
 
 interface GmBoardNotesDrawerProps {
   open: boolean;
@@ -10,20 +10,9 @@ interface GmBoardNotesDrawerProps {
   readOnly?: boolean;
 }
 
-/**
- * The GM's scratch notes for this phase. The text box keeps its own state:
- * the board's cache tells its readers about a change a tick later, which is
- * too late for a controlled text box (typing would lose characters and move
- * the cursor). Notes from elsewhere replace the text only while the box isn't
- * focused.
- */
+/** The GM's scratch notes for this phase. The box keeps its own text while focused (see `useBoundText`). */
 export function GmBoardNotesDrawer({ open, onClose, notes, onChange, readOnly = false }: GmBoardNotesDrawerProps) {
-  const [text, setText] = useState(notes);
-  const [focused, setFocused] = useState(false);
-
-  useEffect(() => {
-    if (!focused) setText(notes);
-  }, [notes, focused]);
+  const { text, setText, bind } = useBoundText(notes);
 
   return (
     <Drawer open={open} onClose={onClose} title="Notes" side="right">
@@ -34,8 +23,7 @@ export function GmBoardNotesDrawer({ open, onClose, notes, onChange, readOnly = 
         rows={16}
         value={text}
         readOnly={readOnly}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        {...bind}
         onChange={(e) => {
           setText(e.target.value);
           onChange(e.target.value);

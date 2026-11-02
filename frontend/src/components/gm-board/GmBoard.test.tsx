@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils/render';
-import { makeGamePhase, makeGmItem } from '@/test-utils/factories';
+import { makeGamePhase, makeGameWithDetails, makeGmItem } from '@/test-utils/factories';
 import type { BoardItemChange, GmItem } from '@/types/gmBoard';
 import { GmBoard } from './GmBoard';
 
@@ -19,7 +19,9 @@ beforeEach(() => {
   stored = [makeGmItem({ kind: 'notes', key: 'notes', version: 1, seq: 3, doc: { text: 'check the vault' } })];
   saves = [];
   server.use(
+    http.get(`/api/v1/games/${GAME_ID}/details`, () => HttpResponse.json(makeGameWithDetails({ id: GAME_ID, gm_user_id: 1 }))),
     http.get(BOARD, () => HttpResponse.json({ items: stored, cursor: 3 })),
+    http.get(`/api/v1/games/${GAME_ID}/gm-settings`, () => HttpResponse.json({ items: [], cursor: 0, share_gm_board: false })),
     http.post(`${BOARD}/changes`, async ({ request }) => {
       const { changes } = (await request.json()) as { changes: BoardItemChange[] };
       saves.push(changes);
@@ -30,7 +32,7 @@ beforeEach(() => {
 });
 
 const renderBoard = (route = `/games/${GAME_ID}/phases/70/board`) =>
-  renderWithProviders(<GmBoard gameId={GAME_ID} gameTitle="Starfall" phase={phase} />, { initialRoute: route });
+  renderWithProviders(<GmBoard gameId={GAME_ID} gameTitle="Starfall" phase={phase} />, { gameId: GAME_ID, initialRoute: route });
 
 describe('GmBoard', () => {
   it('opens on the step named in the URL, and Read by default', async () => {

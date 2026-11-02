@@ -1,16 +1,34 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Alert, Card, CardBody, Spinner } from '@/components/ui';
+import { useQuery } from '@tanstack/react-query';
+import { Alert, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
+import { GmCharacterNames } from '@/components/gm-board/GmCharacterNames';
+import { GmCodexManager } from '@/components/gm-board/GmCodexManager';
 import { useGameContext } from '@/contexts/GameContext';
+import { apiClient } from '@/lib/api';
 import { isGameWritable } from '@/lib/gamePermissions';
+import { boardCast } from '@/lib/gmBoard/cast';
 
 /**
  * `/games/:gameId/board-setup`: the results board's game-level setup (the
- * codex, character names, reward lists and the reward template). It has its
- * own page because a GM needs it before any action phase exists. Empty for
- * now.
+ * codex and character names now; reward lists and the reward template later).
+ * It has its own page because a GM needs it before any action phase exists.
  */
 export function GmBoardSetupPage() {
-  const { gameId, game, isLoadingGame, isGM } = useGameContext();
+  const { gameId, game, isLoadingGame, isGM, allGameCharacters } = useGameContext();
+  const phases = useQuery({
+    queryKey: ['gamePhases', gameId],
+    queryFn: () => apiClient.phases.getGamePhases(gameId).then((res) => res.data),
+    enabled: isGM && gameId > 0,
+  });
+  const actionPhases = useMemo(
+    () =>
+      (phases.data ?? [])
+        .filter((p) => p.phase_type === 'action')
+        .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}` })),
+    [phases.data],
+  );
+  const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
 
   if (isLoadingGame) {
     return (
@@ -48,12 +66,29 @@ export function GmBoardSetupPage() {
       ) : !isGameWritable(game.state) ? (
         <Alert variant="info">This game is archived, so its results board setup can no longer be changed.</Alert>
       ) : (
-        <Card variant="bordered" padding="md">
-          <CardBody>
-            <p className="text-content-primary">The codex, character names and reward lists will be set up here.</p>
-            <p className="text-sm text-content-tertiary mt-2">This page isn’t built yet.</p>
-          </CardBody>
-        </Card>
+        <>
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-content-primary">Codex</h2>
+              <p className="text-sm text-content-secondary mt-1">
+                Places, people, items and secrets. Locations become the rows of the map, names are highlighted in
+                submissions, and secrets feed the checks before publishing.
+              </p>
+            </CardHeader>
+            <CardBody>
+              <GmCodexManager gameId={gameId} phases={actionPhases} players={cast.filter((c) => !c.npc)} />
+            </CardBody>
+          </Card>
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-content-primary">Character names</h2>
+            </CardHeader>
+            <CardBody>
+              <GmCharacterNames gameId={gameId} characters={cast} />
+            </CardBody>
+          </Card>
+          <p className="text-sm text-content-tertiary">Reward lists and the reward block come later.</p>
+        </>
       )}
     </div>
   );

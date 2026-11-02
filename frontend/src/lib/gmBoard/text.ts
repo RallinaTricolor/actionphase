@@ -45,3 +45,10 @@ export function defaultNames(fullName: string): string[] {
 export function characterNames(names: Record<number, string[]>, characterId: number, fullName: string): string[] {
   return Object.prototype.hasOwnProperty.call(names, characterId) ? names[characterId] : defaultNames(fullName);
 }
+
+/** A comma-separated list as typed into a field: trimmed, blanks dropped. */
+export const splitList = (text: string) =>
+  text
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);

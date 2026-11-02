@@ -429,6 +429,33 @@ Dropdown select with label and validation.
 
 ---
 
+### Combobox
+
+A text field with a filtered list to pick from (Headless UI `Combobox`).
+Keyboard-complete: type to filter, arrows to move, Enter to pick, Escape to
+close. Use it instead of `Select` when the list is long or can grow.
+
+**Props:**
+- `label`: `string` (required)
+- `options`: `{ value, label, description? }[]`
+- `value`: `string | null`, `onChange(value)`
+- `onCreate(text)`: optional. Allows a value that isn't listed: typing one
+  offers "Add “text”", and the caller adds the option and selects it.
+- `createLabel(text)`, `placeholder`, `helperText`, `error`, `disabled`
+- `size`: `'sm' | 'md'` (default: `'md'`)
+
+```tsx
+<Combobox
+  label="Location"
+  options={locations.map((l) => ({ value: l.id, label: l.name }))}
+  value={locationId}
+  onChange={setLocationId}
+  onCreate={addLocation}
+/>
+```
+
+---
+
 ### DateTimeInput
 
 Date/time picker.

@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils/render';
-import { makeGameWithDetails } from '@/test-utils/factories';
+import { makeCharacter, makeGameWithDetails } from '@/test-utils/factories';
 import type { GameWithDetails } from '@/types/games';
 import { GmBoardSetupPage } from './GmBoardSetupPage';
 
@@ -18,6 +18,18 @@ function serveGame(overrides: Partial<GameWithDetails> = {}) {
   );
 }
 
+beforeEach(() => {
+  server.use(
+    http.get(`/api/v1/games/${GAME_ID}/gm-settings`, () => HttpResponse.json({ items: [], cursor: 0, share_gm_board: false })),
+    http.get(`/api/v1/games/${GAME_ID}/characters`, () =>
+      HttpResponse.json([
+        makeCharacter({ id: 1, game_id: GAME_ID, name: 'Harrison Vale' }),
+        makeCharacter({ id: 2, game_id: GAME_ID, name: 'Bo Hale', character_type: 'npc' }),
+      ]),
+    ),
+  );
+});
+
 const renderPage = () =>
   renderWithProviders(<GmBoardSetupPage />, { gameId: GAME_ID, initialRoute: `/games/${GAME_ID}/board-setup` });
 
@@ -28,7 +40,10 @@ describe('GmBoardSetupPage', () => {
     serveGame({ state: 'setup' });
     renderPage();
     expect(await screen.findByRole('heading', { name: 'Results board setup' })).toBeInTheDocument();
-    expect(await screen.findByText('The codex, character names and reward lists will be set up here.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Codex' })).toBeInTheDocument();
+    expect(await screen.findByText(/The codex is empty/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Harrison Vale')).toHaveValue('Harrison Vale, Harrison');
+    expect(screen.getByLabelText('Bo Hale (NPC)')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Starfall/ })).toHaveAttribute('href', `/games/${GAME_ID}`);
   });
 

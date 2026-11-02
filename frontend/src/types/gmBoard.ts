@@ -35,5 +35,6 @@ export type GmBoardConflict = components['schemas']['GmBoardConflictResponse'];
 export type BoardItemChange = components['schemas']['BoardItemChange'];
 export type SettingsItemChange = components['schemas']['SettingsItemChange'];
 export type BoardItemKind = BoardItemChange['kind'];
+export type SettingsItemKind = SettingsItemChange['kind'];
 
 export type GmSharing = components['schemas']['SharingResponse'];

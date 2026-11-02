@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { hashKey, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { apiClient } from '@/lib/api';
 import { extractApiErrorMessage } from '@/lib/errors';
@@ -22,7 +22,14 @@ import {
   type StoreState,
 } from '@/lib/gmBoard/store';
 import type { BoardDoc, GameBoardSettings } from '@/lib/gmBoard/types';
-import type { BoardItemChange, BoardItemKind, GmBoardConflict, GmItem, SettingsItemChange } from '@/types/gmBoard';
+import type {
+  BoardItemChange,
+  BoardItemKind,
+  GmBoardConflict,
+  GmItem,
+  SettingsItemChange,
+  SettingsItemKind,
+} from '@/types/gmBoard';
 
 /** How often an open board checks for other editors' changes (while the tab is visible). */
 const GM_BOARD_POLL_MS = 15_000;
@@ -157,9 +164,18 @@ function useItemEditor<S extends StoreState>(source: ItemSource<S>, readOnly: bo
 
   // Read the cached state without a second useQuery: an observer with no
   // queryFn would overwrite the query's options, and the next poll would run
-  // with no fetch function at all.
+  // with no fetch function at all. Listen to this query only: the cache tells
+  // its listeners at once when any component starts a query while rendering,
+  // and re-rendering then is an error in React.
+  const hash = useMemo(() => hashKey(queryKey), [queryKey]);
   const data = useSyncExternalStore(
-    useCallback((onChange: () => void) => queryClient.getQueryCache().subscribe(onChange), [queryClient]),
+    useCallback(
+      (onChange: () => void) =>
+        queryClient.getQueryCache().subscribe((event) => {
+          if (event.query.queryHash === hash) onChange();
+        }),
+      [queryClient, hash],
+    ),
     get,
   );
   const pending = !!data && hasPendingChanges(data);
@@ -253,5 +269,28 @@ export function useGmSettings(gameId: number, options: { enabled?: boolean } = {
     shareGmBoard: query.data?.shareGmBoard ?? false,
     isLoading: query.isLoading,
     error: query.error,
+  };
+}
+
+/**
+ * Edits to a game's board settings (codex entries, character names, the
+ * template), saved like a board's: optimistic, about a second after the last
+ * change, with the same conflict handling.
+ */
+export function useGmSettingsStore(gameId: number, options: { readOnly?: boolean } = {}) {
+  const source = useMemo(() => settingsSource(gameId), [gameId]);
+  const editor = useItemEditor(source, options.readOnly ?? false);
+  const { change } = editor;
+  return {
+    ...editor,
+    update: useCallback(
+      <T>(kind: SettingsItemKind, key: string, fn: (current: T | undefined) => T) =>
+        change((s) => editItem(s, kind, key, fn) as GmSettingsState),
+      [change],
+    ),
+    remove: useCallback(
+      (kind: SettingsItemKind, key: string) => change((s) => removeItem(s, kind, key) as GmSettingsState),
+      [change],
+    ),
   };
 }

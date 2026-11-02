@@ -12,6 +12,7 @@ import {
   loadState,
   markSaved,
   mergeServerItems,
+  newItemKey,
   reapplyLost,
   removeItem,
   toChangeRequests,
@@ -209,5 +210,15 @@ describe('a 409', () => {
     s = applyConflicts(s, [makeGmItem({ kind: 'card', key: 'c1', version: 0, seq: 0, deleted: true, doc: undefined })]);
     expect(s.server[itemId('card', 'c1')]).toBeUndefined();
     expect(getDoc(s, 'card', 'c1')).toBeUndefined();
+  });
+});
+
+describe('newItemKey', () => {
+  it('sorts keys in the order they were made, and fits the server’s key rule', () => {
+    const first = newItemKey('card', 1_000, () => 0.9);
+    const second = newItemKey('card', 2_000, () => 0.1);
+    expect(first < second).toBe(true);
+    expect(second).toMatch(/^card-[a-z0-9]{14}$/);
+    expect(newItemKey('card', 1_000, () => 0.1)).not.toBe(newItemKey('card', 1_000, () => 0.2));
   });
 });

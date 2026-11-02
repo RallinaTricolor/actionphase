@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AxiosError, AxiosHeaders } from 'axios';
 import React from 'react';
 import { makeAxiosResponse, makeGmItem } from '@/test-utils/factories';
@@ -11,6 +11,7 @@ import {
   useGmBoard,
   useGmBoardStore,
   useGmSettings,
+  useGmSettingsStore,
 } from './useGmBoard';
 import { apiClient } from '../lib/api';
 
@@ -254,6 +255,28 @@ describe('useGmBoard and useGmBoardStore', () => {
     errors.mockRestore();
   });
 
+  // The board's save state reads the query cache. The Read step first renders
+  // in the same pass as the board re-rendering with fresh data, and starts its
+  // own queries as it does; the board must not try to re-render mid-render
+  // (React: "Cannot update a component while rendering a different component").
+  it('ignores other queries in the cache', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    function Board() {
+      const { board } = useGmBoard(7, 70);
+      useGmBoardStore(7, 70);
+      return board ? <Child /> : null;
+    }
+    function Child() {
+      useQuery({ queryKey: ['unrelated'], queryFn: () => new Promise(() => {}) });
+      return <p>child</p>;
+    }
+    const Wrapper = makeWrapper();
+    const { findByText } = render(<Board />, { wrapper: Wrapper });
+    await findByText('child');
+    expect(errors.mock.calls.map((c) => String(c[0]))).not.toContainEqual(expect.stringContaining('Cannot update a component'));
+    errors.mockRestore();
+  });
+
   it('a read-only store changes nothing', async () => {
     const { result } = renderHook(() => ({ view: useGmBoard(7, 70), store: useGmBoardStore(7, 70, { readOnly: true }) }), {
       wrapper: makeWrapper(),
@@ -285,5 +308,34 @@ describe('useGmSettings', () => {
   it('does not load for an invalid game', () => {
     renderHook(() => useGmSettings(0), { wrapper: makeWrapper() });
     expect(api.getSettings).not.toHaveBeenCalled();
+  });
+});
+
+describe('useGmSettingsStore', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('saves a codex entry to the settings, keeping the sharing flag', async () => {
+    api.getSettings.mockResolvedValue(makeAxiosResponse({ items: [], cursor: 0, share_gm_board: true }));
+    api.applySettingsChanges.mockImplementation(async (_game, changes) =>
+      written(changes.map((c) => makeGmItem({ kind: c.kind, key: c.key, version: 1, seq: 5, doc: c.doc }))),
+    );
+    const { result } = renderHook(() => ({ view: useGmSettings(7), store: useGmSettingsStore(7) }), {
+      wrapper: makeWrapper(),
+    });
+    await waitFor(() => expect(result.current.view.settings).toBeDefined());
+
+    act(() => result.current.store.update('codex', 'cx-1', () => ({ type: 'Location', name: 'The Old Mill' })));
+    expect(result.current.view.settings?.codex[0]).toMatchObject({ id: 'cx-1', name: 'The Old Mill', aliases: [] });
+    await settle();
+
+    expect(api.applySettingsChanges).toHaveBeenCalledWith(7, [
+      { kind: 'codex', key: 'cx-1', base_version: 0, doc: { type: 'Location', name: 'The Old Mill' } },
+    ]);
+    await waitFor(() => expect(result.current.store.status).toBe('saved'));
+    expect(result.current.view.shareGmBoard).toBe(true);
   });
 });
