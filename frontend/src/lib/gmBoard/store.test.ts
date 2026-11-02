@@ -78,6 +78,13 @@ describe('assembleSettings', () => {
     expect(settings.rewardTemplate).toBe('{{lines main}}');
     expect(settings.secondPerson).toBe(false);
   });
+
+  it('gives a codex entry missing its lists empty ones', () => {
+    const [entry] = assembleSettings([{ kind: 'codex', key: 'x1', doc: { type: 'Secret', name: 'The heir', secret: true } }]).codex;
+    expect(entry).toEqual({
+      id: 'x1', type: 'Secret', name: 'The heir', notes: '', secret: true, aliases: [], knownBy: [], phases: [],
+    });
+  });
 });
 
 describe('editing', () => {

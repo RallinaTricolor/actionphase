@@ -2,17 +2,18 @@
  * The GM results board's data model: the shapes `assembleBoard` and
  * `assembleSettings` build from stored items, and the shapes the board's logic
  * takes. IDs inside these documents are client-generated strings; characters,
- * phases and results use their database IDs.
+ * phases and results use their database IDs. Locations are codex entries, so
+ * they use the codex entry's id.
  *
  * Each card, scene, chunk and cluster is stored as its own item, keyed by its
  * id, with the rest of the object as the item's doc. See `store.ts`.
  */
 
-type Outcome = 'pending' | 'happened' | 'partial' | 'failed' | 'interrupted' | 'moot';
+export type Outcome = 'pending' | 'happened' | 'partial' | 'failed' | 'interrupted' | 'moot';
 
-type StanceValue = 'ally' | 'deal' | 'neutral' | 'wary' | 'target' | 'ally_target';
+export type StanceValue = 'ally' | 'deal' | 'neutral' | 'wary' | 'target' | 'ally_target';
 
-type CharState = 'active' | 'injured' | 'captured' | 'incapacitated' | 'dead';
+export type CharState = 'active' | 'injured' | 'captured' | 'incapacitated' | 'dead';
 
 export interface Chunk {
   id: string;
@@ -38,9 +39,11 @@ export interface Card {
   branchOf: string | null;
   /** Submission paragraph indexes the card came from. */
   src: number[];
+  /** Made by the GM ("+ Card"), not from a submission: labelled "GM card" and left out of a player's card count. */
+  gm: boolean;
 }
 
-interface Moment {
+export interface Moment {
   id: string;
   text: string;
   /** Empty: a private GM note. */
@@ -62,6 +65,8 @@ export interface Scene {
   title: string;
   locationId: string;
   chunkId: string;
+  /** The GM marked it a conflict: the Map shows a Conflict pill instead of Scene. */
+  conflict: boolean;
   participants: number[];
   moments: Moment[];
   effects: StateEffect[];
@@ -111,6 +116,8 @@ export interface CodexEntry {
   aliases: string[];
   notes: string;
   secret: boolean;
+  /** For a secret: the characters allowed to know it, so the leak check skips them. */
+  knownBy: number[];
   /** Phase ids it applies to; empty means every phase. */
   phases: number[];
 }

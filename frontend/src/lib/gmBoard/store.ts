@@ -268,6 +268,17 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
   return board;
 }
 
+/** A codex entry, with its lists defaulted so the checks never meet a missing one. */
+function codexEntry(item: LiveItem): CodexEntry {
+  const e = withId<Partial<CodexEntry> & { id: string }>(item);
+  return {
+    type: 'Other', name: '', notes: '', secret: false, ...e,
+    aliases: Array.isArray(e.aliases) ? e.aliases : [],
+    knownBy: Array.isArray(e.knownBy) ? e.knownBy : [],
+    phases: Array.isArray(e.phases) ? e.phases : [],
+  };
+}
+
 /** Builds a game's board settings from its items, with defaults for what isn't set. */
 export function assembleSettings(items: LiveItem[]): GameBoardSettings {
   const settings: GameBoardSettings = {
@@ -276,7 +287,7 @@ export function assembleSettings(items: LiveItem[]): GameBoardSettings {
   for (const item of items) {
     const doc = asObject(item.doc);
     switch (item.kind) {
-      case 'codex': settings.codex.push(withId<CodexEntry>(item)); break;
+      case 'codex': settings.codex.push(codexEntry(item)); break;
       case 'names': if (Array.isArray(doc.names)) settings.names[Number(item.key)] = doc.names.map(String); break;
       case 'template': settings.rewardTemplate = String(doc.text ?? ''); break;
       case 'groups': if (Array.isArray(doc.groups)) settings.rewardGroups = doc.groups as GameBoardSettings['rewardGroups']; break;

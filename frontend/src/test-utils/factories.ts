@@ -32,6 +32,7 @@ import type { useAuth as useAuthHook } from '../hooks/useAuth';
 import type { User } from '../types/auth';
 import type { Character } from '../types/characters';
 import type { GmItem } from '../types/gmBoard';
+import type { BoardDoc, Card, CodexEntry, Moment, Scene } from '../lib/gmBoard/types';
 import type {
   DashboardDeadline,
   DashboardGameCard,
@@ -608,4 +609,66 @@ export function makeGmItem(overrides: Partial<GmItem> & Pick<GmItem, 'kind' | 'k
     updated_by: 1,
     ...overrides,
   };
+}
+
+// ── GM results board documents (hand-written test data, never player content) ──
+
+export function makeCard(overrides: Partial<Card> & Pick<Card, 'id' | 'characterId'>): Card {
+  return {
+    quote: '',
+    summary: '',
+    note: '',
+    locationId: 'loc-hall',
+    chunkId: 'k1',
+    outcome: 'pending',
+    causedBy: [],
+    isIF: false,
+    cond: '',
+    branchOf: null,
+    src: [],
+    gm: false,
+    ...overrides,
+  };
+}
+
+export function makeMoment(overrides: Partial<Moment> & Pick<Moment, 'id'>): Moment {
+  return { text: '', readers: [], ownText: {}, ...overrides };
+}
+
+export function makeScene(overrides: Partial<Scene> & Pick<Scene, 'id'>): Scene {
+  return {
+    title: '',
+    locationId: 'loc-hall',
+    chunkId: 'k1',
+    conflict: false,
+    participants: [],
+    moments: [],
+    effects: [],
+    ...overrides,
+  };
+}
+
+/** A board with three time slots (k1, k2, k3) unless `chunks` is given. */
+export function makeBoard(overrides: Partial<BoardDoc> = {}): BoardDoc {
+  return {
+    chunks: [
+      { id: 'k1', name: 'Pre-Scenario', position: 1 },
+      { id: 'k2', name: 'Slot 1', position: 2 },
+      { id: 'k3', name: 'Slot 2', position: 3 },
+    ],
+    cards: [],
+    scenes: [],
+    clusters: [],
+    stances: {},
+    readDone: {},
+    ready: {},
+    covered: {},
+    dismissedFlags: {},
+    notes: '',
+    ...overrides,
+  };
+}
+
+export function makeCodexEntry(overrides: Partial<CodexEntry> & Pick<CodexEntry, 'id' | 'name'>): CodexEntry {
+  return { type: 'Other', aliases: [], notes: '', secret: false, knownBy: [], phases: [], ...overrides };
 }
