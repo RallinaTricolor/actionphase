@@ -833,7 +833,7 @@ BEGIN
     p4_id,
     phase2_id,
     char4_id,
-    E'Working on my approach... considering using my social connections or going with a disguise...',
+    E'I''ll walk in through the front doors as Lady Ashworth, a wealthy widow opening a deposit account, and ask to speak with the manager in person. While he''s busy with me, I''ll lift the vault key from his waistcoat.\n\nIf Inspector Dalton is in the lobby, I''ll keep him talking about his late wife''s estate until Vex gives the signal. Once the vault is open, I''ll leave the way I came in and wait with the carriage in the alley.',
     true,
     NULL,
     NOW() - INTERVAL '30 minutes'
@@ -969,14 +969,15 @@ Fixtures live under `backend/pkg/db/test_fixtures/`, organised by purpose:
 
 | Directory | Contents | Loader |
 |---|---|---|
-| `common/` | `00_reset.sql`, `01_users.sql`, worker users | `apply_common.sh` |
+| `common/` | `00_reset.sql`, `01_users.sql`, worker users, `02_gm_board_seed.sql` (defines `fixtures.seed_heist_board()`) | `apply_common.sh` |
 | `demo/` | Recruiting/running games, characters, actions, results | `apply_demo.sh` |
 | `e2e/` | Per-scenario E2E fixtures (66 files) | `apply_e2e_worker.sh` |
 | `perf/` | Performance/pagination data | — |
 
 `apply_all.sh` runs reset → users → all of `demo/` → all of `e2e/`, globbing
-each directory in filename order. Adding a `.sql` file to one of these
-directories is enough; no loader edit is required.
+each directory in filename order. Adding a `.sql` file to `demo/` or `e2e/`
+is enough; no loader edit is required. Files in `common/` are listed by name
+in `apply_common.sh` and `apply_all.sh`, so a new one goes in both.
 
 > Paths are **not** flat. `00_reset.sql` is at `common/00_reset.sql`, not
 > `test_fixtures/00_reset.sql`.

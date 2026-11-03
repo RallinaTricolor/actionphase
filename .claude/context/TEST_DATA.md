@@ -17,7 +17,8 @@ The fixture system is split into four categories:
 test_fixtures/
 ├── common/               # Shared base data (users, reset)
 │   ├── 00_reset.sql      # Cleans all test data
-│   └── 01_users.sql      # Creates test users (TestGM, TestPlayer1-5, TestAudience)
+│   ├── 01_users.sql      # Creates test users (TestGM, TestPlayer1-5, TestAudience)
+│   └── 02_gm_board_seed.sql # Defines fixtures.seed_heist_board() (no data of its own)
 ├── demo/                 # Demo/dev data (games, characters, actions, messages)
 │   ├── 02_games_recruiting.sql
 │   ├── 03_games_running.sql
@@ -26,7 +27,8 @@ test_fixtures/
 │   ├── 06_results.sql
 │   ├── 08_private_messages.sql
 │   ├── 09_demo_content.sql
-│   └── 10_deeply_nested_comments.sql
+│   ├── 10_deeply_nested_comments.sql
+│   └── 11_gm_board_heist.sql  # The Heist's results board (calls the seed above)
 ├── e2e/                  # Isolated fixtures per E2E test file (see below)
 │   ├── 07_common_room.sql        # Games #164-169 (common room tests)
 │   ├── 08_e2e_dedicated_games.sql # State-modifying test games
@@ -209,9 +211,34 @@ Numbers entries may carry `max` (turning a count into a track, "Stress 4/9") and
 ## Test Actions and Results
 
 ### Action Submissions (Game #2)
-- **3 submitted actions** (finalized)
-- **1 draft action** (work in progress)
+- **4 submitted actions**, one edited after submitting (Silk's)
 - Various submission times and content lengths
+- The results board seed quotes them, so changing a Heist submission means
+  changing the card quotes in `common/02_gm_board_seed.sql` too
+
+### Results Board (Game #2, phase 2 "Execute the Plan") — added 2026-11-03
+A partly resolved GM results board, so every built step has data. Open it as
+TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
+- **Setup**: 5 Locations (lobby, vault scoped to this phase, rooftop, alley,
+  ducts), an NPC, an Item, a Secret known only to Silk; names for Inspector
+  Dalton.
+- **Read**: Shade, Rook and Vex marked done; Silk not. Cards quote each
+  submission (Read highlights them).
+- **Map**: 4 time slots (Pre-Scenario, Approach, Inside, Getaway), 17 cards with
+  every outcome, causes, waiting and triggered IF cards, 2 GM cards for
+  Dalton, clusters Inside/Outside crew, stances including an ambush (Silk
+  means to leave Rook behind), a busy cell with no scene (the rear alley in
+  Getaway), no-outcome checks and one dismissed check.
+- **Scenes**: a conflict in the vault (own version, GM note, Silk reading from
+  elsewhere, a moment from a card and one from a passage, Vex injured) and a
+  short lobby scene with Dalton.
+
+The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
+(`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and
+`apply_all.sh`, so an E2E fixture can seed the same board on its own fixed-ID
+game (it needs the Heist's character names and submissions). **When the
+board's data model changes, change the seed in the same piece of work**, and
+write every field the client writes (see `frontend/src/lib/gmBoard/types.ts`).
 
 ### Action Results (Game #3)
 - **3 published results** (visible to players)

@@ -94,7 +94,7 @@ BEGIN
     p4_id,
     phase2_id,
     char4_id,
-    E'Working on my approach... considering using my social connections or going with a disguise...',
+    E'I''ll walk in through the front doors as Lady Ashworth, a wealthy widow opening a deposit account, and ask to speak with the manager in person. While he''s busy with me, I''ll lift the vault key from his waistcoat.\n\nIf Inspector Dalton is in the lobby, I''ll keep him talking about his late wife''s estate until Vex gives the signal. Once the vault is open, I''ll leave the way I came in and wait with the carriage in the alley.',
     NOW() - INTERVAL '90 minutes',
     NOW() - INTERVAL '30 minutes'
   );
