@@ -4,6 +4,7 @@ export interface CastMember {
   id: number;
   name: string;
   npc: boolean;
+  avatarUrl?: string | null;
 }
 
 interface CharacterLike {
@@ -12,12 +13,13 @@ interface CharacterLike {
   character_type?: string;
   is_active: boolean;
   status: string;
+  avatar_url?: string | null;
 }
 
 /** Active, approved characters, players first, then NPCs, each in the order given. */
 export function boardCast(characters: CharacterLike[]): CastMember[] {
   const live = characters
     .filter((c) => c.is_active && c.status === 'approved')
-    .map((c) => ({ id: c.id, name: c.name, npc: c.character_type === 'npc' }));
+    .map((c) => ({ id: c.id, name: c.name, npc: c.character_type === 'npc', avatarUrl: c.avatar_url }));
   return [...live.filter((c) => !c.npc), ...live.filter((c) => c.npc)];
 }

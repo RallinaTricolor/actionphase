@@ -3,7 +3,7 @@
  * slot (chunk) and a location. Labels, IF cards, outcomes and splitting.
  */
 
-import { plainText } from './text';
+import { escapeRegExp, plainText } from './text';
 import type { Card, Chunk, Outcome } from './types';
 
 export const OUTCOMES: { value: Outcome; label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' }[] = [
@@ -39,6 +39,28 @@ export function autoLabel(quote: string): string {
 
 /** What the board shows for a card: its label, else its quote's first sentence. */
 export const cardLabel = (card: Card) => card.summary || (card.quote ? autoLabel(card.quote) : '') || 'GM card';
+
+/**
+ * The label on the Map, where the card already shows its character: a
+ * leading name ("Mara's", "Mara") is dropped, unless little would be left.
+ */
+export function boardLabel(card: Card, names: string[]): string {
+  const label = cardLabel(card);
+  for (const name of [...new Set(names)].filter(Boolean).sort((a, b) => b.length - a.length)) {
+    const m = label.match(new RegExp(`^${escapeRegExp(name)}(?:['’]s)?\\s+(?=\\S)`));
+    if (m && label.length > m[0].length + 4) {
+      const rest = label.slice(m[0].length);
+      return rest[0].toUpperCase() + rest.slice(1);
+    }
+  }
+  return label;
+}
+
+/** The IF condition to show beside a card's label: none when the label already says it. */
+export function shownCondition(card: Card, label: string): string {
+  const cond = card.cond.trim();
+  return isIF(card) && cond && !label.toLowerCase().includes(cond.toLowerCase()) ? cond : '';
+}
 
 export const isIF = (card: Card) => card.isIF || !!card.cond || !!card.branchOf;
 

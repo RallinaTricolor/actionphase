@@ -31,11 +31,30 @@ export function truncate(text: string, max: number): string {
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
 
-/** A character's names when the GM hasn't set any: the full name, plus the first word if it's 3+ letters. */
+const ARTICLES = new Set(['the', 'a', 'an']);
+const TITLES = new Set([
+  'sir', 'dame', 'lady', 'lord', 'master', 'mistress', 'mr', 'mrs', 'ms', 'miss', 'dr', 'captain',
+  'father', 'mother', 'brother', 'sister', 'king', 'queen', 'prince', 'princess', 'saint',
+]);
+
+/**
+ * The word a character goes by for short: the first word, or the one after a
+ * title ("Sir Aldric" → "Aldric"). None after an article: "The Dark Lord"
+ * isn't "The", which would match every sentence that starts with it.
+ */
+function givenName(fullName: string): string | null {
+  const words = fullName.trim().split(/\s+/);
+  const first = (words[0] ?? '').toLowerCase().replace(/\.$/, '');
+  if (ARTICLES.has(first)) return null;
+  if (TITLES.has(first)) return words[1] ?? null;
+  return words[0] || null;
+}
+
+/** A character's names when the GM hasn't set any: the full name, plus the name they go by if it's 3+ letters. */
 export function defaultNames(fullName: string): string[] {
   const name = fullName.trim();
-  const first = name.split(/\s+/)[0] ?? '';
-  return first.length >= 3 && first !== name ? [name, first] : [name];
+  const given = givenName(name);
+  return given && given.length >= 3 && given !== name ? [name, given] : [name];
 }
 
 /**
@@ -45,6 +64,14 @@ export function defaultNames(fullName: string): string[] {
 export function characterNames(names: Record<number, string[]>, characterId: number, fullName: string): string[] {
   return Object.prototype.hasOwnProperty.call(names, characterId) ? names[characterId] : defaultNames(fullName);
 }
+
+/**
+ * The name the board shows where space is short: the name they go by
+ * ("Shade (Whisper)" → "Shade", "Sir Aldric" → "Aldric"). A name with none
+ * ("The Dark Lord"), or a stand-in for a character with no record
+ * ("Character 12"), stays whole.
+ */
+export const shortName = (name: string) => (/^Character \d+$/.test(name.trim()) ? name.trim() : (givenName(name) ?? name.trim()));
 
 /** A comma-separated list as typed into a field: trimmed, blanks dropped. */
 export const splitList = (text: string) =>

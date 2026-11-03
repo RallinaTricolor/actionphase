@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeBoard, makeCard } from '@/test-utils/factories';
-import { autoLabel, cardDoc, cardLabel, isIF, isWaiting, needsCause, newCard, nextChunkId, OUTCOMES, splitCard, textField } from './cards';
+import { autoLabel, boardLabel, cardDoc, cardLabel, isIF, isWaiting, needsCause, newCard, nextChunkId, OUTCOMES, shownCondition, splitCard, textField } from './cards';
 
 const chunks = makeBoard().chunks;
 
@@ -122,5 +122,22 @@ describe('splitCard', () => {
   it('finds the next slot by position, not list order', () => {
     const shuffled = [chunks[2], chunks[0], chunks[1]];
     expect(nextChunkId(shuffled, 'k1')).toBe('k2');
+  });
+});
+
+describe('on the Map', () => {
+  it('drops a leading name from the label, longest name first, unless little is left', () => {
+    const names = ['Mara', 'Mara Quill'];
+    expect(boardLabel(makeCard({ id: 'c', characterId: 1, summary: 'Mara Quill sneaks in' }), names)).toBe('Sneaks in');
+    expect(boardLabel(makeCard({ id: 'c', characterId: 1, summary: 'Mara’s dog barks' }), names)).toBe('Dog barks');
+    expect(boardLabel(makeCard({ id: 'c', characterId: 1, summary: 'Mara runs' }), names)).toBe('Mara runs');
+    expect(boardLabel(makeCard({ id: 'c', characterId: 1, summary: 'Marathon starts' }), names)).toBe('Marathon starts');
+  });
+
+  it('shows an IF card’s condition unless the label already says it', () => {
+    const card = makeCard({ id: 'c', characterId: 1, isIF: true, cond: 'If the dogs bark' });
+    expect(shownCondition(card, 'Run for the dock')).toBe('If the dogs bark');
+    expect(shownCondition(card, 'If the dogs bark, run')).toBe('');
+    expect(shownCondition(makeCard({ id: 'c', characterId: 1, cond: '' }), 'x')).toBe('');
   });
 });

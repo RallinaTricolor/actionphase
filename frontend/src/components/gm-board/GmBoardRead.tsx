@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, Card, CardBody, Spinner } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useBoardCardActions } from '@/hooks/useBoardCardActions';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { apiClient } from '@/lib/api';
@@ -11,13 +12,14 @@ import { cardDoc, newCard } from '@/lib/gmBoard/cards';
 import { boardCast } from '@/lib/gmBoard/cast';
 import { codexDoc, inPhase, newCodexEntry, phaseLocations } from '@/lib/gmBoard/codex';
 import { nextNotDone, setReadDone } from '@/lib/gmBoard/progress';
+import { boardRows } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS, guessCondition, placeNewCard, submissionLinks, type NamedCharacter } from '@/lib/gmBoard/read';
 import { stanceKey } from '@/lib/gmBoard/stances';
 import { newItemKey } from '@/lib/gmBoard/store';
 import { characterNames } from '@/lib/gmBoard/text';
-import type { BoardDoc, Card as BoardCard, CharacterProgress, Chunk, Stance } from '@/lib/gmBoard/types';
+import type { BoardDoc, CharacterProgress, Chunk, Stance } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
-import { ReadCardPanel } from './ReadCardPanel';
+import { CardPanel } from './CardPanel';
 import { ReadPlayerList } from './ReadPlayerList';
 import { ReadSidebar } from './ReadSidebar';
 import { SubmissionReader, type NewCardRequest } from './SubmissionReader';
@@ -78,6 +80,11 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
   );
   const codex = useMemo(() => (settings?.codex ?? []).filter((e) => inPhase(e, phase.id)), [settings?.codex, phase.id]);
   const locations = useMemo(() => phaseLocations(settings?.codex ?? [], phase.id), [settings?.codex, phase.id]);
+  const pickable = useMemo(
+    () => boardRows(settings?.codex ?? [], phase.id, board.cards).filter((r) => r.kind !== 'missing'),
+    [settings?.codex, phase.id, board.cards],
+  );
+  const cardActions = useBoardCardActions(gameId, phase.id, board, names);
 
   const order = submissions.map((s) => s.characterId);
   const wanted = Number(params.get('who'));
@@ -161,15 +168,6 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
     });
   };
 
-  const changeCard = (card: BoardCard, fields: Partial<BoardCard>) =>
-    store.update<Omit<BoardCard, 'id'>>('card', card.id, (current) => ({ ...(current ?? cardDoc(card)), ...fields }));
-
-  const deleteCard = (card: BoardCard) => {
-    store.remove('card', card.id);
-    setOpenCardId(null);
-    showToast('Card deleted.', 'info', { action: { label: 'Undo', onClick: () => store.update('card', card.id, () => cardDoc(card)) } });
-  };
-
   const createLocation = (name: string) => {
     const entry = newCodexEntry({ id: newItemKey('cx'), type: 'Location', name });
     settingsStore.update('codex', entry.id, () => codexDoc(entry));
@@ -237,15 +235,20 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
 
       <div className="sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
         {openCard ? (
-          <ReadCardPanel
+          <CardPanel
             key={openCard.id}
             card={openCard}
-            ownerName={ownerName}
-            locations={locations}
-            chunks={board.chunks}
-            onChange={(fields) => changeCard(openCard, fields)}
+            board={board}
+            names={names}
+            locations={pickable}
+            onChange={(fields) => cardActions.change(openCard, fields)}
             onCreateLocation={createLocation}
-            onDelete={() => deleteCard(openCard)}
+            onSplit={(at) => cardActions.split(openCard, at)}
+            onPushLater={() => cardActions.pushLater(openCard)}
+            onDelete={() => {
+              cardActions.remove(openCard);
+              setOpenCardId(null);
+            }}
             onClose={() => setOpenCardId(null)}
           />
         ) : (

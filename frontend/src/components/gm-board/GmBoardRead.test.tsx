@@ -241,7 +241,7 @@ describe('GmBoardRead', () => {
     const openCard = async () => {
       const sidebar = await screen.findByTestId('read-sidebar');
       await userEvent.click(within(sidebar).getByRole('button', { name: /I sneak into the Old Mill at dusk/ }));
-      return screen.findByTestId('read-card-panel');
+      return screen.findByTestId('card-panel');
     };
 
     it('moves a card to another time slot', async () => {
@@ -284,7 +284,7 @@ describe('GmBoardRead', () => {
       renderRead();
       const panel = await openCard();
       await userEvent.click(within(panel).getByRole('button', { name: 'Delete card' }));
-      expect(screen.queryByTestId('read-card-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
       expect(within(screen.getByTestId('read-sidebar')).getByText('Board cards (0)')).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
       expect(within(screen.getByTestId('read-sidebar')).getByText('Board cards (1)')).toBeInTheDocument();

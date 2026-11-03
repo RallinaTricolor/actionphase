@@ -16,20 +16,22 @@ export function GmBoardNotesDrawer({ open, onClose, notes, onChange, readOnly = 
 
   return (
     <Drawer open={open} onClose={onClose} title="Notes" side="right">
-      <Textarea
-        id="gm-board-notes"
-        label="Notes for this phase"
-        helperText="Only you and your co-GMs can see these, unless you share the board."
-        rows={16}
-        value={text}
-        readOnly={readOnly}
-        {...bind}
-        onChange={(e) => {
-          setText(e.target.value);
-          onChange(e.target.value);
-        }}
-        data-testid="gm-board-notes"
-      />
+      <div className="p-4">
+        <Textarea
+          id="gm-board-notes"
+          label="Notes for this phase"
+          helperText="Only you and your co-GMs can see these, unless you share the board."
+          rows={16}
+          value={text}
+          readOnly={readOnly}
+          {...bind}
+          onChange={(e) => {
+            setText(e.target.value);
+            onChange(e.target.value);
+          }}
+          data-testid="gm-board-notes"
+        />
+      </div>
     </Drawer>
   );
 }

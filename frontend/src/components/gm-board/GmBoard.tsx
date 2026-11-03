@@ -11,6 +11,7 @@ import { NOTES_KEY } from '@/lib/gmBoard/store';
 import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath, type BoardStep } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
 import { GmBoardConflicts } from './GmBoardConflicts';
+import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
 import { GmBoardRead } from './GmBoardRead';
 import { GmBoardSaveStatus } from './GmBoardSaveStatus';
@@ -31,8 +32,8 @@ const STEP_INTROS: Record<BoardStep, string> = {
 
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
- * steps, with the step in the URL (`?step=`). Read is built; the rest are
- * still empty.
+ * steps, with the step in the URL (`?step=`). Read and the Map are built; the
+ * rest are still empty.
  */
 export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   const navigate = useNavigate();
@@ -63,6 +64,14 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
     if (next === 'read') nextParams.delete('step');
     else nextParams.set('step', next);
     setParams(nextParams);
+  };
+
+  const readSubmission = (characterId: number) => {
+    const nextParams = new URLSearchParams(params);
+    nextParams.delete('step');
+    nextParams.set('who', String(characterId));
+    setParams(nextParams);
+    window.scrollTo?.(0, 0);
   };
 
   return (
@@ -114,6 +123,14 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
           onOpenCodex={(name = '') => setCodex({ name })}
           onGoToMap={() => goToStep('map')}
         />
+      ) : step === 'map' ? (
+        <GmBoardMap
+          gameId={gameId}
+          phase={phase}
+          board={board}
+          onOpenCodex={(name = '') => setCodex({ name })}
+          onReadSubmission={readSubmission}
+        />
       ) : (
         <Card variant="bordered" padding="md" data-testid={`gm-board-step-${step}`}>
           <CardBody>
@@ -135,14 +152,16 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
 
       <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
         {codex !== null && (
-          <GmCodexManager
-            key={codex.name}
-            gameId={gameId}
-            phases={actionPhases}
-            players={players}
-            phaseId={phase.id}
-            initialName={codex.name}
-          />
+          <div className="p-4">
+            <GmCodexManager
+              key={codex.name}
+              gameId={gameId}
+              phases={actionPhases}
+              players={players}
+              phaseId={phase.id}
+              initialName={codex.name}
+            />
+          </div>
         )}
       </Drawer>
 
