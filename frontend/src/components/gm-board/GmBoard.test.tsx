@@ -38,8 +38,8 @@ describe('GmBoard', () => {
   it('opens on the step named in the URL, and Read by default', async () => {
     renderBoard(`/games/${GAME_ID}/phases/70/board?step=scenes`);
     expect(await screen.findByTestId('gm-board-step-scenes')).toBeInTheDocument();
-    expect(screen.getByText(/Scenes are made from busy cells on the/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Map' })).toHaveAttribute('href', `/games/${GAME_ID}/phases/70/board?step=map`);
+    expect(await screen.findByText('No scenes yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to the Map' })).toBeInTheDocument();
   });
 
   it('puts the step in the URL when the GM switches', async () => {

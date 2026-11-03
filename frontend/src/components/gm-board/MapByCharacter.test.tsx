@@ -39,6 +39,15 @@ describe('MapByCharacter', () => {
     expect(within(k2).queryByText('Captured')).not.toBeInTheDocument();
   });
 
+  it('lists each character’s scenes in their slot, opening one in Scenes', async () => {
+    const actions = renderRows(testModel({ scenes: [makeScene({ id: 's1', title: 'Standoff', locationId: 'mill', chunkId: 'k2', participants: [1, 2], conflict: true })] }));
+    const harrison = screen.getByTestId('char-cell-1-k2');
+    expect(within(screen.getByTestId('char-cell-2-k2')).getByText(/the Old Mill: Standoff/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('char-cell-3-k2')).queryByText(/Standoff/)).not.toBeInTheDocument();
+    await userEvent.click(within(harrison).getByRole('button', { name: /Standoff/ }));
+    expect(actions.openScene).toHaveBeenCalledWith('s1');
+  });
+
   it('starts a GM card where the character last was', async () => {
     const actions = renderRows(testModel({ cards: [makeCard({ id: 'a', characterId: 3, locationId: 'dock', chunkId: 'k1' })] }));
     expect(within(screen.getByTestId('char-cell-3-k1')).getByText('dock')).toBeInTheDocument();

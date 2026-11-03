@@ -42,7 +42,8 @@ export function verbFor(word: string): string | null {
   if (YOU_BE[lw]) return YOU_BE[lw];
   if (!/^[a-z]+$/.test(word) || NOT_VERB.has(lw) || word.length < 3 || /ss$/.test(lw) || !/s$/.test(lw)) return null;
   if (word.length > 4 && /[^aeiou]ies$/.test(lw)) return `${word.slice(0, -3)}y`;
-  if (/(?:sh|ch|x|z|ss|o)es$/.test(lw)) return word.slice(0, -2);
+  // "buzzes" → "buzz", but "freezes" → "freeze": after a single z the e is the verb's own.
+  if (/(?:sh|ch|x|zz|ss|o)es$/.test(lw)) return word.slice(0, -2);
   return word.slice(0, -1);
 }
 

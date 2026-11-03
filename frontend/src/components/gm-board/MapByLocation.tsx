@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Badge, Button } from '@/components/ui';
 import { isWaiting } from '@/lib/gmBoard/cards';
 import { isChunkEmpty, type BoardRow } from '@/lib/gmBoard/map';
+import { sceneName } from '@/lib/gmBoard/scenes';
 import { isAmbush, stanceOf } from '@/lib/gmBoard/stances';
 import { shortName } from '@/lib/gmBoard/text';
 import type { Card, Chunk } from '@/lib/gmBoard/types';
@@ -130,12 +131,25 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
       className={`border-b border-r border-theme-default ${dimmed ? 'opacity-40' : ''}`}
       data-testid={`cell-${row.id}-${slot.id}`}
     >
-      {busy && <BusyPill model={model} present={present} scenes={scenes} />}
+      {busy && <BusyPill model={model} present={present} scenes={scenes} onOpenScene={actions.openScene} />}
       {scenes.map((s) => (
-        <div key={s.id} className="truncate text-xs text-content-secondary" title={s.title}>
-          {s.title || 'Untitled scene'}
-        </div>
+        <Button
+          key={s.id}
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="!block w-full truncate !px-1 !py-0 text-left text-xs !font-normal"
+          title={`Open ${sceneName(s, model.names)} in Scenes`}
+          onClick={() => actions.openScene(s.id)}
+        >
+          ▸ {sceneName(s, model.names)}
+        </Button>
       ))}
+      {busy && !scenes.length && !missing && (
+        <Button type="button" variant="secondary" size="sm" className="!px-1.5 !py-0 text-xs" onClick={() => actions.createScene(row.id, slot.id)} aria-label={`Create scene at ${row.name}, ${slot.name}`}>
+          Create scene
+        </Button>
+      )}
       {[...live, ...(showMoot ? moot : [])].map((card) => (
         <CellCard key={card.id} card={card} model={model} actions={actions} drag={drag} />
       ))}
@@ -160,8 +174,8 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
   );
 }
 
-/** One pill for a busy cell: its scene or conflict, or that it has none. Hover for who means what to whom. */
-function BusyPill({ model, present, scenes }: { model: MapModel; present: number[]; scenes: CellContents['scenes'] }) {
+/** One pill for a busy cell: its scene or conflict (click to open it), or that it has none. Hover for who means what to whom. */
+function BusyPill({ model, present, scenes, onOpenScene }: { model: MapModel; present: number[]; scenes: CellContents['scenes']; onOpenScene: (id: string) => void }) {
   const lines: string[] = [];
   for (const a of present) {
     for (const b of present) {
@@ -175,9 +189,11 @@ function BusyPill({ model, present, scenes }: { model: MapModel; present: number
   return (
     <div className="flex flex-wrap items-center gap-1" title={title}>
       {scenes.length ? (
-        <Badge variant={conflict ? 'danger' : 'primary'} size="sm">
-          {conflict ? 'Conflict' : 'Scene'}
-        </Badge>
+        <Button type="button" variant="ghost" size="sm" className="!p-0" aria-label={`Open the ${conflict ? 'conflict' : 'scene'} here`} onClick={() => onOpenScene((scenes.find((s) => s.conflict) ?? scenes[0]).id)}>
+          <Badge variant={conflict ? 'danger' : 'primary'} size="sm">
+            {conflict ? 'Conflict' : 'Scene'}
+          </Badge>
+        </Button>
       ) : (
         <Badge variant="warning" size="sm">
           Busy · no scene

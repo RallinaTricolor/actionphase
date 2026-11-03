@@ -1,21 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { Button, Card, CardBody, Drawer, Select, Spinner } from '@/components/ui';
-import { useGameContext } from '@/contexts/GameContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
-import { useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
-import { apiClient } from '@/lib/api';
+import { useBoardPeople } from '@/hooks/useBoardPeople';
+import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
-import { boardCast } from '@/lib/gmBoard/cast';
 import { codexDoc, newCodexEntry } from '@/lib/gmBoard/codex';
 import type { BoardFlag } from '@/lib/gmBoard/flags';
 import { dropCard, nextSlotName, positionAtEnd, positionBefore } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS } from '@/lib/gmBoard/read';
+import { newScene, sceneDoc } from '@/lib/gmBoard/scenes';
 import { stanceKey } from '@/lib/gmBoard/stances';
 import { newItemKey } from '@/lib/gmBoard/store';
-import { characterNames } from '@/lib/gmBoard/text';
 import type { BoardDoc, Card as BoardCard, Chunk, Cluster, Stance, StanceValue } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { CardPanel } from './CardPanel';
@@ -37,6 +34,8 @@ interface GmBoardMapProps {
   onOpenCodex: (name?: string) => void;
   /** Opens a submission in Read. */
   onReadSubmission: (characterId: number) => void;
+  /** Opens a scene in the Scenes step. */
+  onOpenScene: (sceneId: string) => void;
 }
 
 const VIEWS = [
@@ -60,15 +59,14 @@ type Doc = Omit<BoardCard, 'id'>;
  * with checks for likely mistakes, Resolve mode, clusters and stances. The
  * view and cluster are in the URL (`?view=`, `?cluster=`).
  */
-export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission }: GmBoardMapProps) {
+export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission, onOpenScene }: GmBoardMapProps) {
   const [params, setParams] = useSearchParams();
   const view = parseView(params.get('view'));
   const clusterId = params.get('cluster');
-  const { allGameCharacters } = useGameContext();
   const { showToast } = useToast();
   const store = useGmBoardStore(gameId, phase.id);
   const settingsStore = useGmSettingsStore(gameId);
-  const { settings } = useGmSettings(gameId);
+  const { cast, names, nameLists, submitters, settings, canRead, isLoading } = useBoardPeople(gameId, phase.id);
 
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [resolving, setResolving] = useState<string | null>(null);
@@ -77,26 +75,6 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const [stanceFocus, setStanceFocus] = useState<number | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  const actionsQuery = useQuery({
-    queryKey: ['gameActions', gameId],
-    queryFn: () => apiClient.phases.getGameActions(gameId).then((res) => res.data),
-    enabled: gameId > 0,
-  });
-
-  const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
-  const names = useMemo(() => {
-    const m = new Map(cast.map((c) => [c.id, c.name]));
-    for (const a of actionsQuery.data ?? []) if (a.character_id && !m.has(a.character_id)) m.set(a.character_id, a.character_name ?? `Character ${a.character_id}`);
-    return m;
-  }, [cast, actionsQuery.data]);
-  const submitters = useMemo(
-    () => [...new Set((actionsQuery.data ?? []).filter((a) => a.phase_id === phase.id && a.character_id).map((a) => a.character_id as number))],
-    [actionsQuery.data, phase.id],
-  );
-  const nameLists = useMemo(
-    () => new Map([...names].map(([id, name]) => [id, characterNames(settings?.names ?? {}, id, name)])),
-    [names, settings?.names],
-  );
   const cluster = board.clusters.find((c) => c.id === clusterId) ?? null;
   const model = useMemo(
     () =>
@@ -176,6 +154,12 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
       setStanceFocus(id);
       setParam('view', 'stances');
     },
+    createScene: (locationId, chunkId) => {
+      const scene = newScene(board, { locationId, chunkId }, { scene: newItemKey('scene'), moment: newItemKey('m') }, canRead);
+      store.update('scene', scene.id, () => sceneDoc(scene));
+      onOpenScene(scene.id);
+    },
+    openScene: onOpenScene,
   };
 
   const dismiss = (flag: BoardFlag) => {
@@ -218,7 +202,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
     if (c) showToast(`Deleted ${c.name || 'the cluster'}.`, 'info', { action: { label: 'Undo', onClick: () => saveCluster(c) } });
   };
 
-  if (!settings || actionsQuery.isLoading) {
+  if (!settings || isLoading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner size="lg" />
@@ -330,7 +314,15 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
                 onReadSubmission={!openCard.gm && submitters.includes(openCard.characterId) ? () => onReadSubmission(openCard.characterId) : undefined}
               />
             ) : (
-              <MapChecks model={model} onOpenCard={setOpenCardId} onResolveAt={setResolving} onDismiss={dismiss} onRestore={(f) => store.remove('flag', f.key)} />
+              <MapChecks
+                model={model}
+                onOpenCard={setOpenCardId}
+                onResolveAt={setResolving}
+                onDismiss={dismiss}
+                onRestore={(f) => store.remove('flag', f.key)}
+                onCreateScene={actions.createScene}
+                onOpenScene={onOpenScene}
+              />
             )}
           </div>
         </div>

@@ -34,8 +34,10 @@ interface SubmissionReaderProps {
   /** The owner's sheet entries, for `[[ref]]` tooltips. */
   sheetItems?: SheetItem[];
   readOnly?: boolean;
-  onAddCard: (request: NewCardRequest) => void;
-  onAddCodex: (text: string) => void;
+  /** Each action shows only when its handler is given: Read cards and adds to the codex, Scenes starts moments. */
+  onAddCard?: (request: NewCardRequest) => void;
+  onAddCodex?: (text: string) => void;
+  onAddMoment?: (text: string) => void;
   onOpenCard: (cardId: string) => void;
 }
 
@@ -93,6 +95,7 @@ export function SubmissionReader({
   readOnly = false,
   onAddCard,
   onAddCodex,
+  onAddMoment,
   onOpenCard,
 }: SubmissionReaderProps) {
   const box = useRef<HTMLDivElement>(null);
@@ -251,30 +254,47 @@ export function SubmissionReader({
                     </Badge>
                   </span>
                 )}
-                {!readOnly && (
+                {!readOnly && (onAddCard || onAddMoment) && (
                   <span className="absolute right-0 top-1 flex gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="!px-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                      aria-label="+ Whole paragraph"
-                      title="Card the whole paragraph. To card part of it, select the text instead."
-                      onClick={() => onAddCard({ text: b.text, paragraphs: [index], isIF: false })}
-                    >
-                      +
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="!px-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-                      aria-label="+ as IF"
-                      title="Card the whole paragraph as an IF card"
-                      onClick={() => onAddCard({ text: b.text, paragraphs: [index], isIF: true })}
-                    >
-                      IF
-                    </Button>
+                    {onAddCard && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="!px-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                          aria-label="+ Whole paragraph"
+                          title="Card the whole paragraph. To card part of it, select the text instead."
+                          onClick={() => onAddCard({ text: b.text, paragraphs: [index], isIF: false })}
+                        >
+                          +
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="!px-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                          aria-label="+ as IF"
+                          title="Card the whole paragraph as an IF card"
+                          onClick={() => onAddCard({ text: b.text, paragraphs: [index], isIF: true })}
+                        >
+                          IF
+                        </Button>
+                      </>
+                    )}
+                    {onAddMoment && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="!px-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        aria-label="→ Moment from paragraph"
+                        title="A new moment with this paragraph shown above it. To use part of it, select the text instead."
+                        onClick={() => onAddMoment(b.text)}
+                      >
+                        →
+                      </Button>
+                    )}
                   </span>
                 )}
               </div>
@@ -295,15 +315,26 @@ export function SubmissionReader({
           onMouseDown={(e) => e.preventDefault()}
           data-testid="selection-toolbar"
         >
-          <Button type="button" size="sm" variant="primary" onClick={() => fromSelection((s) => onAddCard({ text: s.text, paragraphs: s.paragraphs, isIF: false }))}>
-            + Card
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => fromSelection((s) => onAddCard({ text: s.text, paragraphs: s.paragraphs, isIF: true }))}>
-            + IF card
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => fromSelection((s) => onAddCodex(s.text.slice(0, 80)))}>
-            + Codex
-          </Button>
+          {onAddMoment && (
+            <Button type="button" size="sm" variant="primary" onClick={() => fromSelection((s) => onAddMoment(s.text))}>
+              → Moment
+            </Button>
+          )}
+          {onAddCard && (
+            <>
+              <Button type="button" size="sm" variant="primary" onClick={() => fromSelection((s) => onAddCard({ text: s.text, paragraphs: s.paragraphs, isIF: false }))}>
+                + Card
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => fromSelection((s) => onAddCard({ text: s.text, paragraphs: s.paragraphs, isIF: true }))}>
+                + IF card
+              </Button>
+            </>
+          )}
+          {onAddCodex && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => fromSelection((s) => onAddCodex(s.text.slice(0, 80)))}>
+              + Codex
+            </Button>
+          )}
         </div>
       )}
     </div>

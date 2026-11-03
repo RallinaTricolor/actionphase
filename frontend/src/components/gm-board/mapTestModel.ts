@@ -13,9 +13,9 @@ const CODEX = [
   makeCodexEntry({ id: 'tower', name: 'the Tower', type: 'Location', phases: [69] }),
 ];
 export const CAST: CastMember[] = [
-  { id: 1, name: 'Harrison Vale', npc: false },
-  { id: 2, name: 'Mara Quill', npc: false },
-  { id: 3, name: 'Ilse', npc: false },
+  { id: 1, name: 'Harrison Vale', npc: false, reads: true },
+  { id: 2, name: 'Mara Quill', npc: false, reads: true },
+  { id: 3, name: 'Ilse', npc: false, reads: true },
   { id: 9, name: 'Bo Hale', npc: true },
 ];
 
@@ -45,6 +45,8 @@ export function testActions(): MapActions {
     resolveAt: vi.fn(),
     readSubmission: vi.fn(),
     openStances: vi.fn(),
+    createScene: vi.fn(),
+    openScene: vi.fn(),
   };
 }
 

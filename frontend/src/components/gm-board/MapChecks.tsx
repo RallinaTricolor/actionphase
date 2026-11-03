@@ -10,6 +10,8 @@ interface MapChecksProps {
   onResolveAt: (chunkId: string) => void;
   onDismiss: (flag: BoardFlag) => void;
   onRestore: (flag: BoardFlag) => void;
+  onCreateScene: (locationId: string, chunkId: string) => void;
+  onOpenScene: (sceneId: string) => void;
 }
 
 const KIND_LABEL: Record<BoardFlag['kind'], string> = {
@@ -20,7 +22,8 @@ const KIND_LABEL: Record<BoardFlag['kind'], string> = {
 };
 
 /** Things on the board that are probably mistakes. Each can be dismissed (and restored). */
-export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore }: MapChecksProps) {
+export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore, onCreateScene, onOpenScene }: MapChecksProps) {
+  const go = { onOpenCard, onResolveAt, onCreateScene, onOpenScene };
   const [showDismissed, setShowDismissed] = useState(false);
   const dismissed = model.flags.filter((f) => model.board.dismissedFlags[f.key]);
   return (
@@ -33,7 +36,7 @@ export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore
       ) : (
         <ul className="space-y-1.5">
           {model.open.map((flag) => (
-            <FlagRow key={flag.key} flag={flag} model={model} onOpenCard={onOpenCard} onResolveAt={onResolveAt}>
+            <FlagRow key={flag.key} flag={flag} model={model} {...go}>
               <Button type="button" variant="ghost" size="sm" onClick={() => onDismiss(flag)} aria-label={`Dismiss: ${flagSentence(flag, model)}`}>
                 Dismiss
               </Button>
@@ -49,7 +52,7 @@ export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore
           {showDismissed && (
             <ul className="space-y-1.5 opacity-75">
               {dismissed.map((flag) => (
-                <FlagRow key={flag.key} flag={flag} model={model} onOpenCard={onOpenCard} onResolveAt={onResolveAt}>
+                <FlagRow key={flag.key} flag={flag} model={model} {...go}>
                   <Button type="button" variant="ghost" size="sm" onClick={() => onRestore(flag)} aria-label={`Restore: ${flagSentence(flag, model)}`}>
                     Restore
                   </Button>
@@ -63,16 +66,15 @@ export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore
   );
 }
 
-interface FlagRowProps {
+interface FlagRowProps extends Pick<MapChecksProps, 'onOpenCard' | 'onResolveAt' | 'onCreateScene' | 'onOpenScene'> {
   flag: BoardFlag;
   model: MapModel;
-  onOpenCard: (id: string) => void;
-  onResolveAt: (chunkId: string) => void;
   children: React.ReactNode;
 }
 
-function FlagRow({ flag, model, onOpenCard, onResolveAt, children }: FlagRowProps) {
+function FlagRow({ flag, model, onOpenCard, onResolveAt, onCreateScene, onOpenScene, children }: FlagRowProps) {
   const cardId = flagCardId(flag);
+  const sceneId = flag.kind === 'out' ? flag.sceneId : undefined;
   return (
     <li className="space-y-1 rounded border border-theme-default surface-base p-2 text-sm">
       <div className="text-content-primary">
@@ -82,9 +84,19 @@ function FlagRow({ flag, model, onOpenCard, onResolveAt, children }: FlagRowProp
         {flagSentence(flag, model)}
       </div>
       <div className="flex justify-end gap-1">
-        <Button type="button" variant="ghost" size="sm" onClick={() => (cardId ? onOpenCard(cardId) : onResolveAt(flag.chunkId))}>
-          {cardId ? 'Open card' : 'Show'}
-        </Button>
+        {flag.kind === 'meeting' ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onCreateScene(flag.locationId, flag.chunkId)}>
+            Create scene
+          </Button>
+        ) : sceneId ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onOpenScene(sceneId)}>
+            Open scene
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" size="sm" onClick={() => (cardId ? onOpenCard(cardId) : onResolveAt(flag.chunkId))}>
+            {cardId ? 'Open card' : 'Show'}
+          </Button>
+        )}
         {children}
       </div>
     </li>

@@ -98,6 +98,26 @@ describe('SubmissionReader', () => {
     expect(screen.queryByRole('button', { name: '+ Whole paragraph' })).not.toBeInTheDocument();
   });
 
+  it('offers only moments in the Scenes step: from a selection or a whole paragraph', () => {
+    const onAddMoment = vi.fn();
+    render(<SubmissionReader {...props} onAddCard={undefined} onAddCodex={undefined} onAddMoment={onAddMoment} cards={[]} />);
+    expect(screen.queryByRole('button', { name: '+ Whole paragraph' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: '→ Moment from paragraph' })[1]);
+    expect(onAddMoment).toHaveBeenLastCalledWith('Then I hide the ledger in the vault.');
+
+    const node = screen.getByText(/I meet Mara/).firstChild as Text;
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, 'I meet Mara'.length);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    fireEvent.mouseUp(node.parentElement as HTMLElement);
+    const toolbar = screen.getByTestId('selection-toolbar');
+    expect(toolbar).not.toHaveTextContent('+ Card');
+    fireEvent.click(screen.getByRole('button', { name: '→ Moment' }));
+    expect(onAddMoment).toHaveBeenLastCalledWith('I meet Mara');
+  });
+
   it('says so when a submission is empty', () => {
     render(<SubmissionReader {...props} text="  " cards={[]} />);
     expect(screen.getByText('This submission is empty.')).toBeInTheDocument();

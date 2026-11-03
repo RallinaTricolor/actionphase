@@ -14,6 +14,7 @@ import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
 import { GmBoardRead } from './GmBoardRead';
+import { GmBoardScenes } from './GmBoardScenes';
 import { GmBoardSaveStatus } from './GmBoardSaveStatus';
 import { GmCodexManager } from './GmCodexManager';
 
@@ -23,17 +24,14 @@ interface GmBoardProps {
   phase: GamePhase;
 }
 
-const STEP_INTROS: Record<BoardStep, string> = {
-  read: 'Read each submission and turn the parts that matter into plan cards.',
-  map: 'Place cards on a grid of locations and time slots, mark where people meet, and set outcomes.',
-  scenes: 'Write each scene as moments, each with the people who read it.',
+const STEP_INTROS: Partial<Record<BoardStep, string>> = {
   write: 'Draft each player’s result from their brief, with checks before you publish.',
 };
 
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
- * steps, with the step in the URL (`?step=`). Read and the Map are built; the
- * rest are still empty.
+ * steps, with the step in the URL (`?step=`). Read, the Map and Scenes are
+ * built; Write is still empty.
  */
 export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   const navigate = useNavigate();
@@ -70,6 +68,14 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
     const nextParams = new URLSearchParams(params);
     nextParams.delete('step');
     nextParams.set('who', String(characterId));
+    setParams(nextParams);
+    window.scrollTo?.(0, 0);
+  };
+
+  const openScene = (sceneId: string) => {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('step', 'scenes');
+    nextParams.set('scene', sceneId);
     setParams(nextParams);
     window.scrollTo?.(0, 0);
   };
@@ -130,22 +136,15 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
           board={board}
           onOpenCodex={(name = '') => setCodex({ name })}
           onReadSubmission={readSubmission}
+          onOpenScene={openScene}
         />
+      ) : step === 'scenes' ? (
+        <GmBoardScenes gameId={gameId} phase={phase} board={board} onGoToMap={() => goToStep('map')} />
       ) : (
         <Card variant="bordered" padding="md" data-testid={`gm-board-step-${step}`}>
           <CardBody>
             <p className="text-content-primary">{STEP_INTROS[step]}</p>
-            {step === 'scenes' && board.scenes.length === 0 ? (
-              <p className="text-sm text-content-secondary mt-2">
-                No scenes yet. Scenes are made from busy cells on the{' '}
-                <Link to={boardPath(gameId, phase.id, 'map')} className="underline">
-                  Map
-                </Link>
-                .
-              </p>
-            ) : (
-              <p className="text-sm text-content-tertiary mt-2">This step isn’t built yet.</p>
-            )}
+            <p className="text-sm text-content-tertiary mt-2">This step isn’t built yet.</p>
           </CardBody>
         </Card>
       )}

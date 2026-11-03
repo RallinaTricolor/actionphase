@@ -256,7 +256,7 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
   for (const item of items) {
     switch (item.kind) {
       case 'card': board.cards.push(withId<Card>(item)); break;
-      case 'scene': board.scenes.push(withId<Scene>(item)); break;
+      case 'scene': board.scenes.push(sceneOf(item)); break;
       case 'chunk': board.chunks.push(withId<Chunk>(item)); break;
       case 'cluster': board.clusters.push(withId<Cluster>(item)); break;
       case 'stance': board.stances[item.key] = asObject(item.doc) as unknown as Stance; break;
@@ -277,6 +277,18 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
   board.scenes.sort(byId);
   board.clusters.sort(byId);
   return board;
+}
+
+/** A scene, with its lists defaulted, so an older or hand-made item can't break the Scenes step. */
+function sceneOf(item: LiveItem): Scene {
+  const s = withId<Partial<Scene> & { id: string }>(item);
+  const list = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
+  return {
+    title: '', locationId: '', chunkId: '', conflict: false, ...s,
+    participants: list(s.participants),
+    effects: list(s.effects),
+    moments: list(s.moments).map((m) => ({ ...m, text: m.text ?? '', readers: list(m.readers), ownText: m.ownText ?? {} })),
+  };
 }
 
 /** A codex entry, with its lists defaulted so the checks never meet a missing one. */

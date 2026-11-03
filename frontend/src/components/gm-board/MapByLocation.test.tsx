@@ -25,8 +25,8 @@ describe('MapByLocation', () => {
     expect(screen.getByLabelText('Name of time slot 2')).toHaveValue('Slot 1');
   });
 
-  it('marks a busy cell with no scene, and lists the stances between the people there', () => {
-    renderGrid(
+  it('marks a busy cell with no scene, and lists the stances between the people there', async () => {
+    const actions = renderGrid(
       testModel({
         cards: [
           makeCard({ id: 'a', characterId: 1, locationId: 'mill', chunkId: 'k2' }),
@@ -40,10 +40,12 @@ describe('MapByLocation', () => {
     expect(title).toContain('Here: Harrison, Mara');
     expect(title).toContain('Harrison → Mara: Target — owes him (they think it’s an alliance)');
     expect(title).toContain('Mara → Harrison: Ally');
+    await userEvent.click(within(cell('mill', 'k2')).getByRole('button', { name: 'Create scene at the Old Mill, Slot 1' }));
+    expect(actions.createScene).toHaveBeenCalledWith('mill', 'k2');
   });
 
-  it('shows one Scene or Conflict pill for a cell with a scene', () => {
-    renderGrid(
+  it('shows one Scene or Conflict pill for a cell with a scene, opening it in Scenes', async () => {
+    const actions = renderGrid(
       testModel({
         scenes: [
           makeScene({ id: 's1', title: 'Talk', locationId: 'mill', chunkId: 'k2', participants: [1, 2] }),
@@ -53,7 +55,11 @@ describe('MapByLocation', () => {
     );
     expect(within(cell('mill', 'k2')).getByText('Scene')).toBeInTheDocument();
     expect(within(cell('dock', 'k3')).getByText('Conflict')).toBeInTheDocument();
-    expect(within(cell('dock', 'k3')).getByText('Fight')).toBeInTheDocument();
+    expect(within(cell('dock', 'k3')).queryByRole('button', { name: /^Create scene/ })).not.toBeInTheDocument();
+    await userEvent.click(within(cell('dock', 'k3')).getByRole('button', { name: 'Open the conflict here' }));
+    expect(actions.openScene).toHaveBeenLastCalledWith('s2');
+    await userEvent.click(within(cell('mill', 'k2')).getByRole('button', { name: '▸ Talk' }));
+    expect(actions.openScene).toHaveBeenLastCalledWith('s1');
   });
 
   it('folds moot cards behind “+N moot”', async () => {

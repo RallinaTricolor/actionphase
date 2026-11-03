@@ -45,6 +45,9 @@ export interface MapActions {
   resolveAt: (id: string) => void;
   readSubmission: (characterId: number) => void;
   openStances: (characterId: number) => void;
+  /** Makes a scene for a busy cell and opens it in the Scenes step. */
+  createScene: (locationId: string, chunkId: string) => void;
+  openScene: (sceneId: string) => void;
 }
 
 /** The drag in progress, shared by the cells so they can show where it will land. */

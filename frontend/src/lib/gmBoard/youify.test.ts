@@ -67,6 +67,14 @@ describe('verbFor', () => {
     expect(verbFor('carries')).toBe('carry');
     expect(verbFor('watches')).toBe('watch');
     expect(verbFor('goes')).toBe('go');
+    expect(verbFor('fixes')).toBe('fix');
+  });
+
+  it('keeps the e of a verb ending in -ze, dropping -es only after zz', () => {
+    expect(verbFor('freezes')).toBe('freeze');
+    expect(verbFor('gazes')).toBe('gaze');
+    expect(verbFor('buzzes')).toBe('buzz');
+    expect(youify('Then Harrison freezes.', names).text).toBe('Then you freeze.');
   });
 
   it('refuses words that aren’t third-person verbs', () => {

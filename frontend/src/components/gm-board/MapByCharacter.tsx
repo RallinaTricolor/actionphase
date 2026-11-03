@@ -1,5 +1,6 @@
 import { Badge, Button } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { sceneName } from '@/lib/gmBoard/scenes';
 import { isWaiting } from '@/lib/gmBoard/cards';
 import { locationAt } from '@/lib/gmBoard/map';
 import { outEntering, stateAt } from '@/lib/gmBoard/states';
@@ -104,6 +105,24 @@ export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
                             {STATE_LABELS[state]}
                           </Badge>
                         )}
+                        {model.board.scenes
+                          .filter((sc) => sc.chunkId === s.id && sc.participants.includes(id))
+                          .map((sc) => (
+                            <Button
+                              key={sc.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="!block w-full truncate !px-1 !py-0 text-left text-xs !font-normal"
+                              title={`Open ${sceneName(sc, model.names)} in Scenes`}
+                              onClick={() => actions.openScene(sc.id)}
+                            >
+                              <Badge variant={sc.conflict ? 'danger' : 'primary'} size="sm">
+                                {sc.conflict ? 'Conflict' : 'Scene'}
+                              </Badge>{' '}
+                              {place(sc.locationId)}: {sceneName(sc, model.names)}
+                            </Button>
+                          ))}
                         {cards.map((c) => (
                           <div key={c.id}>
                             <div className="truncate text-xs text-content-tertiary">{place(c.locationId)}</div>
