@@ -83,6 +83,17 @@ var ErrCannotCancelPart = errors.New("cannot cancel staged part")
 // than 400 — the request was well formed, the world moved.
 var ErrCannotEditChain = errors.New("cannot edit staged chain")
 
+// ErrResultNotEditable is returned when a draft result can't be saved: it was
+// published, or someone saved it after the updated_at the caller sent. Both
+// are the world moving under a well-formed request, so handlers answer 409
+// with UserMessage.
+var ErrResultNotEditable = errors.New("cannot update action result")
+
+// ErrActionResultNotFound is returned when a result doesn't exist (or was
+// deleted, which takes a chain's later parts with it). Its text matches the
+// unwrapped "action result not found" errors elsewhere in the results service.
+var ErrActionResultNotFound = errors.New("action result not found")
+
 // ErrInvalidStateTransition is returned when a game state change is rejected by
 // the state machine (allowedTransitions, pkg/db/services/games.go) — for
 // example epilogue → in_progress, which is a deliberate one-way door.

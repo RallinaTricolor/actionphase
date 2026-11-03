@@ -12,6 +12,8 @@ export interface CastMember {
    * is assigned to). Only they can read a scene's moments.
    */
   reads?: boolean;
+  /** Who a result for them goes to: their player, or the player an NPC is assigned to. */
+  userId?: number;
 }
 
 interface CharacterLike {
@@ -36,6 +38,7 @@ export function boardCast(characters: CharacterLike[]): CastMember[] {
       avatarUrl: c.avatar_url,
       // A result goes to a user, as in the standalone result composer.
       reads: (c.user_id ?? c.assigned_user_id) !== undefined,
+      userId: c.user_id ?? c.assigned_user_id,
     }));
   return [...live.filter((c) => !c.npc), ...live.filter((c) => c.npc)];
 }

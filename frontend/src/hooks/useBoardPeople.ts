@@ -9,8 +9,8 @@ import { characterNames } from '@/lib/gmBoard/text';
 /**
  * Who the board is about, for one action phase: the cast, everyone's names
  * (including people with a submission and no character record any more),
- * the names text is matched by, who submitted and what, and who can read
- * moments.
+ * the names text is matched by, who submitted and what (and the submission's
+ * id), and who can read moments (who gets results).
  */
 export function useBoardPeople(gameId: number, phaseId: number) {
   const { allGameCharacters } = useGameContext();
@@ -32,6 +32,12 @@ export function useBoardPeople(gameId: number, phaseId: number) {
     for (const a of actions.data ?? []) if (a.phase_id === phaseId && a.character_id) out.set(a.character_id, a.content);
     return out;
   }, [actions.data, phaseId]);
+  // characterId → their submission's id this phase, which their first result links.
+  const submissionIds = useMemo(() => {
+    const out = new Map<number, number>();
+    for (const a of actions.data ?? []) if (a.phase_id === phaseId && a.character_id) out.set(a.character_id, a.id);
+    return out;
+  }, [actions.data, phaseId]);
   const submitters = useMemo(() => [...submissions.keys()], [submissions]);
   const nameLists = useMemo(
     () => new Map([...names].map(([id, name]) => [id, characterNames(settings?.names ?? {}, id, name)])),
@@ -39,5 +45,5 @@ export function useBoardPeople(gameId: number, phaseId: number) {
   );
   const canRead = useMemo(() => canReadRule(cast), [cast]);
 
-  return { cast, names, nameLists, submissions, submitters, canRead, settings, isLoading: actions.isLoading || !settings, error: actions.error };
+  return { cast, names, nameLists, submissions, submissionIds, submitters, canRead, settings, isLoading: actions.isLoading || !settings, error: actions.error };
 }

@@ -3746,6 +3746,8 @@ export interface components {
             phase_id: number;
             /** Format: date-time */
             sent_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
             /** Format: int32 */
             user_id: number;
         };
@@ -3783,6 +3785,8 @@ export interface components {
             sent_at?: string;
             /** Format: date-time */
             unlocks_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
             /** Format: int32 */
             user_id: number;
             username?: string;
@@ -6439,6 +6443,11 @@ export interface components {
         };
         UpdateActionResultBody: {
             content?: string;
+            /**
+             * Format: date-time
+             * @description The updated_at last seen; a mismatch is refused with 409
+             */
+            expected_updated_at?: string;
         };
         UpdateCommentRequest: {
             /**
@@ -15348,6 +15357,20 @@ export interface operations {
             };
             /** @description Only the GM can update action results */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The result no longer exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The result is published, or was saved by someone else since expected_updated_at */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

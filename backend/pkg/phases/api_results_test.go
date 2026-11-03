@@ -303,6 +303,45 @@ func TestPhaseAPI_UpdateActionResult(t *testing.T) {
 		var response map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
 		assert.Equal(t, "Updated content.", response["content"])
+		assert.NotEmpty(t, response["updated_at"], "the board sends this back on its next save")
+	})
+
+	// The results board sends expected_updated_at; the results list doesn't,
+	// and must keep saving exactly as before (the subtest above).
+	t.Run("expected_updated_at: current saves, stale is 409 and writes nothing", func(t *testing.T) {
+		put := func(body map[string]interface{}) *httptest.ResponseRecorder {
+			bodyJSON, _ := json.Marshal(body)
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/games/%d/results/%d", game.ID, result.ID), bytes.NewBuffer(bodyJSON))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+gmToken)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			return rec
+		}
+
+		var seen string
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(),
+			"SELECT to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') FROM action_results WHERE id = $1", result.ID).Scan(&seen))
+
+		rec := put(map[string]interface{}{"content": "Board save.", "expected_updated_at": seen})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var saved map[string]interface{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &saved))
+		assert.NotEqual(t, seen, saved["updated_at"])
+
+		// Same old updated_at again: someone (this test) saved since.
+		rec = put(map[string]interface{}{"content": "Stale save.", "expected_updated_at": seen})
+		assert.Equal(t, http.StatusConflict, rec.Code)
+		assert.Contains(t, rec.Body.String(), "Someone else saved this result")
+
+		var dbContent string
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(),
+			"SELECT content FROM action_results WHERE id = $1", result.ID).Scan(&dbContent))
+		assert.Equal(t, "Board save.", dbContent)
+
+		// The updated_at the last response gave back works.
+		rec = put(map[string]interface{}{"content": "Next board save.", "expected_updated_at": saved["updated_at"]})
+		assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
 	t.Run("non-GM player cannot update action result", func(t *testing.T) {
@@ -366,8 +405,9 @@ func TestPhaseAPI_UpdatePublishedResultBlocked(t *testing.T) {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
-		// Service returns "result not found or already published" → handler returns 500
-		assert.NotEqual(t, http.StatusOK, rec.Code)
+		// The world moved (it's published), so 409 with a sentence, not a 500.
+		assert.Equal(t, http.StatusConflict, rec.Code)
+		assert.Contains(t, rec.Body.String(), "This result is already published")
 
 		// Verify content was not changed in the DB
 		var dbContent string

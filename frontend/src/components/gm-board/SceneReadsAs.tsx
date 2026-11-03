@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Badge, Button, Checkbox } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { isNote, missReason, readerVersion } from '@/lib/gmBoard/moments';
+import type { Moment } from '@/lib/gmBoard/types';
 import { wordCount } from '@/lib/gmBoard/scenes';
 import { shortName } from '@/lib/gmBoard/text';
 import { MISS_TEXT } from './sceneText';
@@ -16,13 +17,19 @@ interface SceneReadsAsProps {
   focusedId: string | null;
   onFocusMoment: (momentId: string) => void;
   onCopy: (text: string) => void;
+  /** Whether the reader's results already cover a moment (text match or tick). */
+  inDraft: (moment: Moment, characterId: number) => boolean;
+  /** Adds these moments, as this reader gets them, to the end of their draft and ticks them covered. */
+  onAddToDraft: (characterId: number, moments: Moment[], text: string) => void;
+  adding?: boolean;
+  onWrite: (characterId: number) => void;
 }
 
 /**
  * The scene as one reader gets it: the moments they're ticked on, their own
  * version where they have one, in second person when that's on.
  */
-export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment, onCopy }: SceneReadsAsProps) {
+export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment, onCopy, inDraft, onAddToDraft, adding = false, onWrite }: SceneReadsAsProps) {
   const [showMisses, setShowMisses] = useState(false);
   const { scene, readers } = model;
   const x = reader !== null && readers.includes(reader) ? reader : (readers[0] ?? null);
@@ -44,6 +51,7 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
   }));
   const got = versions.filter((v) => v.miss === null);
   const text = got.map((v) => v.version.text.trim()).join('\n\n');
+  const todo = got.filter((v) => !inDraft(v.moment, x));
 
   return (
     <section aria-label="Reads as" className="space-y-3" data-testid="scene-reads-as">
@@ -93,6 +101,14 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
                       </Badge>
                     </>
                   )}
+                  {inDraft(moment, x) && (
+                    <>
+                      {' '}
+                      <Badge variant="success" size="sm">
+                        in draft
+                      </Badge>
+                    </>
+                  )}
                 </>
               ) : (
                 <span className="text-content-tertiary">{MISS_TEXT[miss]}</span>
@@ -103,9 +119,26 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
         {!got.length && !showMisses && <p className="text-sm text-content-secondary">{name} doesn’t get anything here yet.</p>}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          disabled={!todo.length || adding}
+          onClick={() => onAddToDraft(x, todo.map((v) => v.moment), todo.map((v) => v.version.text.trim()).join('\n\n'))}
+          title={`Adds them to the end of the result part you last picked for ${name}, or starts their result`}
+        >
+          {todo.length
+            ? `Add ${todo.length} moment${todo.length === 1 ? '' : 's'} to ${name}’s draft`
+            : got.length
+              ? `All in ${name}’s draft`
+              : 'Nothing to add'}
+        </Button>
         <Button type="button" size="sm" variant="secondary" disabled={!got.length} onClick={() => onCopy(text)}>
           Copy {name}’s version
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => onWrite(x)}>
+          Write {name}’s result →
         </Button>
       </div>
       {model.secondPerson && <YouKey />}

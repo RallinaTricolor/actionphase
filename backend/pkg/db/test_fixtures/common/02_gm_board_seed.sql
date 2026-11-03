@@ -19,13 +19,19 @@
 --   Scenes  a written conflict in the vault (own version, a GM note, someone
 --           elsewhere, a source card and passage, an injury) and a short
 --           scene in the lobby.
+--   Write   draft results (action_results, unpublished): Shade has a two-part
+--           staged result that covers her moments and is marked ready; Vex
+--           has two results, one answering his submission and one standalone
+--           that names a secret he isn't allowed to know (a leak check). Rook
+--           and Silk have nothing written yet.
 --
 -- Every row is written the way the board's save path writes it (version 1,
 -- seq from gm_board_seq, updated_by the GM), and every doc has every field
 -- the client writes (see frontend/src/lib/gmBoard/types.ts). When the board's
 -- model changes, change this seed with it.
 --
--- Re-runnable: it replaces whatever board and setup the phase and game had.
+-- Re-runnable: it replaces whatever board, setup and results the phase and
+-- game had.
 -- All content is hand-written for the demo; never paste player content here.
 -- ============================================================================
 
@@ -48,6 +54,7 @@ DECLARE
   dalton integer;
   settings_json text;
   board_json text;
+  head_id integer;
 BEGIN
   SELECT gm_user_id INTO gm_id FROM games WHERE id = p_game_id;
   IF gm_id IS NULL THEN
@@ -140,7 +147,7 @@ BEGIN
     {"kind": "stance", "key": "__ROOK__|__SILK__", "doc": {"value": "ally", "note": "Split of the take: 60/40"}},
     {"kind": "stance", "key": "__SILK__|__ROOK__", "doc": {"value": "target", "note": "Means to leave him on the roof"}},
 
-    {"kind": "progress", "key": "__SHADE__", "doc": {"readDone": true}},
+    {"kind": "progress", "key": "__SHADE__", "doc": {"readDone": true, "ready": true, "covered": {"m-heist-v1": true}}},
     {"kind": "progress", "key": "__ROOK__", "doc": {"readDone": true}},
     {"kind": "progress", "key": "__VEX__", "doc": {"readDone": true}},
 
@@ -168,5 +175,43 @@ BEGIN
   INSERT INTO gm_board_items (phase_id, kind, item_key, game_id, doc, version, deleted, updated_by)
   SELECT p_phase_id, e->>'kind', e->>'key', p_game_id, e->'doc', 1, false, gm_id
   FROM jsonb_array_elements(board_json::jsonb) AS e;
+
+  -- ── Result drafts (Write) ─────────────────────────────────────────────
+  -- Written as the app writes drafts: CreateActionResult for a head (draft,
+  -- so sent_at and released_at NULL) and CreateStagedResultPart for a later
+  -- part (parent and delay set, released_at left out, the submission copied
+  -- from the part before). Deleting a head deletes its later parts.
+  DELETE FROM action_results WHERE phase_id = p_phase_id;
+
+  -- Shade: two parts, covering what she reads. Part 1 answers her submission.
+  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
+  SELECT p_game_id, c.user_id, p_phase_id, shade,
+         (SELECT id FROM action_submissions WHERE phase_id = p_phase_id AND character_id = shade ORDER BY id LIMIT 1),
+         gm_id,
+         E'The outer lock gives with a hiss, and the vault door swings inward on a breath of acid.\n\nYou feel it before you see it: a ghost bound to the deposit boxes, furious at the intrusion.\n\nYou try to compel the ghost. It quiets, but not before it rattles every box on the wall.',
+         false, NULL, NULL
+  FROM characters c WHERE c.id = shade
+  RETURNING id INTO head_id;
+
+  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes)
+  SELECT r.game_id, r.user_id, r.phase_id, r.character_id, r.action_submission_id, r.gm_user_id,
+         E'The rattling carries up to the lobby. Heads turn toward the vault stairs.\n\nSomewhere above you, a door opens.',
+         false, NULL, r.id, 15
+  FROM action_results r WHERE r.id = head_id;
+
+  -- Vex: his answer, and a second, standalone result that leaks a secret.
+  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
+  SELECT p_game_id, c.user_id, p_phase_id, vex,
+         (SELECT id FROM action_submissions WHERE phase_id = p_phase_id AND character_id = vex ORDER BY id LIMIT 1),
+         gm_id,
+         E'You pour the acid on the outer lock, and the vault door hisses open.\n\nThe ducts were tighter than the blueprints promised. Your knees will remember them.',
+         false, NULL, NULL
+  FROM characters c WHERE c.id = vex;
+
+  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
+  SELECT p_game_id, c.user_id, p_phase_id, vex, NULL, gm_id,
+         E'A note slipped under your door that night: the manager''s debts run deeper than anyone guessed.',
+         false, NULL, NULL
+  FROM characters c WHERE c.id = vex;
 END;
 $fn$;

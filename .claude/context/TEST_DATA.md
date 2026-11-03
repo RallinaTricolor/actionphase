@@ -232,6 +232,12 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
 - **Scenes**: a conflict in the vault (own version, GM note, Silk reading from
   elsewhere, a moment from a card and one from a passage, Vex injured) and a
   short lobby scene with Dalton.
+- **Write** (draft `action_results`, all unpublished): Shade has a two-part
+  staged result (part 2 after 15 minutes) covering all her moments, one
+  ticked by hand, and is marked ready. Vex has two results: one answering his
+  submission, and a standalone one that names the Silk-only secret (a leak
+  check). Rook and Silk have nothing written. The seed deletes the phase's
+  results before writing these.
 
 The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
 (`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and

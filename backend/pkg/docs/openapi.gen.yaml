@@ -57,6 +57,9 @@ components:
                 sent_at:
                     format: date-time
                     type: string
+                updated_at:
+                    format: date-time
+                    type: string
                 user_id:
                     format: int32
                     type: integer
@@ -122,6 +125,9 @@ components:
                     format: date-time
                     type: string
                 unlocks_at:
+                    format: date-time
+                    type: string
+                updated_at:
                     format: date-time
                     type: string
                 user_id:
@@ -5515,6 +5521,10 @@ components:
             additionalProperties: false
             properties:
                 content:
+                    type: string
+                expected_updated_at:
+                    description: The updated_at last seen; a mismatch is refused with 409
+                    format: date-time
                     type: string
             type: object
         UpdateCommentRequest:
@@ -13217,6 +13227,10 @@ paths:
                     description: Not authenticated
                 "403":
                     description: Only the GM can update action results
+                "404":
+                    description: The result no longer exists
+                "409":
+                    description: The result is published, or was saved by someone else since expected_updated_at
                 "422":
                     description: Request failed validation
             security:

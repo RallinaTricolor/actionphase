@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils/render';
-import { makeActionWithDetails, makeCharacter, makeGamePhase, makeGameWithDetails, makeGmItem } from '@/test-utils/factories';
+import { makeActionResult, makeActionWithDetails, makeCharacter, makeGamePhase, makeGameWithDetails, makeGmItem } from '@/test-utils/factories';
+import type { ActionResult } from '@/types/phases';
 import type { BoardItemChange, GmItem } from '@/types/gmBoard';
 import { GmBoard } from './GmBoard';
 
@@ -159,5 +160,57 @@ describe('GmBoardScenes', () => {
     renderBoard('step=map');
     await userEvent.click(await screen.findByRole('button', { name: 'Open the conflict here' }));
     expect(await screen.findByDisplayValue('At the wheel')).toBeInTheDocument();
+  });
+
+  describe('Add to draft', () => {
+    let results: ActionResult[];
+    let writes: { method: string; path: string; body: Record<string, unknown> }[];
+    beforeEach(() => {
+      writes = [];
+      results = [];
+      board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: sceneDoc({ participants: [1, 2], moments: [
+        { id: 'm1', text: 'Harrison draws on Mara.', readers: [1, 2], ownText: {} },
+        { id: 'm2', text: 'Mara ducks.', readers: [1, 2], ownText: {} },
+      ] }) }));
+      server.use(
+        http.get(`/api/v1/games/${GAME_ID}/results`, () => HttpResponse.json(results)),
+        http.post(`/api/v1/games/${GAME_ID}/results`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          writes.push({ method: 'POST', path: new URL(request.url).pathname, body });
+          const r = makeActionResult({ id: 90, phase_id: PHASE_ID, ...(body as Partial<ActionResult>), updated_at: '2026-11-03T10:00:09Z' });
+          results.push(r);
+          return HttpResponse.json(r, { status: 201 });
+        }),
+        http.put(`/api/v1/games/${GAME_ID}/results/:id`, async ({ request, params }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          writes.push({ method: 'PUT', path: new URL(request.url).pathname, body });
+          const r = results.find((x) => x.id === Number(params.id))!;
+          Object.assign(r, { content: body.content, updated_at: '2026-11-03T10:00:10Z' });
+          return HttpResponse.json(r);
+        }),
+      );
+    });
+
+    it('adds what the reader gets to the end of their draft, ticks it covered, and marks it in draft', async () => {
+      results = [makeActionResult({ id: 80, phase_id: PHASE_ID, character_id: 1, content: 'Earlier text.', updated_at: '2026-11-03T10:00:01Z' })];
+      renderBoard('step=scenes&scene=s1');
+      await userEvent.click(await screen.findByRole('button', { name: 'Add 2 moments to Harrison’s draft' }));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      expect(writes[0]).toEqual({
+        method: 'PUT',
+        path: `/api/v1/games/${GAME_ID}/results/80`,
+        body: { content: 'Earlier text.\n\nYou draw on Mara.\n\nMara ducks.', expected_updated_at: '2026-11-03T10:00:01Z' },
+      });
+      await waitFor(() => expect(boardSaves.some((c) => c.kind === 'progress' && c.key === '1' && (c.doc as { covered?: Record<string, boolean> })?.covered?.m2 === true)).toBe(true), { timeout: 3000 });
+      expect(await screen.findByRole('button', { name: 'All in Harrison’s draft' })).toBeDisabled();
+    });
+
+    it('starts the reader’s first result, answering their submission, when they have none', async () => {
+      renderBoard('step=scenes&scene=s1');
+      await userEvent.click(await screen.findByRole('button', { name: 'Add 2 moments to Harrison’s draft' }));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      expect(writes[0].method).toBe('POST');
+      expect(writes[0].body).toMatchObject({ character_id: 1, action_submission_id: 1, content: 'You draw on Mara.\n\nMara ducks.', is_published: false });
+    });
   });
 });

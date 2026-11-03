@@ -48,7 +48,7 @@ import type {
   GameWithDetails,
 } from '../types/games';
 import type { CommentWithDepth, Message } from '../types/messages';
-import type { ActionWithDetails, GamePhase } from '../types/phases';
+import type { ActionResult, ActionWithDetails, GamePhase } from '../types/phases';
 
 /**
  * One participant row. `src/types/conversations.ts` deliberately stopped
@@ -606,6 +606,25 @@ export function makeActionWithDetails(overrides: Partial<ActionWithDetails> = {}
     content: '',
     submitted_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/**
+ * A result as the GM's results list returns it: an unpublished, unstaged
+ * draft by default. Pass `part_number`, `part_count` and `parent_result_id`
+ * for a staged part.
+ */
+export function makeActionResult(overrides: Partial<ActionResult> = {}): ActionResult {
+  return {
+    id: 1,
+    game_id: 1,
+    phase_id: 1,
+    user_id: 100,
+    gm_user_id: 1,
+    content: '',
+    is_published: false,
+    updated_at: '2025-01-01T00:00:00.000000Z',
     ...overrides,
   };
 }

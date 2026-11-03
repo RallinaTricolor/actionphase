@@ -17,8 +17,15 @@ const fight = sceneModel({
   ],
 });
 
-function renderAs(reader: number | null, model = fight) {
-  const props = { onReader: vi.fn(), onFocusMoment: vi.fn(), onCopy: vi.fn() };
+function renderAs(reader: number | null, model = fight, covered: string[] = []) {
+  const props = {
+    onReader: vi.fn(),
+    onFocusMoment: vi.fn(),
+    onCopy: vi.fn(),
+    onAddToDraft: vi.fn(),
+    onWrite: vi.fn(),
+    inDraft: (m: { id: string }) => covered.includes(m.id),
+  };
   render(<SceneReadsAs model={model} reader={reader} focusedId={null} {...props} />);
   return props;
 }
@@ -70,5 +77,19 @@ describe('SceneReadsAs', () => {
   it('says so when nobody in the scene reads results', () => {
     renderAs(null, sceneModel({ participants: [9] }));
     expect(screen.getByText('Nobody in this scene reads results yet.')).toBeInTheDocument();
+  });
+
+  it('adds only the moments not in the reader’s draft yet, as they read them, and marks the rest', async () => {
+    const h = renderAs(1, fight, ['m1']);
+    expect(within(screen.getByTestId('reads-as-m1')).getByText('in draft')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Add 2 moments to Harrison’s draft' }));
+    expect(h.onAddToDraft).toHaveBeenCalledWith(1, [expect.objectContaining({ id: 'm2' }), expect.objectContaining({ id: 'm5' })], 'Mara ducks behind the wheel.\n\nYou hear Ilse leave.');
+  });
+
+  it('says when everything is in the draft, and opens the reader’s result in Write', async () => {
+    const h = renderAs(2, fight, ['m1', 'm2']);
+    expect(screen.getByRole('button', { name: 'All in Mara’s draft' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Write Mara’s result →' }));
+    expect(h.onWrite).toHaveBeenCalledWith(2);
   });
 });

@@ -2137,16 +2137,21 @@ const updateActionResult = `-- name: UpdateActionResult :one
 UPDATE action_results
 SET content = $2
 WHERE id = $1 AND is_published = false
+  AND ($3::timestamptz IS NULL OR updated_at = $3)
 RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type UpdateActionResultParams struct {
-	ID      int32  `json:"id"`
-	Content string `json:"content"`
+	ID                int32              `json:"id"`
+	Content           string             `json:"content"`
+	ExpectedUpdatedAt pgtype.Timestamptz `json:"expected_updated_at"`
 }
 
+// expected_updated_at is optional: when given, the save only lands if nobody
+// has saved since (the results board sends it; the results list doesn't).
+// updated_at is set by the update_action_results_updated_at trigger.
 func (q *Queries) UpdateActionResult(ctx context.Context, arg UpdateActionResultParams) (ActionResult, error) {
-	row := q.db.QueryRow(ctx, updateActionResult, arg.ID, arg.Content)
+	row := q.db.QueryRow(ctx, updateActionResult, arg.ID, arg.Content, arg.ExpectedUpdatedAt)
 	var i ActionResult
 	err := row.Scan(
 		&i.ID,

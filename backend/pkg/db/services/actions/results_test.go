@@ -118,9 +118,37 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update it
-		updated, err := actionService.UpdateActionResult(context.Background(), result.ID, "Updated content")
+		updated, err := actionService.UpdateActionResult(context.Background(), result.ID, "Updated content", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "Updated content", updated.Content)
+	})
+
+	t.Run("expected_updated_at: a matching save lands, a stale one is refused", func(t *testing.T) {
+		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID: game.ID, PhaseID: phase.ID, UserID: int32(player.ID), Content: "First", IsPublished: false,
+		})
+		require.NoError(t, err)
+		seen := result.UpdatedAt.Time
+
+		// Another tab saves first, moving updated_at on.
+		other, err := actionService.UpdateActionResult(context.Background(), result.ID, "Theirs", &seen)
+		require.NoError(t, err)
+		require.True(t, other.UpdatedAt.Time.After(seen), "the trigger should move updated_at on")
+
+		// This tab still holds the old updated_at, so its save is refused...
+		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Mine", &seen)
+		require.ErrorIs(t, err, core.ErrResultNotEditable)
+		assert.Contains(t, err.Error(), "someone else saved")
+
+		var content string
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(), "SELECT content FROM action_results WHERE id = $1", result.ID).Scan(&content))
+		assert.Equal(t, "Theirs", content, "a refused save must not write")
+
+		// ...and lands once it sends the current one.
+		fresh := other.UpdatedAt.Time
+		mine, err := actionService.UpdateActionResult(context.Background(), result.ID, "Mine", &fresh)
+		require.NoError(t, err)
+		assert.Equal(t, "Mine", mine.Content)
 	})
 
 	t.Run("gets unpublished results count", func(t *testing.T) {
@@ -159,16 +187,15 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to update published result
-		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Trying to update published result")
-		require.Error(t, err, "Should not be able to update published result")
-		assert.Contains(t, err.Error(), "result not found or already published")
+		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Trying to update published result", nil)
+		require.ErrorIs(t, err, core.ErrResultNotEditable, "Should not be able to update published result")
+		assert.Contains(t, err.Error(), "already published")
 	})
 
 	t.Run("returns error when updating non-existent result", func(t *testing.T) {
 		nonExistentID := int32(999999)
-		_, err := actionService.UpdateActionResult(context.Background(), nonExistentID, "Update non-existent")
-		require.Error(t, err, "Should error when result doesn't exist")
-		assert.Contains(t, err.Error(), "result not found or already published")
+		_, err := actionService.UpdateActionResult(context.Background(), nonExistentID, "Update non-existent", nil)
+		require.ErrorIs(t, err, core.ErrActionResultNotFound, "Should error when result doesn't exist")
 	})
 
 	t.Run("returns error when getting non-existent result", func(t *testing.T) {

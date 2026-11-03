@@ -136,6 +136,26 @@ func TestPhaseAPI_StagedReadShape(t *testing.T) {
 		assert.Equal(t, float64(3), results[2]["part_number"])
 		assert.Equal(t, float64(3), results[2]["part_count"])
 	})
+
+	// The results board groups parts into chains by parent and saves drafts
+	// with expected_updated_at, so the GM's list carries both. The player's
+	// own list leaves updated_at out.
+	t.Run("GM list links each part to its parent and carries updated_at", func(t *testing.T) {
+		_, results := getResults(t, router, allPath, gmToken)
+		require.Len(t, results, 3)
+
+		assert.Nil(t, results[0]["parent_result_id"], "the head has no parent")
+		assert.Equal(t, results[0]["id"], results[1]["parent_result_id"])
+		assert.Equal(t, results[1]["id"], results[2]["parent_result_id"])
+		for _, part := range results {
+			assert.NotEmpty(t, part["updated_at"])
+		}
+
+		_, mine := getResults(t, router, minePath, playerToken)
+		for _, part := range mine {
+			assert.Nil(t, part["updated_at"])
+		}
+	})
 }
 
 // TestPhaseAPI_StagedReadShape_Audience verifies the audience reads a chain

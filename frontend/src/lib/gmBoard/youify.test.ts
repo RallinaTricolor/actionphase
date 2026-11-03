@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { verbFor, youify } from './youify';
+import { verbFor, youify, youifyExcept } from './youify';
 
 const names = ['Harrison Vale', 'Harrison'];
 const text = (t: string, n = names) => youify(t, n).text;
@@ -82,5 +82,16 @@ describe('verbFor', () => {
     expect(verbFor('always')).toBeNull();
     expect(verbFor('the')).toBeNull();
     expect(verbFor('Paris')).toBeNull();
+  });
+});
+
+describe('youifyExcept', () => {
+  it('rewrites the draft but leaves the reader’s own versions as written', () => {
+    const own = 'Harrison feels the blade go in.';
+    expect(youifyExcept(`Harrison enters. ${own} Harrison falls.`, ['Harrison'], [own])).toBe(`You enter. ${own} You fall.`);
+  });
+
+  it('with nothing to keep, is plain youify', () => {
+    expect(youifyExcept('Harrison enters.', ['Harrison'], ['  '])).toBe('You enter.');
   });
 });

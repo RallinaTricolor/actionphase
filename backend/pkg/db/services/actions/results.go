@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
@@ -315,19 +316,32 @@ func (as *ActionSubmissionService) DeleteActionResult(ctx context.Context, resul
 }
 
 // UpdateActionResult updates the content of an unpublished action result
-func (as *ActionSubmissionService) UpdateActionResult(ctx context.Context, resultID int32, content string) (*models.ActionResult, error) {
+func (as *ActionSubmissionService) UpdateActionResult(ctx context.Context, resultID int32, content string, expectedUpdatedAt *time.Time) (*models.ActionResult, error) {
 	queries := models.New(as.DB)
 
-	result, err := queries.UpdateActionResult(ctx, models.UpdateActionResultParams{
-		ID:      resultID,
-		Content: content,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("result not found or already published")
-		}
+	params := models.UpdateActionResultParams{ID: resultID, Content: content}
+	if expectedUpdatedAt != nil {
+		params.ExpectedUpdatedAt = pgtype.Timestamptz{Time: *expectedUpdatedAt, Valid: true}
+	}
+	result, err := queries.UpdateActionResult(ctx, params)
+	if err == nil {
+		return &result, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("failed to update action result: %w", err)
 	}
 
-	return &result, nil
+	// No row matched: say which guard refused it, so the caller can tell a
+	// stale save from a published or deleted result.
+	current, getErr := queries.GetActionResult(ctx, resultID)
+	switch {
+	case errors.Is(getErr, pgx.ErrNoRows):
+		return nil, core.ErrActionResultNotFound
+	case getErr != nil:
+		return nil, fmt.Errorf("failed to update action result: %w", getErr)
+	case current.IsPublished.Bool:
+		return nil, fmt.Errorf("%w: this result is already published", core.ErrResultNotEditable)
+	default:
+		return nil, fmt.Errorf("%w: someone else saved this result after you opened it", core.ErrResultNotEditable)
+	}
 }

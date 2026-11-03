@@ -74,6 +74,9 @@ type ActionResultResponse struct {
 	Content     string     `json:"content"`
 	IsPublished bool       `json:"is_published"`
 	SentAt      *time.Time `json:"sent_at,omitempty"`
+	// UpdatedAt is sent back on a later update as expected_updated_at, so a
+	// save over someone else's newer one is refused. GM-facing responses only.
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 // ActionResultWithDetailsResponse represents an action result with additional details
@@ -117,6 +120,11 @@ type ActionResultWithDetailsResponse struct {
 	// until the parent releases and is anyway a timestamp rather than a
 	// duration. Nil on a chain head and on any unstaged result.
 	RevealDelayMinutes *int32 `json:"reveal_delay_minutes,omitempty"`
+
+	// UpdatedAt is the draft's last save, for the stale-save check on update
+	// (expected_updated_at). Set on the GM-facing responses; the player's own
+	// results list leaves it out.
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 // DraftCharacterUpdateResponse represents a draft character update

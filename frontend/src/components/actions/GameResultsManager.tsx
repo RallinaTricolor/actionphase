@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useGameActionResults, useUpdateActionResult, usePublishActionResult, useDeleteActionResult, useCancelPendingStagedPart, useAppendStagedPart, useUpdateStagedPartDelay } from '@/hooks/useActionResults';
 import type { ActionResult, GamePhase } from '@/types/phases';
-import { Button, Badge, Alert, Select } from '@/components/ui';
+import { Button, Badge, Alert } from '@/components/ui';
 import { AppendStagedPartForm } from './AppendStagedPartForm';
-import { DELAY_PRESETS, formatDelayLabel, isPresetDelay } from '@/lib/stagedDelays';
+import { canAppendPart as canAppendPartRule, canCancelPart, hasChainControls, isStagedPart as isStagedPartRule, takesSheetUpdates } from '@/lib/resultParts';
+import { StagedPartStatus } from './StagedPartStatus';
 import { UpdateCharacterSheetModal } from '@/components/characters/UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
@@ -178,65 +179,13 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
   const showSheetConflictWarning =
     !result.is_published && hasConflict && hasStagedOrUnknown;
 
-  // Determine if content should be collapsible (long results)
-
-  // Staged chain status. The GM always sees every part's real content — only
-  // the recipient's copy is blanked — so this is purely a schedule readout.
-  //
-  // A part is cancellable only while it is published-but-unreleased. An
-  // unpublished chain is deleted through the ordinary Delete control, and a
-  // released part cannot be recalled.
-  const isStagedPart = result.part_count !== undefined && result.part_count > 1;
-  // Cancel removes an unreleased part and cascades the parts behind it. Guarded
-  // on release, not publication, matching DeleteStagedPart's SQL: a draft
-  // follower is equally removable, and it is the *only* removal control such a
-  // part gets, since Delete is a chain-head action (see showLifecycleControls).
-  const isPendingPart = isStagedPart && result.part_number !== 1 && !result.released_at;
-
-  // A chain member that is not the head. Its lifecycle belongs to the chain,
-  // not to itself: it is published with the head, released by the worker, and
-  // removed with Cancel rather than Delete.
-  const isFollowerPart = isStagedPart && result.part_number !== 1;
-
-  // A follow-up can be added only while the whole chain is still a draft: the
-  // chain must be complete before it goes out, since appending afterwards would
-  // extend a scene the player has already started reading. The server enforces
-  // this too (409); this just avoids offering a control that would fail.
-  //
-  // Offered on the chain TAIL only — the part the new one will actually follow.
-  // A new part always lands at the end, so a button on part 1 of a 3-part chain
-  // would read as "add a follow-up to this part" while silently appending after
-  // part 3. An unstaged draft is a chain of one and is therefore its own tail,
-  // which is how a GM stages a result they saved earlier.
-  const isChainTail = !isStagedPart || result.part_number === result.part_count;
-  const canAppendPart = !result.is_published && isChainTail;
-
-  // Publishing is a chain-level action — PublishActionResult publishes the
-  // whole chain — so a follower must not carry its own Publish button. Offering
-  // one per part implies each can go out separately, which is exactly what the
-  // feature prevents. The same goes for Delete: removing a middle part is
-  // Cancel's job (it cascades correctly); Delete on a follower would strand or
-  // silently cascade the parts behind it.
-  const showLifecycleControls = !result.is_published && !isFollowerPart;
-
-  // Character-sheet updates go on the chain TAIL, not the head, for two reasons.
-  //
-  // Narrative: drafts apply when the chain is published, so hanging them off an
-  // early part would grant the reward as the scene opens — the player sees the
-  // loot before reading whether they survived to earn it. The tail is the beat
-  // the outcome belongs to.
-  //
-  // Structural: every part of a chain shares one recipient, so sheet drafts on
-  // two parts are precisely the clobber useConflictingSheetDrafts warns about
-  // ("all sheet updates for a character in a phase belong in exactly ONE
-  // result"). One control per chain makes that impossible rather than merely
-  // discouraged.
-  const showSheetUpdateControl = !result.is_published && isChainTail;
-
-  // Retiming is guarded on release, not publication: the most common reason to
-  // change a delay is that the scene is already running and the players need
-  // longer. A head has no parent to wait for, so it has no delay to edit.
-  const canEditDelay = isStagedPart && !result.released_at && result.part_number !== 1;
+  // Which controls this part gets: the same rules as the results board
+  // (lib/resultParts.ts explains each).
+  const isStagedPart = isStagedPartRule(result);
+  const isPendingPart = canCancelPart(result);
+  const canAppendPart = canAppendPartRule(result);
+  const showLifecycleControls = hasChainControls(result);
+  const showSheetUpdateControl = takesSheetUpdates(result);
 
   const handleCancelPart = async () => {
     try {
@@ -349,64 +298,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
                   <span className="font-medium text-semantic-warning">Draft</span>
                 )}
               </div>
-              {isStagedPart && (
-                <div
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1"
-                  data-testid={`staged-status-${result.id}`}
-                >
-                  <Badge variant="primary">
-                    Part {result.part_number} of {result.part_count}
-                  </Badge>
-                  {result.released_at ? (
-                    <span className="text-xs text-content-secondary">
-                      Revealed {new Date(result.released_at).toLocaleString()}
-                    </span>
-                  ) : result.unlocks_at ? (
-                    <span className="text-xs text-content-secondary">
-                      Reveals {new Date(result.unlocks_at).toLocaleString()}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-content-secondary">
-                      Reveals after the previous part
-                    </span>
-                  )}
-                  {/* Retiming stays available on a published pending part, not
-                      just a draft: the usual reason to move a timer is that the
-                      scene is live and the players need longer. A custom delay
-                      that is not one of the presets is shown as its own option
-                      so the selector never misrepresents the stored value. */}
-                  {canEditDelay && (
-                    <Select
-                      aria-label={`Delay before part ${result.part_number}`}
-                      selectSize="sm"
-                      value={String(result.reveal_delay_minutes ?? '')}
-                      onChange={e => handleDelayChange(Number(e.target.value))}
-                      disabled={updateDelayMutation.isPending}
-                      data-testid={`edit-staged-delay-${result.id}`}
-                    >
-                      {/* An empty placeholder when the delay is unknown, so a
-                          missing field reads as "unknown" instead of quietly
-                          rendering the first preset as though it were the real
-                          setting. The server always sends it; this exists so
-                          the failure is visible if that ever regresses. */}
-                      {result.reveal_delay_minutes === undefined && (
-                        <option value="">Delay unavailable</option>
-                      )}
-                      {result.reveal_delay_minutes !== undefined
-                        && !isPresetDelay(result.reveal_delay_minutes) && (
-                        <option value={result.reveal_delay_minutes}>
-                          {formatDelayLabel(result.reveal_delay_minutes)}
-                        </option>
-                      )}
-                      {DELAY_PRESETS.map(minutes => (
-                        <option key={minutes} value={minutes}>
-                          {formatDelayLabel(minutes)}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </div>
-              )}
+              <StagedPartStatus result={result} onDelayChange={handleDelayChange} delayPending={updateDelayMutation.isPending} />
             </div>
           </div>
           {/* One group for every button in this header, not one per condition.

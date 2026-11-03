@@ -295,6 +295,11 @@ func (b *createActionResultBody) Resolve(huma.Context) []error { return humaconf
 // track tightening it separately.
 type updateActionResultBody struct {
 	Content string `json:"content" required:"false"`
+	// ExpectedUpdatedAt is the updated_at the caller last saw. When it no
+	// longer matches, someone saved since, and the update is refused with 409
+	// instead of overwriting their text. Optional, so callers that don't send
+	// it (the results list) save as before.
+	ExpectedUpdatedAt *time.Time `json:"expected_updated_at,omitempty" required:"false" doc:"The updated_at last seen; a mismatch is refused with 409"`
 }
 
 type stagedPartBody struct {
@@ -889,6 +894,9 @@ func actionResultResponse(result *models.ActionResult) *ActionResultResponse {
 	if result.SentAt.Valid {
 		resp.SentAt = &result.SentAt.Time
 	}
+	if result.UpdatedAt.Valid {
+		resp.UpdatedAt = &result.UpdatedAt.Time
+	}
 	return resp
 }
 
@@ -1025,6 +1033,17 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 		// are entitled to read a part before it releases.
 		applyStagedFields(&resultResp, result.PartNumber, result.PartCount, result.ReleasedAt, result.UnlocksAt, result.RevealDelayMinutes)
 
+		// The chain link and the last save, for the results board: it groups a
+		// character's parts into chains by parent, and sends UpdatedAt back as
+		// expected_updated_at so it can't save over a co-GM's newer text.
+		if result.ParentResultID.Valid {
+			parentID := result.ParentResultID.Int32
+			resultResp.ParentResultID = &parentID
+		}
+		if result.UpdatedAt.Valid {
+			resultResp.UpdatedAt = &result.UpdatedAt.Time
+		}
+
 		response = append(response, resultResp)
 	}
 
@@ -1049,8 +1068,15 @@ func (h *Handler) humaUpdateActionResult(ctx context.Context, in *updateActionRe
 		return nil, err
 	}
 
-	result, err := h.ActionSubmissionService.UpdateActionResult(ctx, in.ResultID, in.Body.Content)
-	if err != nil {
+	result, err := h.ActionSubmissionService.UpdateActionResult(ctx, in.ResultID, in.Body.Content, in.Body.ExpectedUpdatedAt)
+	switch {
+	case errors.Is(err, core.ErrResultNotEditable):
+		// Published, or saved by someone else since: the request was well
+		// formed and the world moved, so 409, as for staged-chain edits.
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrResultNotEditable)), "Action result not editable", "error", err)
+	case errors.Is(err, core.ErrActionResultNotFound):
+		return nil, h.logAndErr(ctx, core.ErrNotFound("This result no longer exists"), "Action result not found", "error", err)
+	case err != nil:
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update action result", "error", err)
 	}
 
@@ -1201,6 +1227,15 @@ func (h *Handler) humaCreateStagedResultChain(ctx context.Context, in *createSta
 
 		if result.ReleasedAt.Valid {
 			resultResp.ReleasedAt = &result.ReleasedAt.Time
+		}
+
+		if result.ParentResultID.Valid {
+			parentID := result.ParentResultID.Int32
+			resultResp.ParentResultID = &parentID
+		}
+
+		if result.UpdatedAt.Valid {
+			resultResp.UpdatedAt = &result.UpdatedAt.Time
 		}
 
 		response = append(response, resultResp)
@@ -1709,6 +1744,8 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update action results"},
+			"404": {Description: "The result no longer exists"},
+			"409": {Description: "The result is published, or was saved by someone else since expected_updated_at"},
 		},
 	}, h.humaUpdateActionResult)
 
@@ -2086,6 +2123,10 @@ func stagedPartResponse(result models.ActionResult) ActionResultWithDetailsRespo
 	if result.RevealDelayMinutes.Valid {
 		delay := result.RevealDelayMinutes.Int32
 		resp.RevealDelayMinutes = &delay
+	}
+
+	if result.UpdatedAt.Valid {
+		resp.UpdatedAt = &result.UpdatedAt.Time
 	}
 
 	return resp

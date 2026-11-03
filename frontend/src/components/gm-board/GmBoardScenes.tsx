@@ -5,16 +5,21 @@ import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
+import { useGameActionResults } from '@/hooks/useActionResults';
 import { useGmBoardStore } from '@/hooks/useGmBoard';
+import { useAppendToDraft } from '@/hooks/useResultDraft';
+import { isCovered, setCovered } from '@/lib/gmBoard/coverage';
+import { chainsFor, draftTexts, targetPart } from '@/lib/gmBoard/results';
 import { inPhase } from '@/lib/gmBoard/codex';
 import { boardRows, NO_LOCATION, sortedChunks } from '@/lib/gmBoard/map';
 import { insertMoment, joinScene, leaveScene, newMoment, sceneReaders, scenesInOrder } from '@/lib/gmBoard/moments';
 import type { NamedCharacter } from '@/lib/gmBoard/read';
-import { cardsCitingScene, insertAt, moveMoment, removeEffect, removeMoment, sceneDoc, sceneName, sceneNeighbours, updateMoment } from '@/lib/gmBoard/scenes';
+import { insertAt } from '@/lib/insertText';
+import { cardsCitingScene, moveMoment, removeEffect, removeMoment, sceneDoc, sceneName, sceneNeighbours, updateMoment } from '@/lib/gmBoard/scenes';
 import { characterStates, chunkIndex } from '@/lib/gmBoard/states';
 import { newItemKey } from '@/lib/gmBoard/store';
 import { shortName } from '@/lib/gmBoard/text';
-import type { BoardDoc, Card as BoardCard, Moment, Scene } from '@/lib/gmBoard/types';
+import type { BoardDoc, Card as BoardCard, CharacterProgress, Moment, Scene } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { MomentEditor } from './MomentEditor';
 import { SceneCast } from './SceneCast';
@@ -29,6 +34,10 @@ interface GmBoardScenesProps {
   phase: GamePhase;
   board: BoardDoc;
   onGoToMap: () => void;
+  /** characterId → the result part last picked in Write, where "Add to draft" goes. */
+  selectedParts: Record<number, number | null>;
+  onSelectPart: (characterId: number, partId: number | null) => void;
+  onWrite: (characterId: number) => void;
 }
 
 type SceneDocument = Omit<Scene, 'id'>;
@@ -39,14 +48,17 @@ type SceneDocument = Omit<Scene, 'id'>;
  * left, the moments in the middle, and the scene as one reader gets it on
  * the right (or every reader side by side across both).
  */
-export function GmBoardScenes({ gameId, phase, board, onGoToMap }: GmBoardScenesProps) {
+export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, onSelectPart, onWrite }: GmBoardScenesProps) {
   const [params, setParams] = useSearchParams();
   const { showToast } = useToast();
   const store = useGmBoardStore(gameId, phase.id);
   const people = useBoardPeople(gameId, phase.id);
-  const { cast, names, nameLists, submissions, canRead, settings } = people;
+  const { cast, names, nameLists, submissions, submissionIds, canRead, settings } = people;
   const sheetItems = useGameCharacterSheetItems(gameId);
   const cardActions = useBoardCardActions(gameId, phase.id, board, names);
+  const results = useGameActionResults(gameId);
+  const appendToDraft = useAppendToDraft(gameId);
+  const [adding, setAdding] = useState(false);
 
   const [view, setView] = useState<'moments' | 'side'>('moments');
   const [reader, setReader] = useState<number | null>(null);
@@ -211,6 +223,36 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap }: GmBoardScenes
     });
   };
 
+  const inDraft = (m: Moment, characterId: number) => {
+    const drafts = draftTexts(chainsFor(results.data ?? [], phase.id, characterId));
+    return isCovered(m, characterId, drafts, board.covered[characterId], { names: nameLists.get(characterId) ?? [], secondPerson: model.secondPerson });
+  };
+
+  const addToDraft = async (characterId: number, moments: Moment[], text: string) => {
+    const chains = chainsFor(results.data ?? [], phase.id, characterId);
+    const target = targetPart(chains, selectedParts[characterId]);
+    const userId = cast.find((c) => c.id === characterId)?.userId;
+    if (!target && userId === undefined) {
+      showToast(`Nobody plays ${who(characterId)}, so there’s no draft to add to.`, 'warning');
+      return;
+    }
+    setAdding(true);
+    try {
+      const part = await appendToDraft(target, text, {
+        userId: userId as number,
+        characterId,
+        submissionId: chains.length ? undefined : submissionIds.get(characterId),
+      });
+      onSelectPart(characterId, part.id);
+      store.update<CharacterProgress>('progress', String(characterId), (p) => moments.reduce((acc, m) => setCovered(acc, m.id, true), p ?? {}));
+      showToast(`Added to ${who(characterId)}’s draft.`, 'success', { action: { label: `Write ${who(characterId)}’s result`, onClick: () => onWrite(characterId) } });
+    } catch {
+      showToast(`Couldn’t add to ${who(characterId)}’s draft. Try again.`, 'danger');
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const copy = (text: string) => {
     const done = () => showToast('Copied.', 'success');
     const blocked = () => showToast('Copying was blocked by the browser. Select the text and copy it instead.', 'warning');
@@ -334,6 +376,10 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap }: GmBoardScenes
                 document.getElementById(`moment-${id}`)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
               }}
               onCopy={copy}
+              inDraft={inDraft}
+              onAddToDraft={(id, moments, text) => void addToDraft(id, moments, text)}
+              adding={adding}
+              onWrite={onWrite}
             />
           </div>
         )}

@@ -127,7 +127,9 @@ export class PhasesApi extends BaseApiClient {
     return this.client.get<{ count: number }>(`/api/v1/games/${gameId}/phases/${phaseId}/results/unpublished-count`);
   }
 
-  async updateActionResult(gameId: number, resultId: number, data: { content: string }) {
+  // expected_updated_at (optional): the updated_at last seen. If someone has
+  // saved since, the server refuses with 409 instead of overwriting them.
+  async updateActionResult(gameId: number, resultId: number, data: { content: string; expected_updated_at?: string }) {
     return this.client.put<ActionResult>(`/api/v1/games/${gameId}/results/${resultId}`, data);
   }
 

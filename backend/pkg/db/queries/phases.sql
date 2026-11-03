@@ -520,9 +520,13 @@ FROM action_results
 WHERE phase_id = $1 AND is_published = false AND parent_result_id IS NULL;
 
 -- name: UpdateActionResult :one
+-- expected_updated_at is optional: when given, the save only lands if nobody
+-- has saved since (the results board sends it; the results list doesn't).
+-- updated_at is set by the update_action_results_updated_at trigger.
 UPDATE action_results
 SET content = $2
 WHERE id = $1 AND is_published = false
+  AND (sqlc.narg('expected_updated_at')::timestamptz IS NULL OR updated_at = sqlc.narg('expected_updated_at'))
 RETURNING *;
 
 -- name: DeleteActionResult :exec

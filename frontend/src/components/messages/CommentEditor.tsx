@@ -14,6 +14,7 @@ import { STICKY_BELOW_TABS } from '@/components/layout/TabNavigation';
 import type { Character } from '@/types/characters';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { postCachingService } from '@/services/PostCachingService';
+import { insertAt } from '@/lib/insertText';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
 import { HELP_KEY, SHORTCUT_GROUPS, isSubmitCombo } from '@/lib/keyboardShortcuts';
 import { ShortcutKeys } from '@/components/common/keyboard/ShortcutKeys';
@@ -72,6 +73,8 @@ interface CommentEditorProps {
   stickyTabBar?: boolean; // Stick the tab bar below the nav when scrolling (only appropriate for full-page editors, not inline edit forms)
   sheetButton?: ReactNode; // Optional node rendered in the drag-handle bar (e.g. "Character Sheet" toggle)
   insertSheetItemRef?: MutableRefObject<((item: SheetItem) => void) | null>; // Ref to expose cursor-aware insert for external callers (e.g. Drawer)
+  insertTextRef?: MutableRefObject<((text: string) => void) | null>; // Inserts plain text where the cursor last was (at the end if the box was never focused), spaced so it doesn't run into a word
+  transformTextRef?: MutableRefObject<((fn: (text: string) => string) => void) | null>; // Rewrites the selected text, or all of it when nothing is selected
   autosaveRefId?: string; //Ref to a localstorage key for autosave purposes. Undefined disables autosave.
   onSubmitShortcut?: () => void; // Ctrl/⌘+Enter. Defaults to submitting the enclosing <form>, if any.
   onCancelShortcut?: () => void; // Esc, once no suggestion dropdown is open. Takes Esc from an enclosing Modal, so omit it where Cancel just closes the modal.
@@ -107,6 +110,8 @@ export const CommentEditor = memo(function CommentEditor({
   stickyTabBar = false,
   sheetButton,
   insertSheetItemRef,
+  insertTextRef,
+  transformTextRef,
   autosaveRefId = undefined,
   onSubmitShortcut,
   onCancelShortcut,
@@ -333,6 +338,40 @@ export const CommentEditor = memo(function CommentEditor({
       insertSheetItemRef.current = (item: SheetItem) => handleInsertSheetItem(item);
     }
   }, [insertSheetItemRef, handleInsertSheetItem]);
+
+  // The textarea's selection survives blur, but before the first focus it
+  // means nothing (browsers report 0 or the end), so outside inserts go at
+  // the end until the GM has clicked into the box.
+  const focusedOnce = useRef(false);
+
+  useEffect(() => {
+    if (!insertTextRef) return;
+    insertTextRef.current = (text: string) => {
+      const ta = textareaRef.current;
+      const start = focusedOnce.current && ta ? ta.selectionStart : value.length;
+      const end = focusedOnce.current && ta ? ta.selectionEnd : value.length;
+      const next = insertAt(value, start, end, text);
+      onChange(next.value);
+      if (autosaveRefId) postCachingService.save(autosaveRefId, next.value);
+      setTimeout(() => {
+        if (focusedOnce.current) textareaRef.current?.setSelectionRange(next.cursor, next.cursor);
+      }, 0);
+    };
+  }, [insertTextRef, value, onChange, autosaveRefId]);
+
+  useEffect(() => {
+    if (!transformTextRef) return;
+    transformTextRef.current = (fn: (text: string) => string) => {
+      const ta = textareaRef.current;
+      const start = ta?.selectionStart ?? 0;
+      const end = ta?.selectionEnd ?? 0;
+      const hasSelection = focusedOnce.current && ta && end > start;
+      const next = hasSelection ? value.slice(0, start) + fn(value.slice(start, end)) + value.slice(end) : fn(value);
+      if (next === value) return;
+      onChange(next);
+      if (autosaveRefId) postCachingService.save(autosaveRefId, next);
+    };
+  }, [transformTextRef, value, onChange, autosaveRefId]);
 
   // Apply a markdown formatting hotkey to the current selection
   const handleFormat = useCallback(
@@ -690,6 +729,7 @@ export const CommentEditor = memo(function CommentEditor({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onFocus={() => { focusedOnce.current = true; }}
             placeholder={placeholder}
             disabled={disabled}
             rows={rows}

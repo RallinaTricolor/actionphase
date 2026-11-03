@@ -788,8 +788,11 @@ type ActionSubmissionServiceInterface interface {
 	// GetUnpublishedResultsCount returns the count of unpublished results for a phase
 	GetUnpublishedResultsCount(ctx context.Context, phaseID int32) (int64, error)
 
-	// UpdateActionResult updates the content of an unpublished action result
-	UpdateActionResult(ctx context.Context, resultID int32, content string) (*models.ActionResult, error)
+	// UpdateActionResult updates the content of an unpublished action result.
+	// With expectedUpdatedAt, it refuses (ErrResultNotEditable) when the row
+	// was saved since; a published row is refused the same way, and a missing
+	// one is ErrActionResultNotFound.
+	UpdateActionResult(ctx context.Context, resultID int32, content string, expectedUpdatedAt *time.Time) (*models.ActionResult, error)
 
 	// DeleteActionResult deletes an unpublished (draft) action result
 	DeleteActionResult(ctx context.Context, resultID int32) error

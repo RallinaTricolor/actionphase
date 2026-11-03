@@ -109,3 +109,20 @@ export function youify(text: string, names: string[]): YouifyResult {
   marks.sort((a, b) => a.start - b.start);
   return { text: out, marks, swapped };
 }
+
+/**
+ * Make "you" on a draft: `youify`, except inside any of `keep` (the reader's
+ * own versions, which the GM already wrote for them and are never changed).
+ */
+export function youifyExcept(text: string, names: string[], keep: string[]): string {
+  const spans = keep.map((k) => k.trim()).filter(Boolean);
+  if (!spans.length) return youify(text, names).text;
+  const re = new RegExp(spans.sort((a, b) => b.length - a.length).map(escapeRegExp).join('|'), 'g');
+  let out = '';
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    out += youify(text.slice(last, m.index), names).text + m[0];
+    last = (m.index ?? 0) + m[0].length;
+  }
+  return out + youify(text.slice(last), names).text;
+}

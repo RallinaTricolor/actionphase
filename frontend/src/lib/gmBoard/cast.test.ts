@@ -11,7 +11,7 @@ describe('boardCast', () => {
       makeCharacter({ id: 4, name: 'Pending', status: 'pending' }),
       makeCharacter({ id: 5, name: 'Harrison' }),
     ]);
-    expect(cast).toEqual([
+    expect(cast.map(({ id, name, npc, reads }) => ({ id, name, npc, reads }))).toEqual([
       { id: 2, name: 'Mara', npc: false, reads: true },
       { id: 5, name: 'Harrison', npc: false, reads: true },
       { id: 1, name: 'Old Tom', npc: true, reads: true },
@@ -28,5 +28,14 @@ describe('canReadRule', () => {
     ]);
     const canRead = canReadRule(cast);
     expect([1, 2, 3, 44].map(canRead)).toEqual([true, true, false, false]);
+  });
+
+  it('a result goes to the player, or the player an NPC is assigned to', () => {
+    const cast = boardCast([
+      makeCharacter({ id: 1, name: 'Mara', user_id: 7 }),
+      makeCharacter({ id: 2, name: 'Old Tom', character_type: 'npc', user_id: undefined, assigned_user_id: 100 }),
+      makeCharacter({ id: 3, name: 'The Watch', character_type: 'npc', user_id: undefined }),
+    ]);
+    expect(cast.map((c) => c.userId)).toEqual([7, 100, undefined]);
   });
 });

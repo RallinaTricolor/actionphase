@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Alert, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
 import { GmCharacterNames } from '@/components/gm-board/GmCharacterNames';
 import { GmCodexManager } from '@/components/gm-board/GmCodexManager';
+import { GmBoardPrefs } from '@/components/gm-board/GmBoardPrefs';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiClient } from '@/lib/api';
 import { isGameWritable } from '@/lib/gamePermissions';
@@ -85,6 +86,14 @@ export function GmBoardSetupPage() {
             </CardHeader>
             <CardBody>
               <GmCharacterNames gameId={gameId} characters={cast} />
+            </CardBody>
+          </Card>
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-content-primary">Writing results</h2>
+            </CardHeader>
+            <CardBody>
+              <GmBoardPrefs gameId={gameId} />
             </CardBody>
           </Card>
           <p className="text-sm text-content-tertiary">Reward lists and the reward block come later.</p>

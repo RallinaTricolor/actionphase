@@ -1,20 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, CardBody, Drawer, Spinner } from '@/components/ui';
+import { Alert, Button, Drawer, Spinner } from '@/components/ui';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGmBoard, useGmBoardStore } from '@/hooks/useGmBoard';
 import { apiClient } from '@/lib/api';
 import { boardCast } from '@/lib/gmBoard/cast';
 import { NOTES_KEY } from '@/lib/gmBoard/store';
-import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath, type BoardStep } from '@/lib/gmBoard/steps';
+import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
 import { GmBoardRead } from './GmBoardRead';
 import { GmBoardScenes } from './GmBoardScenes';
+import { GmBoardWrite } from './GmBoardWrite';
 import { GmBoardSaveStatus } from './GmBoardSaveStatus';
 import { GmCodexManager } from './GmCodexManager';
 
@@ -24,14 +25,11 @@ interface GmBoardProps {
   phase: GamePhase;
 }
 
-const STEP_INTROS: Partial<Record<BoardStep, string>> = {
-  write: 'Draft each player’s result from their brief, with checks before you publish.',
-};
-
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
- * steps, with the step in the URL (`?step=`). Read, the Map and Scenes are
- * built; Write is still empty.
+ * steps, with the step in the URL (`?step=`). Which result part the GM last
+ * picked for each character lives here, so Scenes' "Add to draft" and Write
+ * agree on it.
  */
 export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   const navigate = useNavigate();
@@ -39,6 +37,8 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   const step = parseBoardStep(params.get('step'));
   const [notesOpen, setNotesOpen] = useState(false);
   const [codex, setCodex] = useState<{ name: string } | null>(null);
+  const [selectedParts, setSelectedParts] = useState<Record<number, number | null>>({});
+  const selectPart = useCallback((characterId: number, partId: number | null) => setSelectedParts((s) => ({ ...s, [characterId]: partId })), []);
   const { allGameCharacters } = useGameContext();
   const players = useMemo(() => boardCast(allGameCharacters).filter((c) => !c.npc), [allGameCharacters]);
   const phases = useQuery({
@@ -76,6 +76,14 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
     const nextParams = new URLSearchParams(params);
     nextParams.set('step', 'scenes');
     nextParams.set('scene', sceneId);
+    setParams(nextParams);
+    window.scrollTo?.(0, 0);
+  };
+
+  const writeFor = (characterId: number) => {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('step', 'write');
+    nextParams.set('who', String(characterId));
     setParams(nextParams);
     window.scrollTo?.(0, 0);
   };
@@ -139,14 +147,17 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
           onOpenScene={openScene}
         />
       ) : step === 'scenes' ? (
-        <GmBoardScenes gameId={gameId} phase={phase} board={board} onGoToMap={() => goToStep('map')} />
+        <GmBoardScenes
+          gameId={gameId}
+          phase={phase}
+          board={board}
+          onGoToMap={() => goToStep('map')}
+          selectedParts={selectedParts}
+          onSelectPart={selectPart}
+          onWrite={writeFor}
+        />
       ) : (
-        <Card variant="bordered" padding="md" data-testid={`gm-board-step-${step}`}>
-          <CardBody>
-            <p className="text-content-primary">{STEP_INTROS[step]}</p>
-            <p className="text-sm text-content-tertiary mt-2">This step isn’t built yet.</p>
-          </CardBody>
-        </Card>
+        <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
       )}
 
       <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">

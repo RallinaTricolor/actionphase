@@ -195,3 +195,27 @@ export function usePublishActionResult(gameId: number) {
     },
   });
 }
+
+/**
+ * Publishes every draft result in a phase (chain heads publish their whole
+ * chain). Shared by the results list and the results board.
+ */
+export function usePublishAllPhaseResults(gameId: number, phaseId: number | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!phaseId) throw new Error('No phase to publish');
+      await apiClient.phases.publishAllPhaseResults(gameId, phaseId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unpublishedResultsCount', gameId, phaseId] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['actionResults', 'user', gameId] });
+      queryClient.invalidateQueries({ queryKey: ['draftCharacterUpdates'] });
+      queryClient.invalidateQueries({ queryKey: ['draftUpdateCount'] });
+      // Published sheet updates change character data.
+      queryClient.invalidateQueries({ queryKey: ['characterData'] });
+    },
+  });
+}
