@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { cn } from '../../lib/theme/utils';
 import { HelpTooltip } from './HelpTooltip';
 
@@ -34,7 +34,8 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
  */
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
   ({ label, error, helperText, helpText, className, id, ...props }, ref) => {
-    const checkboxId = id || props.name;
+    const autoId = useId();
+    const checkboxId = id || props.name || autoId;
 
     return (
       <div className="flex items-start">

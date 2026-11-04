@@ -22,10 +22,13 @@ import type {
   Card,
   CharacterProgress,
   Chunk,
+  CharacterRewards,
   Cluster,
   CodexEntry,
   GameBoardSettings,
+  RewardItem,
   Scene,
+  SheetOp,
   Stance,
 } from './types';
 
@@ -252,6 +255,7 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
   const board: BoardDoc = {
     chunks: [], cards: [], scenes: [], clusters: [],
     stances: {}, readDone: {}, ready: {}, covered: {}, dismissedFlags: {}, notes: '',
+    rewardItems: [], rewards: {},
   };
   for (const item of items) {
     switch (item.kind) {
@@ -262,6 +266,8 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
       case 'stance': board.stances[item.key] = asObject(item.doc) as unknown as Stance; break;
       case 'flag': board.dismissedFlags[item.key] = true; break;
       case 'notes': board.notes = String(asObject(item.doc).text ?? ''); break;
+      case 'reward': board.rewardItems.push(rewardItemOf(item, 'phase')); break;
+      case 'rewards': board.rewards[Number(item.key)] = characterRewardsOf(item); break;
       case 'progress': {
         const characterId = Number(item.key);
         const p = asObject(item.doc) as CharacterProgress;
@@ -276,7 +282,28 @@ export function assembleBoard(items: LiveItem[]): BoardDoc {
   board.cards.sort(byId);
   board.scenes.sort(byId);
   board.clusters.sort(byId);
+  board.rewardItems.sort(byPosition);
   return board;
+}
+
+const byPosition = (a: RewardItem, b: RewardItem) => a.position - b.position || byId(a, b);
+const opsOf = (v: unknown): SheetOp[] => (Array.isArray(v) ? (v as SheetOp[]) : []);
+
+/** A reward list item, with its fields defaulted. */
+function rewardItemOf(item: LiveItem, scope: RewardItem['scope']): RewardItem {
+  const r = withId<Partial<RewardItem> & { id: string }>(item);
+  return { name: '', group: '', text: '', position: 0, ...r, scope, ops: opsOf(r.ops), choose: !!r.choose };
+}
+
+/** A character's rewards, with every line's fields defaulted. */
+function characterRewardsOf(item: LiveItem): CharacterRewards {
+  const doc = asObject(item.doc) as Partial<CharacterRewards>;
+  const lines = Array.isArray(doc.lines) ? doc.lines : [];
+  return {
+    ...doc,
+    lines: lines.map((l) => ({ ...l, group: l.group ?? '', text: l.text ?? '', ops: opsOf(l.ops), choose: !!l.choose })),
+    texts: doc.texts && typeof doc.texts === 'object' ? { ...doc.texts } : {},
+  };
 }
 
 /** A scene, with its lists defaulted, so an older or hand-made item can't break the Scenes step. */
@@ -305,7 +332,7 @@ function codexEntry(item: LiveItem): CodexEntry {
 /** Builds a game's board settings from its items, with defaults for what isn't set. */
 export function assembleSettings(items: LiveItem[]): GameBoardSettings {
   const settings: GameBoardSettings = {
-    codex: [], names: {}, rewardTemplate: '', rewardGroups: [], scales: [], secondPerson: true,
+    codex: [], names: {}, rewardTemplate: '', rewardGroups: [], scales: [], secondPerson: true, rewardItems: [],
   };
   for (const item of items) {
     const doc = asObject(item.doc);
@@ -316,8 +343,10 @@ export function assembleSettings(items: LiveItem[]): GameBoardSettings {
       case 'groups': if (Array.isArray(doc.groups)) settings.rewardGroups = doc.groups as GameBoardSettings['rewardGroups']; break;
       case 'scales': if (Array.isArray(doc.scales)) settings.scales = doc.scales as GameBoardSettings['scales']; break;
       case 'prefs': if (typeof doc.secondPerson === 'boolean') settings.secondPerson = doc.secondPerson; break;
+      case 'reward': settings.rewardItems.push(rewardItemOf(item, 'game')); break;
     }
   }
   settings.codex.sort(byId);
+  settings.rewardItems.sort(byPosition);
   return settings;
 }

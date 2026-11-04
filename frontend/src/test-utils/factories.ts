@@ -698,6 +698,8 @@ export function makeBoard(overrides: Partial<BoardDoc> = {}): BoardDoc {
     ready: {},
     covered: {},
     dismissedFlags: {},
+    rewardItems: [],
+    rewards: {},
     notes: '',
     ...overrides,
   };

@@ -22,6 +22,7 @@ import { shortName } from '@/lib/gmBoard/text';
 import type { BoardDoc, Card as BoardCard, CharacterProgress, Moment, Scene } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { MomentEditor } from './MomentEditor';
+import { SceneRewards } from './SceneRewards';
 import { SceneCast } from './SceneCast';
 import { SceneHeader } from './SceneHeader';
 import { SceneReadsAs } from './SceneReadsAs';
@@ -286,6 +287,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
           showToast('Effect removed.', 'info', { action: { label: 'Undo', onClick: () => put(before) } });
         }}
       />
+      <SceneRewards scene={scene} board={board} names={model.names} canRead={canRead} sceneName={sceneName(scene, model.names)} />
 
       <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(16rem, 1fr) minmax(0, 2.4fr)' : 'minmax(16rem, 1fr) minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
         <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">

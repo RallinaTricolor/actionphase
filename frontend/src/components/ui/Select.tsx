@@ -1,5 +1,5 @@
 import type { SelectHTMLAttributes } from 'react';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { tv } from '../../lib/theme/utils';
 
 export type SelectSize = 'sm' | 'md' | 'lg';
@@ -92,7 +92,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     },
     ref
   ) => {
-    const selectId = id || props.name;
+    const autoId = useId();
+    const selectId = id || props.name || autoId;
     const showError = variant === 'error' || error;
 
     return (

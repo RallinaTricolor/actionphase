@@ -11,7 +11,8 @@ import type {
   StagedResultPart,
   DraftCharacterUpdate,
   CreateDraftCharacterUpdateRequest,
-  UpdateDraftCharacterUpdateRequest
+  UpdateDraftCharacterUpdateRequest,
+  ReplaceRewardSheetUpdatesRequest
 } from '../../types/phases';
 
 /**
@@ -152,6 +153,19 @@ export class PhasesApi extends BaseApiClient {
   async getDraftCharacterUpdates(gameId: number, resultId: number) {
     return this.client.get<DraftCharacterUpdate[]>(
       `/api/v1/games/${gameId}/results/${resultId}/character-updates`
+    );
+  }
+
+  /** Every draft sheet update on a result in the phase (the results board). */
+  async listPhaseDraftCharacterUpdates(gameId: number, phaseId: number) {
+    return this.client.get<DraftCharacterUpdate[]>(`/api/v1/games/${gameId}/phases/${phaseId}/draft-character-updates`);
+  }
+
+  /** Replaces a character's generated sheet drafts for the phase, on one result. */
+  async replaceRewardSheetUpdates(gameId: number, phaseId: number, characterId: number, data: ReplaceRewardSheetUpdatesRequest) {
+    return this.client.put<DraftCharacterUpdate[]>(
+      `/api/v1/games/${gameId}/phases/${phaseId}/characters/${characterId}/reward-sheet-updates`,
+      data
     );
   }
 

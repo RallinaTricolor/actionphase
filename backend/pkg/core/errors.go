@@ -94,6 +94,17 @@ var ErrResultNotEditable = errors.New("cannot update action result")
 // unwrapped "action result not found" errors elsewhere in the results service.
 var ErrActionResultNotFound = errors.New("action result not found")
 
+// ErrHandMadeSheetDrafts is returned when a reward sync would replace sheet
+// drafts a GM made by hand in the results list. The board asks first, then
+// resends with ReplaceHandMade. Handlers answer 409 with UserMessage.
+var ErrHandMadeSheetDrafts = errors.New("hand-made sheet drafts")
+
+// ErrInvalidRewardCarrier is returned when the result named to carry a
+// character's reward sheet drafts can't: another character's or phase's, a
+// part with a later part after it, or published. Handlers answer 409 with
+// UserMessage, since the usual cause is the chain changing meanwhile.
+var ErrInvalidRewardCarrier = errors.New("invalid reward carrier")
+
 // ErrInvalidStateTransition is returned when a game state change is rejected by
 // the state machine (allowedTransitions, pkg/db/services/games.go) — for
 // example epilogue → in_progress, which is a deliberate one-way door.

@@ -16,6 +16,8 @@ interface ResultPartEditorProps {
   transformTextRef: MutableRefObject<((fn: (text: string) => string) => void) | null>;
   /** Set to this editor's flush, so Publish can send waiting text first. */
   flushRef: MutableRefObject<(() => Promise<void>) | null>;
+  /** Set to rewrite this part's whole text (Put block in result), saved as typing is. */
+  rewriteRef?: MutableRefObject<((fn: (text: string) => string) => void) | null>;
   placeholder: string;
   sheetItems?: SheetItem[];
   label: string;
@@ -29,9 +31,9 @@ const STATUS_TEXT: Partial<Record<DraftStatus, string>> = {
 };
 
 /** The draft for one result part, saved as the GM types (see `useResultDraft`). */
-export function ResultPartEditor({ gameId, target, onCreated, onText, insertTextRef, transformTextRef, flushRef, placeholder, sheetItems, label }: ResultPartEditorProps) {
+export function ResultPartEditor({ gameId, target, onCreated, onText, insertTextRef, transformTextRef, flushRef, rewriteRef, placeholder, sheetItems, label }: ResultPartEditorProps) {
   const draft = useResultDraft(gameId, target, onCreated);
-  const { text, flush } = draft;
+  const { text, flush, setText } = draft;
 
   useEffect(() => onText(text), [text, onText]);
   useEffect(() => {
@@ -42,6 +44,14 @@ export function ResultPartEditor({ gameId, target, onCreated, onText, insertText
   }, [flush, flushRef]);
 
   const locked = draft.status === 'published' || draft.status === 'gone';
+  useEffect(() => {
+    if (!rewriteRef || locked) return;
+    const rewrite = (fn: (t: string) => string) => setText(fn(text));
+    rewriteRef.current = rewrite;
+    return () => {
+      if (rewriteRef.current === rewrite) rewriteRef.current = null;
+    };
+  }, [rewriteRef, locked, setText, text]);
 
   return (
     <div className="space-y-2" data-testid="result-part-editor">

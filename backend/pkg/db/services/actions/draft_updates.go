@@ -2,11 +2,13 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -102,4 +104,97 @@ func (s *ActionSubmissionService) GetDraftUpdateCount(ctx context.Context, actio
 	}
 
 	return count, nil
+}
+
+// ListPhaseDraftCharacterUpdates returns every draft sheet update on a result
+// in the phase.
+func (s *ActionSubmissionService) ListPhaseDraftCharacterUpdates(ctx context.Context, phaseID int32) ([]models.ActionResultCharacterUpdate, error) {
+	drafts, err := models.New(s.DB).ListPhaseDraftCharacterUpdates(ctx, phaseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list phase draft character updates: %w", err)
+	}
+	return drafts, nil
+}
+
+// ReplaceRewardSheetUpdates replaces a character's generated sheet drafts.
+//
+// A draft is a whole-tab snapshot, so a character's sheet changes for a phase
+// must sit on one result: this clears them from every unpublished result in
+// the phase before writing the new set on the carrier. The results board works
+// the values out from the reward lines and the live sheet; the server only
+// keeps the one-carrier rule and refuses to drop hand-made drafts unasked.
+func (s *ActionSubmissionService) ReplaceRewardSheetUpdates(ctx context.Context, req core.ReplaceRewardSheetUpdatesRequest) ([]models.ActionResultCharacterUpdate, error) {
+	if req.ResultID == nil && len(req.Updates) > 0 {
+		return nil, fmt.Errorf("%w: sheet changes need a result to go on", core.ErrInvalidRewardCarrier)
+	}
+
+	var written []models.ActionResultCharacterUpdate
+	err := pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		queries := models.New(tx)
+
+		if req.ResultID != nil {
+			result, err := queries.GetActionResult(ctx, *req.ResultID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return fmt.Errorf("%w: that result no longer exists", core.ErrInvalidRewardCarrier)
+				}
+				return fmt.Errorf("failed to get carrier result: %w", err)
+			}
+			if result.GameID != req.GameID || result.PhaseID != req.PhaseID ||
+				!result.CharacterID.Valid || result.CharacterID.Int32 != req.CharacterID {
+				return fmt.Errorf("%w: that result isn't this character's in this phase", core.ErrInvalidRewardCarrier)
+			}
+			if result.IsPublished.Bool {
+				return fmt.Errorf("%w: that result is already published", core.ErrInvalidRewardCarrier)
+			}
+			isTail, err := queries.IsChainTail(ctx, pgtype.Int4{Int32: result.ID, Valid: true})
+			if err != nil {
+				return fmt.Errorf("failed to check chain tail: %w", err)
+			}
+			if !isTail.Bool {
+				return fmt.Errorf("%w: sheet changes go on the last part of a result, and a part was added after this one", core.ErrInvalidRewardCarrier)
+			}
+		}
+
+		existing, err := queries.ListCharacterDraftsOnUnpublishedResults(ctx, models.ListCharacterDraftsOnUnpublishedResultsParams{
+			PhaseID: req.PhaseID, CharacterID: req.CharacterID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list existing drafts: %w", err)
+		}
+		handMade := 0
+		for _, d := range existing {
+			if !d.FromRewards {
+				handMade++
+			}
+		}
+		if handMade > 0 && !req.ReplaceHandMade {
+			return fmt.Errorf("%w: this character has %d sheet update(s) made by hand in the results list", core.ErrHandMadeSheetDrafts, handMade)
+		}
+
+		if err := queries.DeleteCharacterDraftsOnUnpublishedResults(ctx, models.DeleteCharacterDraftsOnUnpublishedResultsParams{
+			PhaseID: req.PhaseID, CharacterID: req.CharacterID, IncludeHandMade: req.ReplaceHandMade,
+		}); err != nil {
+			return fmt.Errorf("failed to clear drafts: %w", err)
+		}
+
+		for _, u := range req.Updates {
+			row, err := queries.CreateRewardCharacterUpdate(ctx, models.CreateRewardCharacterUpdateParams{
+				ActionResultID: *req.ResultID,
+				CharacterID:    req.CharacterID,
+				ModuleType:     u.ModuleType,
+				FieldName:      u.FieldName,
+				FieldValue:     pgtype.Text{String: u.FieldValue, Valid: true},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to write sheet draft: %w", err)
+			}
+			written = append(written, row)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return written, nil
 }

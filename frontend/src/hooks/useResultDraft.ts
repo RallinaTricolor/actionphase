@@ -275,3 +275,30 @@ export function useAppendToDraft(gameId: number) {
     [gameId, qc],
   );
 }
+
+/**
+ * Rewrites a draft part's whole text through the API, for a part the editor
+ * isn't showing (Put block in result). Sends the updated_at it last saw; on a
+ * 409 it reloads the part and tries once more on the fresh copy.
+ */
+export function useRewriteDraft(gameId: number) {
+  const qc = useQueryClient();
+  return useCallback(
+    async (target: ActionResult, fn: (text: string) => string): Promise<void> => {
+      const refresh = () => qc.invalidateQueries({ queryKey: resultsKey(gameId) });
+      const put = (base: ActionResult) =>
+        apiClient.phases.updateActionResult(gameId, base.id, { content: fn(base.content), expected_updated_at: base.updated_at });
+      try {
+        await put(target);
+      } catch (error) {
+        if (!isAxiosError(error) || error.response?.status !== 409) throw error;
+        await refresh();
+        const fresh = qc.getQueryData<ActionResult[]>(resultsKey(gameId))?.find((r) => r.id === target.id);
+        if (!fresh || fresh.is_published) throw error;
+        await put(fresh);
+      }
+      await refresh();
+    },
+    [gameId, qc],
+  );
+}

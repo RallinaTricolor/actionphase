@@ -31,6 +31,9 @@ interface WriteResultsProps {
   insertTextRef: MutableRefObject<((text: string) => void) | null>;
   transformTextRef: MutableRefObject<((fn: (text: string) => string) => void) | null>;
   flushRef: MutableRefObject<(() => Promise<void>) | null>;
+  rewriteRef?: MutableRefObject<((fn: (text: string) => string) => void) | null>;
+  /** Run before a publish, after the editor's text is saved: the reward sheet sync. */
+  beforePublish?: () => Promise<void>;
   sheetItems?: SheetItem[];
 }
 
@@ -93,6 +96,7 @@ export function WriteResults(props: WriteResultsProps) {
       insertTextRef={props.insertTextRef}
       transformTextRef={props.transformTextRef}
       flushRef={props.flushRef}
+      rewriteRef={props.rewriteRef}
       sheetItems={props.sheetItems}
       label={label}
       placeholder={`Write ${name}’s result in your own words. Insert puts a moment at the cursor.`}
@@ -144,14 +148,16 @@ export function WriteResults(props: WriteResultsProps) {
           gameId={gameId}
           chain={chain}
           label={`Result ${i + 1}`}
-          characterId={characterId}
           characterName={characterName}
           phaseResults={phaseResults}
           selectedId={part?.id ?? null}
           onSelect={(id) => void select(id)}
           addingPart={pending?.kind === 'new-part' && chain.parts.some((p) => p.id === pending.tailId)}
           onAddPart={(tail) => void startPending({ kind: 'new-part', key: `new:part:${tail.id}:${Date.now()}`, tailId: tail.id, delayMinutes: DEFAULT_DELAY_MINUTES })}
-          flush={flush}
+          flush={async () => {
+            await flush();
+            await props.beforePublish?.();
+          }}
           onDeleted={(c) => {
             if (c.parts.some((p) => p.id === selectedPartId)) onSelectPart(null);
           }}

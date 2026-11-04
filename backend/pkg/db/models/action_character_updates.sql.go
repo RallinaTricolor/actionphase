@@ -27,8 +27,10 @@ DO UPDATE SET
     field_value = EXCLUDED.field_value,
     field_type = EXCLUDED.field_type,
     operation = EXCLUDED.operation,
+    -- A hand edit of a draft the board generated makes it hand-made.
+    from_rewards = false,
     updated_at = NOW()
-RETURNING id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at
+RETURNING id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at, from_rewards
 `
 
 type CreateDraftCharacterUpdateParams struct {
@@ -64,8 +66,76 @@ func (q *Queries) CreateDraftCharacterUpdate(ctx context.Context, arg CreateDraf
 		&i.Operation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FromRewards,
 	)
 	return i, err
+}
+
+const createRewardCharacterUpdate = `-- name: CreateRewardCharacterUpdate :one
+INSERT INTO action_result_character_updates (
+    action_result_id, character_id, module_type, field_name,
+    field_value, field_type, operation, from_rewards
+)
+VALUES ($1, $2, $3, $4, $5, 'json', 'upsert', true)
+RETURNING id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at, from_rewards
+`
+
+type CreateRewardCharacterUpdateParams struct {
+	ActionResultID int32       `json:"action_result_id"`
+	CharacterID    int32       `json:"character_id"`
+	ModuleType     string      `json:"module_type"`
+	FieldName      string      `json:"field_name"`
+	FieldValue     pgtype.Text `json:"field_value"`
+}
+
+// A draft sheet update generated from reward lines.
+func (q *Queries) CreateRewardCharacterUpdate(ctx context.Context, arg CreateRewardCharacterUpdateParams) (ActionResultCharacterUpdate, error) {
+	row := q.db.QueryRow(ctx, createRewardCharacterUpdate,
+		arg.ActionResultID,
+		arg.CharacterID,
+		arg.ModuleType,
+		arg.FieldName,
+		arg.FieldValue,
+	)
+	var i ActionResultCharacterUpdate
+	err := row.Scan(
+		&i.ID,
+		&i.ActionResultID,
+		&i.CharacterID,
+		&i.ModuleType,
+		&i.FieldName,
+		&i.FieldValue,
+		&i.FieldType,
+		&i.Operation,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.FromRewards,
+	)
+	return i, err
+}
+
+const deleteCharacterDraftsOnUnpublishedResults = `-- name: DeleteCharacterDraftsOnUnpublishedResults :exec
+DELETE FROM action_result_character_updates u
+USING action_results r
+WHERE r.id = u.action_result_id
+  AND r.phase_id = $1
+  AND u.character_id = $2
+  AND r.is_published = false
+  AND (u.from_rewards OR $3::boolean)
+`
+
+type DeleteCharacterDraftsOnUnpublishedResultsParams struct {
+	PhaseID         int32 `json:"phase_id"`
+	CharacterID     int32 `json:"character_id"`
+	IncludeHandMade bool  `json:"include_hand_made"`
+}
+
+// Clears a character's draft sheet updates on this phase's unpublished
+// results, before a reward sync writes the new set. Hand-made ones go only
+// when include_hand_made is true.
+func (q *Queries) DeleteCharacterDraftsOnUnpublishedResults(ctx context.Context, arg DeleteCharacterDraftsOnUnpublishedResultsParams) error {
+	_, err := q.db.Exec(ctx, deleteCharacterDraftsOnUnpublishedResults, arg.PhaseID, arg.CharacterID, arg.IncludeHandMade)
+	return err
 }
 
 const deleteDraftCharacterUpdate = `-- name: DeleteDraftCharacterUpdate :exec
@@ -91,7 +161,7 @@ func (q *Queries) DeletePublishedDrafts(ctx context.Context, actionResultID int3
 }
 
 const getDraftCharacterUpdate = `-- name: GetDraftCharacterUpdate :one
-SELECT id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at FROM action_result_character_updates
+SELECT id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at, from_rewards FROM action_result_character_updates
 WHERE id = $1
 `
 
@@ -110,12 +180,13 @@ func (q *Queries) GetDraftCharacterUpdate(ctx context.Context, id int32) (Action
 		&i.Operation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FromRewards,
 	)
 	return i, err
 }
 
 const getDraftCharacterUpdates = `-- name: GetDraftCharacterUpdates :many
-SELECT id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at FROM action_result_character_updates
+SELECT id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at, from_rewards FROM action_result_character_updates
 WHERE action_result_id = $1
 ORDER BY module_type, field_name
 `
@@ -141,6 +212,7 @@ func (q *Queries) GetDraftCharacterUpdates(ctx context.Context, actionResultID i
 			&i.Operation,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FromRewards,
 		); err != nil {
 			return nil, err
 		}
@@ -163,6 +235,127 @@ func (q *Queries) GetDraftUpdateCount(ctx context.Context, actionResultID int32)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const isChainTail = `-- name: IsChainTail :one
+SELECT NOT EXISTS (
+    SELECT 1 FROM action_results WHERE parent_result_id = $1
+)::boolean AS is_tail
+`
+
+// Whether no later part follows this result in its chain.
+func (q *Queries) IsChainTail(ctx context.Context, parentResultID pgtype.Int4) (pgtype.Bool, error) {
+	row := q.db.QueryRow(ctx, isChainTail, parentResultID)
+	var is_tail pgtype.Bool
+	err := row.Scan(&is_tail)
+	return is_tail, err
+}
+
+const listCharacterDraftsOnUnpublishedResults = `-- name: ListCharacterDraftsOnUnpublishedResults :many
+SELECT u.id, u.action_result_id, u.character_id, u.module_type, u.field_name, u.field_value, u.field_type, u.operation, u.created_at, u.updated_at, u.from_rewards
+FROM action_result_character_updates u
+JOIN action_results r ON r.id = u.action_result_id
+WHERE r.phase_id = $1
+  AND u.character_id = $2
+  AND r.is_published = false
+`
+
+type ListCharacterDraftsOnUnpublishedResultsParams struct {
+	PhaseID     int32 `json:"phase_id"`
+	CharacterID int32 `json:"character_id"`
+}
+
+// A character's draft sheet updates on this phase's unpublished results:
+// the ones a reward sync replaces.
+func (q *Queries) ListCharacterDraftsOnUnpublishedResults(ctx context.Context, arg ListCharacterDraftsOnUnpublishedResultsParams) ([]ActionResultCharacterUpdate, error) {
+	rows, err := q.db.Query(ctx, listCharacterDraftsOnUnpublishedResults, arg.PhaseID, arg.CharacterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActionResultCharacterUpdate
+	for rows.Next() {
+		var i ActionResultCharacterUpdate
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActionResultID,
+			&i.CharacterID,
+			&i.ModuleType,
+			&i.FieldName,
+			&i.FieldValue,
+			&i.FieldType,
+			&i.Operation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FromRewards,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPhaseDraftCharacterUpdates = `-- name: ListPhaseDraftCharacterUpdates :many
+SELECT u.id, u.action_result_id, u.character_id, u.module_type, u.field_name, u.field_value, u.field_type, u.operation, u.created_at, u.updated_at, u.from_rewards
+FROM action_result_character_updates u
+JOIN action_results r ON r.id = u.action_result_id
+WHERE r.phase_id = $1
+ORDER BY u.character_id, u.action_result_id, u.module_type, u.field_name
+`
+
+// Every draft sheet update on a result in this phase, for the results board.
+func (q *Queries) ListPhaseDraftCharacterUpdates(ctx context.Context, phaseID int32) ([]ActionResultCharacterUpdate, error) {
+	rows, err := q.db.Query(ctx, listPhaseDraftCharacterUpdates, phaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActionResultCharacterUpdate
+	for rows.Next() {
+		var i ActionResultCharacterUpdate
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActionResultID,
+			&i.CharacterID,
+			&i.ModuleType,
+			&i.FieldName,
+			&i.FieldValue,
+			&i.FieldType,
+			&i.Operation,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FromRewards,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const moveDraftCharacterUpdates = `-- name: MoveDraftCharacterUpdates :exec
+UPDATE action_result_character_updates
+SET action_result_id = $1, updated_at = NOW()
+WHERE action_result_id = $2
+`
+
+type MoveDraftCharacterUpdatesParams struct {
+	ToResultID   int32 `json:"to_result_id"`
+	FromResultID int32 `json:"from_result_id"`
+}
+
+// Moves a result's draft sheet updates to another result: a chain's drafts
+// follow its last part when a part is added.
+func (q *Queries) MoveDraftCharacterUpdates(ctx context.Context, arg MoveDraftCharacterUpdatesParams) error {
+	_, err := q.db.Exec(ctx, moveDraftCharacterUpdates, arg.ToResultID, arg.FromResultID)
+	return err
 }
 
 const publishDraftCharacterUpdates = `-- name: PublishDraftCharacterUpdates :exec
@@ -196,9 +389,10 @@ const updateDraftCharacterUpdate = `-- name: UpdateDraftCharacterUpdate :one
 UPDATE action_result_character_updates
 SET
     field_value = $2,
+    from_rewards = false,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at
+RETURNING id, action_result_id, character_id, module_type, field_name, field_value, field_type, operation, created_at, updated_at, from_rewards
 `
 
 type UpdateDraftCharacterUpdateParams struct {
@@ -221,6 +415,7 @@ func (q *Queries) UpdateDraftCharacterUpdate(ctx context.Context, arg UpdateDraf
 		&i.Operation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FromRewards,
 	)
 	return i, err
 }

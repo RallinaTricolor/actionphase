@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeActionResult } from '@/test-utils/factories';
-import { canAppendPart, canCancelPart, canEditDelay, hasChainControls, isChainTail, takesSheetUpdates } from './resultParts';
+import { canAppendPart, canCancelPart, canEditDelay, chainTail, hasChainControls, isChainTail, takesSheetUpdates } from './resultParts';
 
 const draft = makeActionResult({ id: 1 });
 const head = makeActionResult({ id: 1, part_number: 1, part_count: 3 });
@@ -25,5 +25,23 @@ describe('result part controls', () => {
     expect([canAppendPart(published(tail)), hasChainControls(published(head)), takesSheetUpdates(published(tail))]).toEqual([false, false, false]);
     expect([canEditDelay(published(tail)), canCancelPart(published(tail))]).toEqual([true, true]);
     expect([canEditDelay(published(tail, true)), canCancelPart(published(tail, true))]).toEqual([false, false]);
+  });
+});
+
+describe('chainTail', () => {
+  const other = makeActionResult({ id: 9 });
+
+  it('follows the parts to the last one, whatever order the list is in', () => {
+    expect(chainTail(head, [tail, other, head, middle]).id).toBe(3);
+    expect(chainTail(middle, [head, middle, tail]).id).toBe(3);
+  });
+
+  it('is the result itself when nothing follows it', () => {
+    expect(chainTail(draft, [draft, other]).id).toBe(1);
+    expect(chainTail(tail, [head, middle, tail]).id).toBe(3);
+  });
+
+  it('stops where the list runs out of parts', () => {
+    expect(chainTail(head, [head, middle]).id).toBe(2);
   });
 });

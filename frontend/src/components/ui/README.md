@@ -657,6 +657,13 @@ deleted from `index.css`.
 - Override core color styles (use variants instead)
 - Create duplicate components (extend existing ones)
 
+### Field ids and labels
+
+`Input`, `Textarea`, `Select`, `Checkbox`, `Radio` and `DateTimeInput` link
+their `label` to the field by id. They use `id` if given, then `name` (for
+`Radio`, `name-value`), and otherwise generate one, so a label always works.
+Pass an `id` only when something else needs to point at the field.
+
 ### Composition Patterns
 
 **Form with Card:**

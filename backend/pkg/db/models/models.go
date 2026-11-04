@@ -126,6 +126,7 @@ type ActionResultCharacterUpdate struct {
 	Operation      string             `json:"operation"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	FromRewards    bool               `json:"from_rewards"`
 }
 
 type ActionSubmission struct {

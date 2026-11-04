@@ -344,6 +344,17 @@ func (as *ActionSubmissionService) AppendStagedPart(ctx context.Context, anchorI
 			return fmt.Errorf("failed to append staged part: %w", err)
 		}
 
+		// A chain's sheet drafts live on its last part (see the release
+		// worker), so they follow the tail. Left behind, they'd sit on a
+		// middle part where no editor shows them, and still apply when that
+		// part is revealed.
+		if err := queries.MoveDraftCharacterUpdates(ctx, models.MoveDraftCharacterUpdatesParams{
+			FromResultID: tail.ID,
+			ToResultID:   created.ID,
+		}); err != nil {
+			return fmt.Errorf("failed to move sheet drafts to the new part: %w", err)
+		}
+
 		return nil
 	})
 	if err != nil {

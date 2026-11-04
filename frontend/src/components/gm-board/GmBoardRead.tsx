@@ -19,6 +19,8 @@ import { newItemKey } from '@/lib/gmBoard/store';
 import { characterNames } from '@/lib/gmBoard/text';
 import type { BoardDoc, CharacterProgress, Chunk, Stance } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
+import { AwardDialog } from './AwardDialog';
+import { useOptionalBoardRewards } from './boardRewards';
 import { CardPanel } from './CardPanel';
 import { ReadPlayerList } from './ReadPlayerList';
 import { ReadSidebar } from './ReadSidebar';
@@ -95,6 +97,8 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
     [submissions, ownerId, characters, codex],
   );
   const openCard = board.cards.find((c) => c.id === openCardId && c.characterId === ownerId) ?? null;
+  const rewards = useOptionalBoardRewards();
+  const [awarding, setAwarding] = useState<string | null>(null);
 
   if (actions.isLoading || !settings) {
     return (
@@ -229,8 +233,10 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
           sheetItems={sheetItems.get(ownerId)}
           onAddCard={addCard}
           onAddCodex={(text) => onOpenCodex(text)}
+          onAddAward={rewards ? setAwarding : undefined}
           onOpenCard={setOpenCardId}
         />
+        {rewards && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
       </article>
 
       <div className="sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">

@@ -8,7 +8,7 @@ import "encoding/json"
 
 // BoardItemChange is one write to a phase's board.
 type BoardItemChange struct {
-	Kind        string          `json:"kind" enum:"card,scene,chunk,cluster,stance,progress,flag,notes" doc:"Item kind"`
+	Kind        string          `json:"kind" enum:"card,scene,chunk,cluster,stance,progress,flag,notes,reward,rewards" doc:"Item kind"`
 	Key         string          `json:"key" minLength:"1" maxLength:"128" pattern:"^[A-Za-z0-9_.:|-]+$" doc:"Item key, unique within its kind"`
 	BaseVersion int32           `json:"base_version" minimum:"0" doc:"The version this change is based on; 0 when the item is new (or was deleted)"`
 	Doc         json.RawMessage `json:"doc,omitempty" required:"false" doc:"The item's new content. Required unless deleted is true"`
@@ -17,7 +17,7 @@ type BoardItemChange struct {
 
 // SettingsItemChange is one write to a game's board settings.
 type SettingsItemChange struct {
-	Kind        string          `json:"kind" enum:"codex,names,template,groups,scales,prefs" doc:"Item kind"`
+	Kind        string          `json:"kind" enum:"codex,names,template,groups,scales,prefs,reward" doc:"Item kind"`
 	Key         string          `json:"key" minLength:"1" maxLength:"128" pattern:"^[A-Za-z0-9_.:|-]+$" doc:"Item key, unique within its kind"`
 	BaseVersion int32           `json:"base_version" minimum:"0" doc:"The version this change is based on; 0 when the item is new (or was deleted)"`
 	Doc         json.RawMessage `json:"doc,omitempty" required:"false" doc:"The item's new content. Required unless deleted is true"`

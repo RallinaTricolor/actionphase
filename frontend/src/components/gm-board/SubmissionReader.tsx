@@ -38,6 +38,8 @@ interface SubmissionReaderProps {
   onAddCard?: (request: NewCardRequest) => void;
   onAddCodex?: (text: string) => void;
   onAddMoment?: (text: string) => void;
+  /** + Award: a reward for the owner, keeping the passage as its reason. */
+  onAddAward?: (text: string) => void;
   onOpenCard: (cardId: string) => void;
 }
 
@@ -96,6 +98,7 @@ export function SubmissionReader({
   onAddCard,
   onAddCodex,
   onAddMoment,
+  onAddAward,
   onOpenCard,
 }: SubmissionReaderProps) {
   const box = useRef<HTMLDivElement>(null);
@@ -333,6 +336,11 @@ export function SubmissionReader({
           {onAddCodex && (
             <Button type="button" size="sm" variant="ghost" onClick={() => fromSelection((s) => onAddCodex(s.text.slice(0, 80)))}>
               + Codex
+            </Button>
+          )}
+          {onAddAward && (
+            <Button type="button" size="sm" variant="ghost" onClick={() => fromSelection((s) => onAddAward(s.text))}>
+              + Award
             </Button>
           )}
         </div>

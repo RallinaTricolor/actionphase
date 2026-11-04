@@ -10,6 +10,7 @@ package phases
 import (
 	"actionphase/pkg/access"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -402,6 +403,25 @@ type updateStagedDelayInput struct {
 	GameID   int32 `path:"gameID" doc:"Game ID"`
 	ResultID int32 `path:"resultId" doc:"Staged part ID"`
 	Body     *updateStagedDelayBody
+}
+
+type rewardSheetUpdateBody struct {
+	ModuleType string `json:"module_type" pattern:"^(skills|inventory|numbers|t_[a-z0-9]{6})$" doc:"Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout"`
+	FieldName  string `json:"field_name" minLength:"1" doc:"The tab's storage field: items for inventory, else the tab key"`
+	FieldValue string `json:"field_value" minLength:"2" maxLength:"262144" doc:"The tab's whole new value, as a JSON array of entries"`
+}
+
+type replaceRewardSheetUpdatesBody struct {
+	ResultID        *int32                  `json:"result_id,omitempty" required:"false" doc:"The result that carries the sheet changes: an unpublished last part of one of this character's results in this phase. Leave out to clear them."`
+	Updates         []rewardSheetUpdateBody `json:"updates" maxItems:"50" doc:"One whole-tab value per changed tab. Empty clears the generated drafts."`
+	ReplaceHandMade bool                    `json:"replace_hand_made,omitempty" required:"false" doc:"Also replace sheet drafts made by hand in the results list. Without it, those make the request fail with 409."`
+}
+
+type replaceRewardSheetUpdatesInput struct {
+	GameID      int32 `path:"gameID" doc:"Game ID"`
+	PhaseID     int32 `path:"phaseId" doc:"Phase ID"`
+	CharacterID int32 `path:"characterId" doc:"Character ID"`
+	Body        *replaceRewardSheetUpdatesBody
 }
 
 type createDraftUpdateInput struct {
@@ -1472,6 +1492,7 @@ func draftUpdateResponse(draft *models.ActionResultCharacterUpdate) *DraftCharac
 		FieldValue:     draft.FieldValue.String,
 		FieldType:      draft.FieldType,
 		Operation:      draft.Operation,
+		FromRewards:    draft.FromRewards,
 		CreatedAt:      draft.CreatedAt.Time,
 		UpdatedAt:      draft.UpdatedAt.Time,
 	}
@@ -1539,6 +1560,86 @@ func (h *Handler) humaDeleteDraftCharacterUpdate(ctx context.Context, in *draftI
 	}
 
 	return &noContentOutput{}, nil
+}
+
+func (h *Handler) humaListPhaseDraftCharacterUpdates(ctx context.Context, in *phaseScopedInput) (*draftUpdateListOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_phase_draft_character_updates")()
+
+	if _, err := h.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	if !isGMFromCtx(ctx) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM can view draft character updates"), "List phase draft updates forbidden")
+	}
+
+	drafts, err := h.ActionSubmissionService.ListPhaseDraftCharacterUpdates(ctx, in.PhaseID)
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to list phase draft character updates", "error", err)
+	}
+
+	response := make([]DraftCharacterUpdateResponse, 0, len(drafts))
+	for _, draft := range drafts {
+		response = append(response, *draftUpdateResponse(&draft))
+	}
+	return &draftUpdateListOutput{Body: response}, nil
+}
+
+func (h *Handler) humaReplaceRewardSheetUpdates(ctx context.Context, in *replaceRewardSheetUpdatesInput) (*draftUpdateListOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_replace_reward_sheet_updates")()
+
+	if _, err := h.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	if !isGMFromCtx(ctx) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM can manage draft character updates"), "Replace reward sheet updates forbidden")
+	}
+
+	// Publishing copies each value into character_data as-is, so every pair
+	// gets the layout check a direct sheet write does.
+	game, ok := ctx.Value("game").(*models.Game)
+	if !ok {
+		return nil, huma.Error500InternalServerError("game context missing")
+	}
+	tabKeys := core.SheetTabKeysForStored(game.CharacterSheet)
+	seen := map[string]bool{}
+	updates := make([]core.RewardSheetUpdate, 0, len(in.Body.Updates))
+	for _, u := range in.Body.Updates {
+		if core.ClassifySheetWrite(u.ModuleType, u.FieldName, tabKeys) != core.SheetWriteGMOnly {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("%s/%s is not a character sheet tab in this game", u.ModuleType, u.FieldName))
+		}
+		if seen[u.ModuleType] {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("The %s tab is listed twice", u.ModuleType))
+		}
+		seen[u.ModuleType] = true
+		var entries []json.RawMessage
+		if err := json.Unmarshal([]byte(u.FieldValue), &entries); err != nil {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("The new value for %s isn't a list of entries", u.ModuleType))
+		}
+		updates = append(updates, core.RewardSheetUpdate{ModuleType: u.ModuleType, FieldName: u.FieldName, FieldValue: u.FieldValue})
+	}
+
+	written, err := h.ActionSubmissionService.ReplaceRewardSheetUpdates(ctx, core.ReplaceRewardSheetUpdatesRequest{
+		GameID:          game.ID,
+		PhaseID:         in.PhaseID,
+		CharacterID:     in.CharacterID,
+		ResultID:        in.Body.ResultID,
+		Updates:         updates,
+		ReplaceHandMade: in.Body.ReplaceHandMade,
+	})
+	switch {
+	case errors.Is(err, core.ErrHandMadeSheetDrafts):
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrHandMadeSheetDrafts)), "Reward sync would replace hand-made drafts", "error", err)
+	case errors.Is(err, core.ErrInvalidRewardCarrier):
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrInvalidRewardCarrier)), "Invalid reward carrier", "error", err)
+	case err != nil:
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to replace reward sheet updates", "error", err)
+	}
+
+	response := make([]DraftCharacterUpdateResponse, 0, len(written))
+	for _, draft := range written {
+		response = append(response, *draftUpdateResponse(&draft))
+	}
+	return &draftUpdateListOutput{Body: response}, nil
 }
 
 func (h *Handler) humaGetDraftUpdateCount(ctx context.Context, in *resultIDInput) (*draftCountOutput, error) {
@@ -1960,6 +2061,41 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 			"404": {Description: "Action result not found"},
 		},
 	}, h.humaDeleteDraftCharacterUpdate)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listPhaseDraftCharacterUpdates",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodGet,
+		Path:        "/phases/{phaseId}/draft-character-updates",
+		Summary:     "List a phase's draft character updates",
+		Description: "Every sheet change staged on a result in the phase, for the results board. GM only.",
+		Tags:        []string{"Draft Character Updates"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can view draft character updates"},
+			"404": {Description: "Phase not found in this game"},
+		},
+	}, h.humaListPhaseDraftCharacterUpdates)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "replaceRewardSheetUpdates",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodPut,
+		Path:        "/phases/{phaseId}/characters/{characterId}/reward-sheet-updates",
+		Summary:     "Replace a character's reward sheet updates",
+		Description: "Sets the sheet changes the results board generated from a character's reward lines. They're cleared from the character's other unpublished results in the phase and written on result_id, in one transaction, so one result carries them. GM only.",
+		Tags:        []string{"Draft Character Updates"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation, or a tab isn't on this game's sheet"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can manage draft character updates"},
+			"404": {Description: "Phase or character not found in this game"},
+			"409": {Description: "Hand-made sheet drafts would be replaced, or the result can't carry them (published, not the last part, or not this character's)"},
+		},
+	}, h.humaReplaceRewardSheetUpdates)
 }
 
 // RegisterHumaPhases registers the phase-id operations mounted at /phases.

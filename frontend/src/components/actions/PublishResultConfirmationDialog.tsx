@@ -7,7 +7,10 @@ interface PublishResultConfirmationDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   gameId: number;
+  /** The result whose sheet drafts publish: a staged chain's last part. */
   actionResultId: number;
+  /** Parts in the chain being published. A staged chain reveals part 1 now and the rest on timers. */
+  partCount?: number;
   isPublishing?: boolean;
   /**
    * True when another unpublished result for the same character also has staged
@@ -22,6 +25,7 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
   onCancel,
   gameId,
   actionResultId,
+  partCount = 1,
   isPublishing = false,
   hasConflictingSheetDrafts = false,
 }) => {
@@ -36,6 +40,8 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
   // sibling-count hook already reports pending counts as a conflict, so the warning
   // fails safe (shown, possibly spuriously) rather than silently absent.
   const isCheckingDrafts = isOpen && isDraftsPending;
+  const staged = partCount > 1;
+  const updates = `${draftCount} character sheet update${draftCount !== 1 ? 's' : ''}`;
 
   return (
     <Modal isOpen={isOpen} onClose={onCancel} title="Publish Action Result?">
@@ -46,7 +52,9 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
 
         {draftCount > 0 && (
           <Alert variant="warning">
-            This will also publish {draftCount} character sheet update{draftCount !== 1 ? 's' : ''} to the player&apos;s character.
+            {staged
+              ? `${updates} will apply to the player's character when the last part is revealed.`
+              : `This will also publish ${updates} to the player's character.`}
           </Alert>
         )}
 
@@ -60,7 +68,9 @@ export const PublishResultConfirmationDialog: React.FC<PublishResultConfirmation
         )}
 
         <p className="text-sm text-content-secondary">
-          This action cannot be undone. The result will be visible immediately.
+          {staged
+            ? `This action cannot be undone. Part 1 will be visible immediately, and ${partCount === 2 ? 'part 2 on its timer' : `parts 2–${partCount} on their timers`}.`
+            : 'This action cannot be undone. The result will be visible immediately.'}
         </p>
 
         <div className="flex justify-end space-x-3 pt-4">

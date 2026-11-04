@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import type { TextareaHTMLAttributes } from 'react';
 import { tv } from '../../lib/theme/utils';
 
@@ -91,7 +91,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     },
     ref
   ) => {
-    const textareaId = id || props.name;
+    const autoId = useId();
+    const textareaId = id || props.name || autoId;
     const showError = variant === 'error' || error;
 
     // Calculate character count

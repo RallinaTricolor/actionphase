@@ -3,7 +3,7 @@ import { useGameActionResults, useUpdateActionResult, usePublishActionResult, us
 import type { ActionResult, GamePhase } from '@/types/phases';
 import { Button, Badge, Alert } from '@/components/ui';
 import { AppendStagedPartForm } from './AppendStagedPartForm';
-import { canAppendPart as canAppendPartRule, canCancelPart, hasChainControls, isStagedPart as isStagedPartRule, takesSheetUpdates } from '@/lib/resultParts';
+import { canAppendPart as canAppendPartRule, canCancelPart, chainTail, hasChainControls, isStagedPart as isStagedPartRule, takesSheetUpdates } from '@/lib/resultParts';
 import { StagedPartStatus } from './StagedPartStatus';
 import { UpdateCharacterSheetModal } from '@/components/characters/UpdateCharacterSheetModal';
 import { PublishResultConfirmationDialog } from './PublishResultConfirmationDialog';
@@ -138,6 +138,8 @@ export function GameResultsManager({ gameId, currentPhase, className = '' }: Gam
   );
 }
 
+const sheetUpdates = (n: number) => `${n} character sheet update${n === 1 ? '' : 's'}`;
+
 interface ResultCardProps {
   result: ActionResult;
   gameId: number;
@@ -163,8 +165,13 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
   const appendPartMutation = useAppendStagedPart(gameId);
   const updateDelayMutation = useUpdateStagedPartDelay(gameId);
   const [isAppendingPart, setIsAppendingPart] = useState(false);
-  const { data: draftCount, isPending: isDraftCountPending } = useDraftUpdateCount(gameId, result.id);
-  const { hasConflict } = useConflictingSheetDrafts(gameId, result, phaseResults);
+  // Sheet drafts live on the chain's last part (an unstaged result is its own),
+  // so the head's Publish checks the tail's drafts: the count, the conflict and
+  // the dialog. Same keys as the tail's own card, so no extra requests.
+  const tail = chainTail(result, phaseResults);
+  const isTail = tail.id === result.id;
+  const { data: draftCount, isPending: isDraftCountPending } = useDraftUpdateCount(gameId, tail.id);
+  const { hasConflict } = useConflictingSheetDrafts(gameId, tail, phaseResults);
   const { showError } = useToast();
 
   // A clobber needs two competing snapshots, so warn only when THIS result also has
@@ -177,7 +184,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
   // conflict and the dialogs below hold their confirm until it settles.
   const hasStagedOrUnknown = isDraftCountPending || (draftCount ?? 0) > 0;
   const showSheetConflictWarning =
-    !result.is_published && hasConflict && hasStagedOrUnknown;
+    !tail.is_published && hasConflict && hasStagedOrUnknown;
 
   // Which controls this part gets: the same rules as the results board
   // (lib/resultParts.ts explains each).
@@ -392,7 +399,8 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
         {/* danger, not warning: the draft card is already a field of yellow (Draft
             label, update-count badge, section header), so a warning-toned alert blends
             in — and the consequence here is silent data loss, not caution. */}
-        {showSheetConflictWarning && (
+        {/* On the tail only, where the drafts are; the head's Publish dialog warns too. */}
+        {showSheetConflictWarning && isTail && (
           <Alert variant="danger" className="mt-3" data-testid={`sheet-conflict-warning-${result.id}`}>
             Another unpublished result for this character also has staged character
             sheet updates. Publishing both will overwrite the earlier one — keep all
@@ -480,7 +488,9 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
             onDismiss={() => setPublishSuccess(false)}
             className="mt-3"
           >
-            The action result{draftCount !== undefined && draftCount > 0 ? ` and ${draftCount} character sheet update${draftCount !== 1 ? 's' : ''}` : ''} has been published and is now visible to the player.
+            {isStagedPart
+              ? `Part 1 is now visible to the player; the rest reveal on their timers.${draftCount ? ` ${sheetUpdates(draftCount)} apply when the last part is revealed.` : ''}`
+              : `The action result${draftCount ? ` and ${sheetUpdates(draftCount)}` : ''} has been published and is now visible to the player.`}
           </Alert>
         )}
 
@@ -500,7 +510,8 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
           onConfirm={handlePublish}
           onCancel={() => setIsPublishDialogOpen(false)}
           gameId={gameId}
-          actionResultId={result.id}
+          actionResultId={tail.id}
+          partCount={result.part_count}
           isPublishing={publishMutation.isPending}
           hasConflictingSheetDrafts={showSheetConflictWarning}
         />

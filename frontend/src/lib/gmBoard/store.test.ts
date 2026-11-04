@@ -68,6 +68,19 @@ describe('assembleBoard', () => {
     const board = assembleBoard([]);
     expect(board.notes).toBe('');
     expect(board.cards).toEqual([]);
+    expect(board.rewardItems).toEqual([]);
+    expect(board.rewards).toEqual({});
+  });
+
+  it('reads this phase’s reward list in position order, and each character’s rewards with defaults', () => {
+    const board = assembleBoard([
+      { kind: 'reward', key: 'r2', doc: { name: 'Glutton', group: 'bonus', text: 'Ate it', ops: [], position: 2 } },
+      { kind: 'reward', key: 'r1', doc: { name: 'Survivor', group: 'bonus', position: 1, choose: 1 } },
+      { kind: 'rewards', key: '3', doc: { lines: [{ id: 'l1', group: 'bonus' }], carrierHeadId: 40 } },
+    ]);
+    expect(board.rewardItems.map((i) => i.id)).toEqual(['r1', 'r2']);
+    expect(board.rewardItems[0]).toEqual({ id: 'r1', scope: 'phase', name: 'Survivor', group: 'bonus', text: '', ops: [], choose: true, position: 1 });
+    expect(board.rewards[3]).toEqual({ lines: [{ id: 'l1', group: 'bonus', text: '', ops: [], choose: false }], texts: {}, carrierHeadId: 40 });
   });
 });
 
@@ -84,6 +97,13 @@ describe('assembleSettings', () => {
     expect(settings.names[3]).toEqual(['Harrison Vale', 'Harrison']);
     expect(settings.rewardTemplate).toBe('{{lines main}}');
     expect(settings.secondPerson).toBe(false);
+  });
+
+  it('reads the every-phase reward list', () => {
+    const { rewardItems } = assembleSettings([{ kind: 'reward', key: 'g1', doc: { name: 'Partial', group: 'result', text: 'Partial', ops: [{ act: 'inc', tab: 'numbers', entry: 'Rating', by: 1 }], position: 1 } }]);
+    expect(rewardItems).toEqual([
+      { id: 'g1', scope: 'game', name: 'Partial', group: 'result', text: 'Partial', ops: [{ act: 'inc', tab: 'numbers', entry: 'Rating', by: 1 }], choose: false, position: 1 },
+    ]);
   });
 
   it('gives a codex entry missing its lists empty ones', () => {

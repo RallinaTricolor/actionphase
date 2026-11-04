@@ -165,6 +165,15 @@ const handlers = [
     return HttpResponse.json({ count: 0 });
   }),
 
+  // The results board's rewards: every sheet draft in the phase, and the sync.
+  http.get('/api/v1/games/:gameId/phases/:phaseId/draft-character-updates', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.put('/api/v1/games/:gameId/phases/:phaseId/characters/:characterId/reward-sheet-updates', () => {
+    return HttpResponse.json([]);
+  }),
+
   http.get('/api/v1/games/:gameId/characters', () => {
     return HttpResponse.json([]);
   }),

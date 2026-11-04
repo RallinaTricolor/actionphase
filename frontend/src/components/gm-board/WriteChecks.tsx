@@ -1,5 +1,6 @@
 import { Badge, Button } from '@/components/ui';
 import type { PublishChecks } from '@/lib/gmBoard/checks';
+import type { RewardCheck } from '@/lib/gmBoard/rewardState';
 import type { Leak } from '@/lib/gmBoard/leaks';
 import { readerText } from '@/lib/gmBoard/moments';
 import { shortName, truncate } from '@/lib/gmBoard/text';
@@ -15,14 +16,30 @@ interface WriteChecksProps {
   rows: MapModel['rows'];
   onOpenScene: (sceneId: string) => void;
   onDismissFlag: (key: string) => void;
+  /** The character's reward checks (lib/gmBoard/rewardState). */
+  rewardChecks?: RewardCheck[];
+  /** Line id → a few words of it, to name the line a check is about. */
+  lineLabel?: (lineId: string) => string;
+  onPutBlock?: () => void;
 }
+
+const REWARD_BADGE: Record<RewardCheck['kind'], { label: string; variant: 'danger' | 'warning' | 'neutral' }> = {
+  'op-error': { label: 'Sheet change', variant: 'danger' },
+  'op-warning': { label: 'Check', variant: 'warning' },
+  drift: { label: 'Differs from the list', variant: 'warning' },
+  block: { label: 'Block', variant: 'warning' },
+  'empty-slot': { label: 'Empty', variant: 'neutral' },
+  'no-result': { label: 'Rewards', variant: 'warning' },
+  'block-missing': { label: 'Block', variant: 'warning' },
+  'block-stale': { label: 'Block', variant: 'warning' },
+};
 
 /**
  * Checks before publishing one character's results: possible leaks, their
  * out-of-play and two-places flags, and the moments they read that no
  * result covers yet. Warnings, not rules.
  */
-export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onDismissFlag }: WriteChecksProps) {
+export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onDismissFlag, rewardChecks = [], lineLabel = () => 'A line', onPutBlock }: WriteChecksProps) {
   const name = shortName(model.names.get(characterId) ?? `Character ${characterId}`);
   const who = (id: number) => shortName(model.names.get(id) ?? `Character ${id}`);
 
@@ -49,10 +66,34 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
     }
   };
 
+  const rewardSentence = (c: RewardCheck) => {
+    switch (c.kind) {
+      case 'op-error':
+      case 'op-warning':
+        return (
+          <>
+            <b>{lineLabel(c.lineId)}</b>: {c.message}.
+          </>
+        );
+      case 'drift':
+        return `${c.item.name} was changed in the list after you gave it to ${name}.`;
+      case 'block':
+        return c.message;
+      case 'empty-slot':
+        return `${c.slot} isn’t written yet.`;
+      case 'no-result':
+        return `${name} has rewards but no draft result to carry them.`;
+      case 'block-missing':
+        return `The reward block isn’t in ${name}’s result.`;
+      case 'block-stale':
+        return `The reward block in ${name}’s result is out of date.`;
+    }
+  };
+
   return (
     <section aria-label="Checks before publishing" className="space-y-2" data-testid="write-checks">
       <h3 className="text-sm font-semibold text-content-primary">Checks before publishing</h3>
-      {checks.clear ? (
+      {checks.clear && rewardChecks.length === 0 ? (
         <p className="text-sm text-content-secondary">No leaks, every moment covered, nothing out of place.</p>
       ) : (
         <ul className="space-y-1.5 text-sm">
@@ -75,6 +116,19 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
               <Button type="button" variant="ghost" size="sm" onClick={() => onDismissFlag(flag.key)}>
                 Dismiss
               </Button>
+            </li>
+          ))}
+          {rewardChecks.map((c, i) => (
+            <li key={`reward-${i}`} className="flex flex-wrap items-baseline gap-1.5" data-testid="write-check-reward">
+              <Badge variant={REWARD_BADGE[c.kind].variant} size="sm">
+                {REWARD_BADGE[c.kind].label}
+              </Badge>
+              <span className="flex-1 text-content-primary">{rewardSentence(c)}</span>
+              {(c.kind === 'block-missing' || c.kind === 'block-stale') && onPutBlock && (
+                <Button type="button" variant="ghost" size="sm" onClick={onPutBlock}>
+                  Put block in result
+                </Button>
+              )}
             </li>
           ))}
           {checks.notCovered.length > 0 && (

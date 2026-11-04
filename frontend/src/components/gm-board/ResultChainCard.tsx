@@ -4,7 +4,6 @@ import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMar
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { PublishResultConfirmationDialog } from '@/components/actions/PublishResultConfirmationDialog';
 import { StagedPartStatus } from '@/components/actions/StagedPartStatus';
-import { UpdateCharacterSheetModal } from '@/components/characters/UpdateCharacterSheetModal';
 import { useToast } from '@/contexts/ToastContext';
 import { useDraftUpdateCount } from '@/hooks';
 import {
@@ -15,7 +14,7 @@ import {
 } from '@/hooks/useActionResults';
 import { useConflictingSheetDrafts } from '@/hooks/useConflictingSheetDrafts';
 import { truncate } from '@/lib/gmBoard/text';
-import { canAppendPart, canCancelPart, hasChainControls, takesSheetUpdates } from '@/lib/resultParts';
+import { canAppendPart, canCancelPart, hasChainControls } from '@/lib/resultParts';
 import { MAX_CHAIN_PARTS } from '@/lib/stagedDelays';
 import type { ResultChain } from '@/lib/gmBoard/results';
 import type { ActionResult } from '@/types/phases';
@@ -26,7 +25,6 @@ interface ResultChainCardProps {
   chain: ResultChain;
   /** "Result 1", "Result 2": its place in the character's list. */
   label: string;
-  characterId: number;
   characterName: string;
   /** Every result in the phase, for the sheet-update conflict check. */
   phaseResults: ActionResult[];
@@ -44,14 +42,14 @@ interface ResultChainCardProps {
 /**
  * One of a character's results: its parts in order, each with its schedule,
  * and the controls the results list gives the same result (lib/resultParts):
- * Publish and Delete on the head of a draft, sheet updates and "+ Part" on
- * the tail, Cancel and the delay on later parts not yet revealed.
+ * Publish and Delete on the head of a draft, "+ Part" on the tail, Cancel and
+ * the delay on later parts not yet revealed. Sheet updates come from the
+ * Rewards panel, so the card only counts the ones on its last part.
  */
 export function ResultChainCard({
   gameId,
   chain,
   label,
-  characterId,
   characterName,
   phaseResults,
   selectedId,
@@ -67,7 +65,6 @@ export function ResultChainCard({
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [cancelling, setCancelling] = useState<ActionResult | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const publish = usePublishActionResult(gameId);
   const remove = useDeleteActionResult(gameId);
   const cancelPart = useCancelPendingStagedPart(gameId);
@@ -141,15 +138,10 @@ export function ResultChainCard({
           {head.is_published && head.sent_at && <span className="text-xs text-content-tertiary">Sent {new Date(head.sent_at).toLocaleString()}</span>}
         </div>
         <div className="flex flex-wrap gap-2">
-          {takesSheetUpdates(tail) && (
-            <Button type="button" size="sm" variant="secondary" onClick={() => setSheetOpen(true)}>
-              Update character sheet
-              {(draftCount ?? 0) > 0 && (
-                <Badge variant="warning" size="sm" className="ml-2" data-testid={`board-draft-update-count-${tail.id}`}>
-                  {draftCount}
-                </Badge>
-              )}
-            </Button>
+          {!tail.is_published && (draftCount ?? 0) > 0 && (
+            <Badge variant="warning" size="sm" data-testid={`board-draft-update-count-${tail.id}`} title="Sheet updates on this result's last part, applied when it's revealed">
+              {draftCount} sheet {draftCount === 1 ? 'update' : 'updates'}
+            </Badge>
           )}
           {hasChainControls(head) && (
             <>
@@ -228,20 +220,13 @@ export function ResultChainCard({
         </Button>
       )}
 
-      <UpdateCharacterSheetModal
-        isOpen={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        gameId={gameId}
-        actionResultId={tail.id}
-        characterId={characterId}
-        characterName={characterName}
-      />
       <PublishResultConfirmationDialog
         isOpen={publishing}
         onConfirm={() => void doPublish()}
         onCancel={() => setPublishing(false)}
         gameId={gameId}
         actionResultId={tail.id}
+        partCount={chain.parts.length}
         isPublishing={publish.isPending}
         hasConflictingSheetDrafts={sheetConflict}
       />

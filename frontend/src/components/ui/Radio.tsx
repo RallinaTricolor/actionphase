@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { cn } from '../../lib/theme/utils';
 
 export interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -35,7 +35,9 @@ export interface RadioProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
  */
 export const Radio = forwardRef<HTMLInputElement, RadioProps>(
   ({ label, error, helperText, className, id, ...props }, ref) => {
-    const radioId = id || `${props.name}-${props.value}`;
+    const autoId = useId();
+    // name-value is unique within a group; without both, two radios would share an id.
+    const radioId = id || (props.name && props.value !== undefined ? `${props.name}-${props.value}` : autoId);
 
     return (
       <div className="flex items-start">

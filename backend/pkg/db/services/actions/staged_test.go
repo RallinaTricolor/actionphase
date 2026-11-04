@@ -587,6 +587,36 @@ func TestAppendStagedPart(t *testing.T) {
 		assert.Equal(t, appended.ID, full[3].ID)
 	})
 
+	// Sheet drafts live on a chain's last part. Left on the old tail, they'd
+	// sit on a middle part that no editor shows, and apply when it's revealed.
+	t.Run("moves the tail's sheet drafts to the new part", func(t *testing.T) {
+		env := setupStagedTest(t)
+
+		draft := env.createDraftResult(t)
+		characterService := &db.CharacterService{DB: env.testDB.Pool, Logger: env.actionService.Logger}
+		userID := env.playerID
+		character, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+			GameID: env.gameID, UserID: &userID, Name: "Append Drafts Character", CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+		_, err = env.actionService.CreateDraftCharacterUpdate(ctx, core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: draft.ID, CharacterID: character.ID, ModuleType: "inventory", FieldName: "items",
+			FieldValue: `[]`, FieldType: "json", Operation: "upsert",
+		})
+		require.NoError(t, err)
+
+		appended, err := env.actionService.AppendStagedPart(ctx, draft.ID, core.StagedResultPart{Content: "Later", DelayMinutes: 5})
+		require.NoError(t, err)
+
+		onOld, err := env.actionService.GetDraftCharacterUpdates(ctx, draft.ID)
+		require.NoError(t, err)
+		assert.Empty(t, onOld, "nothing stays on what is now a middle part")
+		onNew, err := env.actionService.GetDraftCharacterUpdates(ctx, appended.ID)
+		require.NoError(t, err)
+		require.Len(t, onNew, 1)
+		assert.Equal(t, character.ID, onNew[0].CharacterID)
+	})
+
 	t.Run("copies the recipient from the chain", func(t *testing.T) {
 		env := setupStagedTest(t)
 

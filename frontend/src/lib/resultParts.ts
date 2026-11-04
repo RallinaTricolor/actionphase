@@ -33,6 +33,21 @@ export const canCancelPart = (r: PartFields) => isFollowerPart(r) && !r.released
 export const isChainTail = (r: PartFields) => !isStagedPart(r) || r.part_number === r.part_count;
 
 /**
+ * The last part of the chain `result` starts, following `parent_result_id`
+ * through `results`. A part whose child is missing from the list is the tail
+ * as far as the list knows; an unstaged result is its own tail.
+ */
+export function chainTail<R extends Pick<ActionResult, 'id' | 'parent_result_id'>>(result: R, results: readonly R[]): R {
+  let tail = result;
+  for (let i = 0; i < results.length; i++) {
+    const next = results.find((r) => r.parent_result_id === tail.id);
+    if (!next) break;
+    tail = next;
+  }
+  return tail;
+}
+
+/**
  * A follow-up can be added only while the whole chain is a draft (the server
  * refuses otherwise), and only from the tail, since a new part always lands
  * at the end.

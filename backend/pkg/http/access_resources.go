@@ -96,6 +96,7 @@ var childParams = map[string]access.Child{
 	"/conversations/{conversationId}/messages/{messageId}": {Kind: "private message", InParent: true},
 	"/private-messages/conversations/{conversationId}":     {Kind: "conversation"},
 	"/phases/{phaseId}":                                    {Kind: "phase"},
+	"/phases/{phaseId}/characters/{characterId}":           {Kind: "character"},
 	"/results/{resultId}":                                  {Kind: "action result"},
 	"/results/{resultId}/character-updates/{draftId}":      {Kind: "character update", InParent: true},
 	"/participants/{userId}":                               {},

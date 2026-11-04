@@ -238,6 +238,16 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
   submission, and a standalone one that names the Silk-only secret (a leak
   check). Rook and Silk have nothing written. The seed deletes the phase's
   results before writing these.
+- **Rewards**: a block template (sections Job result / Bonus objectives /
+  Other, a Coin scale Broke/Flush/Rich, a "Crew note" text box), an
+  every-phase list (Clean job, Messy job, Shaken, New gear as Choose 1) and
+  the phase's own list (Bound the vault ghost, Lifted the key). Shade has two
+  lines, one from the vault scene; her chain's part 2 carries the sheet
+  changes. Vex has a one-off and a Choose 1, plus a sheet update made by hand
+  in the results list (`from_rewards = false`), so the board asks before
+  replacing it. Rook has two lines and no result yet; his Shaken copy differs
+  from the list. Silk has none. Generated sheet drafts aren't seeded: the
+  board writes them the first time it opens the phase.
 
 The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
 (`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and

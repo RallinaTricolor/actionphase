@@ -5,14 +5,16 @@ import { Alert, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
 import { GmCharacterNames } from '@/components/gm-board/GmCharacterNames';
 import { GmCodexManager } from '@/components/gm-board/GmCodexManager';
 import { GmBoardPrefs } from '@/components/gm-board/GmBoardPrefs';
+import { GmRewardBlock } from '@/components/gm-board/GmRewardBlock';
+import { GmRewardLists } from '@/components/gm-board/GmRewardLists';
 import { useGameContext } from '@/contexts/GameContext';
 import { apiClient } from '@/lib/api';
 import { isGameWritable } from '@/lib/gamePermissions';
 import { boardCast } from '@/lib/gmBoard/cast';
 
 /**
- * `/games/:gameId/board-setup`: the results board's game-level setup (the
- * codex and character names now; reward lists and the reward template later).
+ * `/games/:gameId/board-setup`: the results board's game-level setup: the
+ * codex, character names, reward lists and the reward block.
  * It has its own page because a GM needs it before any action phase exists.
  */
 export function GmBoardSetupPage() {
@@ -30,6 +32,8 @@ export function GmBoardSetupPage() {
     [phases.data],
   );
   const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
+  // Who can get a result, and so a reward: the cast someone plays.
+  const recipients = useMemo(() => cast.filter((c) => c.reads).map((c) => ({ id: c.id, name: c.name })), [cast]);
 
   if (isLoadingGame) {
     return (
@@ -50,7 +54,7 @@ export function GmBoardSetupPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6" data-testid="gm-board-setup">
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6" data-testid="gm-board-setup">
       <div>
         <Link to={`/games/${gameId}`} className="text-sm text-content-tertiary hover:underline">
           &larr; {game.title}
@@ -96,7 +100,22 @@ export function GmBoardSetupPage() {
               <GmBoardPrefs gameId={gameId} />
             </CardBody>
           </Card>
-          <p className="text-sm text-content-tertiary">Reward lists and the reward block come later.</p>
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-content-primary">Reward lists</h2>
+            </CardHeader>
+            <CardBody>
+              <GmRewardLists gameId={gameId} phases={actionPhases} players={recipients} />
+            </CardBody>
+          </Card>
+          <Card variant="bordered" padding="md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-content-primary">Reward block</h2>
+            </CardHeader>
+            <CardBody>
+              <GmRewardBlock gameId={gameId} phases={actionPhases} players={recipients} />
+            </CardBody>
+          </Card>
         </>
       )}
     </div>

@@ -105,6 +105,67 @@ export interface BoardDoc {
   dismissedFlags: Record<string, true>;
   /** GM scratch notes. */
   notes: string;
+  /** This phase's own reward list (the `reward` board items). */
+  rewardItems: RewardItem[];
+  /** characterId → their reward lines and text slots (the `rewards` items). */
+  rewards: Record<number, CharacterRewards>;
+}
+
+// ------------------------------------------------------------------ rewards
+
+/**
+ * One change to a character sheet. `tab` is the tab key; `entry` names the
+ * entry (case doesn't matter); `field` is a field key, defaulting to the tab's
+ * first number or track field for `inc`.
+ */
+export type SheetOp =
+  | { act: 'inc'; tab: string; entry: string; field?: string; by: number }
+  | { act: 'set'; tab: string; entry: string; field: string; value: string }
+  | { act: 'add'; tab: string; entry: string; fields: Record<string, unknown> }
+  | { act: 'remove'; tab: string; entry: string };
+
+/** A reward defined once in a list and given to many characters. */
+export interface RewardItem {
+  id: string;
+  /** Every phase (a game setting) or this phase only (a board item). */
+  scope: 'game' | 'phase';
+  name: string;
+  /** A section key from the game's reward groups. */
+  group: string;
+  /** Block text. `{{entry}}`, `{{before}}` and `{{after}}` fill in from the first op. */
+  text: string;
+  ops: SheetOp[];
+  /** "Choose 1": the text goes in the block, nothing goes on the sheet. */
+  choose: boolean;
+  position: number;
+}
+
+/** What one character got: a copy of a list item, or a one-off. */
+export interface RewardLine {
+  id: string;
+  /** The list item it was given from, if any. */
+  itemId?: string;
+  /** The item's signature when given or last synced, for "differs from the list". */
+  itemSig?: string;
+  group: string;
+  text: string;
+  ops: SheetOp[];
+  choose: boolean;
+  /** The submission passage it was awarded for. */
+  quote?: string;
+  /** The scene it was made from. */
+  sceneId?: string;
+}
+
+/** A character's rewards in one phase (the `rewards` item, keyed by character). */
+export interface CharacterRewards {
+  lines: RewardLine[];
+  /** `{{text Slot}}` boxes: slot name → text. */
+  texts: Record<string, string>;
+  /** The head of the result the GM picked to carry the sheet changes. */
+  carrierHeadId?: number;
+  /** The block text last put in the result, so the next put replaces it. */
+  block?: string;
 }
 
 export type CodexType = 'Location' | 'NPC' | 'Item' | 'Faction' | 'Objective' | 'Secret' | 'Other';
@@ -129,7 +190,10 @@ export interface GameBoardSettings {
   names: Record<number, string[]>;
   rewardTemplate: string;
   rewardGroups: { key: string; label: string }[];
+  /** `name` is the Tab/Entry[/Field] ref that `{{label …}}` looks up. */
   scales: { name: string; steps: { min: number; label: string }[] }[];
+  /** The every-phase reward list (the `reward` settings items). */
+  rewardItems: RewardItem[];
   /** "Make 'you'": on unless the GM turns it off. */
   secondPerson: boolean;
 }

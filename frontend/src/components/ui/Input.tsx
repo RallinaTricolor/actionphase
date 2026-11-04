@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react';
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { tv } from '../../lib/theme/utils';
 
 export type InputSize = 'sm' | 'md' | 'lg';
@@ -88,7 +88,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const inputId = id || props.name;
+    const autoId = useId();
+    const inputId = id || props.name || autoId;
     const showError = variant === 'error' || error;
 
     return (

@@ -24,6 +24,14 @@
 --           has two results, one answering his submission and one standalone
 --           that names a secret he isn't allowed to know (a leak check). Rook
 --           and Silk have nothing written yet.
+--   Rewards a reward block template with sections and a Coin scale, an
+--           every-phase list and this phase's list. Shade has two lines (one
+--           from the vault scene) on her staged result, so the chain's last
+--           part carries the sheet changes. Vex has a hand-made sheet update
+--           from the results list, so the board asks before replacing it.
+--           Rook has rewards but no result yet, and one copy that differs
+--           from the list. Silk has none. The generated sheet drafts aren't
+--           seeded: the board writes them when it opens, as it would.
 --
 -- Every row is written the way the board's save path writes it (version 1,
 -- seq from gm_board_seq, updated_by the GM), and every doc has every field
@@ -83,7 +91,15 @@ BEGIN
     {"kind": "codex", "key": "cx-heist-dalton", "doc": {"type": "NPC", "name": "Inspector Dalton", "aliases": ["Dalton"], "notes": "City Watch. Has suspected Silk since last month.", "secret": false, "knownBy": [], "phases": []}},
     {"kind": "codex", "key": "cx-heist-key", "doc": {"type": "Item", "name": "the vault key", "aliases": [], "notes": "The manager keeps it in his waistcoat.", "secret": false, "knownBy": [], "phases": []}},
     {"kind": "codex", "key": "cx-heist-debts", "doc": {"type": "Secret", "name": "the manager's debts", "aliases": ["his debts"], "notes": "The manager owes the Crows and will look the other way for a cut. Only Silk knows.", "secret": true, "knownBy": [__SILK__], "phases": []}},
-    {"kind": "names", "key": "__DALTON__", "doc": {"names": ["Inspector Dalton", "Dalton"]}}
+    {"kind": "names", "key": "__DALTON__", "doc": {"names": ["Inspector Dalton", "Dalton"]}},
+
+    {"kind": "template", "key": "template", "doc": {"text": "# Rewards\n\n{{lines result}}\n\n{{if bonus}}## Bonus objectives\n\n{{lines bonus}}{{end}}\n\n{{lines other}}\n\n{{if Numbers/Coin}}**Coin:** {{value Numbers/Coin}} ({{label Numbers/Coin}}){{end}}\n\n{{if Numbers/Stress}}**Stress:** {{value Numbers/Stress}}/{{max Numbers/Stress}}{{end}}\n\n**From the crew:** \"{{text Crew note}}\""}},
+    {"kind": "groups", "key": "groups", "doc": {"groups": [{"key": "result", "label": "Job result"}, {"key": "bonus", "label": "Bonus objectives"}, {"key": "other", "label": "Other"}]}},
+    {"kind": "scales", "key": "scales", "doc": {"scales": [{"name": "Numbers/Coin", "steps": [{"min": 0, "label": "Broke"}, {"min": 5, "label": "Flush"}, {"min": 10, "label": "Rich"}]}]}},
+    {"kind": "reward", "key": "rw-heist-clean", "doc": {"name": "Clean job", "group": "result", "text": "**Job result:** Clean. 2 coin.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 2}], "choose": false, "position": 1}},
+    {"kind": "reward", "key": "rw-heist-messy", "doc": {"name": "Messy job", "group": "result", "text": "**Job result:** Messy. 1 coin, 1 stress.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 1}, {"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false, "position": 2}},
+    {"kind": "reward", "key": "rw-heist-shaken", "doc": {"name": "Shaken", "group": "other", "text": "*You take 1 stress from the close call.*", "ops": [{"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false, "position": 3}},
+    {"kind": "reward", "key": "rw-heist-gear", "doc": {"name": "New gear", "group": "other", "text": "**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.", "ops": [], "choose": true, "position": 4}}
   ]$json$;
 
   -- ── The phase's board ─────────────────────────────────────────────────
@@ -153,7 +169,13 @@ BEGIN
 
     {"kind": "flag", "key": "pend:card-heist-dalton-alley", "doc": {}},
 
-    {"kind": "notes", "key": "notes", "doc": {"text": "Dalton suspects Silk. Decide by Getaway whether the Watch is waiting at the carriage."}}
+    {"kind": "notes", "key": "notes", "doc": {"text": "Dalton suspects Silk. Decide by Getaway whether the Watch is waiting at the carriage."}},
+
+    {"kind": "reward", "key": "rw-heist-ghost", "doc": {"name": "Bound the vault ghost", "group": "bonus", "text": "**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}", "ops": [{"act": "set", "tab": "skills", "entry": "Compel", "field": "rank", "value": "3"}], "choose": false, "position": 1}},
+    {"kind": "reward", "key": "rw-heist-key", "doc": {"name": "Lifted the key", "group": "bonus", "text": "**Lifted the vault key** from the manager's waistcoat.", "ops": [{"act": "add", "tab": "inventory", "entry": "Vault Key", "fields": {"quantity": 1, "category": "Key", "description": "Opens the outer vault door at Goldstone Bank."}}], "choose": false, "position": 2}},
+    {"kind": "rewards", "key": "__SHADE__", "doc": {"lines": [{"id": "rl-heist-shade-messy", "itemId": "rw-heist-messy", "itemSig": "[\"result\",\"**Job result:** Messy. 1 coin, 1 stress.\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Coin\",\"tab\":\"numbers\"},{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Messy. 1 coin, 1 stress.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 1}, {"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false}, {"id": "rl-heist-shade-ghost", "itemId": "rw-heist-ghost", "itemSig": "[\"bonus\",\"**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}\",[{\"act\":\"set\",\"entry\":\"Compel\",\"field\":\"rank\",\"tab\":\"skills\",\"value\":\"3\"}],false]", "group": "bonus", "text": "**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}", "ops": [{"act": "set", "tab": "skills", "entry": "Compel", "field": "rank", "value": "3"}], "choose": false, "sceneId": "scene-heist-vault"}], "texts": {"Crew note": "You kept the ghost off our backs. Mostly."}}},
+    {"kind": "rewards", "key": "__VEX__", "doc": {"lines": [{"id": "rl-heist-vex-alchemy", "group": "other", "text": "**Acid recipe:** you can brew the lock acid again.", "ops": [{"act": "add", "tab": "skills", "entry": "Alchemy", "fields": {"rank": "1", "category": "Craft"}}], "choose": false, "quote": "I'll use my alchemical knowledge to create smoke bombs and a custom acid mixture that can dissolve the vault's lock mechanism without triggering the alarm system."}, {"id": "rl-heist-vex-gear", "itemId": "rw-heist-gear", "itemSig": "[\"other\",\"**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.\",[],true]", "group": "other", "text": "**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.", "ops": [], "choose": true}], "texts": {}}},
+    {"kind": "rewards", "key": "__ROOK__", "doc": {"lines": [{"id": "rl-heist-rook-clean", "itemId": "rw-heist-clean", "itemSig": "[\"result\",\"**Job result:** Clean. 2 coin.\",[{\"act\":\"inc\",\"by\":2,\"entry\":\"Coin\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Clean. 2 coin.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 2}], "choose": false}, {"id": "rl-heist-rook-shaken", "itemId": "rw-heist-shaken", "itemSig": "[\"other\",\"*You take 1 stress.*\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "other", "text": "*You take 1 stress.*", "ops": [{"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false, "quote": "I'll signal the team via our pre-arranged mirror flashes if I spot any patrols."}], "texts": {"Crew note": "Good eyes up top."}}}
   ]$json$;
 
   -- Placeholders, longest first so __SHADE__ never eats part of another.
@@ -206,7 +228,14 @@ BEGIN
          gm_id,
          E'You pour the acid on the outer lock, and the vault door hisses open.\n\nThe ducts were tighter than the blueprints promised. Your knees will remember them.',
          false, NULL, NULL
-  FROM characters c WHERE c.id = vex;
+  FROM characters c WHERE c.id = vex
+  RETURNING id INTO head_id;
+
+  -- A sheet update Vex's GM made by hand in the results list (from_rewards
+  -- false, as that path writes it), so the board asks before its rewards
+  -- replace it.
+  INSERT INTO action_result_character_updates (action_result_id, character_id, module_type, field_name, field_value, field_type, operation, from_rewards)
+  VALUES (head_id, vex, 'inventory', 'items', '[{"id":"0b1c2d3e-4f50-4a61-9b72-8c93d0a4e5f6","name":"Acid Vial","quantity":2,"category":"Alchemy"}]', 'json', 'upsert', false);
 
   INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
   SELECT p_game_id, c.user_id, p_phase_id, vex, NULL, gm_id,

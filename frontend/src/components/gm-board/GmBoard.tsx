@@ -5,11 +5,13 @@ import { Alert, Button, Drawer, Spinner } from '@/components/ui';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGmBoard, useGmBoardStore } from '@/hooks/useGmBoard';
+import { usePhaseRewards } from '@/hooks/usePhaseRewards';
 import { apiClient } from '@/lib/api';
 import { boardCast } from '@/lib/gmBoard/cast';
 import { NOTES_KEY } from '@/lib/gmBoard/store';
 import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
+import { BoardRewardsContext } from './boardRewards';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
@@ -56,6 +58,8 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
 
   const { board, isLoading, error } = useGmBoard(gameId, phase.id);
   const store = useGmBoardStore(gameId, phase.id);
+  // Mounted for the whole board, so sheet drafts follow the lines from any step.
+  const rewards = usePhaseRewards(gameId, phase.id, board);
 
   const goToStep = (next: string) => {
     const nextParams = new URLSearchParams(params);
@@ -89,100 +93,102 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   };
 
   return (
-    <div className="px-6 py-6 space-y-4" data-testid="gm-board">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <Link to={resultsAreaPath(gameId)} className="text-sm text-content-tertiary hover:underline">
-            &larr; {gameTitle}: results
-          </Link>
-          <h1 className="text-2xl font-bold text-content-primary mt-1">Results board</h1>
-          <p className="text-sm text-content-secondary">{phase.title || `Phase ${phase.phase_number}`}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />
-          <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
-            Codex
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
-            Notes
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => navigate(boardSetupPath(gameId))}>
-            Game setup
-          </Button>
-        </div>
-      </div>
-
-      <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />
-
-      <TabNavigation
-        tabs={BOARD_STEPS.map((s) => ({ id: s.id, label: s.label }))}
-        activeTab={step}
-        onTabChange={goToStep}
-        getTabHref={(id) => boardPath(gameId, phase.id, parseBoardStep(id))}
-      />
-
-      {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Spinner size="lg" />
-        </div>
-      ) : error || !board ? (
-        <Alert variant="danger" title="The board didn’t load">
-          Try reloading the page.
-        </Alert>
-      ) : step === 'read' ? (
-        <GmBoardRead
-          gameId={gameId}
-          phase={phase}
-          board={board}
-          onOpenCodex={(name = '') => setCodex({ name })}
-          onGoToMap={() => goToStep('map')}
-        />
-      ) : step === 'map' ? (
-        <GmBoardMap
-          gameId={gameId}
-          phase={phase}
-          board={board}
-          onOpenCodex={(name = '') => setCodex({ name })}
-          onReadSubmission={readSubmission}
-          onOpenScene={openScene}
-        />
-      ) : step === 'scenes' ? (
-        <GmBoardScenes
-          gameId={gameId}
-          phase={phase}
-          board={board}
-          onGoToMap={() => goToStep('map')}
-          selectedParts={selectedParts}
-          onSelectPart={selectPart}
-          onWrite={writeFor}
-        />
-      ) : (
-        <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
-      )}
-
-      <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
-        {codex !== null && (
-          <div className="p-4">
-            <GmCodexManager
-              key={codex.name}
-              gameId={gameId}
-              phases={actionPhases}
-              players={players}
-              phaseId={phase.id}
-              initialName={codex.name}
-            />
+    <BoardRewardsContext.Provider value={rewards}>
+      <div className="px-6 py-6 space-y-4" data-testid="gm-board">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <Link to={resultsAreaPath(gameId)} className="text-sm text-content-tertiary hover:underline">
+              &larr; {gameTitle}: results
+            </Link>
+            <h1 className="text-2xl font-bold text-content-primary mt-1">Results board</h1>
+            <p className="text-sm text-content-secondary">{phase.title || `Phase ${phase.phase_number}`}</p>
           </div>
-        )}
-      </Drawer>
+          <div className="flex items-center gap-2">
+            <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />
+            <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
+              Codex
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
+              Notes
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => navigate(boardSetupPath(gameId))}>
+              Game setup
+            </Button>
+          </div>
+        </div>
 
-      {board && (
-        <GmBoardNotesDrawer
-          open={notesOpen}
-          onClose={() => setNotesOpen(false)}
-          notes={board.notes}
-          onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+        <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />
+
+        <TabNavigation
+          tabs={BOARD_STEPS.map((s) => ({ id: s.id, label: s.label }))}
+          activeTab={step}
+          onTabChange={goToStep}
+          getTabHref={(id) => boardPath(gameId, phase.id, parseBoardStep(id))}
         />
-      )}
-    </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Spinner size="lg" />
+          </div>
+        ) : error || !board ? (
+          <Alert variant="danger" title="The board didn’t load">
+            Try reloading the page.
+          </Alert>
+        ) : step === 'read' ? (
+          <GmBoardRead
+            gameId={gameId}
+            phase={phase}
+            board={board}
+            onOpenCodex={(name = '') => setCodex({ name })}
+            onGoToMap={() => goToStep('map')}
+          />
+        ) : step === 'map' ? (
+          <GmBoardMap
+            gameId={gameId}
+            phase={phase}
+            board={board}
+            onOpenCodex={(name = '') => setCodex({ name })}
+            onReadSubmission={readSubmission}
+            onOpenScene={openScene}
+          />
+        ) : step === 'scenes' ? (
+          <GmBoardScenes
+            gameId={gameId}
+            phase={phase}
+            board={board}
+            onGoToMap={() => goToStep('map')}
+            selectedParts={selectedParts}
+            onSelectPart={selectPart}
+            onWrite={writeFor}
+          />
+        ) : (
+          <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
+        )}
+
+        <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
+          {codex !== null && (
+            <div className="p-4">
+              <GmCodexManager
+                key={codex.name}
+                gameId={gameId}
+                phases={actionPhases}
+                players={players}
+                phaseId={phase.id}
+                initialName={codex.name}
+              />
+            </div>
+          )}
+        </Drawer>
+
+        {board && (
+          <GmBoardNotesDrawer
+            open={notesOpen}
+            onClose={() => setNotesOpen(false)}
+            notes={board.notes}
+            onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+          />
+        )}
+      </div>
+    </BoardRewardsContext.Provider>
   );
 }
