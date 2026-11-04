@@ -42,6 +42,46 @@ describe('GmBoard', () => {
     expect(screen.getByRole('button', { name: 'Go to the Map' })).toBeInTheDocument();
   });
 
+  it('guides the GM on an empty board, starting with locations', async () => {
+    renderBoard();
+    const guide = await screen.findByTestId('gm-board-first-run');
+    expect(guide).toHaveTextContent('How the results board works');
+    expect(guide).toHaveTextContent('This phase has no locations yet');
+    await userEvent.click(screen.getByRole('button', { name: 'Add locations in the codex' }));
+    expect(await screen.findByRole('dialog', { name: 'Codex' })).toBeInTheDocument();
+  });
+
+  it('drops the location warning once the phase has a location', async () => {
+    server.use(
+      http.get(`/api/v1/games/${GAME_ID}/gm-settings`, () =>
+        HttpResponse.json({ items: [makeGmItem({ kind: 'codex', key: 'mill', doc: { type: 'Location', name: 'the Old Mill' } })], cursor: 1, share_gm_board: false }),
+      ),
+    );
+    renderBoard();
+    const guide = await screen.findByTestId('gm-board-first-run');
+    await waitFor(() => expect(guide).not.toHaveTextContent('This phase has no locations yet'));
+  });
+
+  it('shows no guide once the board has a card', async () => {
+    stored = [
+      ...stored,
+      makeGmItem({
+        kind: 'card', key: 'c1', seq: 4,
+        doc: { characterId: 1, quote: '', summary: 'Waits', note: '', locationId: 'mill', chunkId: null, outcome: 'pending', causedBy: [], isIF: true, cond: 'x', branchOf: null, src: [], gm: true },
+      }),
+    ];
+    renderBoard();
+    expect(await screen.findByTestId('gm-board-step-read')).toBeInTheDocument();
+    expect(screen.queryByTestId('gm-board-first-run')).not.toBeInTheDocument();
+  });
+
+  it('points the GM at the codex and the Map while there are no submissions', async () => {
+    renderBoard();
+    expect(await screen.findByText('No submissions in this phase yet.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Go to the Map' }));
+    expect(await screen.findByTestId('gm-board-step-map')).toBeInTheDocument();
+  });
+
   it('puts the step in the URL when the GM switches', async () => {
     const { router } = renderBoard();
     expect(await screen.findByTestId('gm-board-step-read')).toBeInTheDocument();

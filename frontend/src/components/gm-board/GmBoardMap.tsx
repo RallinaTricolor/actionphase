@@ -2,10 +2,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Card, CardBody, Drawer, Select, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
+import { useArrowMode } from '@/hooks/useArrowMode';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
+import { ARROW_MODES, isArrowMode } from '@/lib/gmBoard/arrows';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
 import { codexDoc, newCodexEntry } from '@/lib/gmBoard/codex';
 import type { BoardFlag } from '@/lib/gmBoard/flags';
@@ -76,6 +78,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const [clustersOpen, setClustersOpen] = useState(false);
   const [stanceFocus, setStanceFocus] = useState<number | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [arrowMode, setArrowMode] = useArrowMode();
 
   const cluster = board.clusters.find((c) => c.id === clusterId) ?? null;
   const model = useMemo(
@@ -244,6 +247,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
 
   const players = cast.filter((c) => !c.npc);
   const openCard = board.cards.find((c) => c.id === openCardId) ?? null;
+  const arrows = { mode: arrowMode, openId: openCard?.id ?? null };
   const stancePlayers = players.filter((p) => !model.visible || model.visible.has(p.id));
 
   return (
@@ -271,6 +275,24 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             Edit clusters
           </Button>
         )}
+        {view !== 'stances' && (
+          <div className="w-36">
+            <Select
+              id="map-arrows"
+              aria-label="Arrows"
+              title="Arrows show what caused each card"
+              selectSize="sm"
+              value={arrowMode}
+              onChange={(e) => isArrowMode(e.target.value) && setArrowMode(e.target.value)}
+            >
+              {ARROW_MODES.map((m) => (
+                <option key={m.value} value={m.value}>
+                  Arrows: {m.label.toLowerCase()}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         <span className="flex-1" />
         {view !== 'stances' && !readOnly && (
           <>
@@ -295,11 +317,11 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             {model.resolving && <MapResolveBar model={model} chunkId={model.resolving} actions={actions} onClose={() => setResolving(null)} />}
             {view === 'location' ? (
               <>
-                <MapByLocation model={model} actions={actions} drag={drag} />
+                <MapByLocation model={model} actions={actions} drag={drag} arrows={arrows} />
                 <CharacterStateTable model={model} />
               </>
             ) : (
-              <MapByCharacter model={model} actions={actions} drag={drag} />
+              <MapByCharacter model={model} actions={actions} drag={drag} arrows={arrows} />
             )}
           </div>
           <div className="sticky top-4 w-80 shrink-0 self-start max-h-[calc(100vh-2rem)] overflow-y-auto xl:w-96">

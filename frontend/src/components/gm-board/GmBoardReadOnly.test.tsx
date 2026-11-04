@@ -132,7 +132,7 @@ const FILTERS = new Set(['scene-sheet-search', 'scene-codex-search']);
 /** Ticks that only change what's shown. */
 const VIEW_TICKS = new Set(['scene-show-misses']);
 /** Selects that only change what's shown. */
-const VIEW_SELECTS = new Set(['tab-select', 'map-cluster', 'scene-picker']);
+const VIEW_SELECTS = new Set(['tab-select', 'map-cluster', 'map-arrows', 'scene-picker']);
 /** Labels of buttons that change something. */
 const EDIT_LABEL =
   /^(\+|add\b|delete|remove|publish|ready|reopen|dismiss|restore|create|insert|make|split|push|put\b|replace|edit\b|use the list|keep mine|start from|→ moment|triggers here|done reading|resolve|stop resolving|set\b|move\b|cancel part|write\b|give\b)/i;

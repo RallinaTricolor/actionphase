@@ -8,6 +8,7 @@ import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGameActionResults } from '@/hooks/useActionResults';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useGmBoardStore } from '@/hooks/useGmBoard';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAppendToDraft } from '@/hooks/useResultDraft';
 import { isCovered, setCovered } from '@/lib/gmBoard/coverage';
 import { chainsFor, draftTexts, targetPart } from '@/lib/gmBoard/results';
@@ -44,6 +45,9 @@ interface GmBoardScenesProps {
 
 type SceneDocument = Omit<Scene, 'id'>;
 
+/** Below this width the Scenes step folds Reference and Reads as into tabs beside the moments. */
+const SCENES_NARROW_QUERY = '(max-width: 1279px)';
+
 /**
  * The Scenes step: one scene at a time (`?scene=`; with none, the first in
  * time order). The header picks and walks scenes; below it, Reference on the
@@ -64,6 +68,9 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
   const readOnly = useBoardReadOnly();
 
   const [view, setView] = useState<'moments' | 'side'>('moments');
+  /** Below 1280px the side panes share one column, as tabs. */
+  const narrow = useMediaQuery(SCENES_NARROW_QUERY);
+  const [pane, setPane] = useState<'reference' | 'readsAs'>('reference');
   const [reader, setReader] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
@@ -267,6 +274,104 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     }
   };
 
+  const referencePane = (
+    <SceneReference
+      key={scene.id}
+      model={model}
+      plans={{
+        location: settings?.codex.find((e) => e.id === scene.locationId),
+        placeName,
+        slotName,
+        onSetOutcome: (card, outcome) => cardActions.change(card, { outcome }),
+        onTrigger: trigger,
+        onMomentFromCard: momentFromCard,
+        onJoin: join,
+      }}
+      submissions={submissions}
+      sheetItems={sheetItems}
+      codex={codex}
+      characters={characters}
+      onInsert={insert}
+      onMomentFromPassage={(characterId, quote) => addMomentAfter(null, { ref: { characterId, quote } })}
+    />
+  );
+  const momentsPane = (
+    <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1" role="group" aria-label="Scene view">
+          <Button type="button" size="sm" variant={view === 'moments' ? 'primary' : 'secondary'} aria-pressed={view === 'moments'} onClick={() => setView('moments')}>
+            Moments
+          </Button>
+          <Button type="button" size="sm" variant={view === 'side' ? 'primary' : 'secondary'} aria-pressed={view === 'side'} onClick={() => setView('side')}>
+            Side by side
+          </Button>
+        </div>
+        {!readOnly && <span className="text-xs text-content-tertiary">Ctrl+Enter in a moment adds one below.</span>}
+      </div>
+
+      {view === 'side' ? (
+        <SceneSideBySide
+          model={model}
+          onPick={(momentId, characterId) => {
+            setView('moments');
+            setReader(characterId);
+            setFocusedId(momentId);
+            setAutoFocusId(momentId);
+          }}
+        />
+      ) : (
+        <>
+          {!readOnly && (
+          <details className="text-sm" open={scene.moments.length <= 1 && !scene.moments[0]?.text.trim()}>
+            <summary className="cursor-pointer text-content-secondary">How moments work</summary>
+            <p className="mt-1 text-content-secondary">
+              A moment is one thing that happens. Write it once, with names, then tick who reads it: each person ticked gets it with their own
+              name turned into “you”. ✎ beside a name gives that person their own version, such as what it feels like to be hit. Untick everyone
+              and the moment is a private GM note. People in the same room don’t need separate scenes: keep one scene and untick whoever
+              doesn’t notice a moment.
+            </p>
+          </details>
+          )}
+          {scene.moments.map((m, i) => (
+            <div key={m.id} className="space-y-1">
+              {i > 0 && !readOnly && (
+                <div className="flex justify-center">
+                  <Button type="button" size="sm" variant="ghost" className="!py-0 text-xs" aria-label={`Insert a moment before moment ${i + 1}`} onClick={() => addMomentAfter(scene.moments[i - 1].id)}>
+                    + moment
+                  </Button>
+                </div>
+              )}
+              <MomentEditor moment={m} index={i} model={model} actions={momentActions} focused={focusedId === m.id} autoFocus={autoFocusId === m.id} />
+            </div>
+          ))}
+          {!scene.moments.length && <p className="text-sm text-content-secondary">No moments yet.</p>}
+          {!readOnly && (
+            <Button type="button" size="sm" variant="primary" onClick={() => addMomentAfter(scene.moments[scene.moments.length - 1]?.id ?? null)}>
+              + Moment
+            </Button>
+          )}
+        </>
+      )}
+    </div>
+  );
+  const readsAsPane = (
+    <SceneReadsAs
+      model={model}
+      reader={reader}
+      onReader={setReader}
+      focusedId={focusedId}
+      onFocusMoment={(id) => {
+        setFocusedId(id);
+        document.getElementById(`moment-${id}`)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+      }}
+      onCopy={copy}
+      inDraft={inDraft}
+      onAddToDraft={(id, moments, text) => void addToDraft(id, moments, text)}
+      adding={adding}
+      onWrite={onWrite}
+    />
+  );
+
   return (
     <div className="space-y-3" data-testid="gm-board-step-scenes">
       <SceneHeader
@@ -292,107 +397,30 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
       />
       <SceneRewards scene={scene} board={board} names={model.names} canRead={canRead} sceneName={sceneName(scene, model.names)} />
 
-      <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(16rem, 1fr) minmax(0, 2.4fr)' : 'minmax(16rem, 1fr) minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
-        <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
-          <SceneReference
-            key={scene.id}
-            model={model}
-            plans={{
-              location: settings?.codex.find((e) => e.id === scene.locationId),
-              placeName,
-              slotName,
-              onSetOutcome: (card, outcome) => cardActions.change(card, { outcome }),
-              onTrigger: trigger,
-              onMomentFromCard: momentFromCard,
-              onJoin: join,
-            }}
-            submissions={submissions}
-            sheetItems={sheetItems}
-            codex={codex}
-            characters={characters}
-            onInsert={insert}
-            onMomentFromPassage={(characterId, quote) => addMomentAfter(null, { ref: { characterId, quote } })}
-          />
-        </div>
-
-        <div className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1" role="group" aria-label="Scene view">
-              <Button type="button" size="sm" variant={view === 'moments' ? 'primary' : 'secondary'} aria-pressed={view === 'moments'} onClick={() => setView('moments')}>
-                Moments
-              </Button>
-              <Button type="button" size="sm" variant={view === 'side' ? 'primary' : 'secondary'} aria-pressed={view === 'side'} onClick={() => setView('side')}>
-                Side by side
-              </Button>
-            </div>
-            {!readOnly && <span className="text-xs text-content-tertiary">Ctrl+Enter in a moment adds one below.</span>}
-          </div>
-
-          {view === 'side' ? (
-            <SceneSideBySide
-              model={model}
-              onPick={(momentId, characterId) => {
-                setView('moments');
-                setReader(characterId);
-                setFocusedId(momentId);
-                setAutoFocusId(momentId);
-              }}
-            />
-          ) : (
-            <>
-              {!readOnly && (
-              <details className="text-sm" open={scene.moments.length <= 1 && !scene.moments[0]?.text.trim()}>
-                <summary className="cursor-pointer text-content-secondary">How moments work</summary>
-                <p className="mt-1 text-content-secondary">
-                  A moment is one thing that happens. Write it once, with names, then tick who reads it: each person ticked gets it with their own
-                  name turned into “you”. ✎ beside a name gives that person their own version, such as what it feels like to be hit. Untick everyone
-                  and the moment is a private GM note. People in the same room don’t need separate scenes: keep one scene and untick whoever
-                  doesn’t notice a moment.
-                </p>
-              </details>
-              )}
-              {scene.moments.map((m, i) => (
-                <div key={m.id} className="space-y-1">
-                  {i > 0 && !readOnly && (
-                    <div className="flex justify-center">
-                      <Button type="button" size="sm" variant="ghost" className="!py-0 text-xs" aria-label={`Insert a moment before moment ${i + 1}`} onClick={() => addMomentAfter(scene.moments[i - 1].id)}>
-                        + moment
-                      </Button>
-                    </div>
-                  )}
-                  <MomentEditor moment={m} index={i} model={model} actions={momentActions} focused={focusedId === m.id} autoFocus={autoFocusId === m.id} />
-                </div>
-              ))}
-              {!scene.moments.length && <p className="text-sm text-content-secondary">No moments yet.</p>}
-              {!readOnly && (
-                <Button type="button" size="sm" variant="primary" onClick={() => addMomentAfter(scene.moments[scene.moments.length - 1]?.id ?? null)}>
-                  + Moment
+      {narrow ? (
+        <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
+          {momentsPane}
+          {view === 'moments' && (
+            <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-2 overflow-y-auto">
+              <div className="flex gap-1" role="group" aria-label="Side pane">
+                <Button type="button" size="sm" variant={pane === 'reference' ? 'primary' : 'secondary'} aria-pressed={pane === 'reference'} onClick={() => setPane('reference')}>
+                  Reference
                 </Button>
-              )}
-            </>
+                <Button type="button" size="sm" variant={pane === 'readsAs' ? 'primary' : 'secondary'} aria-pressed={pane === 'readsAs'} onClick={() => setPane('readsAs')}>
+                  Reads as
+                </Button>
+              </div>
+              {pane === 'reference' ? referencePane : readsAsPane}
+            </div>
           )}
         </div>
-
-        {view === 'moments' && (
-          <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
-            <SceneReadsAs
-              model={model}
-              reader={reader}
-              onReader={setReader}
-              focusedId={focusedId}
-              onFocusMoment={(id) => {
-                setFocusedId(id);
-                document.getElementById(`moment-${id}`)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-              }}
-              onCopy={copy}
-              inDraft={inDraft}
-              onAddToDraft={(id, moments, text) => void addToDraft(id, moments, text)}
-              adding={adding}
-              onWrite={onWrite}
-            />
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(16rem, 1fr) minmax(0, 2.4fr)' : 'minmax(16rem, 1fr) minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
+          <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{referencePane}</div>
+          {momentsPane}
+          {view === 'moments' && <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{readsAsPane}</div>}
+        </div>
+      )}
     </div>
   );
 }

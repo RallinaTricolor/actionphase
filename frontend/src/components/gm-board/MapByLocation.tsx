@@ -6,6 +6,7 @@ import { sceneName } from '@/lib/gmBoard/scenes';
 import { isAmbush, stanceOf } from '@/lib/gmBoard/stances';
 import { shortName } from '@/lib/gmBoard/text';
 import type { Card, Chunk } from '@/lib/gmBoard/types';
+import { MapArrowLayer, type MapArrows } from './MapArrowLayer';
 import { MapCard } from './MapCard';
 import { MapDropCell } from './MapDropCell';
 import { MapSlotHeader } from './MapSlotHeader';
@@ -17,6 +18,7 @@ interface MapByLocationProps {
   model: MapModel;
   actions: MapActions;
   drag: DragState;
+  arrows?: MapArrows;
 }
 
 /**
@@ -24,7 +26,7 @@ interface MapByLocationProps {
  * (rows) by time slots (columns). A cell with two or more people is busy and
  * says whether it has a scene.
  */
-export function MapByLocation({ model, actions, drag }: MapByLocationProps) {
+export function MapByLocation({ model, actions, drag, arrows }: MapByLocationProps) {
   const cells = useMemo(() => cellContents(model), [model]);
   const { slots, open } = model;
   const shownRows = model.visible
@@ -37,6 +39,7 @@ export function MapByLocation({ model, actions, drag }: MapByLocationProps) {
       <Contingencies model={model} actions={actions} drag={drag} />
 
       <div className="overflow-x-auto rounded-lg border border-theme-default" role="region" aria-label="Locations by time slot" tabIndex={0}>
+        <MapArrowLayer cards={model.board.cards} arrows={arrows} layoutKey={model}>
         <div className="grid" style={{ gridTemplateColumns: `12rem repeat(${slots.length}, minmax(15rem, 1fr))` }}>
           <div className="contents">
             <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2 text-xs text-content-tertiary">
@@ -78,6 +81,7 @@ export function MapByLocation({ model, actions, drag }: MapByLocationProps) {
             </div>
           ))}
         </div>
+        </MapArrowLayer>
         {shownRows.length === 0 && (
           <p className="p-4 text-sm text-content-secondary">Nobody in this cluster has a card on the board yet.</p>
         )}
@@ -142,6 +146,7 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
           className="!block w-full truncate !px-1 !py-0 text-left text-xs !font-normal"
           title={`Open ${sceneName(s, model.names)} in Scenes`}
           onClick={() => actions.openScene(s.id)}
+          data-arrow-id={s.id}
         >
           ▸ {sceneName(s, model.names)}
         </Button>

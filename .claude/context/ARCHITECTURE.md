@@ -2,7 +2,7 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
-**Last Verified**: 2026-10-05
+**Last Verified**: 2026-11-04
 
 ## Core Architectural Principles
 
@@ -763,6 +763,80 @@ unlisted player gets neither the rows nor a count that includes them. The E2E
 spec `e2e/messaging/restricted-posts.spec.ts` runs on its own fixture
 (`33_restricted_posts.sql`, games 708 and 709) and logs each user in once, in
 their own browser context.
+
+### GM Results Board (added 2026-11-04)
+
+An opt-in workspace for resolving one action phase: Read (submissions into
+cards) → Map (cards by place and time slot) → Scenes (moments, each with its
+readers) → Write (results), plus a per-game Game setup page (codex, names,
+reward lists, reward block). Route `/games/:gameId/phases/:phaseId/board`
+(`pages/GmBoardPage.tsx`) and `/games/:gameId/board-setup`. Desktop only (1024px
+and up; `BOARD_NARROW_QUERY` shows a notice below that).
+
+**Storage is an item store, not a document** (migration
+`20261102185548_add_gm_board_items.sql`):
+
+| Table | Holds | Key |
+|---|---|---|
+| `gm_board_items` | one action phase's working state: `card`, `scene` (moments and effects inside), `chunk` (time slot), `cluster`, `stance` (`a\|b`), `progress` (per character: read, ready, covered ticks), `flag` (dismissed), `notes`, `reward` (this phase's list), `rewards` (a character's reward lines) | `(phase_id, kind, item_key)` |
+| `gm_settings_items` | per game: `codex` entries, `names` (per character), `template`, `groups`, `scales`, `prefs`, `reward` (every-phase list) | `(game_id, kind, item_key)` |
+
+Each row has `doc JSONB`, `version`, `seq` (one Postgres sequence, so it only
+goes up) and `deleted` (tombstones, so pollers learn of deletes). One row per
+item means two editors only collide on the same item.
+
+- **Writes** (`POST …/phases/{phaseId}/gm-board/changes`,
+  `POST …/gm-settings/changes`) take `[{kind, key, base_version, doc | deleted}]`
+  and apply in one transaction. A stale `base_version` writes nothing: the 409
+  carries the current copy of each conflicting item. A 409 with no conflicts
+  means the game is archived. Byte and item-count caps answer 422.
+- **Reads** take `?since=<seq>`; the client polls every 15 seconds while
+  visible, on focus and after each save.
+- **Client**: `lib/gmBoard/store.ts` (`assembleBoard`, `assembleSettings`)
+  builds `BoardDoc` / `GameBoardSettings` from items in any order;
+  `hooks/useGmBoard.ts` (`useGmBoardStore`, `useGmSettingsStore`) is the
+  optimistic item store: `update(kind, key, fn)` / `remove`, dirty items
+  flushed about a second after the last edit, conflicts handled once there.
+  Unsaved edits are not kept in browser storage: closing the tab with some
+  pending gets the browser's "leave page?" prompt. Components never write
+  items any other way.
+- **Logic is pure**: `lib/gmBoard/*.ts` holds no React and no I/O (perception,
+  coverage, leak checks, flags, second person, the reward template, sheet
+  diffs, arrows), each with its own Vitest file. Components call it.
+- **What isn't in the store**: result text stays in `action_results`
+  (unpublished drafts; the board's saves send `expected_updated_at`, so a stale
+  save is a 409). Draft sheet updates are generated from reward lines in the
+  browser and written by `PUT …/phases/{pid}/characters/{cid}/reward-sheet-updates`
+  (`action_result_character_updates.from_rewards` marks them). Publishing uses
+  the existing results endpoints and dialogs, so the old results area and the
+  board can be used on the same phase.
+
+**Access: the audience level plus a game setting.** Writes declare
+`access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,
+`GET …/gm-board-phases`) declare `access.AudienceOnly()` as the floor, and the
+handler's `requireViewer` (`pkg/gmboard/huma_api.go`) also refuses (403
+`NotSharedMessage`) anyone without the GM flag unless
+`games.share_gm_board` is on. So while the game runs the audience can view a
+shared board; once it's a public archive (epilogue or completed), anyone who
+can see the game can. The GM toggles it with `PUT …/gm-settings/sharing`; the
+game response carries `share_gm_board`. Viewers see everything on the board,
+GM notes and codex secrets included: the audience already reads every
+submission and result.
+
+**Read-only mode** (`hooks/useBoardReadOnly.ts`, `BoardReadOnlyContext`) is
+for viewers and for the GM of an archived game. The stores drop edits while it
+is set, it still polls, and viewers read submissions from the audience listing
+(`useBoardSubmissions`), never the GM-only `GET …/actions`.
+`GmBoardReadOnly.test.tsx` walks every step as a viewer and fails on any
+enabled edit control, write request or GM-only read: add a new view-only
+control to its allow-lists when you add one.
+
+**Tests and fixtures**: `fixtures.seed_heist_board(game, phase)`
+(`test_fixtures/common/02_gm_board_seed.sql`) fills a partly resolved board.
+The demo Heist calls it (and shares its board). The E2E games 711 (not shared,
+the GM writes) and 712 (shared) in `e2e/34_gm_board.sql` call it for
+`e2e/gameplay/gm-results-board.spec.ts`, desktop project only. When the
+board's model changes, change the seed with it.
 
 ### Character Sheet Storage
 

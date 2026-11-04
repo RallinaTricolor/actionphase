@@ -110,8 +110,23 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
   if (!submissions.length || ownerId === null || !submission || !links) {
     return (
       <Card variant="bordered" padding="md" data-testid="gm-board-step-read">
-        <CardBody>
+        <CardBody className="space-y-3">
           <p className="text-content-primary">No submissions in this phase yet.</p>
+          {!readOnly && (
+            <>
+              <p className="text-sm text-content-secondary">
+                They show here as players send them. In the meantime you can write the codex, or plan events on the Map with GM cards.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="secondary" onClick={() => onOpenCodex()}>
+                  Open the codex
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={onGoToMap}>
+                  Go to the Map
+                </Button>
+              </div>
+            </>
+          )}
           {noCharacter > 0 && <NoCharacterNotice count={noCharacter} />}
         </CardBody>
       </Card>

@@ -602,7 +602,8 @@ export const CommentEditor = memo(function CommentEditor({
         className={`${stickyTabBar ? 'sticky' : ''} z-10 surface-base border-b border-theme-default`}
         style={stickyTabBar ? { top: STICKY_BELOW_TABS } : undefined}
       >
-        <div className="flex items-center justify-between pt-2 pb-1 gap-2">
+        {/* A size container: the help label folds by the editor's own width, so a narrow column on a wide screen doesn't overflow. */}
+        <div className="@container flex items-center justify-between pt-2 pb-1 gap-2">
           {/* Manila-style tabs */}
           <div className="flex items-end gap-1 shrink-0">
             <button
@@ -650,7 +651,7 @@ export const CommentEditor = memo(function CommentEditor({
               className="!px-2"
             >
               <HelpCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Markdown Help</span>
+              <span className="hidden @md:inline">Markdown Help</span>
             </Button>
             <span className="text-xs text-content-tertiary whitespace-nowrap self-center">{value.length} characters</span>
           </div>

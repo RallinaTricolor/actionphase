@@ -35,6 +35,9 @@ const ARTICLES = new Set(['the', 'a', 'an']);
 const TITLES = new Set([
   'sir', 'dame', 'lady', 'lord', 'master', 'mistress', 'mr', 'mrs', 'ms', 'miss', 'dr', 'captain',
   'father', 'mother', 'brother', 'sister', 'king', 'queen', 'prince', 'princess', 'saint',
+  'inspector', 'detective', 'sergeant', 'constable', 'officer', 'agent', 'chief', 'commander', 'colonel',
+  'lieutenant', 'general', 'admiral', 'professor', 'prof', 'doctor', 'baron', 'baroness', 'duke', 'duchess',
+  'countess', 'madam', 'madame', 'mister', 'elder', 'uncle', 'aunt',
 ]);
 
 /**

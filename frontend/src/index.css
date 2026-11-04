@@ -850,6 +850,39 @@
 }
 
 /*
+ * GM results board, Map: arrows from a cause to the card it caused (solid),
+ * and from a card to its alternative (dashed). The hovered card's ends are
+ * outlined; in "All", the other arrows fade while one is hovered.
+ */
+.gm-arrow {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+.gm-arrow-cause {
+  stroke: rgb(var(--color-interactive-primary));
+}
+.gm-arrow-branch {
+  stroke: rgb(var(--color-content-tertiary));
+  stroke-dasharray: 5 4;
+}
+.gm-arrow-faint {
+  opacity: 0.25;
+}
+.gm-arrow-head-cause {
+  fill: rgb(var(--color-interactive-primary));
+}
+.gm-arrow-head-branch {
+  fill: rgb(var(--color-content-tertiary));
+}
+.gm-arrow-end {
+  fill: none;
+  stroke: rgb(var(--color-interactive-primary));
+  stroke-width: 2;
+  opacity: 0.6;
+}
+
+/*
  * GM results board, Scenes: what "Make it 'you'" changed in a moment, as
  * marks over the reader's text. A name swapped for "you", a verb changed to
  * match, and a he/she word to check.

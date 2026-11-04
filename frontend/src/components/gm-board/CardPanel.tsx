@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Badge, Button, Checkbox, Combobox, Input, Select, Textarea } from '@/components/ui';
 import { useBoundText } from '@/hooks/useBoundText';
 import { autoLabel, cardLabel, isIF, isWaiting, needsCause, OUTCOMES, textField } from '@/lib/gmBoard/cards';
 import type { CastMember } from '@/lib/gmBoard/cast';
 import { causeCandidates, laterCardCount, sortedChunks, type CauseGroup } from '@/lib/gmBoard/map';
 import { defaultChunkId } from '@/lib/gmBoard/read';
+import { sceneName } from '@/lib/gmBoard/scenes';
 import { shortName, truncate } from '@/lib/gmBoard/text';
 import type { BoardDoc, Card } from '@/lib/gmBoard/types';
 
@@ -61,6 +62,32 @@ export function CardPanel({
   const cond = useBoundText(card.cond);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const [splitHint, setSplitHint] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+
+  // Opening a card moves focus into the panel, so Tab goes through its fields
+  // next; closing it (✕ or Esc) puts focus back on what opened it.
+  useEffect(() => {
+    // Only the first run records the opener: StrictMode runs this twice in
+    // development, and by the second run focus is already in the panel.
+    const active = document.activeElement;
+    if (!opener.current && active instanceof HTMLElement && active !== document.body && !panelRef.current?.contains(active)) {
+      opener.current = active;
+    }
+    panelRef.current?.focus({ preventScroll: true });
+  }, []);
+  const close = () => {
+    const back = opener.current;
+    onClose();
+    if (back?.isConnected) back.focus({ preventScroll: true });
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    // A combobox or select that is open handles its own Esc first.
+    if (e.key === 'Escape' && !e.defaultPrevented) {
+      e.preventDefault();
+      close();
+    }
+  };
 
   const ifCard = isIF(card);
   const waiting = isWaiting(card);
@@ -73,7 +100,10 @@ export function CardPanel({
   const causes = !waiting && (needsCause(card.outcome) || card.causedBy.length > 0) ? causeCandidates(board, card) : null;
 
   const causeLabel = (id: string, scene: boolean) => {
-    if (scene) return `Scene: ${truncate(board.scenes.find((s) => s.id === id)?.title || 'untitled', 40)}`;
+    if (scene) {
+      const s = board.scenes.find((x) => x.id === id);
+      return `Scene: ${s ? truncate(sceneName(s, names), 40) : 'deleted'}`;
+    }
     const c = board.cards.find((x) => x.id === id);
     return c ? `${shortName(names.get(c.characterId) ?? '?')}: ${truncate(cardLabel(c), 40)}` : '?';
   };
@@ -88,13 +118,13 @@ export function CardPanel({
   };
 
   return (
-    <section aria-label="Card" className="space-y-4" data-testid="card-panel">
+    <section ref={panelRef} tabIndex={-1} onKeyDown={onKeyDown} aria-label="Card" className="space-y-4 focus:outline-none" data-testid="card-panel">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-lg font-semibold text-content-primary">{owner}</h3>
           <p className="text-sm text-content-secondary">{card.gm ? 'GM card' : 'Plan card'}</p>
         </div>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="Close the card">
+        <Button type="button" variant="ghost" size="sm" onClick={close} aria-label="Close the card" title="Close (Esc)">
           ✕
         </Button>
       </div>

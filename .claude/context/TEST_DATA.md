@@ -214,7 +214,8 @@ Numbers entries may carry `max` (turning a count into a track, "Stress 4/9") and
 - **4 submitted actions**, one edited after submitting (Silk's)
 - Various submission times and content lengths
 - The results board seed quotes them, so changing a Heist submission means
-  changing the card quotes in `common/02_gm_board_seed.sql` too
+  changing the card quotes in `common/02_gm_board_seed.sql`, and the copies
+  in `e2e/34_gm_board.sql`, too
 
 ### Results Board (Game #2, phase 2 "Execute the Plan") — added 2026-11-03
 A partly resolved GM results board, so every built step has data. Open it as
@@ -256,7 +257,11 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
 The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
 (`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and
 `apply_all.sh`, so an E2E fixture can seed the same board on its own fixed-ID
-game (it needs the Heist's character names and submissions). **When the
+game (it needs the Heist's character names and submissions). The E2E games
+**#711** "E2E Test: Results Board - GM" (not shared; the GM test writes here)
+and **#712** "E2E Test: Results Board - Shared" (shared, read-only) in
+`e2e/34_gm_board.sql` do that, with copies of the Heist's submissions, for
+`e2e/gameplay/gm-results-board.spec.ts`. **When the
 board's data model changes, change the seed in the same piece of work**, and
 write every field the client writes (see `frontend/src/lib/gmBoard/types.ts`).
 

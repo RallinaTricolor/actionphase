@@ -155,6 +155,40 @@ describe('GmBoardScenes', () => {
     await waitFor(() => expect(boardSaves.some((c) => c.key === 'c-m' && (c.doc as { causedBy: string[] }).causedBy.join() === 's-late')).toBe(true));
   });
 
+  it('below 1280px, shows Reference and Reads as as tabs beside the moments', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(max-width: 1279px)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    try {
+      board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: sceneDoc({ participants: [1], moments: [{ id: 'm1', text: 'Harrison burns.', readers: [1], ownText: {} }] }) }));
+      renderBoard('step=scenes&scene=s1');
+      const box = (await screen.findByLabelText('What happens, with names')) as HTMLTextAreaElement;
+      const panes = screen.getByRole('group', { name: 'Side pane' });
+      expect(within(panes).getByRole('button', { name: 'Reference' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByTestId('scene-reads-as')).not.toBeInTheDocument();
+
+      // Insert still works with Reference in a tab: the moments stay beside it.
+      box.focus();
+      box.setSelectionRange(14, 14);
+      fireEvent.select(box);
+      await userEvent.click(within(screen.getByRole('group', { name: 'Reference tab' })).getByRole('button', { name: 'Codex' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Insert the ledger' }));
+
+      await userEvent.click(within(panes).getByRole('button', { name: 'Reads as' }));
+      expect(screen.getByTestId('scene-reads-as')).toHaveTextContent('You burn the ledger.');
+      expect(screen.queryByRole('group', { name: 'Reference tab' })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Side by side' }));
+      expect(screen.queryByRole('group', { name: 'Side pane' })).not.toBeInTheDocument();
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
   it('opens a scene from its pill on the Map', async () => {
     board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: sceneDoc({ title: 'At the wheel', participants: [1, 2], conflict: true }) }));
     renderBoard('step=map');

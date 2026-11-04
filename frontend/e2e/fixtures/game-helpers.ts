@@ -95,6 +95,10 @@ export const FIXTURE_GAMES = {
   RESTRICTED_POSTS_GM: 'E2E Test: Restricted Posts - GM',                 // Game #708 - GM restricts a post (WRITES)
   RESTRICTED_POSTS_VISIBILITY: 'E2E Test: Restricted Posts - Visibility', // Game #709 - who sees it (READ-ONLY)
 
+  // GM results board (34_gm_board.sql): the Heist's seeded board, twice
+  RESULTS_BOARD_GM: 'E2E Test: Results Board - GM',         // Game #711 - GM edits the board (WRITES); not shared
+  RESULTS_BOARD_SHARED: 'E2E Test: Results Board - Shared', // Game #712 - shared with the audience (READ-ONLY)
+
   // Player multiple characters test (340-345, worker-specific)
   PLAYER_MULTIPLE_CHARACTERS: 'E2E Test: Player Multiple Characters', // Game #340 - "player-multiple-characters.spec.ts"
 

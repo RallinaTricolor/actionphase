@@ -78,6 +78,8 @@ describe('shortName', () => {
 
   it('skips a title, and keeps a name that starts with an article whole', () => {
     expect(shortName('Sir Aldric')).toBe('Aldric');
+    expect(shortName('Inspector Dalton')).toBe('Dalton');
+    expect(shortName('Sergeant Mora Vey')).toBe('Mora');
     expect(shortName('The Dark Lord')).toBe('The Dark Lord');
   });
 });

@@ -90,6 +90,41 @@ describe('GmBoardMap', () => {
     expect(await screen.findByTestId('map-by-location')).toBeInTheDocument();
   });
 
+  it('draws causes on hover by default, every one in All, and remembers the choice', async () => {
+    localStorage.removeItem('gmBoardArrows');
+    board.set('card/c-dock', makeGmItem({ kind: 'card', key: 'c-dock', doc: cardDoc({ characterId: 2, summary: 'Follows him', causedBy: ['c-mill'] }) }));
+    const { unmount } = renderMap();
+    const follows = await screen.findByRole('button', { name: /Mara: Follows him/ });
+    expect(screen.getByLabelText('Arrows')).toHaveValue('hover');
+    expect(screen.queryByTestId('map-arrows')).not.toBeInTheDocument();
+    fireEvent.mouseOver(follows);
+    expect(screen.getAllByTestId('map-arrow-cause')).toHaveLength(1);
+
+    await userEvent.selectOptions(screen.getByLabelText('Arrows'), 'off');
+    expect(screen.queryByTestId('map-arrows')).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Arrows'), 'all');
+    expect(screen.getAllByTestId('map-arrow-cause')).toHaveLength(1);
+    unmount();
+
+    renderMap();
+    expect(await screen.findByLabelText('Arrows')).toHaveValue('all');
+    localStorage.removeItem('gmBoardArrows');
+  });
+
+  it('works from the keyboard: Enter opens a card, focus moves into it, Esc closes it and returns focus', async () => {
+    renderMap();
+    const mapCard = await screen.findByRole('button', { name: /Harrison Vale: Waits by the wheel/ });
+    mapCard.focus();
+    await userEvent.keyboard('{Enter}');
+    const panel = await screen.findByTestId('card-panel');
+    expect(panel).toHaveFocus();
+    await userEvent.tab();
+    expect(within(panel).getByRole('button', { name: 'Close the card' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Harrison Vale: Waits by the wheel/ })).toHaveFocus();
+  });
+
   it('opens a card beside the grid and sets its outcome', async () => {
     renderMap();
     await userEvent.click(await screen.findByRole('button', { name: /Harrison Vale: Waits by the wheel/ }));

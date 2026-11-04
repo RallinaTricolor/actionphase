@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -72,6 +73,31 @@ describe('CardPanel', () => {
     expect(screen.getByRole('button', { name: 'Scene: Fight at the mill' })).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'Mara: Guard the ledger' }));
     expect(onChange).toHaveBeenCalledWith({ causedBy: ['fight', 'o'] });
+  });
+
+  it('takes focus when it opens, and Esc gives it back to what opened it, under StrictMode too', async () => {
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const onClose = vi.fn();
+    const card = makeCard({ id: 'c', characterId: 1, chunkId: 'k2', locationId: 'mill' });
+    render(
+      <StrictMode>
+        <CardPanel card={card} board={makeBoard({ cards: [card] })} names={names} locations={locations} onChange={vi.fn()} onCreateLocation={vi.fn()} onSplit={vi.fn()} onPushLater={vi.fn()} onDelete={vi.fn()} onClose={onClose} />
+      </StrictMode>,
+    );
+    expect(screen.getByTestId('card-panel')).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(opener).toHaveFocus();
+    opener.remove();
+  });
+
+  it('names an untitled scene by its cast, as the Map does', () => {
+    const card = makeCard({ id: 'c', characterId: 1, chunkId: 'k2', locationId: 'mill', outcome: 'failed', causedBy: ['s2'] });
+    const board = makeBoard({ cards: [card], scenes: [makeScene({ id: 's2', title: '', chunkId: 'k2', locationId: 'mill', participants: [1, 2] })] });
+    render(<CardPanel card={card} board={board} names={names} locations={locations} onChange={vi.fn()} onCreateLocation={vi.fn()} onSplit={vi.fn()} onPushLater={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /^Scene: Harrison, Mara/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('offers Push later only when the character has later cards', async () => {

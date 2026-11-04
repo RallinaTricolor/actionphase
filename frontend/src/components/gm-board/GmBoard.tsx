@@ -15,6 +15,7 @@ import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath
 import type { GamePhase } from '@/types/phases';
 import { BoardRewardsContext } from './boardRewards';
 import { GmBoardConflicts } from './GmBoardConflicts';
+import { GmBoardFirstRun } from './GmBoardFirstRun';
 import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
 import { GmBoardRead } from './GmBoardRead';
@@ -160,6 +161,9 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
         </div>
 
         {!readOnly && <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />}
+        {!readOnly && board && (
+          <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => setCodex({ name: '' })} onOpenSetup={() => navigate(boardSetupPath(gameId))} />
+        )}
 
         <TabNavigation
           tabs={BOARD_STEPS.map((s) => ({ id: s.id, label: s.label }))}

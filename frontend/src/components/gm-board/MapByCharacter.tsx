@@ -5,6 +5,7 @@ import { isWaiting } from '@/lib/gmBoard/cards';
 import { locationAt } from '@/lib/gmBoard/map';
 import { outEntering, stateAt } from '@/lib/gmBoard/states';
 import type { Card } from '@/lib/gmBoard/types';
+import { MapArrowLayer, type MapArrows } from './MapArrowLayer';
 import { MapCard } from './MapCard';
 import { MapDropCell } from './MapDropCell';
 import { characterGroups, STATE_LABELS, STATE_TONE } from './mapModel';
@@ -14,6 +15,7 @@ interface MapByCharacterProps {
   model: MapModel;
   actions: MapActions;
   drag: DragState;
+  arrows?: MapArrows;
 }
 
 /**
@@ -22,7 +24,7 @@ interface MapByCharacterProps {
  * are hatched, and a badge marks where their state changes. A card can only
  * be dragged along its own row.
  */
-export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
+export function MapByCharacter({ model, actions, drag, arrows }: MapByCharacterProps) {
   const groups = characterGroups(model);
   const { slots } = model;
   const byCell = new Map<string, Card[]>();
@@ -34,6 +36,7 @@ export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-theme-default" role="region" aria-label="Characters by time slot" tabIndex={0} data-testid="map-by-character">
+      <MapArrowLayer cards={model.board.cards} arrows={arrows} layoutKey={model}>
       <div className="grid" style={{ gridTemplateColumns: `12rem minmax(13rem, 1fr) repeat(${slots.length}, minmax(13rem, 1fr))` }}>
         <div className="contents">
           <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2 text-xs text-content-tertiary">Character ↓ · time →</div>
@@ -116,6 +119,7 @@ export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
                               className="!block w-full truncate !px-1 !py-0 text-left text-xs !font-normal"
                               title={`Open ${sceneName(sc, model.names)} in Scenes`}
                               onClick={() => actions.openScene(sc.id)}
+                              data-arrow-id={sc.id}
                             >
                               <Badge variant={sc.conflict ? 'danger' : 'primary'} size="sm">
                                 {sc.conflict ? 'Conflict' : 'Scene'}
@@ -150,6 +154,7 @@ export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
           </div>
         ))}
       </div>
+      </MapArrowLayer>
     </div>
   );
 }
