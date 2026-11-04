@@ -17,6 +17,16 @@ export function GmBoardNotesDrawer({ open, onClose, notes, onChange, readOnly = 
   return (
     <Drawer open={open} onClose={onClose} title="Notes" side="right">
       <div className="p-4">
+        {readOnly ? (
+          <div data-testid="gm-board-notes">
+            <h3 className="text-sm font-medium text-content-primary mb-2">Notes for this phase</h3>
+            {notes.trim() ? (
+              <p className="whitespace-pre-wrap text-content-primary">{notes}</p>
+            ) : (
+              <p className="text-content-tertiary">No notes.</p>
+            )}
+          </div>
+        ) : (
         <Textarea
           id="gm-board-notes"
           label="Notes for this phase"
@@ -31,6 +41,7 @@ export function GmBoardNotesDrawer({ open, onClose, notes, onChange, readOnly = 
           }}
           data-testid="gm-board-notes"
         />
+        )}
       </div>
     </Drawer>
   );

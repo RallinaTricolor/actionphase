@@ -5,7 +5,8 @@ import type { ActionResult } from '@/types/phases';
 
 interface StagedPartStatusProps {
   result: ActionResult;
-  onDelayChange: (delayMinutes: number) => void;
+  /** Without it the delay is shown as text (a read-only view). */
+  onDelayChange?: (delayMinutes: number) => void;
   delayPending?: boolean;
 }
 
@@ -34,7 +35,10 @@ export function StagedPartStatus({ result, onDelayChange, delayPending = false }
           draft: the usual reason to move a timer is that the scene is live and
           the players need longer. A custom delay that isn't a preset is shown
           as its own option so the selector never misstates the stored value. */}
-      {canEditDelay(result) && (
+      {canEditDelay(result) && !onDelayChange && result.reveal_delay_minutes !== undefined && (
+        <span className="text-xs text-content-secondary">({formatDelayLabel(result.reveal_delay_minutes)} after the part before)</span>
+      )}
+      {canEditDelay(result) && onDelayChange && (
         <Select
           aria-label={`Delay before part ${result.part_number}`}
           selectSize="sm"

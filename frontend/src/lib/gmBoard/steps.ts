@@ -21,3 +21,6 @@ export const boardPath = (gameId: number, phaseId: number, step?: BoardStep) =>
 export const resultsAreaPath = (gameId: number) => `/games/${gameId}?tab=actions`;
 
 export const boardSetupPath = (gameId: number) => `/games/${gameId}/board-setup`;
+
+/** A phase in the game's History tab, where viewers browse past phases. */
+export const historyPhasePath = (gameId: number, phaseId: number) => `/games/${gameId}?tab=history&phase=${phaseId}`;

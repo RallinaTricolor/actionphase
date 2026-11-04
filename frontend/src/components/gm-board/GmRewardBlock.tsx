@@ -4,6 +4,7 @@ import { Badge, Button, Select, Spinner, Textarea } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGameActionResults } from '@/hooks/useActionResults';
 import { useGmBoard, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { apiClient } from '@/lib/api';
 import { chainsFor } from '@/lib/gmBoard/results';
@@ -59,6 +60,7 @@ export function GmRewardBlock({ gameId, phases, players }: { gameId: number; pha
 
 function BlockEditor({ gameId, settings, phases, players }: { gameId: number; settings: GameBoardSettings; phases: { id: number; title: string }[]; players: { id: number; name: string }[] }) {
   const store = useGmSettingsStore(gameId);
+  const readOnly = useBoardReadOnly();
   const { game } = useGameContext();
   const layout = useSheetLayout(game).tabs;
   // The text boxes keep what's typed; the parsed values are what's saved.
@@ -104,7 +106,7 @@ function BlockEditor({ gameId, settings, phases, players }: { gameId: number; se
         </a>
         .
       </p>
-      {!settings.rewardTemplate.trim() && (
+      {!settings.rewardTemplate.trim() && !readOnly && (
         <Button
           type="button"
           size="sm"
@@ -122,7 +124,7 @@ function BlockEditor({ gameId, settings, phases, players }: { gameId: number; se
       )}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
-          <Textarea id="reward-template-box" label="Template" rows={18} className="font-mono text-sm" value={settings.rewardTemplate} onChange={(e) => setTemplate(e.target.value)} data-testid="reward-template" />
+          <Textarea id="reward-template-box" label="Template" rows={18} className="font-mono text-sm" value={settings.rewardTemplate} readOnly={readOnly} onChange={(e) => setTemplate(e.target.value)} data-testid="reward-template" />
           <Textarea
             id="reward-groups-box"
             label="Sections"
@@ -130,6 +132,7 @@ function BlockEditor({ gameId, settings, phases, players }: { gameId: number; se
             rows={4}
             className="font-mono text-sm"
             value={groupsDraft}
+            readOnly={readOnly}
             onChange={(e) => {
               setGroupsDraft(e.target.value);
               setGroups(parseGroups(e.target.value));
@@ -143,6 +146,7 @@ function BlockEditor({ gameId, settings, phases, players }: { gameId: number; se
             rows={3}
             className="font-mono text-sm"
             value={scalesDraft}
+            readOnly={readOnly}
             onChange={(e) => {
               setScalesDraft(e.target.value);
               setScales(parseScales(e.target.value));

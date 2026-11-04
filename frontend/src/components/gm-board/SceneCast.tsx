@@ -49,14 +49,16 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
                   {STATE_LABELS[state]}
                 </Badge>
               )}
-              <Button type="button" size="sm" variant="ghost" className="!px-1 !py-0" aria-label={`Remove ${name(id)} from the scene`} onClick={() => onLeave(id)}>
-                ✕
-              </Button>
+              {!model.readOnly && (
+                <Button type="button" size="sm" variant="ghost" className="!px-1 !py-0" aria-label={`Remove ${name(id)} from the scene`} onClick={() => onLeave(id)}>
+                  ✕
+                </Button>
+              )}
             </span>
           );
         })}
         {!scene.participants.length && <span className="text-sm text-content-secondary">Nobody yet</span>}
-        {addable.length > 0 && (
+        {addable.length > 0 && !model.readOnly && (
           <div className="w-44">
             <Select id="scene-add" aria-label="Add someone to the scene" selectSize="sm" value="" onChange={(e) => e.target.value && onJoin(Number(e.target.value))}>
               <option value="">+ someone</option>
@@ -85,7 +87,14 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="After the scene">
         <span className="mr-1 text-xs font-medium text-content-tertiary">After the scene</span>
-        {scene.effects.map((e, i) => (
+        {model.readOnly && !scene.effects.length && <span className="text-xs text-content-secondary">Nothing lasting.</span>}
+        {model.readOnly && scene.effects.map((e, i) => (
+          <Badge key={i} variant={STATE_TONE[e.state]} data-testid={`effect-${i}`}>
+            {shortName(name(e.characterId))}: {STATE_LABELS[e.state]}
+            {e.untilChunkId ? `, back by ${board.chunks.find((c) => c.id === e.untilChunkId)?.name ?? 'a deleted time slot'}` : ', until the end of the phase'}
+          </Badge>
+        ))}
+        {!model.readOnly && scene.effects.map((e, i) => (
           <span key={i} className="inline-flex items-center gap-1" data-testid={`effect-${i}`}>
             <span className="w-36">
               <Select id={`effect-${i}-who`} aria-label={`Effect ${i + 1}: who`} selectSize="sm" value={e.characterId} onChange={(ev) => onEffects((s) => updateEffect(s, i, { characterId: Number(ev.target.value) }))}>
@@ -120,10 +129,14 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
             </Button>
           </span>
         ))}
-        {!scene.effects.length && <span className="text-xs text-content-secondary">Who ends up injured, captured or out of play. The Map uses it to check later cards.</span>}
-        <Button type="button" size="sm" variant="secondary" disabled={!scene.participants.length} onClick={() => onEffects((s) => addEffect(s, s.participants[0]))}>
-          + State
-        </Button>
+        {!model.readOnly && (
+          <>
+            {!scene.effects.length && <span className="text-xs text-content-secondary">Who ends up injured, captured or out of play. The Map uses it to check later cards.</span>}
+            <Button type="button" size="sm" variant="secondary" disabled={!scene.participants.length} onClick={() => onEffects((s) => addEffect(s, s.participants[0]))}>
+              + State
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

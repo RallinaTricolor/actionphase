@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, Select } from '@/components/ui';
+import { Badge, Button, Checkbox, Input, Select } from '@/components/ui';
 import { useBoundText } from '@/hooks/useBoundText';
 import type { BoardRow } from '@/lib/gmBoard/map';
 import { castNames, sceneGroups, sceneName, sceneNeighbours } from '@/lib/gmBoard/scenes';
@@ -54,11 +54,22 @@ export function SceneHeader({ model, slots, locations, placeName, onGo, onChange
           Scene {index + 1} of {total}
         </span>
         <span className="flex-1" />
-        <Button type="button" size="sm" variant="ghost" onClick={onDelete}>
-          Delete scene
-        </Button>
+        {!model.readOnly && (
+          <Button type="button" size="sm" variant="ghost" onClick={onDelete}>
+            Delete scene
+          </Button>
+        )}
       </div>
 
+      {model.readOnly ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-semibold text-content-primary">{sceneName(scene, names)}</h2>
+          <span className="text-sm text-content-secondary">
+            {placeName(scene.locationId)} · {slots.find((s) => s.id === scene.chunkId)?.name ?? 'Deleted time slot'}
+          </span>
+          {scene.conflict && <Badge variant="danger">Conflict</Badge>}
+        </div>
+      ) : (
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-[16rem] flex-1">
           <Input
@@ -101,6 +112,7 @@ export function SceneHeader({ model, slots, locations, placeName, onGo, onChange
           onChange={(e) => onChange({ conflict: e.target.checked })}
         />
       </div>
+      )}
     </div>
   );
 }

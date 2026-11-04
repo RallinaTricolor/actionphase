@@ -16,11 +16,35 @@ interface MapSlotHeaderProps {
   onInsertBefore: () => void;
   onRemove: () => void;
   onResolve: () => void;
+  /** The name as text, and no slot controls. */
+  readOnly?: boolean;
 }
 
 /** A time slot's column head: its number and name (editable), "+ before", remove, and what's left to resolve. */
-export function MapSlotHeader({ slot, index, todo, hasCards, removable, dimmed, onRename, onInsertBefore, onRemove, onResolve }: MapSlotHeaderProps) {
+export function MapSlotHeader({ slot, index, todo, hasCards, removable, dimmed, onRename, onInsertBefore, onRemove, onResolve, readOnly = false }: MapSlotHeaderProps) {
   const name = useBoundText(slot.name);
+  if (readOnly) {
+    return (
+      <div className={`space-y-1 p-2 ${dimmed ? 'opacity-50' : ''}`} data-testid={`slot-head-${slot.id}`}>
+        <div className="flex items-center gap-1 text-xs text-content-tertiary">
+          <span>{index + 1}</span>
+          <span className="flex-1" />
+          {todo > 0 ? (
+            <Badge variant="warning" size="sm">
+              {todo} to do
+            </Badge>
+          ) : (
+            hasCards && (
+              <Badge variant="success" size="sm" aria-label="Nothing left to do">
+                ✓
+              </Badge>
+            )
+          )}
+        </div>
+        <p className="text-sm font-medium text-content-primary">{slot.name}</p>
+      </div>
+    );
+  }
   return (
     <div className={`space-y-1 p-2 ${dimmed ? 'opacity-50' : ''}`} data-testid={`slot-head-${slot.id}`}>
       <div className="flex items-center gap-1 text-xs text-content-tertiary">

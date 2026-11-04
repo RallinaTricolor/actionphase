@@ -35,6 +35,8 @@ export interface DropTarget {
 }
 
 export interface MapActions {
+  /** Read-only: the views show no editing controls and cards can't be dragged. */
+  readOnly?: boolean;
   openCard: (id: string) => void;
   /** Starts "+ GM cards" with the cell's place, time or character filled in. */
   addGmCards: (prefill: { characterIds?: number[]; locationId?: string; chunkId?: string }) => void;

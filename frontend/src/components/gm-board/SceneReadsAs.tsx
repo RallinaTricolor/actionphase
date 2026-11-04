@@ -120,6 +120,7 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {!model.readOnly && (
         <Button
           type="button"
           size="sm"
@@ -134,11 +135,12 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
               ? `All in ${name}’s draft`
               : 'Nothing to add'}
         </Button>
+        )}
         <Button type="button" size="sm" variant="secondary" disabled={!got.length} onClick={() => onCopy(text)}>
           Copy {name}’s version
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => onWrite(x)}>
-          Write {name}’s result →
+          {model.readOnly ? `${name}’s result →` : `Write ${name}’s result →`}
         </Button>
       </div>
       {model.secondPerson && <YouKey />}

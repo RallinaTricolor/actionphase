@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Drawer, Spinner } from '@/components/ui';
+import { isAxiosError } from 'axios';
+import { Alert, Badge, Button, Drawer, Spinner } from '@/components/ui';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { useGameContext } from '@/contexts/GameContext';
-import { useGmBoard, useGmBoardStore } from '@/hooks/useGmBoard';
+import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
+import { useGmBoard, useGmBoardStore, useGmSettings } from '@/hooks/useGmBoard';
 import { usePhaseRewards } from '@/hooks/usePhaseRewards';
 import { apiClient } from '@/lib/api';
 import { boardCast } from '@/lib/gmBoard/cast';
@@ -25,7 +27,16 @@ interface GmBoardProps {
   gameId: number;
   gameTitle: string;
   phase: GamePhase;
+  /** No editing controls, nothing saved: a viewer, or the GM of an archived game. */
+  readOnly?: boolean;
+  /** Not a GM: someone the GM shares the board with. */
+  viewer?: boolean;
+  /** Where the header's link goes back to: the GM's results area unless given. */
+  back?: { to: string; label: string };
 }
+
+/** A refused read: the GM stopped sharing while a viewer had the board open. */
+const isRefused = (error: unknown) => isAxiosError(error) && error.response?.status === 403;
 
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
@@ -33,7 +44,8 @@ interface GmBoardProps {
  * picked for each character lives here, so Scenes' "Add to draft" and Write
  * agree on it.
  */
-export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
+export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = false, back: backTo }: GmBoardProps) {
+  const back = backTo ?? { to: resultsAreaPath(gameId), label: 'Back to the results' };
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const step = parseBoardStep(params.get('step'));
@@ -57,9 +69,11 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
   );
 
   const { board, isLoading, error } = useGmBoard(gameId, phase.id);
-  const store = useGmBoardStore(gameId, phase.id);
+  const { error: settingsError } = useGmSettings(gameId);
+  // This component is above its own BoardReadOnlyContext, so the hooks here are told directly.
+  const store = useGmBoardStore(gameId, phase.id, { readOnly });
   // Mounted for the whole board, so sheet drafts follow the lines from any step.
-  const rewards = usePhaseRewards(gameId, phase.id, board);
+  const rewards = usePhaseRewards(gameId, phase.id, board, { readOnly });
 
   const goToStep = (next: string) => {
     const nextParams = new URLSearchParams(params);
@@ -92,19 +106,47 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
     window.scrollTo?.(0, 0);
   };
 
+  if (viewer && (isRefused(error) || isRefused(settingsError))) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8" data-testid="gm-board-not-shared">
+        <Alert variant="info" title="This board is no longer shared">
+          <p>The GM has stopped sharing this game’s results boards.</p>
+          <p className="mt-2">
+            <Link to={back.to} className="underline">
+              {back.label}
+            </Link>
+          </p>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
+    <BoardReadOnlyContext.Provider value={readOnly}>
     <BoardRewardsContext.Provider value={rewards}>
       <div className="px-6 py-6 space-y-4" data-testid="gm-board">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <Link to={resultsAreaPath(gameId)} className="text-sm text-content-tertiary hover:underline">
-              &larr; {gameTitle}: results
+            <Link to={back.to} className="text-sm text-content-tertiary hover:underline">
+              &larr; {gameTitle}: {back.label.replace(/^Back to the /, '')}
             </Link>
-            <h1 className="text-2xl font-bold text-content-primary mt-1">Results board</h1>
+            <h1 className="text-2xl font-bold text-content-primary mt-1 flex items-center gap-2">
+              Results board
+              {readOnly && (
+                <Badge variant="neutral" data-testid="gm-board-read-only">
+                  Read-only
+                </Badge>
+              )}
+            </h1>
             <p className="text-sm text-content-secondary">{phase.title || `Phase ${phase.phase_number}`}</p>
+            {readOnly && (
+              <p className="text-sm text-content-tertiary">
+                {viewer ? 'Shared by the GM. It updates as the GM works.' : 'This game is archived, so its boards can no longer be changed.'}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />
+            {!readOnly && <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />}
             <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
               Codex
             </Button>
@@ -117,7 +159,7 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
           </div>
         </div>
 
-        <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />
+        {!readOnly && <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />}
 
         <TabNavigation
           tabs={BOARD_STEPS.map((s) => ({ id: s.id, label: s.label }))}
@@ -186,9 +228,11 @@ export function GmBoard({ gameId, gameTitle, phase }: GmBoardProps) {
             onClose={() => setNotesOpen(false)}
             notes={board.notes}
             onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+            readOnly={readOnly}
           />
         )}
       </div>
     </BoardRewardsContext.Provider>
+    </BoardReadOnlyContext.Provider>
   );
 }

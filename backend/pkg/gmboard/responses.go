@@ -42,6 +42,11 @@ type GmItemsWrittenResponse struct {
 	Items []GmItemResponse `json:"items" nullable:"false" doc:"Each change as written, with its new version. Don't advance a poll cursor from these: that could skip another editor's write"`
 }
 
+// BoardPhasesResponse lists the phases that have a board.
+type BoardPhasesResponse struct {
+	PhaseIDs []int32 `json:"phase_ids" nullable:"false" doc:"The game's action phases whose board has at least one item, in phase order"`
+}
+
 // SharingResponse is the sharing setting after a change.
 type SharingResponse struct {
 	ShareGmBoard bool `json:"share_gm_board" doc:"Whether the GM shares the results boards read-only"`

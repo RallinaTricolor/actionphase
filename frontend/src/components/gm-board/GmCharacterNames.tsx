@@ -1,6 +1,7 @@
 import { Button, Input, Spinner } from '@/components/ui';
 import { useBoundText } from '@/hooks/useBoundText';
 import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { characterNames, defaultNames, splitList } from '@/lib/gmBoard/text';
 
 interface NamedCharacterRow {
@@ -21,7 +22,8 @@ interface GmCharacterNamesProps {
  * defaults to the full name plus the first word; a list the GM sets replaces
  * it, and an empty list turns matching off for that character.
  */
-export function GmCharacterNames({ gameId, characters, readOnly = false }: GmCharacterNamesProps) {
+export function GmCharacterNames({ gameId, characters, readOnly: readOnlyProp = false }: GmCharacterNamesProps) {
+  const readOnly = useBoardReadOnly() || readOnlyProp;
   const { settings, isLoading } = useGmSettings(gameId);
   const store = useGmSettingsStore(gameId, { readOnly });
 

@@ -2258,4 +2258,7 @@ type GmBoardServiceInterface interface {
 	ApplySettingsChanges(ctx context.Context, gameID, userID int32, changes []GmBoardChange) ([]GmBoardItem, error)
 	// SetShareGmBoard turns read-only sharing of the game's boards on or off.
 	SetShareGmBoard(ctx context.Context, gameID int32, share bool) (bool, error)
+	// ListBoardPhaseIDs returns the game's action phases that have a board (at
+	// least one live item), in phase order. Never nil.
+	ListBoardPhaseIDs(ctx context.Context, gameID int32) ([]int32, error)
 }

@@ -158,6 +158,19 @@ func (s *GmBoardService) SetShareGmBoard(ctx context.Context, gameID int32, shar
 	return models.New(s.DB).SetGameShareGmBoard(ctx, models.SetGameShareGmBoardParams{ID: gameID, ShareGmBoard: share})
 }
 
+// ListBoardPhaseIDs lists the game's action phases with at least one live
+// board item, in phase order.
+func (s *GmBoardService) ListBoardPhaseIDs(ctx context.Context, gameID int32) ([]int32, error) {
+	ids, err := models.New(s.DB).ListGmBoardPhaseIDs(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	if ids == nil {
+		ids = []int32{}
+	}
+	return ids, nil
+}
+
 // listItems reads the items and the cursor in one snapshot, so the cursor
 // never runs ahead of the items returned with it.
 func (s *GmBoardService) listItems(ctx context.Context, store gmItemStore, since *int64) (*core.GmBoardItems, error) {

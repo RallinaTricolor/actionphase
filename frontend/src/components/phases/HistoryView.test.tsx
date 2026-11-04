@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils/render';
 import { HistoryView } from './HistoryView';
 import { UtilityDrawerHarness } from '@/test-utils/utilityDrawer';
 import type { GamePhase } from '@/types/phases';
+import { makeGameWithDetails } from '@/test-utils/factories';
 
 describe('HistoryView', () => {
   const mockGameId = 1;
@@ -1198,6 +1200,61 @@ describe('HistoryView', () => {
       await user.hover(await screen.findByText('[[Compel]]'));
 
       expect(screen.queryByText(DESCRIPTION)).not.toBeInTheDocument();
+    });
+  });
+
+  // Where audience members and archive readers browse past phases, a phase
+  // whose board has something on it links to the board, while it's shared.
+  describe('results board link', () => {
+    let boardPhaseCalls: number;
+    const serve = ({ share, boards = [2] }: { share: boolean; boards?: number[] }) => {
+      boardPhaseCalls = 0;
+      server.use(
+        // The mocked current user is user 1, not the GM.
+        http.get('/api/v1/games/:gameId/details', () =>
+          HttpResponse.json(makeGameWithDetails({ id: mockGameId, gm_user_id: 99, state: 'in_progress', share_gm_board: share })),
+        ),
+        http.get('/api/v1/games/:gameId/gm-board-phases', () => {
+          boardPhaseCalls++;
+          return HttpResponse.json({ phase_ids: boards });
+        }),
+      );
+    };
+    const renderPhase = (props: { isGM?: boolean; isAudience?: boolean } = {}) =>
+      renderWithProviders(<HistoryView gameId={mockGameId} currentPhaseId={mockCurrentPhaseId} {...props} />, {
+        gameId: mockGameId,
+        initialRoute: `/games/${mockGameId}?tab=history&phase=2`,
+      });
+
+    it('offers the audience the board of a phase that has one, while it’s shared', async () => {
+      serve({ share: true });
+      const { router } = renderPhase({ isAudience: true });
+      const link = await screen.findByTestId('view-results-board');
+      expect(link).toHaveTextContent('View results board');
+      await userEvent.click(link);
+      expect(router.state.location.pathname).toBe(`/games/${mockGameId}/phases/2/board`);
+    });
+
+    it('offers nothing, and doesn’t ask, while the boards aren’t shared', async () => {
+      serve({ share: false });
+      renderPhase({ isAudience: true });
+      expect(await screen.findByRole('button', { name: /Back to History/ })).toBeInTheDocument();
+      expect(screen.queryByTestId('view-results-board')).not.toBeInTheDocument();
+      expect(boardPhaseCalls).toBe(0);
+    });
+
+    it('offers nothing for a phase with no board', async () => {
+      serve({ share: true, boards: [] });
+      renderPhase({ isAudience: true });
+      expect(await screen.findByRole('button', { name: /Back to History/ })).toBeInTheDocument();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(screen.queryByTestId('view-results-board')).not.toBeInTheDocument();
+    });
+
+    it('offers the GM their own board, shared or not', async () => {
+      serve({ share: false });
+      renderPhase({ isGM: true });
+      expect(await screen.findByTestId('view-results-board')).toHaveTextContent('Open results board');
     });
   });
 });

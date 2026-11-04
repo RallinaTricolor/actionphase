@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGmSettings } from '@/hooks/useGmBoard';
-import { apiClient } from '@/lib/api';
+import { useBoardSubmissions } from '@/hooks/useBoardSubmissions';
 import { boardCast, canReadRule } from '@/lib/gmBoard/cast';
 import { characterNames } from '@/lib/gmBoard/text';
 
@@ -15,11 +14,7 @@ import { characterNames } from '@/lib/gmBoard/text';
 export function useBoardPeople(gameId: number, phaseId: number) {
   const { allGameCharacters } = useGameContext();
   const { settings } = useGmSettings(gameId);
-  const actions = useQuery({
-    queryKey: ['gameActions', gameId],
-    queryFn: () => apiClient.phases.getGameActions(gameId).then((res) => res.data),
-    enabled: gameId > 0,
-  });
+  const actions = useBoardSubmissions(gameId, phaseId);
 
   const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
   const names = useMemo(() => {

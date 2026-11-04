@@ -14,6 +14,7 @@ const mockGame: GameWithDetails = {
   auto_accept_audience: false,
   allow_group_conversations: false,
   portrait_avatars: false,
+  share_gm_board: false,
   state: 'recruitment',
   current_players: 2,
   created_at: '2024-01-01T00:00:00Z',

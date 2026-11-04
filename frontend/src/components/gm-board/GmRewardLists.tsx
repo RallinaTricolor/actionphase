@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Badge, Button, Select, Spinner } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGmBoard, useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { apiClient } from '@/lib/api';
 import { lineEffect, lineFromItem, sheetTabsFrom } from '@/lib/gmBoard/rewards';
@@ -29,6 +30,7 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
   const layout = useSheetLayout(game).tabs;
   const { settings, isLoading } = useGmSettings(gameId);
   const settingsStore = useGmSettingsStore(gameId);
+  const readOnly = useBoardReadOnly();
   const [phaseId, setPhaseId] = useState<number | null>(phases[phases.length - 1]?.id ?? null);
   const activePhase = phaseId ?? phases[phases.length - 1]?.id ?? 0;
   const { board } = useGmBoard(gameId, activePhase, { enabled: activePhase > 0 });
@@ -111,13 +113,15 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
                     </Badge>
                   )}
                 </p>
-                <p className="text-content-secondary">{truncate(i.text, 90)}</p>
+                <p className={readOnly ? 'whitespace-pre-wrap text-content-secondary' : 'text-content-secondary'}>{readOnly ? i.text : truncate(i.text, 90)}</p>
                 {!i.choose && i.ops.length > 0 && <p className="text-xs text-content-tertiary">{lineEffect(layout, i)}</p>}
               </div>
               {board && <span className="text-xs text-content-tertiary">{given(i.id).length} given</span>}
-              <Button type="button" size="sm" variant="ghost" onClick={() => setEditing({ id: i.id, scope: i.scope })}>
-                Edit
-              </Button>
+              {!readOnly && (
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing({ id: i.id, scope: i.scope })}>
+                  Edit
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -128,15 +132,19 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
   return (
     <div className="space-y-6" data-testid="gm-reward-lists">
       <p className="text-sm text-content-secondary">
-        Define each reward once, then give it to people from Write. Everyone who gets it gets a copy of the same text and sheet change.
+        {readOnly
+          ? 'Rewards the GM defines once and gives to people from Write. Everyone who gets one gets a copy of the same text and sheet change.'
+          : 'Define each reward once, then give it to people from Write. Everyone who gets it gets a copy of the same text and sheet change.'}
       </p>
       <section className="space-y-2">
         <h3 className="text-base font-semibold text-content-primary">Every phase</h3>
         <p className="text-sm text-content-secondary">Rewards you hand out in every phase: scenario results, minor objectives, recurring prizes.</p>
         {list(gameItems)}
-        <Button type="button" size="sm" variant="secondary" onClick={() => create('game')} data-testid="new-game-reward">
-          + Reward for every phase
-        </Button>
+        {!readOnly && (
+          <Button type="button" size="sm" variant="secondary" onClick={() => create('game')} data-testid="new-game-reward">
+            + Reward for every phase
+          </Button>
+        )}
       </section>
       <section className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -157,15 +165,17 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
           <>
             <p className="text-sm text-content-secondary">This phase’s own bonus objectives and one-offs. “Given” counts are for this phase.</p>
             {list(phaseItems)}
-            <Button type="button" size="sm" variant="secondary" onClick={() => create('phase')} disabled={!board} data-testid="new-phase-reward">
-              + Reward for {phaseTitle}
-            </Button>
+            {!readOnly && (
+              <Button type="button" size="sm" variant="secondary" onClick={() => create('phase')} disabled={!board} data-testid="new-phase-reward">
+                + Reward for {phaseTitle}
+              </Button>
+            )}
           </>
         )}
       </section>
 
       <RewardItemEditor
-        item={editingItem}
+        item={readOnly ? null : editingItem}
         onClose={() => setEditing(null)}
         phaseTitle={activePhase ? phaseTitle : undefined}
         groups={groups}

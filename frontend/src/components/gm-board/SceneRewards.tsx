@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Select } from '@/components/ui';
+import { Badge, Button, Select } from '@/components/ui';
 import { lineEffect, lineText } from '@/lib/gmBoard/rewards';
 import { defaultGroup } from '@/lib/gmBoard/rewardState';
 import { shortName, truncate } from '@/lib/gmBoard/text';
@@ -43,14 +43,25 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
       {fromScene.map(({ characterId, line: l }) => {
         const state = rewards.stateFor(characterId);
         const summary = lineText(l, state.sheet.recs[l.id]).trim() || lineEffect(rewards.layout, l) || 'Nothing yet';
+        if (rewards.readOnly) {
+          return (
+            <Badge key={l.id} variant="neutral" title={summary} data-testid={`scene-reward-${l.id}`}>
+              {shortName(name(characterId))}: {truncate(summary, 60)}
+            </Badge>
+          );
+        }
         return (
           <Button key={l.id} type="button" size="sm" variant="outline" onClick={() => setEditing({ characterId, lineId: l.id })} data-testid={`scene-reward-${l.id}`}>
             {shortName(name(characterId))}: {truncate(summary, 40)}
           </Button>
         );
       })}
-      {!fromScene.length && <span className="text-xs text-content-secondary">Rewards or sheet changes someone gets from this scene. They show up in Write with their other rewards.</span>}
-      {who.length > 0 && (
+      {!fromScene.length && (
+        <span className="text-xs text-content-secondary">
+          {rewards.readOnly ? 'None.' : 'Rewards or sheet changes someone gets from this scene. They show up in Write with their other rewards.'}
+        </span>
+      )}
+      {who.length > 0 && !rewards.readOnly && (
         <span className="w-48">
           <Select aria-label="Add a sheet update for someone in the scene" selectSize="sm" value="" onChange={(e) => e.target.value && add(Number(e.target.value))} data-testid="scene-add-reward">
             <option value="">+ Sheet update</option>

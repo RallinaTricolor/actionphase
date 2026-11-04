@@ -228,6 +228,37 @@ func (q *Queries) ListGmBoardItemsSince(ctx context.Context, arg ListGmBoardItem
 	return items, nil
 }
 
+const listGmBoardPhaseIDs = `-- name: ListGmBoardPhaseIDs :many
+SELECT p.id FROM game_phases p
+WHERE p.game_id = $1
+  AND p.phase_type = 'action'
+  AND EXISTS (SELECT 1 FROM gm_board_items i WHERE i.phase_id = p.id AND i.deleted = false)
+ORDER BY p.phase_number
+`
+
+// The game's action phases whose board has at least one live item, in phase
+// order. Goes through game_phases so the lookup uses gm_board_items' primary
+// key (phase_id first); the table has no game_id index.
+func (q *Queries) ListGmBoardPhaseIDs(ctx context.Context, gameID int32) ([]int32, error) {
+	rows, err := q.db.Query(ctx, listGmBoardPhaseIDs, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGmSettingsItems = `-- name: ListGmSettingsItems :many
 SELECT game_id, kind, item_key, doc, version, seq, deleted, updated_at, updated_by FROM gm_settings_items
 WHERE game_id = $1 AND deleted = false

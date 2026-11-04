@@ -352,3 +352,33 @@ func TestSettings_SharingToggleAndGameLevelItems(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 }
+
+func TestBoardPhases_SameViewersAsTheBoard(t *testing.T) {
+	s := newBoardScenario(t, "gmb_phases")
+	url := s.gameURL + "/gm-board-phases"
+	phaseIDs := func(role string) []int32 {
+		t.Helper()
+		rec := s.call("GET", url, role, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var out BoardPhasesResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+		return out.PhaseIDs
+	}
+
+	assert.Equal(t, []int32{}, phaseIDs("gm"), "an empty list, not null")
+	require.Equal(t, http.StatusOK, s.call("POST", s.boardURL+"/changes", "gm", changes(change("notes", "notes", 0, map[string]any{"text": "x"}))).Code)
+	assert.Equal(t, []int32{s.phase.ID}, phaseIDs("cogm"))
+
+	s.setShared(false)
+	rec := s.call("GET", url, "audience", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.True(t, strings.EqualFold(detail(rec), NotSharedMessage), detail(rec))
+	assert.Equal(t, http.StatusForbidden, s.call("GET", url, "player", nil).Code)
+
+	s.setShared(true)
+	assert.Equal(t, []int32{s.phase.ID}, phaseIDs("audience"))
+	assert.Equal(t, http.StatusForbidden, s.call("GET", url, "outsider", nil).Code, "a running game is closed to outsiders")
+
+	s.testDB.SetGameStateDirectly(t, s.game.ID, core.GameStateCompleted)
+	assert.Equal(t, []int32{s.phase.ID}, phaseIDs("outsider"), "a shared archive is open to anyone")
+}

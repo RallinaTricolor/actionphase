@@ -12,6 +12,8 @@ interface MapChecksProps {
   onRestore: (flag: BoardFlag) => void;
   onCreateScene: (locationId: string, chunkId: string) => void;
   onOpenScene: (sceneId: string) => void;
+  /** Checks to read: no dismiss or restore, and no creating scenes. */
+  readOnly?: boolean;
 }
 
 const KIND_LABEL: Record<BoardFlag['kind'], string> = {
@@ -22,8 +24,8 @@ const KIND_LABEL: Record<BoardFlag['kind'], string> = {
 };
 
 /** Things on the board that are probably mistakes. Each can be dismissed (and restored). */
-export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore, onCreateScene, onOpenScene }: MapChecksProps) {
-  const go = { onOpenCard, onResolveAt, onCreateScene, onOpenScene };
+export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore, onCreateScene, onOpenScene, readOnly = false }: MapChecksProps) {
+  const go = { onOpenCard, onResolveAt, onCreateScene, onOpenScene, readOnly };
   const [showDismissed, setShowDismissed] = useState(false);
   const dismissed = model.flags.filter((f) => model.board.dismissedFlags[f.key]);
   return (
@@ -66,13 +68,13 @@ export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore
   );
 }
 
-interface FlagRowProps extends Pick<MapChecksProps, 'onOpenCard' | 'onResolveAt' | 'onCreateScene' | 'onOpenScene'> {
+interface FlagRowProps extends Pick<MapChecksProps, 'onOpenCard' | 'onResolveAt' | 'onCreateScene' | 'onOpenScene' | 'readOnly'> {
   flag: BoardFlag;
   model: MapModel;
   children: React.ReactNode;
 }
 
-function FlagRow({ flag, model, onOpenCard, onResolveAt, onCreateScene, onOpenScene, children }: FlagRowProps) {
+function FlagRow({ flag, model, onOpenCard, onResolveAt, onCreateScene, onOpenScene, readOnly, children }: FlagRowProps) {
   const cardId = flagCardId(flag);
   const sceneId = flag.kind === 'out' ? flag.sceneId : undefined;
   return (
@@ -85,19 +87,27 @@ function FlagRow({ flag, model, onOpenCard, onResolveAt, onCreateScene, onOpenSc
       </div>
       <div className="flex justify-end gap-1">
         {flag.kind === 'meeting' ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => onCreateScene(flag.locationId, flag.chunkId)}>
-            Create scene
-          </Button>
+          !readOnly && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onCreateScene(flag.locationId, flag.chunkId)}>
+              Create scene
+            </Button>
+          )
         ) : sceneId ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => onOpenScene(sceneId)}>
             Open scene
           </Button>
-        ) : (
-          <Button type="button" variant="ghost" size="sm" onClick={() => (cardId ? onOpenCard(cardId) : onResolveAt(flag.chunkId))}>
-            {cardId ? 'Open card' : 'Show'}
+        ) : cardId ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onOpenCard(cardId)}>
+            Open card
           </Button>
+        ) : (
+          !readOnly && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onResolveAt(flag.chunkId)}>
+              Show
+            </Button>
+          )
         )}
-        {children}
+        {!readOnly && children}
       </div>
     </li>
   );

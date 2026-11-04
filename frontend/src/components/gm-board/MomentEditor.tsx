@@ -2,7 +2,7 @@ import { useEffect, useRef, type KeyboardEvent, type SyntheticEvent } from 'reac
 import { Badge, Button, Textarea } from '@/components/ui';
 import { useBoundText } from '@/hooks/useBoundText';
 import { cardLabel, OUTCOMES } from '@/lib/gmBoard/cards';
-import { isNote, readerText } from '@/lib/gmBoard/moments';
+import { isNote, readerText, reads } from '@/lib/gmBoard/moments';
 import { dropOwnText, ownTextReaders, readersNote, setOwnText, setReader } from '@/lib/gmBoard/scenes';
 import { shortName, truncate } from '@/lib/gmBoard/text';
 import type { Moment } from '@/lib/gmBoard/types';
@@ -31,6 +31,46 @@ export function MomentEditor({ moment, index, model, actions, focused, autoFocus
   const name = (id: number) => shortName(model.names.get(id) ?? `Character ${id}`);
   const under = readersNote(moment, model.scene, model.canRead, model.names);
   const change = (fn: (m: Moment) => Moment) => actions.change(moment.id, fn);
+
+  if (model.readOnly) {
+    const readers = model.readers.filter((id) => reads(moment, id));
+    return (
+      <section
+        aria-label={`Moment ${number}`}
+        id={`moment-${moment.id}`}
+        data-testid={`moment-${moment.id}`}
+        className={`space-y-2 rounded-lg border p-3 ${focused ? 'border-theme-strong' : 'border-theme-default'} ${note ? 'surface-sunken' : 'surface-base'}`}
+      >
+        <div className="flex flex-wrap items-center gap-1">
+          <Badge variant="neutral" size="sm">
+            {number}
+          </Badge>
+          {note ? (
+            <span className="text-xs text-content-tertiary">GM note: nobody reads it</span>
+          ) : (
+            readers.map((id) => (
+              <Badge key={id} variant={typeof moment.ownText[id] === 'string' ? 'primary' : 'neutral'} size="sm">
+                {typeof moment.ownText[id] === 'string' ? '✎' : '✓'} {name(id)}
+              </Badge>
+            ))
+          )}
+        </div>
+        <MomentSource moment={moment} model={model} />
+        {moment.text.trim() ? (
+          <p className="whitespace-pre-wrap text-content-primary">{moment.text}</p>
+        ) : (
+          <p className="text-sm text-content-tertiary">Nothing written yet.</p>
+        )}
+        {ownTextReaders(moment).map((id) => (
+          <div key={id} className="border-l-4 border-semantic-info pl-2">
+            <p className="text-xs font-medium text-content-secondary">{name(id)} reads instead</p>
+            <p className="whitespace-pre-wrap text-content-primary">{moment.ownText[id]}</p>
+          </div>
+        ))}
+        {under && <p className="text-xs text-content-secondary">{under}</p>}
+      </section>
+    );
+  }
 
   return (
     <section

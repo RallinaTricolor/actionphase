@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, CardBody, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, Spinner } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
+import { useBoardSubmissions } from '@/hooks/useBoardSubmissions';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
-import { apiClient } from '@/lib/api';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
 import { boardCast } from '@/lib/gmBoard/cast';
 import { codexDoc, inPhase, newCodexEntry, phaseLocations } from '@/lib/gmBoard/codex';
@@ -52,12 +52,9 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
   const { settings } = useGmSettings(gameId);
   const sheetItems = useGameCharacterSheetItems(gameId);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const readOnly = useBoardReadOnly();
 
-  const actions = useQuery({
-    queryKey: ['gameActions', gameId],
-    queryFn: () => apiClient.phases.getGameActions(gameId).then((res) => res.data),
-    enabled: gameId > 0,
-  });
+  const actions = useBoardSubmissions(gameId, phase.id);
 
   const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
   const names = useMemo(() => {
@@ -216,13 +213,18 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
             {words} words · {cardsOf(ownerId)} card{cardsOf(ownerId) === 1 ? '' : 's'}
           </span>
           <span className="flex-1" />
-          <Button type="button" size="sm" variant={isDone ? 'secondary' : 'primary'} onClick={toggleDone} title={isDone ? 'Mark as not read yet' : undefined}>
-            {isDone ? '✓ Read' : 'Done reading → next'}
-          </Button>
+          {readOnly ? (
+            isDone && <Badge variant="success">✓ Read</Badge>
+          ) : (
+            <Button type="button" size="sm" variant={isDone ? 'secondary' : 'primary'} onClick={toggleDone} title={isDone ? 'Mark as not read yet' : undefined}>
+              {isDone ? '✓ Read' : 'Done reading → next'}
+            </Button>
+          )}
         </div>
         <p className="text-sm text-content-secondary">
-          Card only what matters. Select a sentence or two to card just that part; hover a paragraph to card all of it.
-          Highlighted text is already on a card: click it to open the card.
+          {readOnly
+            ? 'Highlighted text is on a card: click it to open the card.'
+            : 'Card only what matters. Select a sentence or two to card just that part; hover a paragraph to card all of it. Highlighted text is already on a card: click it to open the card.'}
         </p>
         <SubmissionReader
           ownerId={ownerId}
@@ -231,12 +233,13 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
           characters={characters}
           codex={codex}
           sheetItems={sheetItems.get(ownerId)}
-          onAddCard={addCard}
-          onAddCodex={(text) => onOpenCodex(text)}
-          onAddAward={rewards ? setAwarding : undefined}
+          readOnly={readOnly}
+          onAddCard={readOnly ? undefined : addCard}
+          onAddCodex={readOnly ? undefined : (text) => onOpenCodex(text)}
+          onAddAward={rewards && !readOnly ? setAwarding : undefined}
           onOpenCard={setOpenCardId}
         />
-        {rewards && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
+        {rewards && !readOnly && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
       </article>
 
       <div className="sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
@@ -256,9 +259,11 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
               setOpenCardId(null);
             }}
             onClose={() => setOpenCardId(null)}
+            readOnly={readOnly}
           />
         ) : (
           <ReadSidebar
+            readOnly={readOnly}
             ownerId={ownerId}
             names={names}
             submitters={order}

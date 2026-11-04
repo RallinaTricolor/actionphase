@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api';
 import { getActionPhaseLabel, getActionPhaseColor } from '@/types/phases';
 import { CommonRoom } from '@/components/messages/CommonRoom';
 import { PhaseHistoryPolls } from './PhaseHistoryPolls';
+import { ViewResultsBoardButton } from '@/components/gm-board/ViewResultsBoardButton';
 import { Button, Alert } from '@/components/ui';
 import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMarkdown';
 import { useExpandedSet } from '@/hooks/useExpandedSet';
@@ -89,6 +90,7 @@ interface HistoryViewProps {
 export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience = false, isPublicArchive = false }: HistoryViewProps) {
   const gameContext = useOptionalGameContext();
   const portraitAvatars = gameContext?.game?.portrait_avatars ?? false;
+  const sharesBoards = gameContext?.game?.share_gm_board ?? false;
   const allGameCharacters = gameContext?.allGameCharacters;
 
   // Submissions and results carry only character_id/character_name, so the
@@ -388,9 +390,19 @@ export function HistoryView({ gameId, currentPhaseId, isGM = false, isAudience =
           />
         ) : (
           <div className="surface-base rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-bold text-content-primary mb-4">
-              {selectedPhase.title || getActionPhaseLabel(selectedPhase)}
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h3 className="text-xl font-bold text-content-primary">
+                {selectedPhase.title || getActionPhaseLabel(selectedPhase)}
+              </h3>
+              {/* The board's viewers: the GM, or audience-level access (the
+                  audience, or anyone in a public archive) while it's shared. */}
+              <ViewResultsBoardButton
+                gameId={gameId}
+                phaseId={selectedPhase.id}
+                canView={isGM || (hasArchiveAccess && sharesBoards)}
+                isGM={isGM}
+              />
+            </div>
 
             {/* Tab Navigation */}
             <div className="flex border-b border-theme-default mb-6">

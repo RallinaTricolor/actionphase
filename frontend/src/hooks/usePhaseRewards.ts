@@ -47,14 +47,18 @@ const gameSheetsKey = (gameId: number) => ['gameCharacterData', gameId] as const
  * the phase, so one result carries them. They're resynced whenever the lines,
  * the live sheet or the carrying result change, and by `ensureSynced` just
  * before the board publishes.
+ *
+ * Read-only (a viewer, or an archived game) never writes: no sync, no edits,
+ * and no load of the phase's drafts, which only the GM may read.
  */
-export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc | undefined) {
+export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc | undefined, options: { readOnly?: boolean } = {}) {
+  const readOnly = !!options.readOnly;
   const qc = useQueryClient();
   const { game, allGameCharacters } = useGameContext();
   const layout = useSheetLayout(game).tabs;
   const { settings } = useGmSettings(gameId);
-  const boardStore = useGmBoardStore(gameId, phaseId);
-  const settingsStore = useGmSettingsStore(gameId);
+  const boardStore = useGmBoardStore(gameId, phaseId, { readOnly });
+  const settingsStore = useGmSettingsStore(gameId, { readOnly });
   const results = useGameActionResults(gameId);
   const sheets = useQuery({
     queryKey: gameSheetsKey(gameId),
@@ -65,7 +69,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
   const drafts = useQuery({
     queryKey: phaseDraftsKey(gameId, phaseId),
     queryFn: () => apiClient.phases.listPhaseDraftCharacterUpdates(gameId, phaseId).then((r) => r.data),
-    enabled: gameId > 0 && phaseId > 0,
+    enabled: !readOnly && gameId > 0 && phaseId > 0,
   });
 
   const names = useMemo(() => new Map(allGameCharacters.map((c) => [c.id, c.name])), [allGameCharacters]);
@@ -187,7 +191,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
     [gameId, phaseId, qc, board?.rewards, updateRewards],
   );
 
-  const ready = !!board && !!settings && results.isSuccess && sheets.isSuccess && drafts.isSuccess;
+  const ready = !!board && !!settings && results.isSuccess && sheets.isSuccess && (readOnly || drafts.isSuccess);
   const characterIds = useMemo(() => {
     const ids = new Set(Object.keys(board?.rewards ?? {}).map(Number));
     for (const d of drafts.data ?? []) if (d.from_rewards && unpublishedIds.has(d.action_result_id)) ids.add(d.character_id);
@@ -195,7 +199,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
   }, [board?.rewards, drafts.data, unpublishedIds]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || readOnly) return;
     const timer = setTimeout(() => {
       for (const characterId of characterIds) {
         const state = stateFor(characterId);
@@ -228,7 +232,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
       }
     }, REWARD_SYNC_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [ready, characterIds, stateFor, plan, drafts.data, replaceAsked, setSync, write, qc, gameId, phaseId]);
+  }, [ready, readOnly, characterIds, stateFor, plan, drafts.data, replaceAsked, setSync, write, qc, gameId, phaseId]);
 
   /**
    * Brings a character's drafts in step with the live sheet now, before the
@@ -237,6 +241,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
    */
   const ensureSynced = useCallback(
     async (characterId: number) => {
+      if (readOnly) return;
       if (!board?.rewards[characterId]?.lines.length && !(drafts.data ?? []).some((d) => d.character_id === characterId && d.from_rewards)) return;
       const [rows, freshDrafts] = await Promise.all([
         qc.fetchQuery({ queryKey: gameSheetsKey(gameId), queryFn: () => apiClient.characters.getGameCharacterData(gameId).then((r) => r.data), staleTime: 0 }),
@@ -248,7 +253,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
       if (p.handMade.length && p.desired.length && !replaceAsked[characterId]) return;
       if (!p.inStep) await write(characterId, p.target, p.desired, !!replaceAsked[characterId], state.carrier.chain?.head.id);
     },
-    [board?.rewards, drafts.data, qc, gameId, phaseId, stateFor, plan, write, replaceAsked],
+    [readOnly, board?.rewards, drafts.data, qc, gameId, phaseId, stateFor, plan, write, replaceAsked],
   );
 
   const syncFor = useCallback((characterId: number): RewardSync => syncs[characterId] ?? { state: 'synced', handMade: [] }, [syncs]);
@@ -256,6 +261,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
 
   return {
     ready,
+    readOnly,
     layout,
     groups: settings?.rewardGroups ?? [],
     scales: settings?.scales ?? [],

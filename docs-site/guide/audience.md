@@ -19,6 +19,10 @@ As an audience member, your game view shows an **Audience** tab with two sub-tab
 
 Both tabs are read-only. Audience members cannot post, vote, submit actions, or interact with any game content — unless they have been assigned an NPC (see below).
 
+### The GM's results board
+
+If the GM turns on **Share the results board** (on the board's Game setup page), audience members can also follow the GM's results board, read-only: open a past action phase in the **History** tab and choose **View results board** (on a screen at least 1024 pixels wide). It shows everything on the board, including the GM's notes and the codex's secrets, and it updates as the GM works. If the GM stops sharing, the board says so the next time it checks for changes.
+
 ## Playing an NPC as Audience
 
 Once assigned an NPC by the GM, your experience works similarly to a player's — with one key difference: you do not submit actions during action phases. You will not see the action submission panel, and the NPC is not expected to act.

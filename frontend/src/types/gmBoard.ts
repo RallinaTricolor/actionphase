@@ -38,3 +38,6 @@ export type BoardItemKind = BoardItemChange['kind'];
 export type SettingsItemKind = SettingsItemChange['kind'];
 
 export type GmSharing = components['schemas']['SharingResponse'];
+
+/** The game's action phases whose board has something on it. */
+export type GmBoardPhases = components['schemas']['BoardPhasesResponse'];

@@ -638,6 +638,18 @@ components:
                 - key
                 - base_version
             type: object
+        BoardPhasesResponse:
+            additionalProperties: false
+            properties:
+                phase_ids:
+                    description: The game's action phases whose board has at least one item, in phase order
+                    items:
+                        format: int32
+                        type: integer
+                    type: array
+            required:
+                - phase_ids
+            type: object
         ChangeEmailRequest:
             additionalProperties: false
             properties:
@@ -3320,6 +3332,8 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                share_gm_board:
+                    type: boolean
                 start_date:
                     format: date-time
                     type: string
@@ -3350,6 +3364,7 @@ components:
                 - auto_accept_audience
                 - allow_group_conversations
                 - portrait_avatars
+                - share_gm_board
                 - created_at
                 - updated_at
             type: object
@@ -3454,6 +3469,8 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                share_gm_board:
+                    type: boolean
                 start_date:
                     format: date-time
                     type: string
@@ -3485,6 +3502,7 @@ components:
                 - auto_accept_audience
                 - allow_group_conversations
                 - portrait_avatars
+                - share_gm_board
                 - created_at
                 - updated_at
             type: object
@@ -10648,6 +10666,39 @@ paths:
                 - Common Room
             x-access: public
             x-access-reason: reads or changes only the caller's own records
+    /games/{gameID}/gm-board-phases:
+        get:
+            description: The game's action phases whose board has at least one item, so a viewer can be offered only boards with something on them. Same viewers as the board.
+            operationId: listGmBoardPhases
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    minimum: 1
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BoardPhasesResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Not the GM, and the game doesn't share its boards with this viewer
+                "422":
+                    description: Request failed validation
+            security:
+                - bearerAuth: []
+            summary: List the phases that have a results board
+            tags:
+                - Results Board
+            x-access: audience
     /games/{gameID}/gm-settings:
         get:
             description: The codex, character names, reward template and similar game-level setup, plus whether the boards are shared. Same viewers as the board.

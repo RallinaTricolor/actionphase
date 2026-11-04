@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Card, CardBody, Drawer, Select, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
@@ -64,6 +65,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const view = parseView(params.get('view'));
   const clusterId = params.get('cluster');
   const { showToast } = useToast();
+  const readOnly = useBoardReadOnly();
   const store = useGmBoardStore(gameId, phase.id);
   const settingsStore = useGmSettingsStore(gameId);
   const { cast, names, nameLists, submitters, settings, canRead, isLoading } = useBoardPeople(gameId, phase.id);
@@ -123,6 +125,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const rowName = (id: string) => model.rows.find((r) => r.id === id)?.name ?? '';
 
   const actions: MapActions = {
+    readOnly,
     openCard: setOpenCardId,
     addGmCards: setGmCards,
     moveCard: (card, target: DropTarget) => {
@@ -215,9 +218,11 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
       <Card variant="bordered" padding="md" data-testid="gm-board-step-map">
         <CardBody className="space-y-3">
           <p className="text-content-primary">The Map’s rows are this phase’s locations, and there are none yet.</p>
-          <Button type="button" variant="primary" onClick={() => onOpenCodex()}>
-            Add a location in the codex
-          </Button>
+          {!readOnly && (
+            <Button type="button" variant="primary" onClick={() => onOpenCodex()}>
+              Add a location in the codex
+            </Button>
+          )}
         </CardBody>
       </Card>
     );
@@ -227,9 +232,11 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
       <Card variant="bordered" padding="md" data-testid="gm-board-step-map">
         <CardBody className="space-y-3">
           <p className="text-content-primary">The Map’s columns are time slots, and there are none yet.</p>
-          <Button type="button" variant="primary" onClick={() => DEFAULT_CHUNKS.forEach(putChunk)}>
-            Add Pre-Scenario and Slots 1–3
-          </Button>
+          {!readOnly && (
+            <Button type="button" variant="primary" onClick={() => DEFAULT_CHUNKS.forEach(putChunk)}>
+              Add Pre-Scenario and Slots 1–3
+            </Button>
+          )}
         </CardBody>
       </Card>
     );
@@ -259,11 +266,13 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             ))}
           </Select>
         </div>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setClustersOpen(true)}>
-          Edit clusters
-        </Button>
+        {!readOnly && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setClustersOpen(true)}>
+            Edit clusters
+          </Button>
+        )}
         <span className="flex-1" />
-        {view !== 'stances' && (
+        {view !== 'stances' && !readOnly && (
           <>
             <Button type="button" size="sm" variant="secondary" onClick={() => setGmCards({})}>
               + GM cards…
@@ -279,7 +288,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
       </div>
 
       {view === 'stances' ? (
-        <StanceMatrix stances={board.stances} players={stancePlayers} names={names} focusId={stanceFocus} onSet={setStance} onSetMany={setMany} />
+        <StanceMatrix stances={board.stances} players={stancePlayers} names={names} focusId={stanceFocus} onSet={setStance} onSetMany={setMany} readOnly={readOnly} />
       ) : (
         <div className="flex items-start gap-4">
           <div className="min-w-0 flex-1 space-y-3">
@@ -312,6 +321,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
                 }}
                 onClose={() => setOpenCardId(null)}
                 onReadSubmission={!openCard.gm && submitters.includes(openCard.characterId) ? () => onReadSubmission(openCard.characterId) : undefined}
+                readOnly={readOnly}
               />
             ) : (
               <MapChecks
@@ -322,6 +332,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
                 onRestore={(f) => store.remove('flag', f.key)}
                 onCreateScene={actions.createScene}
                 onOpenScene={onOpenScene}
+                readOnly={readOnly}
               />
             )}
           </div>

@@ -284,6 +284,7 @@ export function makeConversation(overrides: Partial<Conversation> = {}): Convers
  * `auto_accept_audience`, `portrait_avatars` and `current_players`: all plain
  * non-omitempty fields, so the key is always present. The first three are
  * settings that default false; `current_players` is a computed count.
+ * `share_gm_board` (results board sharing) also defaults false.
  *
  * Note `state` includes 'setup' -- the lifecycle is
  * setup -> recruitment -> character_creation -> in_progress -> paused ->
@@ -303,6 +304,7 @@ export function makeGameWithDetails(
     allow_group_conversations: false,
     auto_accept_audience: false,
     portrait_avatars: false,
+    share_gm_board: false,
     current_players: 1,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',

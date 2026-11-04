@@ -129,16 +129,18 @@ export function MapByCharacter({ model, actions, drag }: MapByCharacterProps) {
                             <RowCard card={c} model={model} actions={actions} drag={drag} />
                           </div>
                         ))}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="!px-1 !py-0 text-xs opacity-0 focus:opacity-100 group-hover:opacity-100"
-                          onClick={() => actions.addGmCards({ characterIds: [id], chunkId: s.id, locationId: where ?? undefined })}
-                          aria-label={`Add a GM card for ${name} in ${s.name}`}
-                        >
-                          + GM card
-                        </Button>
+                        {!actions.readOnly && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="!px-1 !py-0 text-xs opacity-0 focus:opacity-100 group-hover:opacity-100"
+                            onClick={() => actions.addGmCards({ characterIds: [id], chunkId: s.id, locationId: where ?? undefined })}
+                            aria-label={`Add a GM card for ${name} in ${s.name}`}
+                          >
+                            + GM card
+                          </Button>
+                        )}
                       </MapDropCell>
                     );
                   })}
@@ -166,7 +168,7 @@ function RowCard({ card, model, actions, drag }: { card: Card; model: MapModel; 
       flagged={model.outCards.has(card.id)}
       dragging={drag.cardId === card.id}
       onOpen={actions.openCard}
-      onDragStart={drag.start}
+      onDragStart={actions.readOnly ? undefined : drag.start}
       onDragEnd={drag.end}
     />
   );

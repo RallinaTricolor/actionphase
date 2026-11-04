@@ -2,6 +2,7 @@ import { BaseApiClient } from './client';
 import type {
   BoardItemChange,
   GmItems,
+  GmBoardPhases,
   GmItemsWritten,
   GmSettings,
   GmSharing,
@@ -32,6 +33,11 @@ export class GmBoardApi extends BaseApiClient {
 
   async applySettingsChanges(gameId: number, changes: SettingsItemChange[]) {
     return this.client.post<GmItemsWritten>(`/api/v1/games/${gameId}/gm-settings/changes`, { changes });
+  }
+
+  /** The action phases whose board has at least one item, in phase order. */
+  async listBoardPhases(gameId: number) {
+    return this.client.get<GmBoardPhases>(`/api/v1/games/${gameId}/gm-board-phases`);
   }
 
   /** Share the boards read-only, or stop. Works in any game state. */

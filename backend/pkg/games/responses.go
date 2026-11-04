@@ -32,12 +32,17 @@ type GameResponse struct {
 	AutoAcceptAudience      bool           `json:"auto_accept_audience"`
 	AllowGroupConversations bool           `json:"allow_group_conversations"`
 	PortraitAvatars         bool           `json:"portrait_avatars"`
-	BannerURL               *string        `json:"banner_url,omitempty"`
-	CommonRoomOpenDay       *int16         `json:"common_room_open_day,omitempty"`
-	CommonRoomOpenTime      *string        `json:"common_room_open_time,omitempty"`
-	CommonRoomCloseDay      *int16         `json:"common_room_close_day,omitempty"`
-	CommonRoomCloseTime     *string        `json:"common_room_close_time,omitempty"`
-	ScheduleTimezone        *string        `json:"schedule_timezone,omitempty"`
+	// Whether the GM shares the results boards read-only (with the audience
+	// while the game runs, with everyone once it is a public archive). Lets a
+	// viewer's client offer the board without asking the board endpoints,
+	// which refuse viewers while sharing is off.
+	ShareGmBoard        bool    `json:"share_gm_board"`
+	BannerURL           *string `json:"banner_url,omitempty"`
+	CommonRoomOpenDay   *int16  `json:"common_room_open_day,omitempty"`
+	CommonRoomOpenTime  *string `json:"common_room_open_time,omitempty"`
+	CommonRoomCloseDay  *int16  `json:"common_room_close_day,omitempty"`
+	CommonRoomCloseTime *string `json:"common_room_close_time,omitempty"`
+	ScheduleTimezone    *string `json:"schedule_timezone,omitempty"`
 	// A POINTER because legacy games genuinely have no community (req 5). A
 	// zero int32 would render as community 0, which no client can distinguish
 	// from "unset" -- absent is the honest encoding.

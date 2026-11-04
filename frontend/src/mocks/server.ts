@@ -145,6 +145,16 @@ const handlers = [
     return HttpResponse.json({ items: [], cursor: 0, share_gm_board: false });
   }),
 
+  // BoardPhasesResponse (gmBoard.ts listBoardPhases): no phase has a board.
+  http.get('/api/v1/games/:gameId/gm-board-phases', () => {
+    return HttpResponse.json({ phase_ids: [] });
+  }),
+
+  // The audience listing of submissions (History, and the board for viewers).
+  http.get('/api/v1/games/:gameId/action-submissions/all', () => {
+    return HttpResponse.json({ action_submissions: [], total: 0 });
+  }),
+
   http.get('/api/v1/games/:gameId/phases', () => {
     return HttpResponse.json([]);
   }),

@@ -103,7 +103,7 @@ export function RewardsTable({ characterIds, name, stateFor, onOpen, onBack }: R
                           <Checkbox
                             aria-label={`${i.name} for ${name(id)}`}
                             checked={state.lines.some((l) => l.itemId === i.id)}
-                            disabled={state.locked}
+                            disabled={state.locked || rewards.readOnly}
                             onChange={() => rewards.toggleItem(id, i)}
                           />
                         </td>

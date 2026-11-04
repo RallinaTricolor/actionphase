@@ -16,6 +16,8 @@ interface StanceMatrixProps {
   onSet: (from: number, to: number, stance: Stance) => void;
   /** Sets every listed pair to one value ("Set several at once"). */
   onSetMany: (keys: string[], value: StanceValue | '') => void;
+  /** A cell still opens its pair, to read the note; nothing can be set. */
+  readOnly?: boolean;
 }
 
 const tone = (value: string) => STANCES.find((s) => s.value === value)?.tone ?? 'neutral';
@@ -25,7 +27,7 @@ const tone = (value: string) => STANCES.find((s) => s.value === value)?.tone ?? 
  * toward whom. Click a cell to set it and add a note. A strike on someone
  * who thinks it's an alliance is marked.
  */
-export function StanceMatrix({ stances, players, names, focusId = null, onSet, onSetMany }: StanceMatrixProps) {
+export function StanceMatrix({ stances, players, names, focusId = null, onSet, onSetMany, readOnly = false }: StanceMatrixProps) {
   const [pair, setPair] = useState<[number, number] | null>(null);
   const strikes = players.flatMap((a) =>
     players.filter((b) => {
@@ -103,10 +105,11 @@ export function StanceMatrix({ stances, players, names, focusId = null, onSet, o
           names={names}
           onSet={(stance) => onSet(pair[0], pair[1], stance)}
           onClose={() => setPair(null)}
+          readOnly={readOnly}
         />
       )}
 
-      <SetSeveral key={focusId ?? 'none'} players={players} focusId={focusId} onSetMany={onSetMany} />
+      {!readOnly && <SetSeveral key={focusId ?? 'none'} players={players} focusId={focusId} onSetMany={onSetMany} />}
 
       <section className="space-y-1" aria-label="Planned strikes">
         <h3 className="text-sm font-semibold text-content-primary">Planned strikes</h3>
@@ -134,9 +137,10 @@ interface PairEditorProps {
   names: Map<number, string>;
   onSet: (stance: Stance) => void;
   onClose: () => void;
+  readOnly: boolean;
 }
 
-function PairEditor({ from, to, stances, names, onSet, onClose }: PairEditorProps) {
+function PairEditor({ from, to, stances, names, onSet, onClose, readOnly }: PairEditorProps) {
   const current = stances[`${from}|${to}`] ?? { value: '' };
   const note = useBoundText(current.note ?? '');
   const who = `${names.get(from) ?? '?'} → ${names.get(to) ?? '?'}`;
@@ -149,7 +153,7 @@ function PairEditor({ from, to, stances, names, onSet, onClose }: PairEditorProp
         </Button>
       </div>
       <div className="grid grid-cols-[12rem_minmax(0,1fr)] gap-2">
-        <Select id={`stance-${from}-${to}-value`} label="Stance" value={current.value} onChange={(e) => onSet({ ...current, value: e.target.value as StanceValue | '' })}>
+        <Select id={`stance-${from}-${to}-value`} label="Stance" value={current.value} disabled={readOnly} onChange={(e) => onSet({ ...current, value: e.target.value as StanceValue | '' })}>
           <option value="">Not set</option>
           {STANCES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -160,8 +164,9 @@ function PairEditor({ from, to, stances, names, onSet, onClose }: PairEditorProp
         <Input
           id={`stance-${from}-${to}-note`}
           label="Note"
-          placeholder="Why, or what they want"
+          placeholder={readOnly ? undefined : 'Why, or what they want'}
           value={note.text}
+          readOnly={readOnly}
           {...note.bind}
           onChange={(e) => {
             note.setText(e.target.value);

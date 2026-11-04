@@ -65,6 +65,20 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
             <blockquote className="mt-1 whitespace-pre-wrap text-sm text-content-primary">“{card.quote}”</blockquote>
           </details>
         )}
+        {model.readOnly ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {isWaiting(card) ? (
+              <Badge variant="primary" size="sm">
+                Waiting
+              </Badge>
+            ) : (
+              (() => {
+                const o = OUTCOMES.find((x) => x.value === card.outcome);
+                return o && <Badge variant={o.tone} size="sm">{o.label}</Badge>;
+              })()
+            )}
+          </div>
+        ) : (
         <div className="flex flex-wrap items-center gap-1">
           {isWaiting(card) ? (
             <Button type="button" size="sm" variant="secondary" title="It happens in this scene" onClick={() => onTrigger(card)}>
@@ -91,6 +105,7 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
             {used ? '+ Another moment' : '→ Moment'}
           </Button>
         </div>
+        )}
       </div>
     );
   };
@@ -161,11 +176,17 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
         <div className="space-y-1 rounded-lg border border-theme-default p-2">
           <div className="text-xs font-medium text-content-tertiary">Also at {placeName(scene.locationId)} at this time</div>
           <div className="flex flex-wrap gap-1">
-            {others.map((id) => (
+            {others.map((id) =>
+              model.readOnly ? (
+                <Badge key={id} variant="neutral" size="sm">
+                  {shortName(name(id))}
+                </Badge>
+              ) : (
               <Button key={id} type="button" size="sm" variant="secondary" onClick={() => onJoin(id)} aria-label={`Add ${name(id)} to the scene`}>
                 + {shortName(name(id))}
               </Button>
-            ))}
+              ),
+            )}
           </div>
         </div>
       )}

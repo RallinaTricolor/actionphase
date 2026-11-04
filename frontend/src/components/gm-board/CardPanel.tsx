@@ -133,11 +133,13 @@ export function CardPanel({
             onChange({ [field]: e.target.value });
           }}
         />
-        {!readOnly && (
+        {(!readOnly || onReadSubmission) && (
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="secondary" onClick={split}>
-              Split at the cursor
-            </Button>
+            {!readOnly && (
+              <Button type="button" size="sm" variant="secondary" onClick={split}>
+                Split at the cursor
+              </Button>
+            )}
             {onReadSubmission && (
               <Button type="button" size="sm" variant="ghost" onClick={onReadSubmission}>
                 Read the submission

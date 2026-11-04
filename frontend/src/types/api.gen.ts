@@ -2044,6 +2044,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/gm-board-phases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the phases that have a results board
+         * @description The game's action phases whose board has at least one item, so a viewer can be offered only boards with something on them. Same viewers as the board.
+         */
+        get: operations["listGmBoardPhases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/gm-settings": {
         parameters: {
             query?: never;
@@ -4044,6 +4064,10 @@ export interface components {
              */
             kind: "card" | "scene" | "chunk" | "cluster" | "stance" | "progress" | "flag" | "notes" | "reward" | "rewards";
         };
+        BoardPhasesResponse: {
+            /** @description The game's action phases whose board has at least one item, in phase order */
+            phase_ids: number[];
+        };
         ChangeEmailRequest: {
             current_password: string;
             new_email: string;
@@ -5362,6 +5386,7 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
             /**
@@ -5425,6 +5450,7 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
             /**
@@ -12477,6 +12503,50 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listGmBoardPhases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoardPhasesResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, and the game doesn't share its boards with this viewer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

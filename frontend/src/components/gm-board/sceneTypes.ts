@@ -17,6 +17,8 @@ export interface SceneModel {
   states: Record<number, CharState[]>;
   /** The scene's time slot, as an index in time order (-1 if it was deleted). */
   slotIndex: number;
+  /** Read-only: the scene and its moments as text, with no editing controls. */
+  readOnly?: boolean;
 }
 
 /** The last place the GM's cursor was in a moment, for Insert. */

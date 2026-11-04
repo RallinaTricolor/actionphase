@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Badge, Button, Checkbox, Input, Select, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { CODEX_TYPES, codexDoc, codexTone, inPhase, newCodexEntry } from '@/lib/gmBoard/codex';
 import { newItemKey } from '@/lib/gmBoard/store';
 import { splitList } from '@/lib/gmBoard/text';
@@ -37,9 +38,10 @@ export function GmCodexManager({
   phaseId,
   initialName = '',
   onCreated,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
 }: GmCodexManagerProps) {
   const { settings, isLoading } = useGmSettings(gameId);
+  const readOnly = useBoardReadOnly() || readOnlyProp;
   const store = useGmSettingsStore(gameId, { readOnly });
   const { showToast } = useToast();
   const [open, setOpen] = useState<string | null>(null);

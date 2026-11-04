@@ -6,6 +6,7 @@ import { useBoardCardActions } from '@/hooks/useBoardCardActions';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGameActionResults } from '@/hooks/useActionResults';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useGmBoardStore } from '@/hooks/useGmBoard';
 import { useAppendToDraft } from '@/hooks/useResultDraft';
 import { isCovered, setCovered } from '@/lib/gmBoard/coverage';
@@ -60,6 +61,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
   const results = useGameActionResults(gameId);
   const appendToDraft = useAppendToDraft(gameId);
   const [adding, setAdding] = useState(false);
+  const readOnly = useBoardReadOnly();
 
   const [view, setView] = useState<'moments' | 'side'>('moments');
   const [reader, setReader] = useState<number | null>(null);
@@ -92,8 +94,9 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
       readers: sceneReaders(scene, canRead),
       states: characterStates(board),
       slotIndex: chunkIndex(board).get(scene.chunkId) ?? -1,
+      readOnly,
     };
-  }, [scene, board, names, cast, canRead, nameLists, settings?.secondPerson]);
+  }, [scene, board, names, cast, canRead, nameLists, settings?.secondPerson, readOnly]);
 
   if (people.isLoading) {
     return (
@@ -322,7 +325,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
                 Side by side
               </Button>
             </div>
-            <span className="text-xs text-content-tertiary">Ctrl+Enter in a moment adds one below.</span>
+            {!readOnly && <span className="text-xs text-content-tertiary">Ctrl+Enter in a moment adds one below.</span>}
           </div>
 
           {view === 'side' ? (
@@ -337,6 +340,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
             />
           ) : (
             <>
+              {!readOnly && (
               <details className="text-sm" open={scene.moments.length <= 1 && !scene.moments[0]?.text.trim()}>
                 <summary className="cursor-pointer text-content-secondary">How moments work</summary>
                 <p className="mt-1 text-content-secondary">
@@ -346,9 +350,10 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
                   doesn’t notice a moment.
                 </p>
               </details>
+              )}
               {scene.moments.map((m, i) => (
                 <div key={m.id} className="space-y-1">
-                  {i > 0 && (
+                  {i > 0 && !readOnly && (
                     <div className="flex justify-center">
                       <Button type="button" size="sm" variant="ghost" className="!py-0 text-xs" aria-label={`Insert a moment before moment ${i + 1}`} onClick={() => addMomentAfter(scene.moments[i - 1].id)}>
                         + moment
@@ -359,9 +364,11 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
                 </div>
               ))}
               {!scene.moments.length && <p className="text-sm text-content-secondary">No moments yet.</p>}
-              <Button type="button" size="sm" variant="primary" onClick={() => addMomentAfter(scene.moments[scene.moments.length - 1]?.id ?? null)}>
-                + Moment
-              </Button>
+              {!readOnly && (
+                <Button type="button" size="sm" variant="primary" onClick={() => addMomentAfter(scene.moments[scene.moments.length - 1]?.id ?? null)}>
+                  + Moment
+                </Button>
+              )}
             </>
           )}
         </div>

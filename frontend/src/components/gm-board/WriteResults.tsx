@@ -6,6 +6,7 @@ import { targetPart, type ResultChain } from '@/lib/gmBoard/results';
 import { DEFAULT_DELAY_MINUTES, DELAY_PRESETS, formatDelayLabel } from '@/lib/stagedDelays';
 import type { ActionResult } from '@/types/phases';
 import { ResultChainCard } from './ResultChainCard';
+import { ResultChainView } from './ResultChainView';
 import { ResultPartEditor } from './ResultPartEditor';
 
 interface WriteResultsProps {
@@ -35,6 +36,8 @@ interface WriteResultsProps {
   /** Run before a publish, after the editor's text is saved: the reward sheet sync. */
   beforePublish?: () => Promise<void>;
   sheetItems?: SheetItem[];
+  /** Show the results as text: no editor, no controls. */
+  readOnly?: boolean;
 }
 
 type Pending = { kind: 'new-result'; key: string } | { kind: 'new-part'; key: string; tailId: number; delayMinutes: number };
@@ -71,8 +74,8 @@ export function WriteResults(props: WriteResultsProps) {
 
   const part = pending ? null : targetPart(merged, selectedPartId);
   const firstKey = `new:first:${characterId}`;
-  const implicitNew = !pending && !part && merged.length === 0 && userId !== undefined;
-  const editable = !!pending || !!part || implicitNew;
+  const implicitNew = !props.readOnly && !pending && !part && merged.length === 0 && userId !== undefined;
+  const editable = !props.readOnly && (!!pending || !!part || implicitNew);
   const { onEditable, onLiveText } = props;
   useEffect(() => onEditable(editable), [editable, onEditable]);
 
@@ -116,6 +119,18 @@ export function WriteResults(props: WriteResultsProps) {
 
   if (userId === undefined && merged.length === 0) {
     return <p className="text-sm text-content-secondary">Nobody plays {name}, so there’s no one to send a result to.</p>;
+  }
+
+  if (props.readOnly) {
+    return (
+      <div className="space-y-3" data-testid="write-results">
+        {merged.length ? (
+          merged.map((chain, i) => <ResultChainView key={chain.head.id} chain={chain} label={`Result ${i + 1}`} />)
+        ) : (
+          <p className="text-sm text-content-secondary">Nothing written for {name} yet.</p>
+        )}
+      </div>
+    );
   }
 
   // The one editor, always in the same place after the list, so React keeps

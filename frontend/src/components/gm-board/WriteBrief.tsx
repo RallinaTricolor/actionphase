@@ -20,7 +20,8 @@ interface WriteBriefProps {
   submission?: string;
   isCovered: (moment: Moment) => boolean;
   coverage: { done: number; total: number };
-  onCovered: (momentId: string, covered: boolean) => void;
+  /** Without it, a moment's tick is shown, not offered (a read-only view, which has no Insert either). */
+  onCovered?: (momentId: string, covered: boolean) => void;
   /** Puts the text in the draft at the cursor and ticks the moment covered. Absent when there's no draft to type into. */
   onInsert?: (moment: Moment, text: string) => void;
   onCopy: (text: string) => void;
@@ -97,12 +98,18 @@ export function WriteBrief({ model, characterId, others, submission, isCovered, 
           const notEveryone = scene.participants.some((p) => p !== characterId && model.cast.get(p)?.reads && !m.readers.includes(p));
           return (
             <li key={m.id} className={`flex items-start gap-2 rounded px-1.5 py-1 text-sm ${covered ? 'surface-sunken' : ''}`} data-testid={`brief-moment-${m.id}`}>
-              <Checkbox
-                id={`covered-${characterId}-${m.id}`}
-                aria-label={`Covered in ${name}’s result: ${truncate(version.text, 60)}`}
-                checked={covered}
-                onChange={(e) => onCovered(m.id, e.target.checked)}
-              />
+              {onCovered ? (
+                <Checkbox
+                  id={`covered-${characterId}-${m.id}`}
+                  aria-label={`Covered in ${name}’s result: ${truncate(version.text, 60)}`}
+                  checked={covered}
+                  onChange={(e) => onCovered(m.id, e.target.checked)}
+                />
+              ) : (
+                <span className="w-4 shrink-0 text-center text-content-tertiary" aria-label={covered ? 'Covered in the result' : 'Not in the result yet'} title={covered ? 'Covered in the result' : 'Not in the result yet'}>
+                  {covered ? '✓' : '·'}
+                </span>
+              )}
               <span className="min-w-0 flex-1 text-content-primary">
                 <YouText result={version} />
                 {(!here || notEveryone) && (
@@ -126,16 +133,18 @@ export function WriteBrief({ model, characterId, others, submission, isCovered, 
                 <Button type="button" variant="ghost" size="sm" onClick={() => onCopy(version.text)}>
                   Copy
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={!onInsert}
-                  title={onInsert ? 'Put it in the draft at the cursor and tick it' : 'Every result is published: add another result first'}
-                  onClick={() => onInsert?.(m, version.text)}
-                >
-                  Insert
-                </Button>
+                {onCovered && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={!onInsert}
+                    title={onInsert ? 'Put it in the draft at the cursor and tick it' : 'Every result is published: add another result first'}
+                    onClick={() => onInsert?.(m, version.text)}
+                  >
+                    Insert
+                  </Button>
+                )}
               </span>
             </li>
           );

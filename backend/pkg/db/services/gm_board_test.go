@@ -310,3 +310,30 @@ func TestGmSettings_ScopedToTheGame(t *testing.T) {
 	var conflict *core.GmBoardConflictError
 	assert.True(t, errors.As(err, &conflict), "settings get the same version check")
 }
+
+func TestGmBoard_ListBoardPhaseIDs(t *testing.T) {
+	f := newGmBoardFixture(t, "phaseids")
+	ctx := context.Background()
+	empty := f.db.CreateTestPhase(t, f.game.ID, core.PhaseTypeAction, "Day 2")
+	cleared := f.db.CreateTestPhase(t, f.game.ID, core.PhaseTypeAction, "Day 3")
+	f.db.CreateTestPhase(t, f.game.ID, core.PhaseTypeCommonRoom, "Talk")
+	other := f.db.CreateTestGame(t, int32(f.gm.ID), "Other game")
+	otherPhase := f.db.CreateTestPhase(t, other.ID, core.PhaseTypeAction, "Their day")
+
+	ids, err := f.svc.ListBoardPhaseIDs(ctx, f.game.ID)
+	require.NoError(t, err)
+	assert.NotNil(t, ids, "no boards is an empty list, not null")
+	assert.Empty(t, ids)
+
+	f.apply(t, put("notes", "notes", 0, `{"text":"x"}`))
+	_, err = f.svc.ApplyBoardChanges(ctx, cleared.ID, int32(f.gm.ID), []core.GmBoardChange{put("card", "c1", 0, `{}`)})
+	require.NoError(t, err)
+	_, err = f.svc.ApplyBoardChanges(ctx, cleared.ID, int32(f.gm.ID), []core.GmBoardChange{del("card", "c1", 1)})
+	require.NoError(t, err)
+	_, err = f.svc.ApplyBoardChanges(ctx, otherPhase.ID, int32(f.gm.ID), []core.GmBoardChange{put("notes", "notes", 0, `{}`)})
+	require.NoError(t, err)
+
+	ids, err = f.svc.ListBoardPhaseIDs(ctx, f.game.ID)
+	require.NoError(t, err)
+	assert.Equal(t, []int32{f.phase.ID}, ids, "only live items count: %d is empty, %d has only a tombstone", empty.ID, cleared.ID)
+}

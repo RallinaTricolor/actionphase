@@ -55,6 +55,7 @@ export function MapByLocation({ model, actions, drag }: MapByLocationProps) {
                   onInsertBefore={() => actions.insertSlotBefore(i)}
                   onRemove={() => actions.removeSlot(slot.id)}
                   onResolve={() => actions.resolveAt(slot.id)}
+                  readOnly={actions.readOnly}
                 />
               </div>
             ))}
@@ -145,7 +146,7 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
           ▸ {sceneName(s, model.names)}
         </Button>
       ))}
-      {busy && !scenes.length && !missing && (
+      {busy && !scenes.length && !missing && !actions.readOnly && (
         <Button type="button" variant="secondary" size="sm" className="!px-1.5 !py-0 text-xs" onClick={() => actions.createScene(row.id, slot.id)} aria-label={`Create scene at ${row.name}, ${slot.name}`}>
           Create scene
         </Button>
@@ -158,7 +159,7 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
           {showMoot ? 'Hide moot' : `+${moot.length} moot`}
         </Button>
       )}
-      {!missing && (
+      {!missing && !actions.readOnly && (
         <Button
           type="button"
           variant="ghost"
@@ -213,7 +214,7 @@ function CellCard({ card, model, actions, drag }: { card: Card; model: MapModel;
       flagged={model.outCards.has(card.id)}
       dragging={drag.cardId === card.id}
       onOpen={actions.openCard}
-      onDragStart={drag.start}
+      onDragStart={actions.readOnly ? undefined : drag.start}
       onDragEnd={drag.end}
     />
   );
@@ -235,7 +236,9 @@ function Contingencies({ model, actions, drag }: MapByLocationProps) {
       >
         <div className="flex items-baseline gap-2">
           <h3 className="text-sm font-semibold text-content-primary">Contingencies</h3>
-          <span className="text-xs text-content-tertiary">IF cards waiting to trigger. Drag one into a time slot when it does.</span>
+          <span className="text-xs text-content-tertiary">
+            {actions.readOnly ? 'IF cards waiting to trigger.' : 'IF cards waiting to trigger. Drag one into a time slot when it does.'}
+          </span>
         </div>
         {waiting.length ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-1.5">

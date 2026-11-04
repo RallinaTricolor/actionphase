@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge, Button, Checkbox, Input, Modal, Radio, Select, Textarea } from '@/components/ui';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
+import { lineEffect } from '@/lib/gmBoard/rewards';
 import type { GameBoardSettings, RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
 import type { SheetTab } from '@/types/characters';
 import { SheetOpsEditor } from './SheetOpsEditor';
@@ -72,11 +73,28 @@ interface LineEditorProps {
   onRemove: () => void;
   /** Saves a one-off as a list item, so others can get it. */
   onAddToList?: () => void;
+  /** Shown, not editable: the result went out, or the board is read-only. */
   locked?: boolean;
+  /** Why it's locked; null for none (a read-only board). */
+  lockedNote?: string | null;
 }
 
 /** One character's reward line: their own copy, so edits here change only theirs. */
-export function RewardLineEditor({ line, onClose, characterName, item, sceneName, groups, layout, entryNames, onChange, onRemove, onAddToList, locked = false }: LineEditorProps) {
+export function RewardLineEditor({
+  line,
+  onClose,
+  characterName,
+  item,
+  sceneName,
+  groups,
+  layout,
+  entryNames,
+  onChange,
+  onRemove,
+  onAddToList,
+  locked = false,
+  lockedNote = 'This result is published, so its rewards can’t change.',
+}: LineEditorProps) {
   return (
     <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: reward line`} size="lg">
       {line && (
@@ -91,7 +109,16 @@ export function RewardLineEditor({ line, onClose, characterName, item, sceneName
             <blockquote className="rounded surface-sunken px-3 py-2 text-sm italic text-content-secondary">“{line.quote}”</blockquote>
           )}
           {locked ? (
-            <p className="text-sm text-content-secondary">This result is published, so its rewards can’t change.</p>
+            <div className="space-y-2" data-testid="reward-line-view">
+              {lockedNote && <p className="text-sm text-content-secondary">{lockedNote}</p>}
+              <GroupBadge groups={groups} group={line.group} />
+              {line.text.trim() ? (
+                <p className="whitespace-pre-wrap text-content-primary">{line.text}</p>
+              ) : (
+                <p className="text-sm text-content-tertiary">Nothing in the block: sheet changes only.</p>
+              )}
+              {lineEffect(layout, line) && <p className="text-sm text-content-secondary">{lineEffect(layout, line)}</p>}
+            </div>
           ) : (
             <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" />
           )}

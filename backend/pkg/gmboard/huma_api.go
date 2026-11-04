@@ -62,6 +62,10 @@ type applySettingsInput struct {
 	Body   ApplySettingsChangesRequest
 }
 
+type gameInput struct {
+	GameID int32 `path:"gameID" minimum:"1" doc:"Game ID"`
+}
+
 type setSharingInput struct {
 	GameID int32 `path:"gameID" minimum:"1" doc:"Game ID"`
 	Body   SetSharingRequest
@@ -71,6 +75,7 @@ type itemsOutput struct{ Body *GmItemsResponse }
 type settingsOutput struct{ Body *GmSettingsResponse }
 type writtenOutput struct{ Body *GmItemsWrittenResponse }
 type sharingOutput struct{ Body *SharingResponse }
+type boardPhasesOutput struct{ Body *BoardPhasesResponse }
 
 // ---------------------------------------------------------------- helpers
 
@@ -192,6 +197,19 @@ func (h *Handler) humaApplySettingsChanges(ctx context.Context, in *applySetting
 	return &writtenOutput{Body: &GmItemsWrittenResponse{Items: toItemResponses(written)}}, nil
 }
 
+func (h *Handler) humaListBoardPhases(ctx context.Context, in *gameInput) (*boardPhasesOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_gm_board_phases")()
+	if _, err := h.requireViewer(ctx, in.GameID); err != nil {
+		return nil, err
+	}
+	ids, err := h.BoardService.ListBoardPhaseIDs(ctx, in.GameID)
+	if err != nil {
+		h.App.ObsLogger.Error(ctx, "Failed to list results board phases", "error", err, "game_id", in.GameID)
+		return nil, huma.Error500InternalServerError("failed to list the results boards")
+	}
+	return &boardPhasesOutput{Body: &BoardPhasesResponse{PhaseIDs: ids}}, nil
+}
+
 func (h *Handler) humaSetSharing(ctx context.Context, in *setSharingInput) (*sharingOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_set_gm_board_sharing")()
 	shared, err := h.BoardService.SetShareGmBoard(ctx, in.GameID, in.Body.Share)
@@ -264,6 +282,20 @@ func RegisterHumaGmBoard(api huma.API, h *Handler) {
 			"401": readErrors["401"], "403": readErrors["403"], "422": readErrors["422"],
 		},
 	}, h.humaGetSettings)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listGmBoardPhases",
+		Extensions:  access.AudienceOnly(),
+		Method:      http.MethodGet,
+		Path:        "/gm-board-phases",
+		Summary:     "List the phases that have a results board",
+		Description: "The game's action phases whose board has at least one item, so a viewer can be offered only boards with something on them. Same viewers as the board.",
+		Tags:        []string{"Results Board"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"401": readErrors["401"], "403": readErrors["403"], "422": readErrors["422"],
+		},
+	}, h.humaListBoardPhases)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "applyGmSettingsChanges",

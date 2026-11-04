@@ -92,3 +92,13 @@ SELECT COUNT(*)::int FROM gm_settings_items WHERE game_id = $1 AND deleted = fal
 UPDATE games SET share_gm_board = $2
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING share_gm_board;
+
+-- name: ListGmBoardPhaseIDs :many
+-- The game's action phases whose board has at least one live item, in phase
+-- order. Goes through game_phases so the lookup uses gm_board_items' primary
+-- key (phase_id first); the table has no game_id index.
+SELECT p.id FROM game_phases p
+WHERE p.game_id = $1
+  AND p.phase_type = 'action'
+  AND EXISTS (SELECT 1 FROM gm_board_items i WHERE i.phase_id = p.id AND i.deleted = false)
+ORDER BY p.phase_number;

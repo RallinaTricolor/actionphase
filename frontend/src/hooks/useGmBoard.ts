@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { hashKey, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { hashKey, useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { apiClient } from '@/lib/api';
 import { extractApiErrorMessage } from '@/lib/errors';
 import {
@@ -227,10 +228,15 @@ export function useGmBoard(gameId: number, phaseId: number, options: { enabled?:
   return { board, isLoading: query.isLoading, error: query.error, refetch: query.refetch };
 }
 
-/** Edits to a phase's board: optimistic, saved about a second after the last change. */
+/**
+ * Edits to a phase's board: optimistic, saved about a second after the last
+ * change. Read-only (the option, or the board's BoardReadOnlyContext) drops
+ * every edit, so nothing is saved.
+ */
 export function useGmBoardStore(gameId: number, phaseId: number, options: { readOnly?: boolean } = {}) {
   const source = useMemo(() => boardSource(gameId, phaseId), [gameId, phaseId]);
-  const editor = useItemEditor(source, options.readOnly ?? false);
+  const boardReadOnly = useBoardReadOnly();
+  const editor = useItemEditor(source, !!options.readOnly || boardReadOnly);
   const { change } = editor;
   return {
     ...editor,
@@ -279,7 +285,8 @@ export function useGmSettings(gameId: number, options: { enabled?: boolean } = {
  */
 export function useGmSettingsStore(gameId: number, options: { readOnly?: boolean } = {}) {
   const source = useMemo(() => settingsSource(gameId), [gameId]);
-  const editor = useItemEditor(source, options.readOnly ?? false);
+  const boardReadOnly = useBoardReadOnly();
+  const editor = useItemEditor(source, !!options.readOnly || boardReadOnly);
   const { change } = editor;
   return {
     ...editor,
@@ -293,4 +300,32 @@ export function useGmSettingsStore(gameId: number, options: { readOnly?: boolean
       [change],
     ),
   };
+}
+
+// ------------------------------------------------------------------ sharing
+
+/**
+ * The action phases whose board has something on it, for "View results
+ * board" links. Same viewers as a board: ask only as the GM, or when the
+ * game shares its boards.
+ */
+export function useGmBoardPhases(gameId: number, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['gmBoardPhases', gameId],
+    queryFn: () => apiClient.gmBoard.listBoardPhases(gameId).then((res) => res.data.phase_ids),
+    enabled: (options.enabled ?? true) && gameId > 0,
+  });
+}
+
+/** Turns read-only sharing of the game's boards on or off (GM only, any game state). */
+export function useSetGmBoardSharing(gameId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (share: boolean) => apiClient.gmBoard.setSharing(gameId, share).then((res) => res.data.share_gm_board),
+    onSuccess: (shared) => {
+      queryClient.setQueryData<GmSettingsState>(gmSettingsQueryKey(gameId), (s) => (s ? { ...s, shareGmBoard: shared } : s));
+      // The game itself carries the flag too (History reads it for the links).
+      void queryClient.invalidateQueries({ queryKey: ['gameDetails', gameId] });
+    },
+  });
 }

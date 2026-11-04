@@ -15,7 +15,8 @@ interface WriteChecksProps {
   /** For the flag sentences: the board's location rows. */
   rows: MapModel['rows'];
   onOpenScene: (sceneId: string) => void;
-  onDismissFlag: (key: string) => void;
+  /** Without it, flags can't be dismissed (a read-only view). */
+  onDismissFlag?: (key: string) => void;
   /** The character's reward checks (lib/gmBoard/rewardState). */
   rewardChecks?: RewardCheck[];
   /** Line id → a few words of it, to name the line a check is about. */
@@ -113,9 +114,11 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
                 {flag.kind === 'out' ? 'Out of play' : 'Two places'}
               </Badge>
               <span className="flex-1 text-content-primary">{flagSentence(flag, { board: model.board, names: model.names, rows })}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => onDismissFlag(flag.key)}>
-                Dismiss
-              </Button>
+              {onDismissFlag && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => onDismissFlag(flag.key)}>
+                  Dismiss
+                </Button>
+              )}
             </li>
           ))}
           {rewardChecks.map((c, i) => (

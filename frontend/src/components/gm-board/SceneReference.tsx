@@ -68,7 +68,7 @@ export function SceneReference({ model, plans, submissions, sheetItems, codex, c
       ) : (
         <div className="space-y-2">
           {whoPicker}
-          <p className="text-xs text-content-tertiary">Select a passage for “→ Moment”, or use → beside a paragraph.</p>
+          {!model.readOnly && <p className="text-xs text-content-tertiary">Select a passage for “→ Moment”, or use → beside a paragraph.</p>}
           <SubmissionReader
             key={owner}
             ownerId={owner}
@@ -77,7 +77,8 @@ export function SceneReference({ model, plans, submissions, sheetItems, codex, c
             characters={characters}
             codex={codex}
             sheetItems={sheetItems.get(owner)}
-            onAddMoment={(text) => onMomentFromPassage(owner, text)}
+            readOnly={model.readOnly}
+            onAddMoment={model.readOnly ? undefined : (text) => onMomentFromPassage(owner, text)}
             onOpenCard={() => undefined}
           />
         </div>
@@ -96,7 +97,9 @@ export function SceneReference({ model, plans, submissions, sheetItems, codex, c
         <div className="space-y-2">
           {whoPicker}
           <Input id="scene-sheet-search" aria-label="Search the sheet" placeholder={`Search ${shortName(model.names.get(owner) ?? '')}’s sheet`} value={query} onChange={(e) => setQuery(e.target.value)} />
-          <p className="text-xs text-content-tertiary">Insert puts the name in bold at your cursor. “In plan”: named in their submission. “Used”: already in a moment.</p>
+          <p className="text-xs text-content-tertiary">
+            {model.readOnly ? '' : 'Insert puts the name in bold at your cursor. '}“In plan”: named in their submission. “Used”: already in a moment.
+          </p>
           {items.length ? (
             items.map(({ it, planned, used: inScene, text }) => (
               <div key={it.id} className="space-y-0.5 rounded border border-theme-subtle p-2" data-testid={`sheet-item-${it.id}`}>
@@ -113,9 +116,11 @@ export function SceneReference({ model, plans, submissions, sheetItems, codex, c
                     </Badge>
                   )}
                   <span className="text-xs text-content-tertiary">{it.tabLabel}</span>
-                  <Button type="button" size="sm" variant="secondary" title={`Insert “${it.name}” in bold where your cursor was`} aria-label={`Insert ${it.name}`} onClick={() => onInsert(`**${it.name}**`)}>
-                    Insert
-                  </Button>
+                  {!model.readOnly && (
+                    <Button type="button" size="sm" variant="secondary" title={`Insert “${it.name}” in bold where your cursor was`} aria-label={`Insert ${it.name}`} onClick={() => onInsert(`**${it.name}**`)}>
+                      Insert
+                    </Button>
+                  )}
                 </div>
                 {text && (
                   <details className="text-xs">
@@ -145,9 +150,11 @@ export function SceneReference({ model, plans, submissions, sheetItems, codex, c
                   {e.secret ? 'Secret' : e.type}
                 </Badge>
                 <span className="flex-1 font-medium text-content-primary">{e.name}</span>
-                <Button type="button" size="sm" variant="secondary" aria-label={`Insert ${e.name}`} onClick={() => onInsert(e.name)}>
-                  Insert
-                </Button>
+                {!model.readOnly && (
+                  <Button type="button" size="sm" variant="secondary" aria-label={`Insert ${e.name}`} onClick={() => onInsert(e.name)}>
+                    Insert
+                  </Button>
+                )}
               </div>
               {e.notes && <p className="whitespace-pre-wrap text-xs text-content-secondary">{e.notes}</p>}
             </div>

@@ -40,6 +40,8 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
   const [editing, setEditing] = useState<string | null>(null);
   const sync = rewards.syncFor(characterId);
   const { lines, locked, carrier } = state;
+  // Read-only (a viewer, or an archived game) shows what locked shows, without the "went out" notice.
+  const ro = locked || rewards.readOnly;
   const given = new Set(lines.map((l) => l.itemId).filter(Boolean));
   const editingLine = lines.find((l) => l.id === editing) ?? null;
   const entryNames = (tabKey: string) => (state.sheet.before[tabKey] ?? []).map((e) => e.name);
@@ -73,7 +75,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           </span>
         </div>
         <div className="flex gap-2">
-          {!locked && (
+          {!ro && (
             <Button type="button" size="sm" variant="secondary" onClick={addLine}>
               + Line
             </Button>
@@ -93,7 +95,9 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
       )}
 
       <ul className="space-y-2" data-testid="reward-lines">
-        {lines.length === 0 && <li className="text-sm text-content-secondary">No rewards yet. Give one from the lists below, or add a line.</li>}
+        {lines.length === 0 && (
+          <li className="text-sm text-content-secondary">{ro ? 'No rewards.' : 'No rewards yet. Give one from the lists below, or add a line.'}</li>
+        )}
         {lines.map((line) => {
           const text = lineText(line, state.sheet.recs[line.id]);
           const effect = lineEffect(layout, line);
@@ -109,15 +113,15 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
                   {line.sceneId && <p className="text-content-tertiary">from {sceneName(line.sceneId) ?? 'a deleted scene'}</p>}
                 </div>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(line.id)}>
-                  {locked ? 'View' : 'Edit'}
+                  {ro ? 'View' : 'Edit'}
                 </Button>
-                {!locked && (
+                {!ro && (
                   <Button type="button" size="sm" variant="ghost" aria-label={`Remove ${truncate(text || 'this line', 30)}`} onClick={() => rewards.removeLine(characterId, line.id)}>
                     ✕
                   </Button>
                 )}
               </div>
-              {drift && !locked && (
+              {drift && !ro && (
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                   <Badge size="sm" variant="warning">
                     Differs from the list
@@ -136,7 +140,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
         })}
       </ul>
 
-      {!locked &&
+      {!ro &&
         (items.length ? (
           <div className="space-y-2" data-testid="reward-quick-give">
             {quickGame.length > 0 && (
@@ -165,7 +169,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           label={slot}
           rows={2}
           value={state.rewards.texts[slot] ?? ''}
-          disabled={locked}
+          disabled={ro}
           onChange={(e) => rewards.updateRewards(characterId, (r) => ({ ...r, texts: { ...r.texts, [slot]: e.target.value } }))}
           data-testid={`reward-slot-${slot}`}
         />
@@ -178,7 +182,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
             <Button type="button" size="sm" variant="ghost" disabled={!state.block.text} onClick={() => onCopy(state.block.text)}>
               Copy block
             </Button>
-            {!locked && (
+            {!ro && (
               <Button
                 type="button"
                 size="sm"
@@ -203,7 +207,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           <h4 className="text-sm font-semibold text-content-primary">
             Sheet changes <span className="font-normal text-content-tertiary">{state.changes ? `${state.changes} in ${state.diff.map((d) => d.tab.label).join(', ')}` : 'none'}</span>
           </h4>
-          {!locked && draftChains.length > 1 ? (
+          {!ro && draftChains.length > 1 ? (
             <Select
               aria-label="Result that carries the sheet changes"
               selectSize="sm"
@@ -218,7 +222,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
               ))}
             </Select>
           ) : (
-            !locked &&
+            !ro &&
             carrier.chain &&
             state.changes > 0 && <span className="text-xs text-content-tertiary">On {chainLabel(carrier.chain)}</span>
           )}
@@ -257,7 +261,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
             update their sheet then.
           </p>
         )}
-        {!locked && state.changes > 0 && <SyncLine sync={sync} onReplace={() => rewards.replaceHandMade(characterId)} noResult={carrier.state === 'no-result'} name={name} staged={(carrier.chain?.parts.length ?? 0) > 1} />}
+        {!ro && state.changes > 0 && <SyncLine sync={sync} onReplace={() => rewards.replaceHandMade(characterId)} noResult={carrier.state === 'no-result'} name={name} staged={(carrier.chain?.parts.length ?? 0) > 1} />}
       </section>
 
       <RewardLineEditor
@@ -269,7 +273,8 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
         groups={groups}
         layout={layout}
         entryNames={entryNames}
-        locked={locked}
+        locked={ro}
+        lockedNote={locked ? undefined : null}
         onChange={(line: RewardLine) => rewards.updateLine(characterId, line.id, () => fixEntryCase(line, state))}
         onRemove={() => {
           if (editingLine) rewards.removeLine(characterId, editingLine.id);

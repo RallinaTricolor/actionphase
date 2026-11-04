@@ -219,6 +219,10 @@ Numbers entries may carry `max` (turning a count into a track, "Stress 4/9") and
 ### Results Board (Game #2, phase 2 "Execute the Plan") — added 2026-11-03
 A partly resolved GM results board, so every built step has data. Open it as
 TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
+- **Sharing**: the Heist shares its boards (`games.share_gm_board`, set in
+  `demo/11_gm_board_heist.sql`, not in the seed function). Log in as
+  TestAudience to view the board read-only: History tab → phase 2 → "View
+  results board". Turn sharing off on the board's Game setup page.
 - **Setup**: 5 Locations (lobby, vault scoped to this phase, rooftop, alley,
   ducts), an NPC, an Item, a Secret known only to Silk; names for Inspector
   Dalton.

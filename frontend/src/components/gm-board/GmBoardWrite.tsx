@@ -6,6 +6,7 @@ import { PublishAllResultsDialog } from '@/components/actions/PublishAllResultsD
 import { useToast } from '@/contexts/ToastContext';
 import { useGameActionResults, usePublishAllPhaseResults } from '@/hooks/useActionResults';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGmBoardStore } from '@/hooks/useGmBoard';
 import { useRewriteDraft } from '@/hooks/useResultDraft';
@@ -52,6 +53,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   const [params, setParams] = useSearchParams();
   const { showToast, showError } = useToast();
   const rewards = useOptionalBoardRewards();
+  const readOnly = useBoardReadOnly();
   const rewriteDraft = useRewriteDraft(gameId);
   const [putting, setPutting] = useState(false);
   const store = useGmBoardStore(gameId, phase.id);
@@ -64,7 +66,8 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   const unpublished = useQuery({
     queryKey: ['unpublishedResultsCount', gameId, phase.id],
     queryFn: () => apiClient.phases.getUnpublishedResultsCount(gameId, phase.id).then((res) => res.data),
-    enabled: gameId > 0,
+    // GM only, like publishing.
+    enabled: !readOnly && gameId > 0,
   });
 
   const insertTextRef = useRef<((text: string) => void) | null>(null);
@@ -251,6 +254,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
 
   return (
     <div className="space-y-3" data-testid="gm-board-step-write">
+      {!readOnly && (
       <div className="flex flex-wrap items-center justify-end gap-2">
         <span className="text-sm text-content-secondary">
           {count} draft {count === 1 ? 'result' : 'results'} in this phase
@@ -273,6 +277,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
           Publish all
         </Button>
       </div>
+      )}
 
       {view === 'table' && rewards ? (
         <RewardsTable
@@ -296,7 +301,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                 submission={submissions.get(current)}
                 isCovered={covered}
                 coverage={coverage}
-                onCovered={tick}
+                onCovered={readOnly ? undefined : tick}
                 onInsert={
                   editable
                     ? (m, text) => {
@@ -316,6 +321,9 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
               <CardBody className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-base font-semibold text-content-primary">Results for {allNames.get(current)}</h3>
+                  {readOnly ? (
+                    ready && <Badge variant="success">Ready</Badge>
+                  ) : (
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
@@ -345,6 +353,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                       </Button>
                     )}
                   </div>
+                  )}
                 </div>
                 <WriteResults
                   key={current}
@@ -366,6 +375,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                   rewriteRef={rewriteRef}
                   beforePublish={beforePublish}
                   sheetItems={sheetItems.get(current)}
+                  readOnly={readOnly}
                 />
               </CardBody>
             </Card>
@@ -400,16 +410,20 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                   checks={checks}
                   rows={rows}
                   onOpenScene={onOpenScene}
-                  onDismissFlag={(key) => {
-                    store.update('flag', key, () => ({}));
-                    showToast('Check dismissed.', 'info', { action: { label: 'Undo', onClick: () => store.remove('flag', key) } });
-                  }}
+                  onDismissFlag={
+                    readOnly
+                      ? undefined
+                      : (key) => {
+                          store.update('flag', key, () => ({}));
+                          showToast('Check dismissed.', 'info', { action: { label: 'Undo', onClick: () => store.remove('flag', key) } });
+                        }
+                  }
                   rewardChecks={reward?.checks}
                   lineLabel={(lineId) => {
                     const line = reward?.lines.find((l) => l.id === lineId);
                     return line ? truncate(lineText(line, reward?.sheet.recs[lineId]) || 'A sheet-only line', 50) : 'A line';
                   }}
-                  onPutBlock={() => void putBlock()}
+                  onPutBlock={readOnly ? undefined : () => void putBlock()}
                 />
               </CardBody>
             </Card>
@@ -417,6 +431,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
         </div>
       )}
 
+      {!readOnly && (
       <PublishAllResultsDialog
         isOpen={publishAllOpen}
         onClose={() => setPublishAllOpen(false)}
@@ -426,6 +441,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
         count={count}
         isPublishing={publishAll.isPending}
       />
+      )}
     </div>
   );
 }
