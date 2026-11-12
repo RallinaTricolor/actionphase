@@ -14,7 +14,7 @@ function setup() {
   render(
     <SceneReference
       model={model}
-      plans={{ location: undefined, placeName: () => 'the Old Mill', slotName: () => 'Slot 1', onSetOutcome: vi.fn(), onTrigger: vi.fn(), onMomentFromCard: vi.fn(), onJoin: vi.fn() }}
+      plans={{ location: undefined, placeName: () => 'the Old Mill', slotName: () => 'Slot 1', onSetOutcome: vi.fn(), onTrigger: vi.fn(), onMomentFromCard: vi.fn(), onJoin: vi.fn(), onOpenCard: vi.fn() }}
       submissions={new Map([[2, 'I hide behind the wheel.']])}
       sheetItems={new Map([[1, [sheet('a', 'Lantern', 'A brass lantern.'), sheet('b', 'Rope'), sheet('c', 'Pistol')]]])}
       codex={[makeCodexEntry({ id: 'ledger', name: 'the ledger', type: 'Item', notes: 'Proof of the debt.' }), makeCodexEntry({ id: 'mill', name: 'the Old Mill', type: 'Location' })]}

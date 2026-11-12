@@ -286,8 +286,8 @@ E2E tests (Playwright) are slow (~20-30s each), hard to debug, and provide poor 
 
 See `frontend/e2e/README.md` for the complete E2E testing guide.
 
-**Current E2E coverage** (49 spec files, organized into subdirectories under `frontend/e2e/`):
-- Auth, Games (lifecycle/applications/settings/co-GM), Gameplay (actions/phases/characters/handouts/polls/deadlines), Messaging (common room/private messages/mentions), Notifications, Settings, Admin, Security, Smoke, Edge cases
+**Current E2E coverage** (67 spec files, organized into subdirectories under `frontend/e2e/`):
+- Auth, Games (lifecycle/applications/settings/co-GM), Gameplay (actions/phases/characters/handouts/polls/deadlines), GM results board (`gm-board/`), Messaging (common room/private messages/mentions), Notifications, Settings, Admin, Security, Smoke, Edge cases
 
 **Note on mobile testing**: `just e2e` runs both Chromium (desktop) and Pixel 5 (mobile) projects. When adding new tests, verify they pass on both projects — mobile can fail due to layout differences.
 
@@ -338,6 +338,38 @@ dozens of fake failures. If a killed run left the lock behind, `rmdir .e2e-run.l
   the form and is only for specs that test logging in.
 - `actionTimeout` (10s) and `navigationTimeout` (15s) are set globally so a
   stuck step fails at its own line instead of consuming the test budget.
+
+**GM results board specs** *(2026-11-12)* live in `frontend/e2e/gm-board/`,
+one file per area (shell, read, map, scenes, write, rewards, publish,
+collaboration, sharing, setup), desktop project only apart from one `@mobile`
+shell test. They cover what jsdom can't: the real save path (debounced
+batches, 409s, polls, tombstones), measured layout (arrows, drag, the
+1024/1280px breakpoints), board ↔ results-area parity, and other users
+(co-GM, audience, archive readers). Rules:
+- **Every spec that writes has its own fixture game** (`e2e/34_gm_board.sql`,
+  games 711-721; see TEST_DATA.md), so specs running in parallel never write
+  to the same board. Read-only specs may share one.
+- **Arrange through the real save endpoints**: `arrangeBoard` /
+  `arrangeSettings` (`e2e/fixtures/gm-board-helpers.ts`) write items at the
+  server's current versions, so a retry starts where the first attempt did.
+  Make your own items named with `runTag(testInfo)` (time slots after the
+  Heist's with `freshSlotPosition()`), or put the seeded items you touch
+  back first. A spec that needs an empty game deletes what earlier attempts
+  left (`emptyTheGame` in `setup.spec.ts`).
+- **Wait on the batch, not the badge**: board edits save about a second
+  after the last change; wrap an edit in `GmBoardPage.saving()` (waits for
+  `API.saveBoard`), or `performAndWaitForMutation(…, API.saveBoardSettings)`
+  for settings. The badge already says "Saved" before the first edit.
+- **Drive polls with the clock**: `page.clock.install()` before opening the
+  board, then `GmBoardPage.nextPoll()`. Never wait out the real 15s.
+- **Drags stay between neighbouring rows** (rooftop ↔ vault): `dragTo` can't
+  scroll the page mid-drag.
+- New board spec files must pass under `--repeat-each=3` before the next.
+  `just e2e-test file` takes no extra arguments, so run Playwright in the
+  container yourself after `just _e2e-lock`, `just _e2e-app` and
+  `just load-e2e` (and `rmdir .e2e-run.lock` after).
+- Any E2E run reloads the shared fixtures, which wipes the demo games: run
+  `just test-fixtures` afterwards to get them back.
 
 **The URL changes before the UI does** *(2026-10-07)*. React Router commits
 navigations in a transition, so while a lazy page chunk loads the URL already

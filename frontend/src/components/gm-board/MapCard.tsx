@@ -53,6 +53,7 @@ export const MapCard = memo(function MapCard({ card, owner, ownerNames, flagged,
       aria-label={`${name}: ${label}${/[.!?…]$/.test(label) ? '' : '.'} ${status}${flagged ? ', out of play' : ''}`}
       data-testid={`map-card-${card.id}`}
       data-arrow-id={card.id}
+      data-card-id={card.id}
       className={[
         'w-full !justify-start !items-start !text-left !px-2 !py-1 border border-l-4 surface-base',
         flagged ? 'border-semantic-danger' : 'border-theme-default',

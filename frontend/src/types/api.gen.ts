@@ -6404,7 +6404,7 @@ export interface components {
              * @description Item kind
              * @enum {string}
              */
-            kind: "codex" | "names" | "template" | "groups" | "scales" | "prefs" | "reward";
+            kind: "codex" | "names" | "template" | "groups" | "scales" | "prefs" | "reward" | "notes";
         };
         SharingResponse: {
             /** @description Whether the GM shares the results boards read-only */

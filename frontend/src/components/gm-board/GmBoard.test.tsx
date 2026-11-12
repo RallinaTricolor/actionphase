@@ -34,6 +34,8 @@ beforeEach(() => {
 const renderBoard = (route = `/games/${GAME_ID}/phases/70/board`) =>
   renderWithProviders(<GmBoard gameId={GAME_ID} gameTitle="Starfall" phase={phase} />, { gameId: GAME_ID, initialRoute: route });
 
+const SETTINGS = `/api/v1/games/${GAME_ID}/gm-settings`;
+
 describe('GmBoard', () => {
   it('opens on the step named in the URL, and Read by default', async () => {
     renderBoard(`/games/${GAME_ID}/phases/70/board?step=scenes`);
@@ -103,7 +105,7 @@ describe('GmBoard', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
     await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
 
-    const box = await screen.findByLabelText('Notes for this phase');
+    const box = await screen.findByLabelText('Notes for Day 2');
     expect(box).toHaveValue('check the vault');
     await userEvent.clear(box);
     await userEvent.type(box, 'vault is empty');
@@ -128,10 +130,57 @@ describe('GmBoard', () => {
     renderBoard();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
     await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
-    await userEvent.type(await screen.findByLabelText('Notes for this phase'), '!');
+    await userEvent.type(await screen.findByLabelText('Notes for Day 2'), '!');
 
     expect(await screen.findByText('Someone else changed what you were editing', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText('the notes')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use mine' })).toBeInTheDocument();
+  });
+
+  it('saves the notes for every phase to the game, apart from this phase’s', async () => {
+    const settingsSaves: BoardItemChange[][] = [];
+    server.use(
+      http.get(SETTINGS, () =>
+        HttpResponse.json({ items: [makeGmItem({ kind: 'notes', key: 'notes', version: 2, seq: 1, doc: { text: 'the heist is a front' } })], cursor: 1, share_gm_board: false }),
+      ),
+      http.post(`${SETTINGS}/changes`, async ({ request }) => {
+        const { changes } = (await request.json()) as { changes: BoardItemChange[] };
+        settingsSaves.push(changes);
+        return HttpResponse.json({ items: changes.map((c, i) => makeGmItem({ kind: c.kind, key: c.key, version: c.base_version + 1, seq: 5 + i, doc: c.doc })) });
+      }),
+    );
+    renderBoard();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+
+    const box = await screen.findByLabelText('Notes for every phase');
+    await waitFor(() => expect(box).toHaveValue('the heist is a front'));
+    await userEvent.type(box, '!');
+
+    await waitFor(() => expect(settingsSaves).toHaveLength(1), { timeout: 3000 });
+    expect(settingsSaves[0]).toEqual([{ kind: 'notes', key: 'notes', base_version: 2, doc: { text: 'the heist is a front!' } }]);
+    expect(saves).toEqual([]);
+  });
+
+  it('tells the GM when another editor changed the notes for every phase first', async () => {
+    server.use(
+      http.post(`${SETTINGS}/changes`, () =>
+        HttpResponse.json(
+          {
+            status: 409, title: 'Conflict', detail: 'Another editor changed an item you were editing.',
+            conflicts: [makeGmItem({ kind: 'notes', key: 'notes', version: 3, seq: 8, doc: { text: 'co-GM was here' } })],
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderBoard();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.type(await screen.findByLabelText('Notes for every phase'), '!');
+
+    expect(await screen.findByText('Someone else changed what you were editing', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('the notes for every phase')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Use mine' })).toBeInTheDocument();
   });
 });

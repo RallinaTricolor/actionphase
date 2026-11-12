@@ -5,7 +5,7 @@ import { AxiosError, AxiosHeaders } from 'axios';
 import React from 'react';
 import { makeActionResult, makeAxiosResponse } from '@/test-utils/factories';
 import type { ActionResult } from '@/types/phases';
-import { DRAFT_SAVE_DELAY_MS, useResultDraft, type DraftTarget } from './useResultDraft';
+import { DRAFT_RETRY_MS, DRAFT_SAVE_DELAY_MS, useResultDraft, type DraftTarget } from './useResultDraft';
 import { apiClient } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
@@ -160,5 +160,70 @@ describe('useResultDraft', () => {
     unmount();
     await act(async () => { await Promise.resolve(); });
     expect(api.updateActionResult).toHaveBeenCalledWith(7, 5, { content: 'Leaving now.', expected_updated_at: part.updated_at });
+  });
+
+  // Regression: a failed save left the text only in the box, with nothing
+  // that would send it again unless the GM typed more. Changing step or
+  // closing the tab then dropped it silently, even once the network was back.
+  describe('after a save fails', () => {
+    const networkError = () => new AxiosError('Network Error', 'ERR_NETWORK', { headers: new AxiosHeaders() });
+    const saved = () => makeAxiosResponse({ ...part, updated_at: '2026-11-03T10:00:01Z' });
+
+    it('tries again on its own, without more typing', async () => {
+      api.updateActionResult.mockRejectedValueOnce(networkError()).mockResolvedValue(saved());
+      const { result } = setup({ kind: 'part', part }, [part]);
+      act(() => result.current.setText('The last paragraph.'));
+      await settle();
+      expect(result.current.status).toBe('error');
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(DRAFT_RETRY_MS); });
+      expect(api.updateActionResult).toHaveBeenCalledTimes(2);
+      expect(api.updateActionResult).toHaveBeenLastCalledWith(7, 5, { content: 'The last paragraph.', expected_updated_at: part.updated_at });
+      expect(result.current.status).toBe('saved');
+    });
+
+    it('still asks before the tab closes', async () => {
+      api.updateActionResult.mockRejectedValue(networkError());
+      const { result } = setup({ kind: 'part', part }, [part]);
+      act(() => result.current.setText('The last paragraph.'));
+      await settle();
+      expect(result.current.status).toBe('error');
+
+      const leaving = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(leaving);
+      expect(leaving.defaultPrevented).toBe(true);
+    });
+
+    it('sends the text when it unmounts', async () => {
+      api.updateActionResult.mockRejectedValueOnce(networkError()).mockResolvedValue(saved());
+      const { result, unmount } = setup({ kind: 'part', part }, [part]);
+      act(() => result.current.setText('The last paragraph.'));
+      await settle();
+      expect(api.updateActionResult).toHaveBeenCalledTimes(1);
+
+      unmount();
+      await act(async () => { await Promise.resolve(); });
+      expect(api.updateActionResult).toHaveBeenCalledTimes(2);
+      expect(api.updateActionResult).toHaveBeenLastCalledWith(7, 5, { content: 'The last paragraph.', expected_updated_at: part.updated_at });
+    });
+  });
+
+  it('while a conflict waits for the GM’s choice, asks before the tab closes but sends nothing on unmount', async () => {
+    api.updateActionResult.mockRejectedValueOnce(httpError(409));
+    const theirs = { ...part, content: 'Their version.', updated_at: '2026-11-03T10:05:00Z' };
+    api.getGameResults.mockResolvedValue(makeAxiosResponse([theirs]));
+    const { result, unmount, qc } = setup({ kind: 'part', part }, [part]);
+    qc.setQueryDefaults(['actionResults', 'game', 7], { queryFn: () => apiClient.phases.getGameResults(7).then((r) => r.data) });
+    void qc.prefetchQuery({ queryKey: ['actionResults', 'game', 7] });
+    act(() => result.current.setText('Mine.'));
+    await settle();
+    await waitFor(() => expect(result.current.status).toBe('conflict'));
+    const leaving = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(leaving);
+    expect(leaving.defaultPrevented).toBe(true);
+
+    unmount();
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(api.updateActionResult).toHaveBeenCalledTimes(1);
   });
 });

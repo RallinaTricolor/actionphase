@@ -5375,6 +5375,7 @@ components:
                         - scales
                         - prefs
                         - reward
+                        - notes
                     type: string
             required:
                 - kind

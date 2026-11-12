@@ -11,6 +11,7 @@ import { defaultGroup } from '@/lib/gmBoard/rewardState';
 import { newItemKey } from '@/lib/gmBoard/store';
 import { truncate } from '@/lib/gmBoard/text';
 import type { CharacterRewards, RewardItem } from '@/lib/gmBoard/types';
+import { GmBoardConflicts } from './GmBoardConflicts';
 import { RewardItemEditor } from './RewardEditors';
 
 interface GmRewardListsProps {
@@ -131,6 +132,12 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
 
   return (
     <div className="space-y-6" data-testid="gm-reward-lists">
+      {!readOnly && boardStore.lost.length > 0 && (
+        // The page shows the game settings' conflicts; a phase's list saves to that phase's board.
+        <div data-testid="reward-list-conflicts">
+          <GmBoardConflicts lost={boardStore.lost} onKeepMine={boardStore.keepMine} onDismiss={boardStore.dismissLost} />
+        </div>
+      )}
       <p className="text-sm text-content-secondary">
         {readOnly
           ? 'Rewards the GM defines once and gives to people from Write. Everyone who gets one gets a copy of the same text and sheet change.'

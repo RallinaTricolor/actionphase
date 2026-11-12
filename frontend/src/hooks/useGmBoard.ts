@@ -129,6 +129,9 @@ function useItemEditor<S extends StoreState>(source: ItemSource<S>, readOnly: bo
       const conflicts = conflictsOf(error);
       if (conflicts) {
         set((s) => applyConflicts(s, conflicts) as S);
+        // The refusal only carries the conflicting items: fetch the other
+        // editor's other changes now, not at the next poll.
+        void queryClient.invalidateQueries({ queryKey });
       } else {
         const message = extractApiErrorMessage(error) ?? 'Saving failed.';
         set((s) => ({ ...s, saving: false, saveError: message }));

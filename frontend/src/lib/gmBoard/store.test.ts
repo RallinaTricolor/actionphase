@@ -92,11 +92,14 @@ describe('assembleSettings', () => {
       { kind: 'names', key: '3', doc: { names: ['Harrison Vale', 'Harrison'] } },
       { kind: 'template', key: 'template', doc: { text: '{{lines main}}' } },
       { kind: 'prefs', key: 'prefs', doc: { secondPerson: false } },
+      { kind: 'notes', key: 'notes', doc: { text: 'The heist is a front.' } },
     ]);
     expect(settings.codex[0]).toMatchObject({ id: 'loc1', name: 'Hangar' });
     expect(settings.names[3]).toEqual(['Harrison Vale', 'Harrison']);
     expect(settings.rewardTemplate).toBe('{{lines main}}');
     expect(settings.secondPerson).toBe(false);
+    expect(settings.notes).toBe('The heist is a front.');
+    expect(assembleSettings([]).notes).toBe('');
   });
 
   it('reads the every-phase reward list', () => {
@@ -228,6 +231,29 @@ describe('a 409', () => {
     expect(s.lost).toEqual([]);
     expect(getDoc(s, 'card', 'c1')).toEqual({ summary: 'mine' });
     expect(s.dirty[itemId('card', 'c1')].baseVersion).toBe(2);
+  });
+
+  // Regression: two GMs opening a board both wrote the same derived value
+  // (the reward carrier) from the same version, and the second was told
+  // someone else had changed what they were editing.
+  it('an edit the other editor already made is not a conflict: their copy stands and nothing is lost', () => {
+    let s = loadState([card('c1', 'base', 1, 1)], 1);
+    s = editItem(s, 'card', 'c1', () => ({ summary: 'same', characterId: 3 }));
+    // The database's key order isn't ours.
+    s = applyConflicts(s, [makeGmItem({ kind: 'card', key: 'c1', version: 2, seq: 7, doc: { characterId: 3, summary: 'same' } })]);
+
+    expect(s.lost).toEqual([]);
+    expect(hasPendingChanges(s)).toBe(false);
+    expect(s.server[itemId('card', 'c1')].version).toBe(2);
+  });
+
+  it('a delete the other editor already made is not a conflict either', () => {
+    let s = loadState([card('c1', 'base', 1, 1)], 1);
+    s = removeItem(s, 'card', 'c1');
+    s = applyConflicts(s, [makeGmItem({ kind: 'card', key: 'c1', version: 2, seq: 7, deleted: true, doc: undefined })]);
+
+    expect(s.lost).toEqual([]);
+    expect(hasPendingChanges(s)).toBe(false);
   });
 
   it('an item that turned out not to exist is dropped from our copy', () => {

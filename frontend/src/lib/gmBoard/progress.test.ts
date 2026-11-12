@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { nextNotDone, setReadDone, setReady } from './progress';
+import { makeBoard, makeCard, makeScene } from '@/test-utils/factories';
+import { nextNotDone, setReadDone, setReady, stepProgress } from './progress';
 
 const order = [1, 2, 3, 4];
 
@@ -30,3 +31,36 @@ describe('Ready → next', () => {
     expect(setReadDone({ ready: true }, true)).toEqual({ ready: true, readDone: true });
   });
 });
+
+describe('stepProgress (the step tabs)', () => {
+  const people = { submitters: [1, 2, 3], recipients: [1, 2, 3, 4] };
+
+  it('counts who is read, what is left to resolve, the scenes and who is ready', () => {
+    const board = makeBoard({
+      readDone: { 1: true, 3: true },
+      ready: { 2: true },
+      cards: [
+        makeCard({ id: 'a', characterId: 1, outcome: 'happened' }),
+        makeCard({ id: 'b', characterId: 2, chunkId: 'k2' }),
+        makeCard({ id: 'c', characterId: 3, chunkId: 'k3' }),
+      ],
+      scenes: [makeScene({ id: 's1', participants: [1] })],
+    });
+    expect(stepProgress(board, people)).toEqual({ read: '2/3 read', map: '2 to resolve', scenes: '1', write: '1/4 ready' });
+  });
+
+  it('leaves dismissed checks out of what is left to resolve', () => {
+    const board = makeBoard({ cards: [makeCard({ id: 'b', characterId: 2 })], dismissedFlags: { 'pend:b': true } });
+    expect(stepProgress(board, people).map).toBe('all resolved');
+  });
+
+  it('says nothing for a step with nothing in it yet', () => {
+    expect(stepProgress(makeBoard(), { submitters: [], recipients: [] })).toEqual({});
+  });
+
+  it('counts only people still in the lists', () => {
+    const board = makeBoard({ readDone: { 9: true }, ready: { 9: true } });
+    expect(stepProgress(board, people)).toEqual({ read: '0/3 read', write: '0/4 ready' });
+  });
+});
+

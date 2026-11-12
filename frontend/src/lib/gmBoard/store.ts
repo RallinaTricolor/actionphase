@@ -17,6 +17,7 @@
  */
 
 import type { GmItem } from '@/types/gmBoard';
+import { stable } from './rewards';
 import type {
   BoardDoc,
   Card,
@@ -199,9 +200,21 @@ export function markSaved(state: StoreState, sent: DirtyEdit[], written: GmItem[
 }
 
 /**
+ * Whether the server's copy already says what our edit says: the other
+ * editor made the same change (two GMs opening a board both write the same
+ * derived value, such as a reward carrier). Compared as stored JSON, since
+ * the database neither keeps key order nor `undefined` values.
+ */
+function sameAsEdit(item: GmItem, edit: DirtyEdit): boolean {
+  if (edit.deleted || item.deleted) return edit.deleted && item.deleted;
+  return stable(JSON.parse(JSON.stringify(edit.doc ?? null))) === stable(item.doc);
+}
+
+/**
  * A save was refused because `conflicts` changed under us. Those items take
- * the server's copy, and our edits to them move to `lost`. Every other edit
- * stays dirty, to be sent again.
+ * the server's copy, and our edits to them move to `lost`, unless the server
+ * already has what we wrote: then there's nothing to choose between, and the
+ * edit is simply done. Every other edit stays dirty, to be sent again.
  */
 export function applyConflicts(state: StoreState, conflicts: GmItem[]): StoreState {
   const server = { ...state.server };
@@ -215,7 +228,7 @@ export function applyConflicts(state: StoreState, conflicts: GmItem[]): StoreSta
     const mine = dirty[id];
     if (mine) {
       delete dirty[id];
-      lost.push(mine);
+      if (!sameAsEdit(item, mine)) lost.push(mine);
     }
   }
   return { ...state, server, dirty, lost, saving: false, saveError: null };
@@ -332,7 +345,7 @@ function codexEntry(item: LiveItem): CodexEntry {
 /** Builds a game's board settings from its items, with defaults for what isn't set. */
 export function assembleSettings(items: LiveItem[]): GameBoardSettings {
   const settings: GameBoardSettings = {
-    codex: [], names: {}, rewardTemplate: '', rewardGroups: [], scales: [], secondPerson: true, rewardItems: [],
+    codex: [], names: {}, rewardTemplate: '', rewardGroups: [], scales: [], secondPerson: true, rewardItems: [], notes: '',
   };
   for (const item of items) {
     const doc = asObject(item.doc);
@@ -344,6 +357,7 @@ export function assembleSettings(items: LiveItem[]): GameBoardSettings {
       case 'scales': if (Array.isArray(doc.scales)) settings.scales = doc.scales as GameBoardSettings['scales']; break;
       case 'prefs': if (typeof doc.secondPerson === 'boolean') settings.secondPerson = doc.secondPerson; break;
       case 'reward': settings.rewardItems.push(rewardItemOf(item, 'game')); break;
+      case 'notes': settings.notes = String(doc.text ?? ''); break;
     }
   }
   settings.codex.sort(byId);

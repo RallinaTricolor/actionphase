@@ -257,13 +257,30 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
 The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
 (`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and
 `apply_all.sh`, so an E2E fixture can seed the same board on its own fixed-ID
-game (it needs the Heist's character names and submissions). The E2E games
-**#711** "E2E Test: Results Board - GM" (not shared; the GM test writes here)
-and **#712** "E2E Test: Results Board - Shared" (shared, read-only) in
-`e2e/34_gm_board.sql` do that, with copies of the Heist's submissions, for
-`e2e/gameplay/gm-results-board.spec.ts`. **When the
-board's data model changes, change the seed in the same piece of work**, and
-write every field the client writes (see `frontend/src/lib/gmBoard/types.ts`).
+game (it needs the Heist's character names and submissions).
+`e2e/34_gm_board.sql` makes one such game per spec in `frontend/e2e/gm-board/`
+(IDs offset per worker), each run by TestGM with players 1-4 as the crew
+(each with a sheet: Coin, Stress, a skill, an item), Inspector Dalton as an
+NPC, TestAudience in the audience, and copies of the Heist's submissions in
+phase 2, "Execute the Plan":
+
+| Game | Title ("E2E Test: Results Board - …") | Board | Used by |
+|---|---|---|---|
+| #711 | GM | seeded, not shared | `map` (writes own items); `shell`, `sharing` (read) |
+| #712 | Shared | seeded, shared | `sharing`, `shell` @mobile (read-only) |
+| #713 | Read | seeded | `read` (own cards, codex entries) |
+| #714 | Scenes | seeded | `scenes` (own scenes) |
+| #715 | Write | seeded | `write` (own results) |
+| #716 | Rewards | seeded | `rewards` (lines, blocks, sheet drafts) |
+| #717 | Publish | seeded | `publish` (publishes what it wrote; irreversible) |
+| #718 | Co-GM | seeded; TestPlayer5 is co-GM | `collaboration` |
+| #719 | Sharing | seeded, shared | `sharing` (turns sharing off; turns it back on first) |
+| #720 | Archive | seeded, shared, game completed | `sharing` (TestPlayer5, a non-member, reads it) |
+| #721 | Empty | none, and no codex | `setup` (first-run guide; empties itself first) |
+
+**When the board's data model changes, change the seed in the same piece of
+work**, and write every field the client writes (see
+`frontend/src/lib/gmBoard/types.ts`).
 
 ### Action Results (Game #3)
 - **3 published results** (visible to players)

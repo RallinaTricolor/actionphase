@@ -76,6 +76,32 @@ describe('Game setup: reward lists', () => {
   });
 });
 
+describe('Game setup: a phase’s reward list', () => {
+  it('tells the GM when another editor saved the same reward first', async () => {
+    server.use(
+      http.post(`/api/v1/games/${GAME_ID}/phases/${PHASE_ID}/gm-board/changes`, async ({ request }) => {
+        const { changes } = (await request.json()) as { changes: BoardItemChange[] };
+        return HttpResponse.json(
+          {
+            status: 409, title: 'Conflict', detail: 'Another editor changed an item you were editing.',
+            conflicts: changes.map((c) => makeGmItem({ kind: c.kind, key: c.key, version: 2, seq: 9, doc: { name: 'Theirs', group: 'result', text: '', ops: [], choose: false } })),
+          },
+          { status: 409 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('new-phase-reward')).toBeEnabled());
+    await user.click(screen.getByTestId('new-phase-reward'));
+    await user.type(within(await screen.findByTestId('reward-item-editor')).getByTestId('item-name'), 'Mine');
+
+    const notice = await screen.findByTestId('reward-list-conflicts', {}, { timeout: 3000 });
+    expect(notice).toHaveTextContent('Someone else changed what you were editing');
+    expect(notice).toHaveTextContent('a reward in a list');
+  });
+});
+
 describe('Game setup: reward block', () => {
   it('starts from a simple template, previews it, and lists problems as you type', async () => {
     const user = userEvent.setup();

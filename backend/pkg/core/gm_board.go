@@ -24,7 +24,7 @@ import (
 // GM board item kinds. A new kind is added here and to the request enum.
 var (
 	GmBoardItemKinds    = []string{"card", "scene", "chunk", "cluster", "stance", "progress", "flag", "notes", "reward", "rewards"}
-	GmSettingsItemKinds = []string{"codex", "names", "template", "groups", "scales", "prefs", "reward"}
+	GmSettingsItemKinds = []string{"codex", "names", "template", "groups", "scales", "prefs", "reward", "notes"}
 )
 
 // Size caps. MaxGmBoardItemBytes bounds one item's doc; the largest item is a

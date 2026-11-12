@@ -125,6 +125,21 @@ describe('GmBoardMap', () => {
     expect(screen.getByRole('button', { name: /Harrison Vale: Waits by the wheel/ })).toHaveFocus();
   });
 
+  it('returns focus to a card moved by its time-slot picker, in the cell it moved to', async () => {
+    renderMap();
+    const mapCard = await screen.findByRole('button', { name: /Harrison Vale: Waits by the wheel/ });
+    mapCard.focus();
+    await userEvent.keyboard('{Enter}');
+    const panel = await screen.findByTestId('card-panel');
+    // Moving the card re-renders it in another cell: the button that opened the panel is gone.
+    await userEvent.selectOptions(within(panel).getByLabelText('Time slot'), 'k3');
+    expect(mapCard).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
+    const moved = within(screen.getByTestId('cell-mill-k3')).getByRole('button', { name: /Harrison Vale: Waits by the wheel/ });
+    expect(moved).toHaveFocus();
+  });
+
   it('opens a card beside the grid and sets its outcome', async () => {
     renderMap();
     await userEvent.click(await screen.findByRole('button', { name: /Harrison Vale: Waits by the wheel/ }));

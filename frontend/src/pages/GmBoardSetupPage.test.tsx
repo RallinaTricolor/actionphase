@@ -113,4 +113,29 @@ describe('GmBoardSetupPage', () => {
     renderPage();
     expect(await screen.findByText('The GM hasn’t shared this game’s results boards.')).toBeInTheDocument();
   });
+
+  it('tells the GM when another editor saved the same setting first, and offers “Use mine”', async () => {
+    serveGame({ state: 'in_progress' });
+    server.use(
+      http.post(`/api/v1/games/${GAME_ID}/gm-settings/changes`, async ({ request }) => {
+        const { changes } = (await request.json()) as { changes: { kind: string; key: string }[] };
+        return HttpResponse.json(
+          {
+            status: 409, title: 'Conflict', detail: 'Another editor changed an item you were editing.',
+            conflicts: changes.map((c) => makeGmItem({ kind: c.kind, key: c.key, version: 2, seq: 9, doc: { type: 'Location', name: 'Their mill' } })),
+          },
+          { status: 409 },
+        );
+      }),
+    );
+    renderPage();
+    const codex = await screen.findByTestId('gm-codex');
+    await userEvent.type(within(codex).getByLabelText('Name'), 'the Old Mill');
+    await userEvent.click(within(codex).getByRole('button', { name: 'Add to codex' }));
+
+    expect(await screen.findByText('Someone else changed what you were editing', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('a codex entry')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Use mine' })).toBeInTheDocument();
+  });
 });
+

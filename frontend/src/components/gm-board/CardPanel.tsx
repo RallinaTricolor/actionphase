@@ -77,9 +77,14 @@ export function CardPanel({
     panelRef.current?.focus({ preventScroll: true });
   }, []);
   const close = () => {
-    const back = opener.current;
+    // A card moved to another cell (by its time-slot or location picker) is
+    // drawn anew there, so the button that opened the panel is gone: go back
+    // to the card where it is now.
+    const back = opener.current?.isConnected
+      ? opener.current
+      : document.querySelector<HTMLElement>(`[data-card-id="${CSS.escape(card.id)}"]`);
     onClose();
-    if (back?.isConnected) back.focus({ preventScroll: true });
+    back?.focus({ preventScroll: true });
   };
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     // A combobox or select that is open handles its own Esc first.

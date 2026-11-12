@@ -3,17 +3,17 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { Alert, Badge, Button, Drawer, Spinner } from '@/components/ui';
-import { TabNavigation } from '@/components/layout/TabNavigation';
 import { useGameContext } from '@/contexts/GameContext';
 import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
-import { useGmBoard, useGmBoardStore, useGmSettings } from '@/hooks/useGmBoard';
+import { useGmBoard, useGmBoardStore, useGmSettings, useGmSettingsStore, type GmSaveStatus } from '@/hooks/useGmBoard';
 import { usePhaseRewards } from '@/hooks/usePhaseRewards';
 import { apiClient } from '@/lib/api';
 import { boardCast } from '@/lib/gmBoard/cast';
 import { NOTES_KEY } from '@/lib/gmBoard/store';
-import { BOARD_STEPS, boardPath, boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/steps';
+import { boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
 import { BoardRewardsContext } from './boardRewards';
+import { BoardStepTabs } from './BoardStepTabs';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardFirstRun } from './GmBoardFirstRun';
 import { GmBoardMap } from './GmBoardMap';
@@ -35,6 +35,10 @@ interface GmBoardProps {
   /** Where the header's link goes back to: the GM's results area unless given. */
   back?: { to: string; label: string };
 }
+
+const SAVE_RANK: Record<GmSaveStatus, number> = { saved: 0, unsaved: 1, saving: 2, error: 3 };
+/** The board and the game settings save separately; the header shows whichever is further from saved. */
+const worse = (a: GmSaveStatus, b: GmSaveStatus) => (SAVE_RANK[b] > SAVE_RANK[a] ? b : a);
 
 /** A refused read: the GM stopped sharing while a viewer had the board open. */
 const isRefused = (error: unknown) => isAxiosError(error) && error.response?.status === 403;
@@ -70,9 +74,12 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   );
 
   const { board, isLoading, error } = useGmBoard(gameId, phase.id);
-  const { error: settingsError } = useGmSettings(gameId);
+  const { settings, error: settingsError } = useGmSettings(gameId);
   // This component is above its own BoardReadOnlyContext, so the hooks here are told directly.
   const store = useGmBoardStore(gameId, phase.id, { readOnly });
+  // Game settings edited from the board: the codex drawer and the notes for every phase.
+  const settingsStore = useGmSettingsStore(gameId, { readOnly });
+  const saveStatus = worse(store.status, settingsStore.status);
   // Mounted for the whole board, so sheet drafts follow the lines from any step.
   const rewards = usePhaseRewards(gameId, phase.id, board, { readOnly });
 
@@ -147,7 +154,16 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!readOnly && <GmBoardSaveStatus status={store.status} error={store.saveError} onRetry={() => void store.flush()} />}
+            {!readOnly && (
+              <GmBoardSaveStatus
+                status={saveStatus}
+                error={store.saveError ?? settingsStore.saveError}
+                onRetry={() => {
+                  void store.flush();
+                  void settingsStore.flush();
+                }}
+              />
+            )}
             <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
               Codex
             </Button>
@@ -161,16 +177,19 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
         </div>
 
         {!readOnly && <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />}
+        {!readOnly && (
+          <GmBoardConflicts
+            lost={settingsStore.lost}
+            onKeepMine={settingsStore.keepMine}
+            onDismiss={settingsStore.dismissLost}
+            kindNames={{ notes: 'the notes for every phase' }}
+          />
+        )}
         {!readOnly && board && (
           <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => setCodex({ name: '' })} onOpenSetup={() => navigate(boardSetupPath(gameId))} />
         )}
 
-        <TabNavigation
-          tabs={BOARD_STEPS.map((s) => ({ id: s.id, label: s.label }))}
-          activeTab={step}
-          onTabChange={goToStep}
-          getTabHref={(id) => boardPath(gameId, phase.id, parseBoardStep(id))}
-        />
+        <BoardStepTabs gameId={gameId} phaseId={phase.id} board={board ?? null} step={step} onStep={goToStep} />
 
         {isLoading ? (
           <div className="flex justify-center py-16">
@@ -206,6 +225,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             selectedParts={selectedParts}
             onSelectPart={selectPart}
             onWrite={writeFor}
+            onReadSubmission={readSubmission}
           />
         ) : (
           <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
@@ -230,8 +250,11 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           <GmBoardNotesDrawer
             open={notesOpen}
             onClose={() => setNotesOpen(false)}
+            phaseTitle={phase.title || `Phase ${phase.phase_number}`}
             notes={board.notes}
             onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+            gameNotes={settings?.notes ?? ''}
+            onGameChange={(text) => settingsStore.update('notes', NOTES_KEY, () => ({ text }))}
             readOnly={readOnly}
           />
         )}

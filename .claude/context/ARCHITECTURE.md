@@ -833,9 +833,9 @@ control to its allow-lists when you add one.
 
 **Tests and fixtures**: `fixtures.seed_heist_board(game, phase)`
 (`test_fixtures/common/02_gm_board_seed.sql`) fills a partly resolved board.
-The demo Heist calls it (and shares its board). The E2E games 711 (not shared,
-the GM writes) and 712 (shared) in `e2e/34_gm_board.sql` call it for
-`e2e/gameplay/gm-results-board.spec.ts`, desktop project only. When the
+The demo Heist calls it (and shares its board). The E2E games 711-720 in
+`e2e/34_gm_board.sql` call it, one per spec in `e2e/gm-board/` (721 stays
+empty for the first-run guide); see TEST_DATA.md and TESTING.md. When the
 board's model changes, change the seed with it.
 
 ### Character Sheet Storage

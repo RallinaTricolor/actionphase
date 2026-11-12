@@ -199,6 +199,21 @@ describe('useGmBoard and useGmBoardStore', () => {
     expect(result.current.store.lost).toEqual([]);
   });
 
+  // A refused save only returns the items that conflicted; the other
+  // editor's other changes should arrive now, not at the next 15s poll.
+  it('polls straight after a conflict', async () => {
+    api.applyBoardChanges.mockRejectedValueOnce(conflictError([notes('theirs', 2, 9)]));
+    const { result } = renderBoard();
+    await waitFor(() => expect(result.current.view.board).toBeDefined());
+    const loads = api.getBoard.mock.calls.length;
+
+    act(() => result.current.store.update('notes', 'notes', () => ({ text: 'mine' })));
+    await settle();
+    await waitFor(() => expect(result.current.store.lost).toHaveLength(1));
+    await waitFor(() => expect(api.getBoard.mock.calls.length).toBe(loads + 1));
+    expect(api.getBoard).toHaveBeenLastCalledWith(7, 70, expect.any(Number));
+  });
+
   it('a 409 without conflicts (archived game) is an error, not a retry', async () => {
     api.applyBoardChanges.mockRejectedValue(conflictError(undefined));
     const { result } = renderBoard();

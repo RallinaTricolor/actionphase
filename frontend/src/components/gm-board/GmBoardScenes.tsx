@@ -7,12 +7,12 @@ import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGameActionResults } from '@/hooks/useActionResults';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
-import { useGmBoardStore } from '@/hooks/useGmBoard';
+import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAppendToDraft } from '@/hooks/useResultDraft';
 import { isCovered, setCovered } from '@/lib/gmBoard/coverage';
 import { chainsFor, draftTexts, targetPart } from '@/lib/gmBoard/results';
-import { inPhase } from '@/lib/gmBoard/codex';
+import { codexDoc, inPhase, newCodexEntry } from '@/lib/gmBoard/codex';
 import { boardRows, NO_LOCATION, sortedChunks } from '@/lib/gmBoard/map';
 import { insertMoment, joinScene, leaveScene, newMoment, sceneReaders, scenesInOrder } from '@/lib/gmBoard/moments';
 import type { NamedCharacter } from '@/lib/gmBoard/read';
@@ -23,6 +23,7 @@ import { newItemKey } from '@/lib/gmBoard/store';
 import { shortName } from '@/lib/gmBoard/text';
 import type { BoardDoc, Card as BoardCard, CharacterProgress, Moment, Scene } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
+import { CardPanel } from './CardPanel';
 import { MomentEditor } from './MomentEditor';
 import { SceneRewards } from './SceneRewards';
 import { SceneCast } from './SceneCast';
@@ -41,6 +42,8 @@ interface GmBoardScenesProps {
   selectedParts: Record<number, number | null>;
   onSelectPart: (characterId: number, partId: number | null) => void;
   onWrite: (characterId: number) => void;
+  /** Opens a submission in Read, from the card panel. */
+  onReadSubmission?: (characterId: number) => void;
 }
 
 type SceneDocument = Omit<Scene, 'id'>;
@@ -54,10 +57,11 @@ const SCENES_NARROW_QUERY = '(max-width: 1279px)';
  * left, the moments in the middle, and the scene as one reader gets it on
  * the right (or every reader side by side across both).
  */
-export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, onSelectPart, onWrite }: GmBoardScenesProps) {
+export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, onSelectPart, onWrite, onReadSubmission }: GmBoardScenesProps) {
   const [params, setParams] = useSearchParams();
   const { showToast } = useToast();
   const store = useGmBoardStore(gameId, phase.id);
+  const settingsStore = useGmSettingsStore(gameId);
   const people = useBoardPeople(gameId, phase.id);
   const { cast, names, nameLists, submissions, submissionIds, canRead, settings } = people;
   const sheetItems = useGameCharacterSheetItems(gameId);
@@ -75,6 +79,8 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const lastField = useRef<MomentField | null>(null);
+  /** A card opened from Plans: it takes Reads as' place beside the moments until closed. */
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   const ordered = useMemo(() => scenesInOrder(board), [board]);
   const wanted = params.get('scene');
@@ -144,6 +150,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     else next.delete('scene');
     setParams(next);
     setFocusedId(null);
+    setOpenCardId(null);
     lastField.current = null;
   };
 
@@ -264,6 +271,18 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     }
   };
 
+  const createLocation = (name: string) => {
+    const entry = newCodexEntry({ id: newItemKey('cx'), type: 'Location', name });
+    settingsStore.update('codex', entry.id, () => codexDoc(entry));
+    return entry.id;
+  };
+
+  const openCard = (openCardId && board.cards.find((c) => c.id === openCardId)) || null;
+  const showCard = (id: string) => {
+    setOpenCardId(id);
+    setView('moments');
+  };
+
   const copy = (text: string) => {
     const done = () => showToast('Copied.', 'success');
     const blocked = () => showToast('Copying was blocked by the browser. Select the text and copy it instead.', 'warning');
@@ -286,6 +305,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
         onTrigger: trigger,
         onMomentFromCard: momentFromCard,
         onJoin: join,
+        onOpenCard: showCard,
       }}
       submissions={submissions}
       sheetItems={sheetItems}
@@ -372,6 +392,28 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     />
   );
 
+  const cardPane = openCard && (
+    <CardPanel
+      key={openCard.id}
+      card={openCard}
+      board={board}
+      names={model.names}
+      locations={locations}
+      cast={cast}
+      onChange={(fields) => cardActions.change(openCard, fields)}
+      onCreateLocation={createLocation}
+      onSplit={(at) => cardActions.split(openCard, at)}
+      onPushLater={() => cardActions.pushLater(openCard)}
+      onDelete={() => {
+        cardActions.remove(openCard);
+        setOpenCardId(null);
+      }}
+      onClose={() => setOpenCardId(null)}
+      onReadSubmission={onReadSubmission && !openCard.gm && submissions.has(openCard.characterId) ? () => onReadSubmission(openCard.characterId) : undefined}
+      readOnly={readOnly}
+    />
+  );
+
   return (
     <div className="space-y-3" data-testid="gm-board-step-scenes">
       <SceneHeader
@@ -402,6 +444,8 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
           {momentsPane}
           {view === 'moments' && (
             <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-2 overflow-y-auto">
+              {cardPane || (
+              <>
               <div className="flex gap-1" role="group" aria-label="Side pane">
                 <Button type="button" size="sm" variant={pane === 'reference' ? 'primary' : 'secondary'} aria-pressed={pane === 'reference'} onClick={() => setPane('reference')}>
                   Reference
@@ -411,6 +455,8 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
                 </Button>
               </div>
               {pane === 'reference' ? referencePane : readsAsPane}
+              </>
+              )}
             </div>
           )}
         </div>
@@ -418,7 +464,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
         <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(16rem, 1fr) minmax(0, 2.4fr)' : 'minmax(16rem, 1fr) minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
           <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{referencePane}</div>
           {momentsPane}
-          {view === 'moments' && <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{readsAsPane}</div>}
+          {view === 'moments' && <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{cardPane || readsAsPane}</div>}
         </div>
       )}
     </div>

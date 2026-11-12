@@ -21,6 +21,8 @@ interface ScenePlansProps {
   onTrigger: (card: Card) => void;
   onMomentFromCard: (card: Card) => void;
   onJoin: (characterId: number) => void;
+  /** Opens the card in the card panel, for its note, causes, text and place. */
+  onOpenCard: (cardId: string) => void;
 }
 
 /**
@@ -28,7 +30,7 @@ interface ScenePlansProps {
  * others, their cards in this time slot with outcomes, their waiting IF
  * cards, and their other cards. Then anyone else at this place and time.
  */
-export function ScenePlans({ model, location, placeName, slotName, onSetOutcome, onTrigger, onMomentFromCard, onJoin }: ScenePlansProps) {
+export function ScenePlans({ model, location, placeName, slotName, onSetOutcome, onTrigger, onMomentFromCard, onJoin, onOpenCard }: ScenePlansProps) {
   const { scene, board } = model;
   const others = nearby(board, scene);
   const name = (id: number) => model.names.get(id) ?? `Character ${id}`;
@@ -37,6 +39,11 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
     const label = cardLabel(card);
     const cond = shownCondition(card, label);
     const used = scene.moments.some((m) => m.cardId === card.id);
+    const openButton = (
+      <Button type="button" size="sm" variant="ghost" aria-label={`Open the card: ${truncate(label, 50)}`} title="Open the card: its note, causes, text and place" onClick={() => onOpenCard(card.id)}>
+        Card
+      </Button>
+    );
     return (
       <div key={card.id} className="space-y-1 rounded border border-theme-subtle p-2" data-testid={`plan-${card.id}`}>
         <div className="text-sm text-content-primary">
@@ -77,6 +84,7 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
                 return o && <Badge variant={o.tone} size="sm">{o.label}</Badge>;
               })()
             )}
+            {openButton}
           </div>
         ) : (
         <div className="flex flex-wrap items-center gap-1">
@@ -104,6 +112,7 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
           <Button type="button" size="sm" variant="ghost" title="A new moment with this plan shown above it" onClick={() => onMomentFromCard(card)}>
             {used ? '+ Another moment' : '→ Moment'}
           </Button>
+          {openButton}
         </div>
         )}
       </div>

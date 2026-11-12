@@ -194,7 +194,7 @@ describe('GmBoardRead', () => {
 
     expect(await screen.findByRole('heading', { name: 'Ilse' })).toBeInTheDocument();
     expect(router.state.location.search).toContain('who=3');
-    expect(screen.getByText('2/3 read')).toBeInTheDocument();
+    expect(within(screen.getByTestId('read-player-list')).getByText('2/3 read')).toBeInTheDocument();
     await waitForBoardSave((c) => c.kind === 'progress' && c.key === '1');
     expect(boardSaves.find((c) => c.key === '1')?.doc).toEqual({ readDone: true });
   });

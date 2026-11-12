@@ -155,6 +155,42 @@ describe('GmBoardScenes', () => {
     await waitFor(() => expect(boardSaves.some((c) => c.key === 'c-m' && (c.doc as { causedBy: string[] }).causedBy.join() === 's-late')).toBe(true));
   });
 
+  // The mockup's plan rows opened the card: a Failed set here needs its cause, which is in the card panel.
+  it('opens a plan card beside the moments, gives it a cause, and closes back to Reads as', async () => {
+    board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: sceneDoc({ title: 'The meeting', participants: [1, 2] }) }));
+    renderBoard('step=scenes&scene=s1');
+    expect(await screen.findByTestId('scene-reads-as')).toBeInTheDocument();
+
+    await userEvent.click(within(screen.getByTestId('plan-c-m')).getByRole('button', { name: 'Open the card: Follows him' }));
+    const panel = await screen.findByTestId('card-panel');
+    expect(screen.queryByTestId('scene-reads-as')).not.toBeInTheDocument();
+    // The moments stay beside it.
+    expect(screen.getByRole('button', { name: '+ Moment' })).toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Failed' }));
+    await userEvent.click(within(panel).getByRole('button', { name: /The meeting/ }));
+    await waitFor(
+      () => expect(boardSaves.some((c) => c.key === 'c-m' && (c.doc as { outcome: string; causedBy: string[] }).outcome === 'failed' && (c.doc as { causedBy: string[] }).causedBy.join() === 's1')).toBe(true),
+      { timeout: 3000 },
+    );
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Close the card' }));
+    expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('scene-reads-as')).toBeInTheDocument();
+  });
+
+  it('closes an open card when the GM goes to another scene', async () => {
+    board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: sceneDoc({ title: 'The meeting', participants: [1, 2] }) }));
+    board.set('scene/s2', makeGmItem({ kind: 'scene', key: 's2', doc: sceneDoc({ title: 'The chase', chunkId: 'k3', participants: [2] }) }));
+    renderBoard('step=scenes&scene=s1');
+    await userEvent.click(within(await screen.findByTestId('plan-c-h')).getByRole('button', { name: 'Open the card: Waits by the wheel' }));
+    expect(await screen.findByTestId('card-panel')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next →' }));
+    expect(await screen.findByDisplayValue('The chase')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
+  });
+
   it('below 1280px, shows Reference and Reads as as tabs beside the moments', async () => {
     const original = window.matchMedia;
     window.matchMedia = ((query: string) => ({
@@ -181,6 +217,14 @@ describe('GmBoardScenes', () => {
       await userEvent.click(within(panes).getByRole('button', { name: 'Reads as' }));
       expect(screen.getByTestId('scene-reads-as')).toHaveTextContent('You burn the ledger.');
       expect(screen.queryByRole('group', { name: 'Reference tab' })).not.toBeInTheDocument();
+
+      // A card opened from Plans takes the side pane until it's closed.
+      await userEvent.click(within(panes).getByRole('button', { name: 'Reference' }));
+      await userEvent.click(within(screen.getByTestId('plan-c-h')).getByRole('button', { name: 'Open the card: Waits by the wheel' }));
+      expect(await screen.findByTestId('card-panel')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Side pane' })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Close the card' }));
+      expect(screen.getByRole('group', { name: 'Side pane' })).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: 'Side by side' }));
       expect(screen.queryByRole('group', { name: 'Side pane' })).not.toBeInTheDocument();

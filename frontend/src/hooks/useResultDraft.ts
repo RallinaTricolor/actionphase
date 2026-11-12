@@ -7,6 +7,9 @@ import type { ActionResult } from '@/types/phases';
 /** How long after the last keystroke a draft saves. */
 export const DRAFT_SAVE_DELAY_MS = 1000;
 
+/** How long after a failed save (network, server, expired session) it tries again. */
+export const DRAFT_RETRY_MS = 10_000;
+
 /**
  * What the editor is writing into: a saved draft part, a character's next
  * result (made on the first keystroke; the first one links their
@@ -35,8 +38,11 @@ const isNewer = (a: string | undefined, b: string | undefined) => !!a && (!b || 
  * same component mounted (same React key) when it switches the target to
  * that part, or typing in between is lost.
  *
- * Unsaved text is sent when the component unmounts, and the page warns
- * before closing while a save is outstanding.
+ * A save that fails for any other reason is tried again every
+ * DRAFT_RETRY_MS while the editor is open (typing tries sooner). Text that
+ * differs from the last good save is sent when the component unmounts, and
+ * the page warns before closing while any is outstanding, failed saves and
+ * unresolved conflicts included: the box may hold the only copy.
  */
 export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: (result: ActionResult) => void) {
   const qc = useQueryClient();
@@ -57,6 +63,15 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
   const blocked = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  // The latest save, for the retry timer that save itself sets.
+  const saveRef = useRef<() => Promise<void>>(async () => {});
 
   // A newer copy of this part arrived (someone else saved, or a refetch after
   // another step wrote to it) while nothing is waiting to save: show it.
@@ -145,6 +160,15 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
           void qc.invalidateQueries({ queryKey: resultsKey(gameId) });
         } else {
           setStatus('error');
+          // Nothing else would send this text again unless the GM typed more.
+          // Not after unmount: the unmount save was the last try, and a late
+          // retry could overwrite what a new editor on this part has saved.
+          if (mounted.current && !timer.current) {
+            timer.current = setTimeout(() => {
+              timer.current = null;
+              void saveRef.current();
+            }, DRAFT_RETRY_MS);
+          }
         }
       }
     })();
@@ -155,6 +179,9 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
       inFlight.current = null;
     }
   }, [gameId, patchCache, qc]);
+  useEffect(() => {
+    saveRef.current = save;
+  }, [save]);
 
   const setText = useCallback(
     (next: string) => {
@@ -201,19 +228,21 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
     void save();
   }, [theirs, save]);
 
-  // Send what's waiting when the editor goes away (another part, another step).
+  // Send what's waiting when the editor goes away (another part, another
+  // step): text typed since the last good save, whether its save is still
+  // timed or already failed. `save` skips a blocked part.
   useEffect(
     () => () => {
       if (timer.current) {
         clearTimeout(timer.current);
         timer.current = null;
-        void save();
       }
+      if (textRef.current !== savedTextRef.current) void save();
     },
     [save],
   );
 
-  const pending = status === 'unsaved' || status === 'saving';
+  const pending = status === 'unsaved' || status === 'saving' || status === 'error' || status === 'conflict';
   useEffect(() => {
     if (!pending) return;
     const warn = (e: BeforeUnloadEvent) => {

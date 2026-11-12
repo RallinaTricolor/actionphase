@@ -27,7 +27,7 @@ const STATUS_TEXT: Partial<Record<DraftStatus, string>> = {
   unsaved: 'Not saved yet',
   saving: 'Saving…',
   saved: 'Saved',
-  error: 'Couldn’t save. It’ll try again as you type.',
+  error: 'Couldn’t save. It’ll keep trying.',
 };
 
 /** The draft for one result part, saved as the GM types (see `useResultDraft`). */

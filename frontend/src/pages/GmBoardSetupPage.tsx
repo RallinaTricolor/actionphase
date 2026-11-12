@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { Alert, Badge, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
+import { GmBoardConflicts } from '@/components/gm-board/GmBoardConflicts';
 import { GmBoardSharing } from '@/components/gm-board/GmBoardSharing';
 import { GmCharacterNames } from '@/components/gm-board/GmCharacterNames';
 import { GmCodexManager } from '@/components/gm-board/GmCodexManager';
@@ -11,7 +12,7 @@ import { GmRewardBlock } from '@/components/gm-board/GmRewardBlock';
 import { GmRewardLists } from '@/components/gm-board/GmRewardLists';
 import { useGameContext } from '@/contexts/GameContext';
 import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
-import { useGmSettings } from '@/hooks/useGmBoard';
+import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { apiClient } from '@/lib/api';
 import { isGameWritable } from '@/lib/gamePermissions';
 import { boardCast } from '@/lib/gmBoard/cast';
@@ -28,6 +29,8 @@ export function GmBoardSetupPage() {
   const mayView = isGM || (isAudience && !!game?.share_gm_board);
   const readOnly = !isGM || !game || !isGameWritable(game.state);
   const { error: settingsError } = useGmSettings(gameId, { enabled: mayView });
+  // The editors below share this store (one cache per game), so its lost edits are theirs.
+  const settingsStore = useGmSettingsStore(gameId, { readOnly });
   const phases = useQuery({
     queryKey: ['gamePhases', gameId],
     queryFn: () => apiClient.phases.getGamePhases(gameId).then((res) => res.data),
@@ -111,6 +114,14 @@ export function GmBoardSetupPage() {
             <Alert variant="info">This game is archived, so its results board setup can no longer be changed.</Alert>
           )}
           {!isGM && <p className="text-sm text-content-tertiary">Shared by the GM, read-only.</p>}
+          {!readOnly && (
+            <GmBoardConflicts
+              lost={settingsStore.lost}
+              onKeepMine={settingsStore.keepMine}
+              onDismiss={settingsStore.dismissLost}
+              kindNames={{ notes: 'the notes for every phase' }}
+            />
+          )}
 
           <BoardReadOnlyContext.Provider value={readOnly}>
             <Card variant="bordered" padding="md">

@@ -196,4 +196,6 @@ export interface GameBoardSettings {
   rewardItems: RewardItem[];
   /** "Make 'you'": on unless the GM turns it off. */
   secondPerson: boolean;
+  /** The GM's notes for every phase (the board's own `notes` are one phase's). */
+  notes: string;
 }

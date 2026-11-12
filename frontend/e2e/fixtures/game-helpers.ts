@@ -95,9 +95,18 @@ export const FIXTURE_GAMES = {
   RESTRICTED_POSTS_GM: 'E2E Test: Restricted Posts - GM',                 // Game #708 - GM restricts a post (WRITES)
   RESTRICTED_POSTS_VISIBILITY: 'E2E Test: Restricted Posts - Visibility', // Game #709 - who sees it (READ-ONLY)
 
-  // GM results board (34_gm_board.sql): the Heist's seeded board, twice
-  RESULTS_BOARD_GM: 'E2E Test: Results Board - GM',         // Game #711 - GM edits the board (WRITES); not shared
-  RESULTS_BOARD_SHARED: 'E2E Test: Results Board - Shared', // Game #712 - shared with the audience (READ-ONLY)
+  // GM results board (34_gm_board.sql): the Heist's seeded board, one game per area (e2e/gm-board/)
+  RESULTS_BOARD_GM: 'E2E Test: Results Board - GM',           // Game #711 - shell and Map (WRITES own items); not shared
+  RESULTS_BOARD_SHARED: 'E2E Test: Results Board - Shared',   // Game #712 - shared with the audience (READ-ONLY)
+  RESULTS_BOARD_READ: 'E2E Test: Results Board - Read',       // Game #713 - Read step (WRITES own cards)
+  RESULTS_BOARD_SCENES: 'E2E Test: Results Board - Scenes',   // Game #714 - Scenes step (WRITES own scenes)
+  RESULTS_BOARD_WRITE: 'E2E Test: Results Board - Write',     // Game #715 - Write step (WRITES own results)
+  RESULTS_BOARD_REWARDS: 'E2E Test: Results Board - Rewards', // Game #716 - rewards (WRITES)
+  RESULTS_BOARD_PUBLISH: 'E2E Test: Results Board - Publish', // Game #717 - publishes results it wrote
+  RESULTS_BOARD_CO_GM: 'E2E Test: Results Board - Co-GM',     // Game #718 - TestPlayer5 is co-GM (WRITES)
+  RESULTS_BOARD_SHARING: 'E2E Test: Results Board - Sharing', // Game #719 - sharing turned off and on (WRITES)
+  RESULTS_BOARD_ARCHIVE: 'E2E Test: Results Board - Archive', // Game #720 - completed and shared (READ-ONLY)
+  RESULTS_BOARD_EMPTY: 'E2E Test: Results Board - Empty',     // Game #721 - no board, no codex (WRITES)
 
   // Player multiple characters test (340-345, worker-specific)
   PLAYER_MULTIPLE_CHARACTERS: 'E2E Test: Player Multiple Characters', // Game #340 - "player-multiple-characters.spec.ts"

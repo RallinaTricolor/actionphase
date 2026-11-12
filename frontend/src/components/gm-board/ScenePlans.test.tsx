@@ -12,12 +12,12 @@ const cards = [
   makeCard({ id: 'ilse', characterId: 3, locationId: 'mill', chunkId: 'k2', summary: 'Watches' }),
 ];
 
-function setup(moments = [makeMoment({ id: 'm', readers: [1, 2] })]) {
-  const model = sceneModel(
-    { participants: [1, 2, 9], moments },
-    { cards, stances: { '1|2': { value: 'target', note: 'owes him' } } },
-  );
-  const props = { onSetOutcome: vi.fn(), onTrigger: vi.fn(), onMomentFromCard: vi.fn(), onJoin: vi.fn() };
+function setup(moments = [makeMoment({ id: 'm', readers: [1, 2] })], readOnly = false) {
+  const model = {
+    ...sceneModel({ participants: [1, 2, 9], moments }, { cards, stances: { '1|2': { value: 'target', note: 'owes him' } } }),
+    readOnly,
+  };
+  const props = { onSetOutcome: vi.fn(), onTrigger: vi.fn(), onMomentFromCard: vi.fn(), onJoin: vi.fn(), onOpenCard: vi.fn() };
   render(
     <ScenePlans
       model={model}
@@ -64,5 +64,18 @@ describe('ScenePlans', () => {
     const h = setup();
     await userEvent.click(screen.getByRole('button', { name: 'Add Ilse to the scene' }));
     expect(h.onJoin).toHaveBeenCalledWith(3);
+  });
+
+  // The note, the causes, the text and the place are in the card panel; it opens beside the moments.
+  it('opens any card in the card panel, read-only too', async () => {
+    const h = setup();
+    await userEvent.click(within(screen.getByTestId('plan-draw')).getByRole('button', { name: 'Open the card: Draws on Mara' }));
+    expect(h.onOpenCard).toHaveBeenCalledWith('draw');
+  });
+
+  it('lets a viewer open a card to read it', async () => {
+    const h = setup(undefined, true);
+    await userEvent.click(within(screen.getByTestId('plan-wait')).getByRole('button', { name: 'Open the card: Runs for the door' }));
+    expect(h.onOpenCard).toHaveBeenCalledWith('wait');
   });
 });

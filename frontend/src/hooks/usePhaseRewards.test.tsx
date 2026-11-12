@@ -18,7 +18,7 @@ vi.mock('../lib/api', () => ({
 
 const boardUpdate = vi.fn();
 const settings: GameBoardSettings = {
-  codex: [], names: {}, rewardTemplate: '{{lines result}}', rewardGroups: [{ key: 'result', label: 'Result' }], scales: [], secondPerson: true, rewardItems: [],
+  codex: [], names: {}, rewardTemplate: '{{lines result}}', rewardGroups: [{ key: 'result', label: 'Result' }], scales: [], secondPerson: true, rewardItems: [], notes: '',
 };
 vi.mock('./useGmBoard', () => ({
   useGmSettings: () => ({ settings }),
