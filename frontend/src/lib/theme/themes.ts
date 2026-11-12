@@ -287,3 +287,12 @@ export const themes = {
 } as const;
 
 export type ThemeName = keyof typeof themes;
+
+/**
+ * The CSS `color-scheme` for a theme. The browser draws native controls
+ * (scrollbars, checkboxes, date pickers) from this, not from our tokens, so
+ * without it they stay light on a dark theme.
+ */
+export function colorSchemeFor(theme: ThemeName): 'light' | 'dark' {
+  return theme === 'dark' || theme === 'highContrastDark' ? 'dark' : 'light';
+}

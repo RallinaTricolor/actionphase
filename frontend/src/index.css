@@ -820,6 +820,16 @@
 ::highlight(gm-codex-secret) {
   background-color: rgb(var(--color-semantic-danger-subtle));
 }
+/* The dark themes' "subtle" tokens are solid green-900 / red-700: fine
+   behind a badge, but heavy across whole paragraphs of a submission. */
+:root.dark ::highlight(gm-carded),
+:root.highContrastDark ::highlight(gm-carded) {
+  background-color: rgb(var(--color-semantic-success-subtle) / 0.55);
+}
+:root.dark ::highlight(gm-codex-secret),
+:root.highContrastDark ::highlight(gm-codex-secret) {
+  background-color: rgb(var(--color-semantic-danger-subtle) / 0.55);
+}
 
 /*
  * GM results board, Map: a card's left edge shows its outcome, and a cell

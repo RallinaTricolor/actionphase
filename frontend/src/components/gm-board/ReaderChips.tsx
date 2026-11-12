@@ -69,7 +69,7 @@ export function ReaderChips({ moment, number, model, onToggle, onOwnText, onAddE
         );
       })}
       {elsewhere.length > 0 && (
-        <div className="w-44">
+        <div>
           <Select
             id={`moment-${moment.id}-elsewhere`}
             aria-label="Also tell someone elsewhere"

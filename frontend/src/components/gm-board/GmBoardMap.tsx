@@ -276,7 +276,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
           </Button>
         )}
         {view !== 'stances' && (
-          <div className="w-36">
+          <div>
             <Select
               id="map-arrows"
               aria-label="Arrows"

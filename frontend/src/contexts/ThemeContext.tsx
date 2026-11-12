@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { themes, type ThemeName } from '../lib/theme/themes';
+import { colorSchemeFor, themes, type ThemeName } from '../lib/theme/themes';
 import { useAuth } from './AuthContext';
 import { useUserPreferences, useUpdateUserPreferences } from '../hooks/useUserPreferences';
 
@@ -117,6 +117,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // This ensures both old and new systems work simultaneously
     root.classList.remove('light', 'dark');
     root.classList.add(resolvedTheme);
+    root.style.colorScheme = colorSchemeFor(resolvedTheme);
 
     // Persist theme preference to localStorage
     if (theme !== 'system') {

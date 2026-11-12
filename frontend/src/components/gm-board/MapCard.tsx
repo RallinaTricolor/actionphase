@@ -55,7 +55,9 @@ export const MapCard = memo(function MapCard({ card, owner, ownerNames, flagged,
       data-arrow-id={card.id}
       data-card-id={card.id}
       className={[
-        'w-full !justify-start !items-start !text-left !px-2 !py-1 border border-l-4 surface-base',
+        // !whitespace-normal: Button's nowrap would keep the label on one line
+        // and cut it mid-word, defeating its line-clamp.
+        'w-full !justify-start !items-start !text-left !whitespace-normal !px-2 !py-1 border border-l-4 surface-base',
         flagged ? 'border-semantic-danger' : 'border-theme-default',
         `gm-edge-${waiting ? 'waiting' : outcome.tone}`,
         card.outcome === 'moot' ? 'opacity-60' : '',
