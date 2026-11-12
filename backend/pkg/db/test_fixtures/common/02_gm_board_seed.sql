@@ -21,9 +21,9 @@
 --           scene in the lobby.
 --   Write   draft results (action_results, unpublished): Shade has a two-part
 --           staged result that covers her moments and is marked ready; Vex
---           has two results, one answering his submission and one standalone
---           that names a secret he isn't allowed to know (a leak check). Rook
---           and Silk have nothing written yet.
+--           has one result answering his submission, which names a secret he
+--           isn't allowed to know (a leak check). Rook and Silk have nothing
+--           written yet. Everyone gets one result (staged or not), as in play.
 --   Rewards a reward block template with sections and a Coin scale, an
 --           every-phase list and this phase's list. Shade has two lines (one
 --           from the vault scene) on her staged result, so the chain's last
@@ -221,12 +221,12 @@ BEGIN
          false, NULL, r.id, 15
   FROM action_results r WHERE r.id = head_id;
 
-  -- Vex: his answer, and a second, standalone result that leaks a secret.
+  -- Vex: his answer, which leaks a secret.
   INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
   SELECT p_game_id, c.user_id, p_phase_id, vex,
          (SELECT id FROM action_submissions WHERE phase_id = p_phase_id AND character_id = vex ORDER BY id LIMIT 1),
          gm_id,
-         E'You pour the acid on the outer lock, and the vault door hisses open.\n\nThe ducts were tighter than the blueprints promised. Your knees will remember them.',
+         E'You pour the acid on the outer lock, and the vault door hisses open.\n\nThe ducts were tighter than the blueprints promised. Your knees will remember them.\n\nThat night, a note slipped under your door: the manager''s debts run deeper than anyone guessed.',
          false, NULL, NULL
   FROM characters c WHERE c.id = vex
   RETURNING id INTO head_id;
@@ -236,11 +236,5 @@ BEGIN
   -- replace it.
   INSERT INTO action_result_character_updates (action_result_id, character_id, module_type, field_name, field_value, field_type, operation, from_rewards)
   VALUES (head_id, vex, 'inventory', 'items', '[{"id":"0b1c2d3e-4f50-4a61-9b72-8c93d0a4e5f6","name":"Acid Vial","quantity":2,"category":"Alchemy"}]', 'json', 'upsert', false);
-
-  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
-  SELECT p_game_id, c.user_id, p_phase_id, vex, NULL, gm_id,
-         E'A note slipped under your door that night: the manager''s debts run deeper than anyone guessed.',
-         false, NULL, NULL
-  FROM characters c WHERE c.id = vex;
 END;
 $fn$;

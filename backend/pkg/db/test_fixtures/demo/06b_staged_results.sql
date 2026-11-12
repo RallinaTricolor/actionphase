@@ -22,14 +22,18 @@
 --   action_results_delay_bounds          — 1 <= reveal_delay_minutes <= 1440
 --   action_results_no_self_parent        — a part cannot be its own parent
 --
+-- Each chain is that character's ONLY result for the phase (06_results.sql
+-- skips them): in real games everyone gets one result, sometimes in parts.
+--
 -- Coverage:
---   Game #3 (in_progress) — a PENDING chain: part 1 revealed, part 2 due soon,
---     part 3 with no knowable unlock time. This is what the player-facing
---     countdown and "Pending" placeholder render against.
---   Game #3 (in_progress) — a FULLY RELEASED chain, so the "Part N of M" labels
---     have a case where every part reads normally.
---   Game #9 (completed)   — a chain in the public archive, half released and
---     half never released, which is what the export gate is written against.
+--   Game #3 (in_progress) — Commander Vasquez: a PENDING chain: part 1
+--     revealed, part 2 due soon, part 3 with no knowable unlock time. This is
+--     what the player-facing countdown and "Pending" placeholder render against.
+--   Game #3 (in_progress) — Dr. Kim: a FULLY RELEASED chain, so the "Part N of
+--     M" labels have a case where every part reads normally.
+--   Game #9 (completed)   — Theron, final phase: a chain in the public archive,
+--     half released and half never released, which is what the export gate is
+--     written against.
 
 BEGIN;
 
@@ -38,6 +42,7 @@ DECLARE
   gm_id INTEGER;
   p1_id INTEGER;
   p2_id INTEGER;
+  p3_id INTEGER;
   game3_id INTEGER;
   game9_id INTEGER;
   phase3_id INTEGER;
@@ -48,6 +53,7 @@ BEGIN
   SELECT id INTO gm_id FROM users WHERE email = 'test_gm@example.com';
   SELECT id INTO p1_id FROM users WHERE email = 'test_player1@example.com';
   SELECT id INTO p2_id FROM users WHERE email = 'test_player2@example.com';
+  SELECT id INTO p3_id FROM users WHERE email = 'test_player3@example.com';
 
   SELECT id INTO game3_id FROM games WHERE title = 'Starfall Station';
   SELECT id INTO game9_id FROM games WHERE title = 'COMPLETED: Tales of the Arcane';
@@ -70,7 +76,7 @@ BEGIN
     phase3_id,
     (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p1_id),
     gm_id,
-    E'Commander Vasquez:\n\nThe thing in the air duct drops behind you without a sound. You spin, sidearm rising, and for one long moment you are looking straight down the length of something that should not exist.\n\nIt lunges. Your shot goes wide. Its claw comes around in a flat arc toward your throat...',
+    E'Commander Vasquez:\n\nAs you systematically search Deck C, your security scanner picks up an unusual energy signature behind the maintenance panel in Section C-7. When you pry it open, you find a makeshift laboratory filled with bizarre biological samples.\n\nThe samples are... moving. Pulsating with an otherworldly rhythm.\n\nYou notice a personal datapad partially dissolved by some kind of acid. Through the damage, you can make out the name "Dr. Morrison" - one of the scientists who went missing three weeks ago.\n\nYour radio crackles: "Commander, we''re picking up movement in the air ducts above your location."\n\nThe thing in the air duct drops behind you without a sound. You spin, sidearm rising, and for one long moment you are looking straight down the length of something that should not exist.\n\nIt lunges. Your shot goes wide. Its claw comes around in a flat arc toward your throat...',
     true,
     NOW() - INTERVAL '2 minutes',
     NOW() - INTERVAL '2 minutes'
@@ -118,29 +124,29 @@ BEGIN
   INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
   VALUES (
     game3_id,
-    p2_id,
+    p3_id,
     phase3_id,
-    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p2_id),
+    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p3_id),
     gm_id,
-    E'Dr. Kim:\n\nThe seizures stop all at once, as though a switch were thrown. Three crew members sit up in perfect unison and look at you.\n\n"You are reading the wrong records," they say together.',
+    E'Dr. Kim:\n\nYour medical examination of the crew members who reported "strange dreams" reveals elevated levels of an unknown compound in their bloodstream. The compound doesn''t match anything in the medical database.\n\nMore concerning: brain scans show unusual activity in the areas associated with memory and perception. It''s as if something is... writing new neural pathways.\n\nPatient Zero appears to be Dr. Morrison from the Biology Department. According to records, he was the first to report symptoms, two weeks before he vanished.\n\nYou''re interrupted by an emergency medical alert: three crew members in MedBay simultaneously began seizing. Their eyes are moving in perfect synchronization, tracking something invisible in the room.\n\nThey''re all whispering the same word: "Starfall."\n\nThe seizures stop all at once, as though a switch were thrown. Three crew members sit up in perfect unison and look at you.\n\n"You are reading the wrong records," they say together.',
     true,
-    NOW() - INTERVAL '3 hours',
-    NOW() - INTERVAL '3 hours'
+    NOW() - INTERVAL '5 hours',
+    NOW() - INTERVAL '5 hours'
   ) RETURNING id INTO head_id;
 
   INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at)
   VALUES (
     game3_id,
-    p2_id,
+    p3_id,
     phase3_id,
-    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p2_id),
+    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p3_id),
     gm_id,
     E'They speak the coordinates of a storage bay that is not on any manifest you have seen, then lie back down and sleep like children.\n\nWhen you check the medical log an hour later, the entry you wrote about the incident is gone.',
     true,
-    NOW() - INTERVAL '3 hours',
+    NOW() - INTERVAL '5 hours',
     head_id,
     15,
-    NOW() - INTERVAL '2 hours 45 minutes'
+    NOW() - INTERVAL '4 hours 45 minutes'
   );
 
   -- ============================================
@@ -154,43 +160,46 @@ BEGIN
   INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
   VALUES (
     game9_id,
-    p1_id,
+    p2_id,
     game9_phase7_id,
     (SELECT id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     (SELECT character_id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     gm_id,
-    E'Theron:\n\nAs the fortress falls, you see a figure standing calmly amid the collapsing stone — untouched, unhurried, watching you.\n\nIt raises one hand in something that is almost a greeting...',
+    E'Theron:\n\nDawnbreaker has never burned brighter. Every swing cuts through Valdane''s defenses, and with his ritual broken and his bound servants freed, he has nothing left.\n\n"This is for everyone you''ve hurt!" you shout, driving him back step by step.\n\nValdane makes one final attempt - a death curse, designed to take you with him. But Lyra and the shadow dragon intercept it, absorbing the dark magic harmlessly.\n\nYour blade finds its mark.\n\nArchmagus Valdane, master of the Shadow Council, architect of a hundred dark plots, falls. His last words are a whisper: "The Council... is more than... one mage..."\n\nThen he''s gone. The fortress begins to crumble around you - without Valdane''s magic sustaining it, the ancient structure can''t hold.\n\n"Time to go!" you shout, and the three of you race for the exit as the fortress of shadows collapses into dust.\n\nAs the fortress falls, you see a figure standing calmly amid the collapsing stone — untouched, unhurried, watching you.\n\nIt raises one hand in something that is almost a greeting...',
     true,
-    NOW() - INTERVAL '58 days',
-    NOW() - INTERVAL '58 days'
+    NOW() - INTERVAL '59 days',
+    NOW() - INTERVAL '59 days'
   ) RETURNING id INTO head_id;
 
   -- Part 2 is the tail of the RELEASED portion. Its own released_at is set, but
   -- note its reveal_delay_minutes is large and it is anchored to NOW(), not to
-  -- 58 days ago — see the comment on part 3 for why that matters.
+  -- 59 days ago — see the comment on part 3 for why that matters.
   INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, character_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes, released_at)
   VALUES (
     game9_id,
-    p1_id,
+    p2_id,
     game9_phase7_id,
     (SELECT id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     (SELECT character_id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     gm_id,
     E'...and then it is simply not there, and neither is the fortress, and you are standing in an empty field with your friends and no evidence that any of it happened.\n\nThe Shadow Council is more than one mage.',
     true,
-    NOW() - INTERVAL '58 days',
+    NOW() - INTERVAL '59 days',
     head_id,
     20,
     NOW()
   ) RETURNING id INTO part2_id;
 
   -- Still pending: the game completed with this reveal outstanding.
+  -- It appears in the archive and in exports by design (see the note on the
+  -- export query in exports.sql); the path that DOES hide it is GetUserResults,
+  -- which blanks unreleased content for the recipient mid-game.
   --
-  -- ⚠️ Its parent's released_at is deliberately NOW(), not 58 days ago. The
+  -- ⚠️ Its parent's released_at is deliberately NOW(), not 59 days ago. The
   -- release worker owns a chain's clock independently of game state — it does
   -- NOT join games or game_phases, by design ("Chain Independence") — so a part
   -- whose parent released in the past is overdue and fires on the very next
@@ -204,16 +213,16 @@ BEGIN
   INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, character_id, gm_user_id, content, is_published, sent_at, parent_result_id, reveal_delay_minutes)
   VALUES (
     game9_id,
-    p1_id,
+    p2_id,
     game9_phase7_id,
     (SELECT id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     (SELECT character_id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p1_id AND phase_id = game9_phase7_id),
+      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
     gm_id,
-    E'PENDING AT COMPLETION: this reveal never fired. It appears in the archive and in exports by design — see the note on the export query in exports.sql. The path that DOES hide it is GetUserResults, which blanks unreleased content for the recipient mid-game.',
+    E'A month later, a letter finds you, sealed in black wax. Inside is a single line in Valdane''s hand, dated the day after he died:\n\n"We are patient."',
     true,
-    NOW() - INTERVAL '58 days',
+    NOW() - INTERVAL '59 days',
     part2_id,
     1440
   );

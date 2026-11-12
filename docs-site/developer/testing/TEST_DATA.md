@@ -946,18 +946,6 @@ BEGIN
     NOW() - INTERVAL '5 hours'
   );
 
-  -- Unpublished draft result (GM hasn't published yet)
-  INSERT INTO action_results (game_id, user_id, phase_id, gm_user_id, content, is_published, sent_at)
-  VALUES (
-    game3_id,
-    p1_id,
-    phase3_id,
-    gm_id,
-    E'[DRAFT - Additional information about the entity''s origin - publish this later for dramatic effect]',
-    false,
-    NULL
-  );
-
 END $$;
 
 COMMIT;
@@ -1087,10 +1075,18 @@ currently contain none.
 
 ### Action Results
 
+Verified 2026-11-12. Rows, not results: a staged result is one row per part.
+
 | Game | Published | Draft |
 |---|---|---|
-| Starfall Station | 8 | 1 |
-| COMPLETED: Tales of the Arcane | 12 | 0 |
+| Starfall Station | 6 | 0 |
+| COMPLETED: Tales of the Arcane | 11 | 0 |
+| The Heist at Goldstone Bank | 0 | 3 |
+
+Each character gets exactly one result per phase, as in real games; some are
+split into staged parts (Vasquez and Dr. Kim in Starfall, Theron in Arcane's
+final phase, Shade in the Heist). Never seed a second, separate result for a
+character in the same phase.
 
 Draft vs. published is `action_results.is_published`. Note this flag means
 "the GM has published these results", not phase visibility.

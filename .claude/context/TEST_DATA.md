@@ -239,9 +239,10 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
   short lobby scene with Dalton.
 - **Write** (draft `action_results`, all unpublished): Shade has a two-part
   staged result (part 2 after 15 minutes) covering all her moments, one
-  ticked by hand, and is marked ready. Vex has two results: one answering his
-  submission, and a standalone one that names the Silk-only secret (a leak
-  check). Rook and Silk have nothing written. The seed deletes the phase's
+  ticked by hand, and is marked ready. Vex has one result answering his
+  submission that names the Silk-only secret (a leak check). Rook and Silk
+  have nothing written. Everyone gets one result (staged or not), as in real
+  play, so don't seed a second for anyone. The seed deletes the phase's
   results before writing these.
 - **Rewards**: a block template (sections Job result / Bonus objectives /
   Other, a Coin scale Broke/Flush/Rich, a "Crew note" text box), an
@@ -283,18 +284,26 @@ work**, and write every field the client writes (see
 `frontend/src/lib/gmBoard/types.ts`).
 
 ### Action Results (Game #3)
-- **3 published results** (visible to players)
-- **1 draft result** (GM hasn't published yet)
+- **3 published results**, one per character (visible to players). Two are
+  staged chains from `06b_staged_results.sql`.
 - Demonstrates storytelling and cliffhangers
+
+**One result per character per phase.** In real games everyone gets exactly
+one result, sometimes split into staged parts; a second, separate result is a
+very rare exception. Every demo character follows this, so don't seed a second
+result for anyone. A character whose result is a staged chain has no row in
+`06_results.sql`.
 
 ### Staged Result Chains (`demo/06b_staged_results.sql`)
 
 A staged chain is one result split into parts revealed on a timer.
 
-- **Game #3** — a *pending* chain (part 1 released, part 2 due minutes after
-  load, part 3 with no knowable unlock time) and a *fully released* chain
-- **Game #9** (completed) — an archive chain: released head and tail, plus one
-  part still pending, which is what the export gate is verified against
+- **Game #3** — Commander Vasquez: a *pending* chain (part 1 released, part 2
+  due minutes after load, part 3 with no knowable unlock time). Dr. Kim: a
+  *fully released* chain
+- **Game #9** (completed) — Theron, final phase: an archive chain: released
+  head and tail, plus one part still pending, which is what the export gate
+  is verified against
 
 #### 🔴 Two rules when writing `action_results` fixtures
 
