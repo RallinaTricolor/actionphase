@@ -86,6 +86,7 @@ test.describe('GM results board: setup', () => {
     await performAndWaitForMutation(page, () => page.getByTestId('item-name').fill(reward), API.saveBoardSettings);
 
     await board.open({ step: 'write', who: silk });
+    await board.resultTab('Rewards');
     await expect(page.getByTestId('reward-quick-give').getByRole('button', { name: `+ ${reward}` })).toBeVisible();
   });
 });

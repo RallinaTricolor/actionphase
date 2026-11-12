@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, CardBody, Spinner } from '@/components/ui';
+import { Button, Card, CardBody, HelpTooltip, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
 import { useBoardPeople } from '@/hooks/useBoardPeople';
@@ -23,6 +23,9 @@ import { newItemKey } from '@/lib/gmBoard/store';
 import { shortName } from '@/lib/gmBoard/text';
 import type { BoardDoc, Card as BoardCard, CharacterProgress, Moment, Scene } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
+import { BoardPane } from './BoardPane';
+import { BoardToolbar } from './BoardToolbar';
+import { TOOLBAR_ROW } from './boardToolbarSlot';
 import { CardPanel } from './CardPanel';
 import { MomentEditor } from './MomentEditor';
 import { SceneRewards } from './SceneRewards';
@@ -316,8 +319,14 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     />
   );
   const momentsPane = (
-    <div className="min-w-0 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <BoardPane
+      title={
+        <div className="flex items-center gap-1">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-content-secondary">Moments</h3>
+          {!readOnly && <HelpTooltip text="Ctrl+Enter in a moment adds one below." />}
+        </div>
+      }
+      actions={
         <div className="flex gap-1" role="group" aria-label="Scene view">
           <Button type="button" size="sm" variant={view === 'moments' ? 'primary' : 'secondary'} aria-pressed={view === 'moments'} onClick={() => setView('moments')}>
             Moments
@@ -326,9 +335,9 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
             Side by side
           </Button>
         </div>
-        {!readOnly && <span className="text-xs text-content-tertiary">Ctrl+Enter in a moment adds one below.</span>}
-      </div>
-
+      }
+      bodyClassName="space-y-3"
+    >
       {view === 'side' ? (
         <SceneSideBySide
           model={model}
@@ -372,7 +381,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
           )}
         </>
       )}
-    </div>
+    </BoardPane>
   );
   const readsAsPane = (
     <SceneReadsAs
@@ -414,57 +423,65 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, selectedParts, 
     />
   );
 
+  const sidePaneSwitch = (
+    <div className="flex gap-1" role="group" aria-label="Side pane">
+      <Button type="button" size="sm" variant={pane === 'reference' ? 'primary' : 'secondary'} aria-pressed={pane === 'reference'} onClick={() => setPane('reference')}>
+        Reference
+      </Button>
+      <Button type="button" size="sm" variant={pane === 'readsAs' ? 'primary' : 'secondary'} aria-pressed={pane === 'readsAs'} onClick={() => setPane('readsAs')}>
+        Reads as
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-3" data-testid="gm-board-step-scenes">
-      <SceneHeader
-        key={scene.id}
-        model={model}
-        slots={slots}
-        locations={locations}
-        placeName={placeName}
-        onGo={go}
-        onChange={(fields) => edit((s) => ({ ...s, ...fields }))}
-        onDelete={deleteScene}
-      />
-      <SceneCast
-        model={model}
-        onJoin={join}
-        onLeave={leave}
-        onEffects={edit}
-        onRemoveEffect={(i) => {
-          const before = scene;
-          edit((s) => removeEffect(s, i));
-          showToast('Effect removed.', 'info', { action: { label: 'Undo', onClick: () => put(before) } });
-        }}
-      />
-      <SceneRewards scene={scene} board={board} names={model.names} canRead={canRead} sceneName={sceneName(scene, model.names)} />
+    <div className="space-y-4" data-testid="gm-board-step-scenes">
+      <BoardToolbar aria-label="Scene">
+        <SceneHeader
+          key={scene.id}
+          model={model}
+          slots={slots}
+          locations={locations}
+          placeName={placeName}
+          onGo={go}
+          onChange={(fields) => edit((s) => ({ ...s, ...fields }))}
+          onDelete={deleteScene}
+        />
+        <div className={TOOLBAR_ROW}>
+          <SceneCast
+            model={model}
+            onJoin={join}
+            onLeave={leave}
+            onEffects={edit}
+            onRemoveEffect={(i) => {
+              const before = scene;
+              edit((s) => removeEffect(s, i));
+              showToast('Effect removed.', 'info', { action: { label: 'Undo', onClick: () => put(before) } });
+            }}
+          />
+          <SceneRewards scene={scene} board={board} names={model.names} canRead={canRead} sceneName={sceneName(scene, model.names)} />
+        </div>
+      </BoardToolbar>
 
       {narrow ? (
         <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
           {momentsPane}
-          {view === 'moments' && (
-            <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-2 overflow-y-auto">
-              {cardPane || (
-              <>
-              <div className="flex gap-1" role="group" aria-label="Side pane">
-                <Button type="button" size="sm" variant={pane === 'reference' ? 'primary' : 'secondary'} aria-pressed={pane === 'reference'} onClick={() => setPane('reference')}>
-                  Reference
-                </Button>
-                <Button type="button" size="sm" variant={pane === 'readsAs' ? 'primary' : 'secondary'} aria-pressed={pane === 'readsAs'} onClick={() => setPane('readsAs')}>
-                  Reads as
-                </Button>
-              </div>
-              {pane === 'reference' ? referencePane : readsAsPane}
-              </>
-              )}
-            </div>
-          )}
+          {view === 'moments' &&
+            (cardPane ? (
+              <BoardPane sticky>{cardPane}</BoardPane>
+            ) : (
+              <BoardPane sticky title={sidePaneSwitch}>
+                {pane === 'reference' ? referencePane : readsAsPane}
+              </BoardPane>
+            ))}
         </div>
       ) : (
         <div className="grid items-start gap-4" style={{ gridTemplateColumns: view === 'side' ? 'minmax(16rem, 1fr) minmax(0, 2.4fr)' : 'minmax(16rem, 1fr) minmax(0, 1.6fr) minmax(16rem, 1fr)' }}>
-          <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{referencePane}</div>
+          <BoardPane sticky title="Reference">
+            {referencePane}
+          </BoardPane>
           {momentsPane}
-          {view === 'moments' && <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">{cardPane || readsAsPane}</div>}
+          {view === 'moments' && <BoardPane sticky title={cardPane ? undefined : 'Reads as'}>{cardPane || readsAsPane}</BoardPane>}
         </div>
       )}
     </div>

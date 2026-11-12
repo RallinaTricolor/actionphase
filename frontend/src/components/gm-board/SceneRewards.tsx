@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Badge, Button, Select } from '@/components/ui';
+import { Badge, Button, HelpTooltip, Select } from '@/components/ui';
 import { lineEffect, lineText } from '@/lib/gmBoard/rewards';
 import { defaultGroup } from '@/lib/gmBoard/rewardState';
 import { shortName, truncate } from '@/lib/gmBoard/text';
 import type { BoardDoc, Scene } from '@/lib/gmBoard/types';
 import { useOptionalBoardRewards } from './boardRewards';
+import { TOOLBAR_LABEL } from './boardToolbarSlot';
 import { RewardLineEditor } from './RewardEditors';
 
 interface SceneRewardsProps {
@@ -38,8 +39,8 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-theme-default surface-raised p-2" role="group" aria-label="Sheet updates from the scene" data-testid="scene-rewards">
-      <span className="mr-1 text-xs font-medium text-content-tertiary">Sheet updates</span>
+    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Sheet updates from the scene" data-testid="scene-rewards">
+      <span className={`mr-1 ${TOOLBAR_LABEL}`}>Sheet updates</span>
       {fromScene.map(({ characterId, line: l }) => {
         const state = rewards.stateFor(characterId);
         const summary = lineText(l, state.sheet.recs[l.id]).trim() || lineEffect(rewards.layout, l) || 'Nothing yet';
@@ -56,13 +57,10 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
           </Button>
         );
       })}
-      {!fromScene.length && (
-        <span className="text-xs text-content-secondary">
-          {rewards.readOnly ? 'None.' : 'Rewards or sheet changes someone gets from this scene. They show up in Write with their other rewards.'}
-        </span>
-      )}
+      {!fromScene.length && rewards.readOnly && <span className="text-xs text-content-secondary">None.</span>}
+      {!rewards.readOnly && <HelpTooltip text="Rewards or sheet changes someone gets from this scene. They show up in Write with their other rewards." />}
       {who.length > 0 && !rewards.readOnly && (
-        <span className="w-48">
+        <span>
           <Select aria-label="Add a sheet update for someone in the scene" selectSize="sm" value="" onChange={(e) => e.target.value && add(Number(e.target.value))} data-testid="scene-add-reward">
             <option value="">+ Sheet update</option>
             {who.map((id) => (

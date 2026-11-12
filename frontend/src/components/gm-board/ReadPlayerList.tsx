@@ -1,4 +1,5 @@
 import { Badge, Button } from '@/components/ui';
+import { TOOLBAR_LABEL } from './boardToolbarSlot';
 
 interface ReadPlayer {
   id: number;
@@ -14,31 +15,32 @@ interface ReadPlayerListProps {
   onSelect: (id: number) => void;
 }
 
-/** The phase's submitters, with how many are read and how many cards each has given the board. */
+/**
+ * The phase's submitters as a strip of chips in the Read step's toolbar, with
+ * how many are read and how many cards each has given the board.
+ */
 export function ReadPlayerList({ players, selectedId, onSelect }: ReadPlayerListProps) {
   const read = players.filter((p) => p.readDone).length;
   return (
-    <nav aria-label="Submissions" className="space-y-1" data-testid="read-player-list">
-      <p className="px-2 pb-1 text-sm text-content-secondary">
+    <nav aria-label="Submissions" className="flex flex-wrap items-center gap-1.5" data-testid="read-player-list">
+      <span className={`mr-1 ${TOOLBAR_LABEL}`}>
         {read}/{players.length} read
-      </p>
+      </span>
       {players.map((p) => (
         <Button
           key={p.id}
           type="button"
-          variant={p.id === selectedId ? 'secondary' : 'ghost'}
+          variant={p.id === selectedId ? 'primary' : 'outline'}
           size="sm"
-          className="w-full !justify-between text-left"
+          className="max-w-[14rem] gap-1.5"
           aria-current={p.id === selectedId ? 'true' : undefined}
           onClick={() => onSelect(p.id)}
         >
           <span className="truncate">{p.name}</span>
-          <span className="flex items-center gap-1 shrink-0" title={`${p.readDone ? 'Read. ' : ''}${p.cards} card${p.cards === 1 ? '' : 's'} on the board`}>
-            {p.readDone && <span aria-label="read">✓</span>}
-            <Badge variant={p.cards ? 'success' : 'neutral'} size="sm">
-              {p.cards}
-            </Badge>
-          </span>
+          {p.readDone && <span aria-label="read">✓</span>}
+          <Badge variant={p.cards ? 'success' : 'neutral'} size="sm" title={`${p.readDone ? 'Read. ' : ''}${p.cards} card${p.cards === 1 ? '' : 's'} on the board`}>
+            {p.cards}
+          </Badge>
         </Button>
       ))}
     </nav>

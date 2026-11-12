@@ -362,8 +362,17 @@ batches, 409s, polls, tombstones), measured layout (arrows, drag, the
   for settings. The badge already says "Saved" before the first edit.
 - **Drive polls with the clock**: `page.clock.install()` before opening the
   board, then `GmBoardPage.nextPoll()`. Never wait out the real 15s.
-- **Drags stay between neighbouring rows** (rooftop ↔ vault): `dragTo` can't
-  scroll the page mid-drag.
+- **Drags stay between neighbouring rows** (rooftop ↔ vault) and use
+  `GmBoardPage.dragCard(cardId, cell)`, never a bare `dragTo`: Playwright
+  can't scroll mid-drag (the drop is lost, or the drag hangs on a sideways
+  scroll), so `dragCard` centres the target column in the grid and puts both
+  rows on screen first. Bare `dragTo` broke once Map cards wrapped to three
+  lines and rows grew taller (2026-11-12).
+- **Write's result column is tabbed** (Result, Rewards, Checks; 2026-11-12).
+  Call `GmBoardPage.resultTab('Rewards' | 'Checks' | 'Result')` before
+  reaching into that tab: the others stay mounted but hidden, so a locator
+  resolves and then fails `toBeVisible`/click. Map's Checks column is closed
+  until its toolbar button (`map-checks-toggle`) opens it.
 - New board spec files must pass under `--repeat-each=3` before the next.
   `just e2e-test file` takes no extra arguments, so run Playwright in the
   container yourself after `just _e2e-lock`, `just _e2e-app` and

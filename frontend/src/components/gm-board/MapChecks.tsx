@@ -30,9 +30,6 @@ export function MapChecks({ model, onOpenCard, onResolveAt, onDismiss, onRestore
   const dismissed = model.flags.filter((f) => model.board.dismissedFlags[f.key]);
   return (
     <section aria-label="Checks" className="space-y-2" data-testid="map-checks">
-      <h3 className="text-sm font-semibold text-content-primary">
-        Checks {model.open.length > 0 && <Badge variant="warning" size="sm">{model.open.length}</Badge>}
-      </h3>
       {model.open.length === 0 ? (
         <p className="text-sm text-content-secondary">Nothing to check.</p>
       ) : (

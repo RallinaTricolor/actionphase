@@ -26,6 +26,8 @@ import type { BoardDoc, CharacterProgress, Moment } from '@/lib/gmBoard/types';
 import { youifyExcept } from '@/lib/gmBoard/youify';
 import type { GamePhase } from '@/types/phases';
 import { useOptionalBoardRewards } from './boardRewards';
+import { BoardPane } from './BoardPane';
+import { BoardToolbar } from './BoardToolbar';
 import { RewardsTable } from './RewardsTable';
 import { WriteBrief } from './WriteBrief';
 import { WriteChecks } from './WriteChecks';
@@ -33,6 +35,12 @@ import { WritePlayerList, type WritePlayer } from './WritePlayerList';
 import { WriteResults } from './WriteResults';
 import { WriteRewards } from './WriteRewards';
 import type { WriteModel } from './writeTypes';
+
+const RESULT_TABS = [
+  { id: 'result', label: 'Result' },
+  { id: 'rewards', label: 'Rewards' },
+  { id: 'checks', label: 'Checks' },
+] as const;
 
 interface GmBoardWriteProps {
   gameId: number;
@@ -76,6 +84,9 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   const rewriteRef = useRef<((fn: (text: string) => string) => void) | null>(null);
   const [live, setLive] = useState<{ characterId: number; partId: number | null; text: string } | null>(null);
   const [editable, setEditable] = useState(false);
+  // The result column's tab. Every tab stays mounted (only hidden), so Insert
+  // can always reach the editor and a draft keeps its state.
+  const [tab, setTab] = useState<'result' | 'rewards' | 'checks'>('result');
 
   const secondPerson = settings?.secondPerson ?? true;
   const phaseResults = useMemo(() => (results.data ?? []).filter((r) => r.phase_id === phase.id), [results.data, phase.id]);
@@ -251,33 +262,44 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   };
 
   const count = unpublished.data?.count ?? 0;
+  const rewardCount = reward?.lines.length ?? 0;
+  // The Rewards tab asks before replacing hand-made sheet updates; flag the tab so the question isn't missed behind it.
+  const rewardsAsk = !readOnly && !!rewards && (reward?.changes ?? 0) > 0 && rewards.syncFor(current).state === 'hand-made';
+  const checkDanger = checks.leaks.length + checks.flags.length > 0;
+  const checkCount = checks.leaks.length + checks.flags.length + (reward?.checks.length ?? 0) + (checks.notCovered.length ? 1 : 0);
 
   return (
-    <div className="space-y-3" data-testid="gm-board-step-write">
-      {!readOnly && (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="text-sm text-content-secondary">
-          {count} draft {count === 1 ? 'result' : 'results'} in this phase
-        </span>
-        <Button
-          type="button"
-          variant="primary"
-          disabled={count === 0 || publishAll.isPending}
-          onClick={async () => {
-            await flushRef.current?.();
-            try {
-              await Promise.all(order.map((id) => rewards?.ensureSynced(id)));
-            } catch {
-              showError('Couldn’t save the reward sheet updates before publishing. Try again.');
-              return;
-            }
-            setPublishAllOpen(true);
-          }}
-        >
-          Publish all
-        </Button>
-      </div>
-      )}
+    <div className="space-y-4" data-testid="gm-board-step-write">
+      <BoardToolbar aria-label="Results">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <WritePlayerList players={players} selectedId={current} onSelect={(id) => void choose(id)} />
+          <span className="flex-1" />
+          {!readOnly && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-content-secondary">
+              {count} draft {count === 1 ? 'result' : 'results'} in this phase
+            </span>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={count === 0 || publishAll.isPending}
+              onClick={async () => {
+                await flushRef.current?.();
+                try {
+                  await Promise.all(order.map((id) => rewards?.ensureSynced(id)));
+                } catch {
+                  showError('Couldn’t save the reward sheet updates before publishing. Try again.');
+                  return;
+                }
+                setPublishAllOpen(true);
+              }}
+            >
+              Publish all
+            </Button>
+          </div>
+          )}
+        </div>
+      </BoardToolbar>
 
       {view === 'table' && rewards ? (
         <RewardsTable
@@ -288,146 +310,160 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
           onBack={() => setView('results')}
         />
       ) : (
-        <div className="grid grid-cols-[12rem_minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-4">
-          <WritePlayerList players={players} selectedId={current} onSelect={(id) => void choose(id)} />
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-4">
+          <BoardPane title={`${name}’s phase, in order`}>
+            <WriteBrief
+              key={current}
+              model={model}
+              characterId={current}
+              others={order}
+              submission={submissions.get(current)}
+              isCovered={covered}
+              coverage={coverage}
+              onCovered={readOnly ? undefined : tick}
+              onInsert={
+                editable
+                  ? (m, text) => {
+                      setTab('result');
+                      insertTextRef.current?.(text);
+                      tick(m.id, true);
+                    }
+                  : undefined
+              }
+              onCopy={copy}
+              onOpenScene={onOpenScene}
+            />
+          </BoardPane>
 
-          <Card variant="bordered" padding="md">
-            <CardBody>
-              <WriteBrief
-                key={current}
-                model={model}
-                characterId={current}
-                others={order}
-                submission={submissions.get(current)}
-                isCovered={covered}
-                coverage={coverage}
-                onCovered={readOnly ? undefined : tick}
-                onInsert={
-                  editable
-                    ? (m, text) => {
-                        insertTextRef.current?.(text);
-                        tick(m.id, true);
-                      }
-                    : undefined
-                }
-                onCopy={copy}
-                onOpenScene={onOpenScene}
-              />
-            </CardBody>
-          </Card>
-
-          <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-4 overflow-y-auto">
-            <Card variant="bordered" padding="md">
-              <CardBody className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-content-primary">Results for {allNames.get(current)}</h3>
-                  {readOnly ? (
-                    ready && <Badge variant="success">Ready</Badge>
-                  ) : (
-                  <div className="flex flex-wrap items-center gap-2">
+          <BoardPane
+            sticky
+            title={<h3 className="text-base font-semibold text-content-primary">Results for {allNames.get(current)}</h3>}
+            actions={
+              readOnly ? (
+                ready && <Badge variant="success">Ready</Badge>
+              ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!editable}
+                  onClick={makeYou}
+                  title={`Swap ${name}’s names for “you” in the selected text, or the whole draft when nothing is selected. Own versions stay as written.`}
+                >
+                  Make “you”
+                </Button>
+                {ready ? (
+                  <>
+                    <Badge variant="success">Ready</Badge>
                     <Button
                       type="button"
                       size="sm"
                       variant="ghost"
-                      disabled={!editable}
-                      onClick={makeYou}
-                      title={`Swap ${name}’s names for “you” in the selected text, or the whole draft when nothing is selected. Own versions stay as written.`}
+                      onClick={() => store.update<CharacterProgress>('progress', String(current), (p) => setReady(p, false))}
                     >
-                      Make “you”
+                      Reopen
                     </Button>
-                    {ready ? (
-                      <>
-                        <Badge variant="success">Ready</Badge>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => store.update<CharacterProgress>('progress', String(current), (p) => setReady(p, false))}
-                        >
-                          Reopen
-                        </Button>
-                      </>
-                    ) : (
-                      <Button type="button" size="sm" variant="primary" onClick={() => void readyNext()} title={`Mark ${name} ready and open the next person`}>
-                        Ready → next
-                      </Button>
+                  </>
+                ) : (
+                  <Button type="button" size="sm" variant="primary" onClick={() => void readyNext()} title={`Mark ${name} ready and open the next person`}>
+                    Ready → next
+                  </Button>
+                )}
+              </div>
+              )
+            }
+            bodyClassName="space-y-3"
+          >
+            <div className="flex gap-1" role="group" aria-label="Result pane">
+              {RESULT_TABS.map((t) => {
+                const badge = t.id === 'rewards' ? rewardCount : t.id === 'checks' ? checkCount : 0;
+                return (
+                  <Button key={t.id} type="button" size="sm" variant={tab === t.id ? 'primary' : 'secondary'} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
+                    {t.label}
+                    {(badge > 0 || (t.id === 'rewards' && rewardsAsk)) && (
+                      <Badge
+                        variant={t.id === 'checks' ? (checkDanger ? 'danger' : 'warning') : t.id === 'rewards' && rewardsAsk ? 'warning' : 'neutral'}
+                        size="sm"
+                        title={t.id === 'rewards' && rewardsAsk ? 'Sheet updates made by hand: the board asks before replacing them' : undefined}
+                      >
+                        {badge}
+                        {t.id === 'rewards' && rewardsAsk && ' !'}
+                      </Badge>
                     )}
-                  </div>
-                  )}
-                </div>
-                <WriteResults
-                  key={current}
-                  gameId={gameId}
-                  characterId={current}
-                  characterName={allNames.get(current) ?? name}
-                  name={name}
-                  userId={castById.get(current)?.userId}
-                  submissionId={submissionIds.get(current)}
-                  chains={chains}
-                  phaseResults={phaseResults}
-                  selectedPartId={selectedParts[current] ?? null}
-                  onSelectPart={selectPart}
-                  onLiveText={onLiveText}
-                  onEditable={setEditable}
-                  insertTextRef={insertTextRef}
-                  transformTextRef={transformTextRef}
-                  flushRef={flushRef}
-                  rewriteRef={rewriteRef}
-                  beforePublish={beforePublish}
-                  sheetItems={sheetItems.get(current)}
-                  readOnly={readOnly}
-                />
-              </CardBody>
-            </Card>
+                  </Button>
+                );
+              })}
+            </div>
+            <div hidden={tab !== 'result'}>
+              <WriteResults
+                key={current}
+                gameId={gameId}
+                characterId={current}
+                characterName={allNames.get(current) ?? name}
+                name={name}
+                userId={castById.get(current)?.userId}
+                submissionId={submissionIds.get(current)}
+                chains={chains}
+                phaseResults={phaseResults}
+                selectedPartId={selectedParts[current] ?? null}
+                onSelectPart={selectPart}
+                onLiveText={onLiveText}
+                onEditable={setEditable}
+                insertTextRef={insertTextRef}
+                transformTextRef={transformTextRef}
+                flushRef={flushRef}
+                rewriteRef={rewriteRef}
+                beforePublish={beforePublish}
+                sheetItems={sheetItems.get(current)}
+                readOnly={readOnly}
+              />
+            </div>
             {rewards && reward && (
-              <Card variant="bordered" padding="md">
-                <CardBody>
-                  <WriteRewards
-                    key={current}
-                    gameId={gameId}
-                    characterId={current}
-                    name={name}
-                    fullName={allNames.get(current) ?? name}
-                    state={reward}
-                    chains={chains}
-                    sceneName={(id) => {
-                      const scene = board.scenes.find((sc) => sc.id === id);
-                      return scene ? model.sceneName(scene) : undefined;
-                    }}
-                    onPutBlock={() => void putBlock()}
-                    putting={putting}
-                    onCopy={copy}
-                    onShowTable={() => setView('table')}
-                  />
-                </CardBody>
-              </Card>
+            <div hidden={tab !== 'rewards'}>
+              <WriteRewards
+                key={current}
+                gameId={gameId}
+                characterId={current}
+                name={name}
+                fullName={allNames.get(current) ?? name}
+                state={reward}
+                chains={chains}
+                sceneName={(id) => {
+                  const scene = board.scenes.find((sc) => sc.id === id);
+                  return scene ? model.sceneName(scene) : undefined;
+                }}
+                onPutBlock={() => void putBlock()}
+                putting={putting}
+                onCopy={copy}
+                onShowTable={() => setView('table')}
+              />
+            </div>
             )}
-            <Card variant="bordered" padding="md">
-              <CardBody>
-                <WriteChecks
-                  model={model}
-                  characterId={current}
-                  checks={checks}
-                  rows={rows}
-                  onOpenScene={onOpenScene}
-                  onDismissFlag={
-                    readOnly
-                      ? undefined
-                      : (key) => {
-                          store.update('flag', key, () => ({}));
-                          showToast('Check dismissed.', 'info', { action: { label: 'Undo', onClick: () => store.remove('flag', key) } });
-                        }
-                  }
-                  rewardChecks={reward?.checks}
-                  lineLabel={(lineId) => {
-                    const line = reward?.lines.find((l) => l.id === lineId);
-                    return line ? truncate(lineText(line, reward?.sheet.recs[lineId]) || 'A sheet-only line', 50) : 'A line';
-                  }}
-                  onPutBlock={readOnly ? undefined : () => void putBlock()}
-                />
-              </CardBody>
-            </Card>
-          </div>
+            <div hidden={tab !== 'checks'}>
+              <WriteChecks
+                model={model}
+                characterId={current}
+                checks={checks}
+                rows={rows}
+                onOpenScene={onOpenScene}
+                onDismissFlag={
+                  readOnly
+                    ? undefined
+                    : (key) => {
+                        store.update('flag', key, () => ({}));
+                        showToast('Check dismissed.', 'info', { action: { label: 'Undo', onClick: () => store.remove('flag', key) } });
+                      }
+                }
+                rewardChecks={reward?.checks}
+                lineLabel={(lineId) => {
+                  const line = reward?.lines.find((l) => l.id === lineId);
+                  return line ? truncate(lineText(line, reward?.sheet.recs[lineId]) || 'A sheet-only line', 50) : 'A line';
+                }}
+                onPutBlock={readOnly ? undefined : () => void putBlock()}
+              />
+            </div>
+          </BoardPane>
         </div>
       )}
 

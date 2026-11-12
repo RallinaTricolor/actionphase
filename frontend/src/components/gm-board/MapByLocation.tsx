@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, HelpTooltip } from '@/components/ui';
 import { isWaiting } from '@/lib/gmBoard/cards';
 import { isChunkEmpty, type BoardRow } from '@/lib/gmBoard/map';
 import { sceneName } from '@/lib/gmBoard/scenes';
 import { isAmbush, stanceOf } from '@/lib/gmBoard/stances';
 import { shortName } from '@/lib/gmBoard/text';
 import type { Card, Chunk } from '@/lib/gmBoard/types';
+import { TOOLBAR_LABEL } from './boardToolbarSlot';
 import { MapArrowLayer, type MapArrows } from './MapArrowLayer';
 import { MapCard } from './MapCard';
 import { MapDropCell } from './MapDropCell';
@@ -38,15 +39,15 @@ export function MapByLocation({ model, actions, drag, arrows }: MapByLocationPro
     <div className="space-y-4" data-testid="map-by-location">
       <Contingencies model={model} actions={actions} drag={drag} />
 
-      <div className="overflow-x-auto rounded-lg border border-theme-default" role="region" aria-label="Locations by time slot" tabIndex={0}>
+      <div className="overflow-x-auto rounded-lg border border-theme-default surface-base" role="region" aria-label="Locations by time slot" tabIndex={0}>
         <MapArrowLayer cards={model.board.cards} arrows={arrows} layoutKey={model}>
         <div className="grid" style={{ gridTemplateColumns: `12rem repeat(${slots.length}, minmax(15rem, 1fr))` }}>
           <div className="contents">
-            <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2 text-xs text-content-tertiary">
+            <div className="sticky left-0 z-10 surface-sunken border-b border-r border-theme-default p-2 text-xs text-content-tertiary">
               Location ↓ · time →
             </div>
             {slots.map((slot, i) => (
-              <div key={slot.id} className="surface-raised border-b border-r border-theme-default">
+              <div key={slot.id} className="surface-sunken border-b border-r border-theme-default">
                 <MapSlotHeader
                   slot={slot}
                   index={i}
@@ -95,7 +96,7 @@ const cellHasShown = (cell: CellContents | undefined, model: MapModel) =>
 
 function RowHead({ row }: { row: BoardRow }) {
   return (
-    <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2">
+    <div className="sticky left-0 z-10 surface-sunken border-b border-r border-theme-default p-2">
       <div className="font-medium text-content-primary">{row.name}</div>
       {row.kind === 'other' && <div className="text-xs text-content-tertiary">Set for another phase</div>}
       {row.kind === 'missing' && (
@@ -229,7 +230,7 @@ function CellCard({ card, model, actions, drag }: { card: Card; model: MapModel;
 function Contingencies({ model, actions, drag }: MapByLocationProps) {
   const waiting = model.board.cards.filter((c) => isWaiting(c) && isShown(model, c.characterId));
   return (
-    <section aria-label="Contingencies" className="rounded-lg border border-theme-default surface-raised">
+    <section aria-label="Contingencies" className="rounded-lg border border-theme-default surface-base">
       <MapDropCell
         target={{ chunkId: null }}
         drag={drag}
@@ -239,21 +240,23 @@ function Contingencies({ model, actions, drag }: MapByLocationProps) {
         }}
         data-testid="contingencies"
       >
-        <div className="flex items-baseline gap-2">
-          <h3 className="text-sm font-semibold text-content-primary">Contingencies</h3>
-          <span className="text-xs text-content-tertiary">
-            {actions.readOnly ? 'IF cards waiting to trigger.' : 'IF cards waiting to trigger. Drag one into a time slot when it does.'}
-          </span>
-        </div>
-        {waiting.length ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-1.5">
-            {waiting.map((card) => (
-              <CellCard key={card.id} card={card} model={model} actions={actions} drag={drag} />
-            ))}
+        <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1">
+            <h3 className={TOOLBAR_LABEL}>Contingencies</h3>
+            <HelpTooltip text={actions.readOnly ? 'IF cards waiting to trigger.' : 'IF cards waiting to trigger. Drag one into a time slot when it does.'} />
           </div>
-        ) : (
-          <p className="text-xs text-content-secondary">None waiting.</p>
-        )}
+          {waiting.length ? (
+            <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+              {waiting.map((card) => (
+                <div key={card.id} className="w-60 shrink-0">
+                  <CellCard card={card} model={model} actions={actions} drag={drag} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-content-secondary">None waiting.</p>
+          )}
+        </div>
       </MapDropCell>
     </section>
   );

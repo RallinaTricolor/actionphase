@@ -65,9 +65,35 @@ export class GmBoardPage {
     return this.page.getByTestId('gm-board-save-status');
   }
 
+  // ── Write ────────────────────────────────────────────────────────────
+  /** Opens a tab of Write's result column (Result, Rewards, Checks); the others stay mounted but hidden. */
+  async resultTab(name: 'Result' | 'Rewards' | 'Checks') {
+    const tab = this.page.getByRole('group', { name: 'Result pane' }).getByRole('button', { name: new RegExp(`^${name}`) });
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-pressed', 'true');
+  }
+
   // ── Map ──────────────────────────────────────────────────────────────
   mapCard(cardId: string): Locator {
     return this.page.getByTestId(`map-card-${cardId}`);
+  }
+
+  /**
+   * Drags a Map card into a cell. Playwright's drag can't scroll mid-drag
+   * (the drop is lost or the drag hangs), and its own scroll-into-view only
+   * places the card, so the target can end up past the grid's right edge or
+   * below a 720px window. So both are placed first: the grid scrolls
+   * sideways to centre the target column (the source is a neighbouring
+   * column), then the page scrolls to put the higher of the two just below
+   * the site's sticky nav (4rem), leaving the rest of the window for the other.
+   */
+  async dragCard(cardId: string, to: Locator) {
+    const card = this.mapCard(cardId);
+    await to.evaluate((el) => el.scrollIntoView({ block: 'nearest', inline: 'center' }));
+    const [from, target] = [await card.boundingBox(), await to.boundingBox()];
+    if (!from || !target) throw new Error(`dragCard: ${cardId} or its target cell has no box`);
+    await this.page.evaluate((dy) => window.scrollBy(0, dy), Math.min(from.y, target.y) - 80);
+    await card.dragTo(to);
   }
 
   cell(locationId: string, slotId: string): Locator {

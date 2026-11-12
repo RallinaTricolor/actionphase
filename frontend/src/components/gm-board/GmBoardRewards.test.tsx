@@ -92,6 +92,10 @@ beforeEach(() => {
 const render = (query = 'step=write&who=1') =>
   renderWithProviders(<GmBoard gameId={GAME_ID} gameTitle="Starfall" phase={phase} />, { gameId: GAME_ID, initialRoute: `/games/${GAME_ID}/phases/${PHASE_ID}/board?${query}` });
 
+/** Opens a tab of the Write step's result column (Result, Rewards, Checks); the others stay mounted but hidden. */
+const openResultTab = async (user: ReturnType<typeof userEvent.setup>, name: 'Result' | 'Rewards' | 'Checks') =>
+  user.click(within(await screen.findByRole('group', { name: 'Result pane' })).getByRole('button', { name: new RegExp(`^${name}`) }));
+
 const rewardsSaved = (characterId: number, match: (doc: Record<string, unknown>) => boolean) =>
   waitFor(() => expect(boardSaves.some((c) => c.kind === 'rewards' && c.key === String(characterId) && !!c.doc && match(c.doc as Record<string, unknown>))).toBe(true), { timeout: 3000 });
 
@@ -99,6 +103,7 @@ describe('Write: rewards', () => {
   it('gives a reward from the list: the line, the block, the sheet change, and drafts saved on the result', async () => {
     const user = userEvent.setup();
     render();
+    await openResultTab(user, 'Rewards');
     const panel = await screen.findByTestId('write-rewards');
     await user.click(await within(panel).findByRole('button', { name: '+ Partial' }));
 
@@ -111,6 +116,7 @@ describe('Write: rewards', () => {
     expect(syncs[0]).toMatchObject({ characterId: 1, body: { result_id: 100, updates: [{ module_type: 'numbers', field_name: 'numbers' }] } });
     expect(JSON.parse((syncs[0].body.updates as { field_value: string }[])[0].field_value)).toEqual([{ id: 'n1', name: 'Coin', amount: { value: 3 } }]);
     // The block isn't in the result yet: a check says so.
+    await openResultTab(user, 'Checks');
     expect(within(screen.getByTestId('write-checks')).getByText(/The reward block isn’t in Harrison’s result/)).toBeInTheDocument();
   });
 
@@ -129,6 +135,10 @@ describe('Write: rewards', () => {
     board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', group: 'result', text: 'Coin', ops: partial.ops, choose: false }], texts: {} } }));
     const user = userEvent.setup();
     render();
+    // The question waits behind the Rewards tab, so the tab is flagged.
+    const tabs = await screen.findByRole('group', { name: 'Result pane' });
+    await waitFor(() => expect(within(tabs).getByRole('button', { name: /^Rewards/ })).toHaveTextContent('!'), { timeout: 4000 });
+    await openResultTab(user, 'Rewards');
     const alert = await screen.findByTestId('reward-hand-made', {}, { timeout: 4000 });
     expect(alert).toHaveTextContent('(inventory)');
     expect(syncs).toHaveLength(0);
@@ -171,6 +181,7 @@ describe('Write: rewards', () => {
     render();
     const checks = await screen.findByTestId('write-checks');
     expect(await within(checks).findByText('There’s no Numbers entry named “Gold”', { exact: false })).toBeInTheDocument();
+    await openResultTab(user, 'Rewards');
     await user.click(within(screen.getByTestId('reward-line-l1')).getByRole('button', { name: 'Edit' }));
     const editor = await screen.findByTestId('reward-line-editor');
     expect(within(editor).getByTestId('line-entry-0-tag')).toHaveTextContent('Not on the sheet');

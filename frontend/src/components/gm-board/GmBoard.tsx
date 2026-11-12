@@ -14,6 +14,7 @@ import { boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/s
 import type { GamePhase } from '@/types/phases';
 import { BoardRewardsContext } from './boardRewards';
 import { BoardStepTabs } from './BoardStepTabs';
+import { BoardToolbarSlotContext } from './boardToolbarSlot';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardFirstRun } from './GmBoardFirstRun';
 import { GmBoardMap } from './GmBoardMap';
@@ -55,6 +56,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   const [params, setParams] = useSearchParams();
   const step = parseBoardStep(params.get('step'));
   const [notesOpen, setNotesOpen] = useState(false);
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
   const [codex, setCodex] = useState<{ name: string } | null>(null);
   const [selectedParts, setSelectedParts] = useState<Record<number, number | null>>({});
   const selectPart = useCallback((characterId: number, partId: number | null) => setSelectedParts((s) => ({ ...s, [characterId]: partId })), []);
@@ -132,49 +134,63 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   return (
     <BoardReadOnlyContext.Provider value={readOnly}>
     <BoardRewardsContext.Provider value={rewards}>
-      <div className="px-6 py-6 space-y-4" data-testid="gm-board">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <Link to={back.to} className="text-sm text-content-tertiary hover:underline">
-              &larr; {gameTitle}: {back.label.replace(/^Back to the /, '')}
-            </Link>
-            <h1 className="text-2xl font-bold text-content-primary mt-1 flex items-center gap-2">
-              Results board
-              {readOnly && (
-                <Badge variant="neutral" data-testid="gm-board-read-only">
-                  Read-only
-                </Badge>
-              )}
-            </h1>
-            <p className="text-sm text-content-secondary">{phase.title || `Phase ${phase.phase_number}`}</p>
-            {readOnly && (
-              <p className="text-sm text-content-tertiary">
-                {viewer ? 'Shared by the GM. It updates as the GM works.' : 'This game is archived, so its boards can no longer be changed.'}
+      <div className="px-6 py-4 space-y-4" data-testid="gm-board">
+        <header className="rounded-lg border border-theme-strong surface-base shadow-sm">
+          {/* Below xl the title takes its own short line, so the tabs and actions keep their room without truncating it. */}
+          <div className="flex flex-wrap items-stretch gap-x-4 px-4 xl:flex-nowrap">
+            <div className="flex min-w-0 basis-full items-baseline gap-3 self-center pt-2 xl:block xl:flex-1 xl:basis-auto xl:py-2">
+              <p className="min-w-0 shrink truncate text-xs text-content-tertiary xl:shrink-0">
+                <Link to={back.to} className="hover:underline">
+                  &larr; {gameTitle}: {back.label.replace(/^Back to the /, '')}
+                </Link>
+                {readOnly && (
+                  <>
+                    {' · '}
+                    <span>{viewer ? 'Shared by the GM. It updates as the GM works.' : 'This game is archived, so its boards can no longer be changed.'}</span>
+                  </>
+                )}
               </p>
-            )}
+              <h1 className="order-first flex shrink-0 items-center gap-2 text-base font-semibold text-content-primary xl:order-none">
+                <span className="truncate">
+                  <span className="sr-only font-normal text-content-secondary xl:not-sr-only">Results board · </span>
+                  {phase.title || `Phase ${phase.phase_number}`}
+                </span>
+                {readOnly && (
+                  <Badge variant="neutral" data-testid="gm-board-read-only">
+                    Read-only
+                  </Badge>
+                )}
+              </h1>
+            </div>
+            <div className="flex shrink-0 items-end">
+              <BoardStepTabs gameId={gameId} phaseId={phase.id} board={board ?? null} step={step} onStep={goToStep} />
+            </div>
+            <span className="flex-1 xl:hidden" />
+            <div className="flex shrink-0 items-center gap-1.5 py-2">
+              {!readOnly && (
+                <GmBoardSaveStatus
+                  status={saveStatus}
+                  error={store.saveError ?? settingsStore.saveError}
+                  onRetry={() => {
+                    void store.flush();
+                    void settingsStore.flush();
+                  }}
+                />
+              )}
+              <Button type="button" size="sm" variant="secondary" onClick={() => setCodex({ name: '' })}>
+                Codex
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
+                Notes
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => navigate(boardSetupPath(gameId))}>
+                Game setup
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!readOnly && (
-              <GmBoardSaveStatus
-                status={saveStatus}
-                error={store.saveError ?? settingsStore.saveError}
-                onRetry={() => {
-                  void store.flush();
-                  void settingsStore.flush();
-                }}
-              />
-            )}
-            <Button type="button" variant="secondary" onClick={() => setCodex({ name: '' })}>
-              Codex
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
-              Notes
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => navigate(boardSetupPath(gameId))}>
-              Game setup
-            </Button>
-          </div>
-        </div>
+          {/* The open step's toolbar (BoardToolbar) is portalled in here, so it reads as part of the header. */}
+          <div ref={setToolbarSlot} className="rounded-b-lg border-t border-theme-default surface-sunken px-4 py-2 empty:hidden" data-testid="gm-board-step-toolbar" />
+        </header>
 
         {!readOnly && <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />}
         {!readOnly && (
@@ -189,8 +205,8 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => setCodex({ name: '' })} onOpenSetup={() => navigate(boardSetupPath(gameId))} />
         )}
 
-        <BoardStepTabs gameId={gameId} phaseId={phase.id} board={board ?? null} step={step} onStep={goToStep} />
 
+        <BoardToolbarSlotContext.Provider value={toolbarSlot}>
         {isLoading ? (
           <div className="flex justify-center py-16">
             <Spinner size="lg" />
@@ -230,6 +246,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
         ) : (
           <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
         )}
+        </BoardToolbarSlotContext.Provider>
 
         <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
           {codex !== null && (

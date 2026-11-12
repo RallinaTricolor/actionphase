@@ -47,7 +47,9 @@ test.describe('GM results board: publishing', () => {
 
     // "Clean job" adds 2 Coin. The board writes the sheet drafts onto the
     // result that carries Silk's changes: this one, her only draft.
+    await board.resultTab('Rewards');
     await clickAndWaitForMutation(page, page.getByTestId('give-rw-heist-clean'), API.saveRewardSheetUpdates);
+    await board.resultTab('Result');
     await expect(page.getByTestId(`board-draft-update-count-${resultId}`)).toBeVisible();
 
     await chain.getByRole('button', { name: 'Publish', exact: true }).click();

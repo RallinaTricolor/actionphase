@@ -163,7 +163,6 @@ export function WriteBrief({ model, characterId, others, submission, isCovered, 
   return (
     <section aria-label={`${name}’s brief`} className="space-y-4" data-testid="write-brief">
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-content-primary">{name}’s phase, in order</h3>
         <div className="flex items-center gap-2 text-xs text-content-secondary">
           <span>
             {coverage.done} of {coverage.total} moments covered

@@ -23,7 +23,7 @@ export function SceneSideBySide({ model, onPick }: SceneSideBySideProps) {
       <div className="overflow-x-auto rounded-lg border border-theme-default">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="surface-raised">
+            <tr className="surface-sunken">
               <th scope="col" className="w-40 border-b border-theme-default p-2 text-left text-xs font-normal text-content-tertiary">
                 Moment
               </th>

@@ -1,9 +1,10 @@
-import { Badge, Button, Select } from '@/components/ui';
+import { Badge, Button, HelpTooltip, Select } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { addEffect, laterSlots, updateEffect } from '@/lib/gmBoard/scenes';
 import { stateAt } from '@/lib/gmBoard/states';
 import { shortName } from '@/lib/gmBoard/text';
 import type { CharState, Scene } from '@/lib/gmBoard/types';
+import { TOOLBAR_LABEL } from './boardToolbarSlot';
 import { STATE_LABELS, STATE_TONE } from './mapModel';
 import type { SceneModel } from './sceneTypes';
 
@@ -32,9 +33,9 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
   const later = laterSlots(board, scene);
 
   return (
-    <div className="space-y-2 rounded-lg border border-theme-default surface-raised p-2" data-testid="scene-cast">
-      <div className="flex flex-wrap items-center gap-1">
-        <span className="mr-1 text-xs font-medium text-content-tertiary">Here</span>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="scene-cast">
+      <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Here">
+        <span className={`mr-1 ${TOOLBAR_LABEL}`}>Here</span>
         {scene.participants.map((id) => {
           const c = model.cast.get(id);
           const state = model.slotIndex >= 0 ? stateAt(model.states, id, model.slotIndex) : 'active';
@@ -85,8 +86,8 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="After the scene">
-        <span className="mr-1 text-xs font-medium text-content-tertiary">After the scene</span>
+      <div className="flex flex-wrap items-center gap-1" role="group" aria-label="After the scene">
+        <span className={`mr-1 ${TOOLBAR_LABEL}`}>After the scene</span>
         {model.readOnly && !scene.effects.length && <span className="text-xs text-content-secondary">Nothing lasting.</span>}
         {model.readOnly && scene.effects.map((e, i) => (
           <Badge key={i} variant={STATE_TONE[e.state]} data-testid={`effect-${i}`}>
@@ -131,7 +132,7 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
         ))}
         {!model.readOnly && (
           <>
-            {!scene.effects.length && <span className="text-xs text-content-secondary">Who ends up injured, captured or out of play. The Map uses it to check later cards.</span>}
+            <HelpTooltip text="Who ends up injured, captured or out of play. The Map uses it to check later cards." />
             <Button type="button" size="sm" variant="secondary" disabled={!scene.participants.length} onClick={() => onEffects((s) => addEffect(s, s.participants[0]))}>
               + State
             </Button>

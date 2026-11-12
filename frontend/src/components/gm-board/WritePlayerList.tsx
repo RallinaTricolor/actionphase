@@ -1,5 +1,6 @@
 import { Badge, Button } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
+import { TOOLBAR_LABEL } from './boardToolbarSlot';
 
 export interface WritePlayer {
   id: number;
@@ -17,28 +18,31 @@ interface WritePlayerListProps {
   onSelect: (id: number) => void;
 }
 
-/** Everyone who gets a result, with where their result is, its coverage and possible leaks. */
+/**
+ * Everyone who gets a result, as a strip of chips in the Write step's toolbar:
+ * where their result is, its coverage and possible leaks.
+ */
 export function WritePlayerList({ players, selectedId, onSelect }: WritePlayerListProps) {
   const ready = players.filter((p) => p.status === 'ready').length;
   return (
-    <nav aria-label="Results" className="space-y-1" data-testid="write-player-list">
-      <p className="px-2 pb-1 text-sm text-content-secondary">
+    <nav aria-label="Results" className="flex flex-wrap items-center gap-1.5" data-testid="write-player-list">
+      <span className={`mr-1 ${TOOLBAR_LABEL}`}>
         {ready}/{players.length} ready
-      </p>
+      </span>
       {players.map((p) => (
         <Button
           key={p.id}
           type="button"
-          variant={p.id === selectedId ? 'secondary' : 'ghost'}
+          variant={p.id === selectedId ? 'primary' : 'outline'}
           size="sm"
-          className="!flex w-full !justify-start gap-2 text-left"
+          className="max-w-[15rem] gap-1.5 !py-1 text-left"
           aria-current={p.id === selectedId ? 'true' : undefined}
           onClick={() => onSelect(p.id)}
         >
           <CharacterAvatar avatarUrl={p.avatarUrl} characterName={p.name} size="xs" />
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0 leading-tight">
             <span className="block truncate">{p.name}</span>
-            <span className={`block text-xs ${p.status === 'ready' ? 'text-semantic-success' : 'text-content-tertiary'}`}>
+            <span className={`block text-xs font-normal ${p.id === selectedId ? '' : p.status === 'ready' ? 'text-semantic-success' : 'text-content-tertiary'}`}>
               {p.status} · {p.covered}/{p.moments}
             </span>
           </span>

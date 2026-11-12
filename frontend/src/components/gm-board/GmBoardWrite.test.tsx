@@ -191,6 +191,19 @@ describe('GmBoardWrite', () => {
     expect(brief).toHaveTextContent('1 of 1 moments covered');
   });
 
+  it('Insert from the brief brings the draft back into view when another tab is open', async () => {
+    renderWrite(1);
+    const brief = await screen.findByTestId('write-brief');
+    const tabs = screen.getByRole('group', { name: 'Result pane' });
+    await userEvent.click(within(tabs).getByRole('button', { name: /^Checks/ }));
+    expect(within(tabs).getByRole('button', { name: /^Checks/ })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(within(within(brief).getByTestId('brief-moment-m1')).getByRole('button', { name: 'Insert' }));
+    expect(within(tabs).getByRole('button', { name: /^Result/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(await draftBox()).toHaveValue('You wait by the wheel.');
+    expect(await draftBox()).toBeVisible();
+  });
+
   it('flags a secret the character may not know before publishing', async () => {
     renderWrite(1);
     fireEvent.change(await draftBox(), { target: { value: 'Orrin is watching.' } });

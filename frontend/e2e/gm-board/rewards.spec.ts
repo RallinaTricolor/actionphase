@@ -74,7 +74,9 @@ test.describe('GM results board: rewards', () => {
     const { characterId, resultId } = await freshDraft(page, 'Silk (Spider)');
     await board.open({ step: 'write', who: characterId });
 
+    await board.resultTab('Rewards');
     await clickAndWaitForMutation(page, page.getByTestId('give-rw-heist-clean'), API.saveRewardSheetUpdates);
+    await board.resultTab('Result');
     await expect(page.getByTestId(`board-draft-update-count-${resultId}`)).toContainText('1');
     expect(await sheetDrafts(page, resultId)).toEqual([expect.objectContaining({ module_type: 'numbers', from_rewards: true })]);
 
@@ -87,6 +89,7 @@ test.describe('GM results board: rewards', () => {
   test('Put block in result adds the reward block to the result, and putting it again replaces it', async ({ page }) => {
     const { characterId, resultId, text } = await freshDraft(page, 'Silk (Spider)');
     await board.open({ step: 'write', who: characterId });
+    await board.resultTab('Rewards');
 
     await clickAndWaitForMutation(page, page.getByTestId('give-rw-heist-clean'), API.saveRewardSheetUpdates);
     await clickAndWaitForMutation(page, page.getByTestId('put-block'), API.updateResult);
@@ -129,6 +132,7 @@ test.describe('GM results board: rewards', () => {
     );
 
     await board.open({ step: 'write', who: rook });
+    await board.resultTab('Rewards');
     const ask = page.getByTestId('reward-hand-made');
     await expect(ask).toContainText('inventory');
     expect(await sheetDrafts(page, resultId)).toEqual([expect.objectContaining({ module_type: 'inventory', from_rewards: false })]);

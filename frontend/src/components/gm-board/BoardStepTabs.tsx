@@ -36,6 +36,7 @@ export function BoardStepTabs({ gameId, phaseId, board, step, onStep }: BoardSte
       activeTab={step}
       onTabChange={onStep}
       getTabHref={(id) => boardPath(gameId, phaseId, parseBoardStep(id))}
+      embedded
     />
   );
 }

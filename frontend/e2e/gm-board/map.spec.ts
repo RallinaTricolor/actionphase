@@ -82,17 +82,18 @@ test.describe('GM results board: Map', () => {
     await board.open({ step: 'map' });
     const from = board.cell(HEIST_LOCATIONS.rooftop, a);
     // Rooftop and vault are neighbouring rows: Playwright's drag can't
-    // scroll the page mid-drag, so both cells must be on screen at once.
+    // scroll the page mid-drag, so both cells must be on screen at once
+    // (dragCard scrolls them into place first).
     const to = board.cell(HEIST_LOCATIONS.vault, b);
     await expect(from.getByTestId(`map-card-${cardId}`)).toBeVisible();
 
-    await board.saving(() => board.mapCard(cardId).dragTo(to));
+    await board.saving(() => board.dragCard(cardId, to));
     await expect(to.getByTestId(`map-card-${cardId}`)).toBeVisible();
 
     await board.saving(() => page.getByRole('button', { name: 'Undo' }).click());
     await expect(from.getByTestId(`map-card-${cardId}`)).toBeVisible();
 
-    await board.saving(() => board.mapCard(cardId).dragTo(to));
+    await board.saving(() => board.dragCard(cardId, to));
     await page.reload();
     await board.waitForLoaded('map');
     await expect(to.getByTestId(`map-card-${cardId}`)).toBeVisible();
@@ -153,7 +154,7 @@ test.describe('GM results board: Map', () => {
     await expectOn(arrowEnd(page, cardId), arrow.to);
 
     // Moved a row up (the rooftop, the vault's neighbour), the arrow ends on the card's new place.
-    await board.saving(() => board.mapCard(cardId).dragTo(board.cell(HEIST_LOCATIONS.rooftop, b)));
+    await board.saving(() => board.dragCard(cardId, board.cell(HEIST_LOCATIONS.rooftop, b)));
     await expect(board.cell(HEIST_LOCATIONS.rooftop, b).getByTestId(`map-card-${cardId}`)).toBeVisible();
     await board.mapCard(cardId).hover();
     [arrow] = await arrowEnds(page);

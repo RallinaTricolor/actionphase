@@ -34,7 +34,7 @@ export function MapResolveBar({ model, chunkId, actions, onClose }: MapResolveBa
 
   if (!slot) return null;
   return (
-    <section aria-label={`Resolving ${slot.name}`} className="space-y-2 rounded-lg border border-interactive-primary surface-raised p-3" data-testid="resolve-bar">
+    <section aria-label={`Resolving ${slot.name}`} className="space-y-2 rounded-lg border border-interactive-primary surface-base p-3" data-testid="resolve-bar">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-semibold text-content-primary">Resolving {slot.name}</h3>
         <span className="flex-1" />

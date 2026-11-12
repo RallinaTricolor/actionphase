@@ -144,6 +144,7 @@ test.describe('GM results board: Write', () => {
   test('the checks before publishing flag a secret in a draft', async ({ page }) => {
     // Vex's seeded draft names "the manager's debts", a secret only Silk may know.
     await board.open({ step: 'write', who: cast['Vex (Leech)'] });
+    await board.resultTab('Checks');
     await expect(page.getByTestId('write-check-leak').filter({ hasText: /the manager.s debts/ })).toBeVisible();
   });
 });

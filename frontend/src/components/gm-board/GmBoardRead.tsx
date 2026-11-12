@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Alert, Badge, Button, Card, CardBody, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, HelpTooltip, Spinner } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
@@ -20,6 +20,8 @@ import { characterNames } from '@/lib/gmBoard/text';
 import type { BoardDoc, CharacterProgress, Chunk, Stance } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { AwardDialog } from './AwardDialog';
+import { BoardPane } from './BoardPane';
+import { BoardToolbar } from './BoardToolbar';
 import { useOptionalBoardRewards } from './boardRewards';
 import { CardPanel } from './CardPanel';
 import { ReadPlayerList } from './ReadPlayerList';
@@ -211,87 +213,99 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
   const words = submission.text.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="grid grid-cols-[11rem_minmax(0,1fr)_18rem] gap-4 xl:grid-cols-[14rem_minmax(0,1fr)_24rem] xl:gap-6" data-testid="gm-board-step-read">
-      <div className="sticky top-4 self-start">
-        <ReadPlayerList
-          players={order.map((id) => ({ id, name: names.get(id) ?? `Character ${id}`, cards: cardsOf(id), readDone: !!board.readDone[id] }))}
-          selectedId={ownerId}
-          onSelect={pick}
-        />
-        {noCharacter > 0 && <NoCharacterNotice count={noCharacter} />}
-      </div>
-
-      <article className="min-w-0 space-y-4" aria-label={`${ownerName}’s submission`}>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xl font-semibold text-content-primary">{ownerName}</h2>
-          <span className="text-sm text-content-tertiary">
-            {words} words · {cardsOf(ownerId)} card{cardsOf(ownerId) === 1 ? '' : 's'}
-          </span>
-          <span className="flex-1" />
-          {readOnly ? (
-            isDone && <Badge variant="success">✓ Read</Badge>
-          ) : (
-            <Button type="button" size="sm" variant={isDone ? 'secondary' : 'primary'} onClick={toggleDone} title={isDone ? 'Mark as not read yet' : undefined}>
-              {isDone ? '✓ Read' : 'Done reading → next'}
-            </Button>
-          )}
+    <div className="space-y-4" data-testid="gm-board-step-read">
+      <BoardToolbar aria-label="Submissions">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <ReadPlayerList
+            players={order.map((id) => ({ id, name: names.get(id) ?? `Character ${id}`, cards: cardsOf(id), readDone: !!board.readDone[id] }))}
+            selectedId={ownerId}
+            onSelect={pick}
+          />
+          {noCharacter > 0 && <NoCharacterNotice count={noCharacter} />}
         </div>
-        <p className="text-sm text-content-secondary">
-          {readOnly
-            ? 'Highlighted text is on a card: click it to open the card.'
-            : 'Card only what matters. Select a sentence or two to card just that part; hover a paragraph to card all of it. Highlighted text is already on a card: click it to open the card.'}
-        </p>
-        <SubmissionReader
-          ownerId={ownerId}
-          text={submission.text}
-          cards={board.cards}
-          characters={characters}
-          codex={codex}
-          sheetItems={sheetItems.get(ownerId)}
-          readOnly={readOnly}
-          onAddCard={readOnly ? undefined : addCard}
-          onAddCodex={readOnly ? undefined : (text) => onOpenCodex(text)}
-          onAddAward={rewards && !readOnly ? setAwarding : undefined}
-          onOpenCard={setOpenCardId}
-        />
-        {rewards && !readOnly && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
-      </article>
+      </BoardToolbar>
 
-      <div className="sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
-        {openCard ? (
-          <CardPanel
-            key={openCard.id}
-            card={openCard}
-            board={board}
-            names={names}
-            locations={pickable}
-            onChange={(fields) => cardActions.change(openCard, fields)}
-            onCreateLocation={createLocation}
-            onSplit={(at) => cardActions.split(openCard, at)}
-            onPushLater={() => cardActions.pushLater(openCard)}
-            onDelete={() => {
-              cardActions.remove(openCard);
-              setOpenCardId(null);
-            }}
-            onClose={() => setOpenCardId(null)}
-            readOnly={readOnly}
-          />
-        ) : (
-          <ReadSidebar
-            readOnly={readOnly}
+      <div className="grid grid-cols-[minmax(0,1fr)_20rem] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <BoardPane
+          aria-label={`${ownerName}’s submission`}
+          title={
+            <div className="flex min-w-0 items-baseline gap-3">
+              <h2 className="truncate text-base font-semibold text-content-primary">{ownerName}</h2>
+              <span className="text-sm text-content-tertiary">
+                {words} words · {cardsOf(ownerId)} card{cardsOf(ownerId) === 1 ? '' : 's'}
+              </span>
+              <HelpTooltip
+                text={
+                  readOnly
+                    ? 'Highlighted text is on a card: click it to open the card.'
+                    : 'Card only what matters. Select a sentence or two to card just that part; hover a paragraph to card all of it. Highlighted text is already on a card: click it to open the card.'
+                }
+              />
+            </div>
+          }
+          actions={
+            readOnly ? (
+              isDone && <Badge variant="success">✓ Read</Badge>
+            ) : (
+              <Button type="button" size="sm" variant={isDone ? 'secondary' : 'primary'} onClick={toggleDone} title={isDone ? 'Mark as not read yet' : undefined}>
+                {isDone ? '✓ Read' : 'Done reading → next'}
+              </Button>
+            )
+          }
+          bodyClassName="px-5 py-4"
+        >
+          <SubmissionReader
             ownerId={ownerId}
-            names={names}
-            submitters={order}
-            stances={board.stances}
+            text={submission.text}
             cards={board.cards}
-            chunks={board.chunks}
-            codex={settings.codex}
-            links={links}
-            onSetStance={setStance}
+            characters={characters}
+            codex={codex}
+            sheetItems={sheetItems.get(ownerId)}
+            readOnly={readOnly}
+            onAddCard={readOnly ? undefined : addCard}
+            onAddCodex={readOnly ? undefined : (text) => onOpenCodex(text)}
+            onAddAward={rewards && !readOnly ? setAwarding : undefined}
             onOpenCard={setOpenCardId}
-            onPickSubmission={pick}
           />
-        )}
+          {rewards && !readOnly && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
+        </BoardPane>
+
+        <BoardPane sticky title={openCard ? undefined : 'Around this submission'}>
+          {openCard ? (
+            <CardPanel
+              key={openCard.id}
+              card={openCard}
+              board={board}
+              names={names}
+              locations={pickable}
+              onChange={(fields) => cardActions.change(openCard, fields)}
+              onCreateLocation={createLocation}
+              onSplit={(at) => cardActions.split(openCard, at)}
+              onPushLater={() => cardActions.pushLater(openCard)}
+              onDelete={() => {
+                cardActions.remove(openCard);
+                setOpenCardId(null);
+              }}
+              onClose={() => setOpenCardId(null)}
+              readOnly={readOnly}
+            />
+          ) : (
+            <ReadSidebar
+              readOnly={readOnly}
+              ownerId={ownerId}
+              names={names}
+              submitters={order}
+              stances={board.stances}
+              cards={board.cards}
+              chunks={board.chunks}
+              codex={settings.codex}
+              links={links}
+              onSetStance={setStance}
+              onOpenCard={setOpenCardId}
+              onPickSubmission={pick}
+            />
+          )}
+        </BoardPane>
       </div>
     </div>
   );
@@ -299,7 +313,7 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
 
 function NoCharacterNotice({ count }: { count: number }) {
   return (
-    <p className="mt-3 text-sm text-content-tertiary">
+    <p className="text-xs text-content-tertiary">
       {count} submission{count === 1 ? ' has' : 's have'} no character, so {count === 1 ? 'it isn’t' : 'they aren’t'} shown here.
       You can read {count === 1 ? 'it' : 'them'} in the results area.
     </p>

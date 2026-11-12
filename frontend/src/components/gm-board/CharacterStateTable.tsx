@@ -12,7 +12,7 @@ export function CharacterStateTable({ model }: { model: MapModel }) {
   const [open, setOpen] = useState(true);
   const players = [...model.cast.values()].filter((c) => !c.npc && isShown(model, c.id));
   return (
-    <section aria-label="Character state over the phase" className="rounded-lg border border-theme-default surface-raised">
+    <section aria-label="Character state over the phase" className="rounded-lg border border-theme-default surface-base">
       <Button type="button" variant="ghost" size="sm" className="w-full !justify-start" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         {open ? '▾' : '▸'} Character state over the phase
       </Button>

@@ -773,6 +773,14 @@ reward lists, reward block). Route `/games/:gameId/phases/:phaseId/board`
 (`pages/GmBoardPage.tsx`) and `/games/:gameId/board-setup`. Desktop only (1024px
 and up; `BOARD_NARROW_QUERY` shows a notice below that).
 
+**Layout (2026-11-12): chrome is sunken, content is base.** `GmBoard` draws one
+header block (title, step tabs, Codex/Notes/Game setup); each step puts its own
+controls in it with `BoardToolbar` (a portal into a sunken slot, via
+`BoardToolbarSlotContext`; inline when a step renders alone, as in its tests).
+Each workspace area is a `BoardPane` (base card, sunken title strip; `sticky`
+pins it below the site nav with `PANE_STICKY`). Don't use `surface-raised` on
+the board: in the dark theme it's the page colour, so it reads as no box at all.
+
 **Storage is an item store, not a document** (migration
 `20261102185548_add_gm_board_items.sql`):
 

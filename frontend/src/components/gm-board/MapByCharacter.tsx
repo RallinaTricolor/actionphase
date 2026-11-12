@@ -35,14 +35,14 @@ export function MapByCharacter({ model, actions, drag, arrows }: MapByCharacterP
   const place = (id: string) => model.rows.find((r) => r.id === id)?.name ?? 'No location';
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-theme-default" role="region" aria-label="Characters by time slot" tabIndex={0} data-testid="map-by-character">
+    <div className="overflow-x-auto rounded-lg border border-theme-default surface-base" role="region" aria-label="Characters by time slot" tabIndex={0} data-testid="map-by-character">
       <MapArrowLayer cards={model.board.cards} arrows={arrows} layoutKey={model}>
       <div className="grid" style={{ gridTemplateColumns: `12rem minmax(13rem, 1fr) repeat(${slots.length}, minmax(13rem, 1fr))` }}>
         <div className="contents">
-          <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2 text-xs text-content-tertiary">Character ↓ · time →</div>
-          <div className="surface-raised border-b border-r border-theme-default p-2 text-sm font-medium text-content-primary">Contingencies</div>
+          <div className="sticky left-0 z-10 surface-sunken border-b border-r border-theme-default p-2 text-xs text-content-tertiary">Character ↓ · time →</div>
+          <div className="surface-sunken border-b border-r border-theme-default p-2 text-sm font-medium text-content-primary">Contingencies</div>
           {slots.map((s, i) => (
-            <div key={s.id} className={`surface-raised border-b border-r border-theme-default p-2 text-sm font-medium text-content-primary ${model.resolving && model.resolving !== s.id ? 'opacity-50' : ''}`}>
+            <div key={s.id} className={`surface-sunken border-b border-r border-theme-default p-2 text-sm font-medium text-content-primary ${model.resolving && model.resolving !== s.id ? 'opacity-50' : ''}`}>
               <span className="mr-1 text-xs text-content-tertiary">{i + 1}</span>
               {s.name}
             </div>
@@ -59,7 +59,7 @@ export function MapByCharacter({ model, actions, drag, arrows }: MapByCharacterP
               const name = model.names.get(id) ?? `Character ${id}`;
               return (
                 <div className="contents" key={id} data-testid={`character-row-${id}`}>
-                  <div className="sticky left-0 z-10 surface-raised border-b border-r border-theme-default p-2">
+                  <div className="sticky left-0 z-10 surface-sunken border-b border-r border-theme-default p-2">
                     <div className="flex items-center gap-1.5">
                       <CharacterAvatar avatarUrl={member?.avatarUrl} characterName={name} size="xs" />
                       <span className="truncate font-medium text-content-primary">{name}</span>

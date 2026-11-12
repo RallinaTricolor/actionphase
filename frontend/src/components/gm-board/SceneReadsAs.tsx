@@ -37,7 +37,6 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
   if (x === null) {
     return (
       <section aria-label="Reads as" className="space-y-2">
-        <h3 className="text-sm font-semibold text-content-primary">Reads as</h3>
         <p className="text-sm text-content-secondary">Nobody in this scene reads results yet.</p>
       </section>
     );
@@ -56,7 +55,6 @@ export function SceneReadsAs({ model, reader, onReader, focusedId, onFocusMoment
   return (
     <section aria-label="Reads as" className="space-y-3" data-testid="scene-reads-as">
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-content-primary">Reads as</h3>
         <div className="flex flex-wrap gap-1" role="group" aria-label="Reader">
           {readers.map((id) => {
             const n = shortName(model.names.get(id) ?? `Character ${id}`);

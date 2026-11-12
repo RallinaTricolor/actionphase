@@ -147,7 +147,30 @@ describe('GmBoardMap', () => {
     await userEvent.click(within(panel).getByRole('button', { name: 'Happened' }));
     await saved((c) => c.kind === 'card' && c.key === 'c-mill' && docOf(c).outcome === 'happened');
     await userEvent.click(within(panel).getByRole('button', { name: 'Close the card' }));
+    expect(screen.queryByTestId('card-panel')).not.toBeInTheDocument();
+    // Checks weren't open, so closing the card gives the grid its width back.
+    expect(screen.queryByTestId('map-checks')).not.toBeInTheDocument();
+  });
+
+  it('opens the checks beside the grid on demand, with how many are open, and returns to them after a card', async () => {
+    renderMap();
+    const toggle = await screen.findByTestId('map-checks-toggle');
+    expect(screen.queryByTestId('map-checks')).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(toggle).toHaveTextContent(/^Checks\d+$/);
+
+    await userEvent.click(toggle);
     expect(screen.getByTestId('map-checks')).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    // A card opens in the same column, and closing it brings the checks back.
+    await userEvent.click(screen.getByRole('button', { name: /Harrison Vale: Waits by the wheel/ }));
+    expect(screen.queryByTestId('map-checks')).not.toBeInTheDocument();
+    await userEvent.click(within(screen.getByTestId('card-panel')).getByRole('button', { name: 'Close the card' }));
+    expect(screen.getByTestId('map-checks')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close the checks' }));
+    expect(screen.queryByTestId('map-checks')).not.toBeInTheDocument();
   });
 
   it('moves a dragged card to another cell, with Undo', async () => {
@@ -171,6 +194,7 @@ describe('GmBoardMap', () => {
 
   it('dismisses a check, with Undo', async () => {
     renderMap();
+    await userEvent.click(await screen.findByTestId('map-checks-toggle'));
     await userEvent.click(await screen.findByRole('button', { name: /^Dismiss: Mara, Harrison Vale are at the Old Mill/ }));
     await saved((c) => c.kind === 'flag' && c.key === 'meet:mill:k2' && !c.deleted);
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));

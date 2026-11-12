@@ -243,6 +243,7 @@ describe('the results board, read-only', () => {
     expect(within(await screen.findByTestId('reward-line-rl1')).getByText('Kept watch all night')).toBeInTheDocument();
     expectNoEditControls();
 
+    await userEvent.click(within(screen.getByRole('group', { name: 'Result pane' })).getByRole('button', { name: /^Rewards/ }));
     await userEvent.click(within(screen.getByTestId('reward-line-rl1')).getByRole('button', { name: 'View' }));
     expect(await screen.findByTestId('reward-line-view')).toHaveTextContent('Kept watch all night');
     expect(screen.queryByText(/This result is published/)).not.toBeInTheDocument();

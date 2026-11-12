@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, CardBody, Drawer, Select, Spinner } from '@/components/ui';
+import { Badge, Button, Card, CardBody, Drawer, Select, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useArrowMode } from '@/hooks/useArrowMode';
 import { useBoardCardActions } from '@/hooks/useBoardCardActions';
@@ -18,6 +18,8 @@ import { stanceKey } from '@/lib/gmBoard/stances';
 import { newItemKey } from '@/lib/gmBoard/store';
 import type { BoardDoc, Card as BoardCard, Chunk, Cluster, Stance, StanceValue } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
+import { BoardPane } from './BoardPane';
+import { BoardToolbar } from './BoardToolbar';
 import { CardPanel } from './CardPanel';
 import { CharacterStateTable } from './CharacterStateTable';
 import { ClusterEditor } from './ClusterEditor';
@@ -76,6 +78,8 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const [resolving, setResolving] = useState<string | null>(null);
   const [gmCards, setGmCards] = useState<Parameters<MapActions['addGmCards']>[0] | null>(null);
   const [clustersOpen, setClustersOpen] = useState(false);
+  // The Checks column opens on demand, so the grid gets the width the rest of the time.
+  const [checksOpen, setChecksOpen] = useState(false);
   const [stanceFocus, setStanceFocus] = useState<number | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [arrowMode, setArrowMode] = useArrowMode();
@@ -251,8 +255,9 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const stancePlayers = players.filter((p) => !model.visible || model.visible.has(p.id));
 
   return (
-    <div className="space-y-3" data-testid="gm-board-step-map">
-      <div className="flex flex-wrap items-end gap-2">
+    <div className="space-y-4" data-testid="gm-board-step-map">
+      <BoardToolbar aria-label="Map">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1" role="group" aria-label="View">
           {VIEWS.map((v) => (
             <Button key={v.id} type="button" size="sm" variant={view === v.id ? 'primary' : 'secondary'} aria-pressed={view === v.id} onClick={() => setParam('view', v.id === 'location' ? null : v.id)}>
@@ -307,13 +312,26 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             </Button>
           </>
         )}
+        {view !== 'stances' && (
+          <Button type="button" size="sm" variant={checksOpen ? 'primary' : 'secondary'} aria-pressed={checksOpen} onClick={() => setChecksOpen((v) => !v)} data-testid="map-checks-toggle">
+            Checks
+            {model.open.length > 0 && (
+              <Badge variant="warning" size="sm">
+                {model.open.length}
+              </Badge>
+            )}
+          </Button>
+        )}
       </div>
+      </BoardToolbar>
 
       {view === 'stances' ? (
-        <StanceMatrix stances={board.stances} players={stancePlayers} names={names} focusId={stanceFocus} onSet={setStance} onSetMany={setMany} readOnly={readOnly} />
+        <BoardPane title="Stances: how each person sees the others">
+          <StanceMatrix stances={board.stances} players={stancePlayers} names={names} focusId={stanceFocus} onSet={setStance} onSetMany={setMany} readOnly={readOnly} />
+        </BoardPane>
       ) : (
         <div className="flex items-start gap-4">
-          <div className="min-w-0 flex-1 space-y-3">
+          <div className="min-w-0 flex-1 space-y-4">
             {model.resolving && <MapResolveBar model={model} chunkId={model.resolving} actions={actions} onClose={() => setResolving(null)} />}
             {view === 'location' ? (
               <>
@@ -324,7 +342,19 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
               <MapByCharacter model={model} actions={actions} drag={drag} arrows={arrows} />
             )}
           </div>
-          <div className="sticky top-4 w-80 shrink-0 self-start max-h-[calc(100vh-2rem)] overflow-y-auto xl:w-96">
+          {(openCard || checksOpen) && (
+          <BoardPane
+            sticky
+            className="w-80 shrink-0 xl:w-96"
+            title={openCard ? undefined : 'Checks'}
+            actions={
+              !openCard && (
+                <Button type="button" size="sm" variant="ghost" className="!px-1.5" aria-label="Close the checks" onClick={() => setChecksOpen(false)}>
+                  ✕
+                </Button>
+              )
+            }
+          >
             {openCard ? (
               <CardPanel
                 key={openCard.id}
@@ -357,7 +387,8 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
                 readOnly={readOnly}
               />
             )}
-          </div>
+          </BoardPane>
+          )}
         </div>
       )}
 
