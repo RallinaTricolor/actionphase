@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EntryForm } from '@/components/characters/sheet-items/EntryForm';
 import { applyEntryEdit, type EntryEdit } from '@/lib/sheetEntries';
-import { applyOps, sheetTabsFrom } from '@/lib/gmBoard/rewards';
+import { applyOps, editOpFrom, sheetTabsFrom } from '@/lib/gmBoard/rewards';
 import type { CharacterData, SheetTab } from '@/types/characters';
 
 // The prod incident: draft results wrote entries the sheet editor read
@@ -64,6 +64,16 @@ describe('an entry the results board writes, saved unchanged in the sheet editor
     );
     const written = tabs[contacts.key][0];
     expect(written).toEqual({ id: 'm1', name: 'Mara', quantity: 0, rank: 'Tier 2', trust: { value: 1, max: 5, display: 'boxes' } });
+    expect(await saveUnchanged(written)).toEqual(written);
+  });
+
+  it('an entry edited through the sheet’s own form, as an Edit entry op, comes back identical', async () => {
+    const stored = { id: 'm1', name: 'Mara', rank: ' Tier 1 ', quantity: 2, trust: { value: 2, max: 5, display: 'boxes' } };
+    const tabs = sheetTabsFrom([sheetRow([stored])], layout);
+    const edit: EntryEdit = { name: 'Mara Vey', values: { rank: 'Tier 1', quantity: 4, description: 'Owes us', kind: undefined, known: true, trust: { value: 3, max: 5, display: 'boxes' } } };
+    applyOps(layout, tabs, [editOpFrom(contacts, tabs[contacts.key][0], edit)], () => 'x');
+    const written = tabs[contacts.key][0];
+    expect(written).toEqual({ id: 'm1', name: 'Mara Vey', rank: 'Tier 1', quantity: 4, description: 'Owes us', known: true, trust: { value: 3, max: 5, display: 'boxes' } });
     expect(await saveUnchanged(written)).toEqual(written);
   });
 });

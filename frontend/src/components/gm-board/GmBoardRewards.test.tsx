@@ -210,6 +210,17 @@ describe('Write: rewards', () => {
     expect(screen.queryByRole('button', { name: '+ Sheet change' })).not.toBeInTheDocument();
   });
 
+  it('a published line shows no before and after: it is already on the sheet', async () => {
+    results[0].is_published = true;
+    board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', group: 'result', text: 'Coin', ops: partial.ops, choose: false }], texts: {}, carrierHeadId: 100 } }));
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    await user.click(within(await screen.findByTestId('reward-line-l1')).getByRole('button', { name: 'View' }));
+    expect(await screen.findByTestId('reward-line-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('sheet-change-preview')).not.toBeInTheDocument();
+  });
+
   it('+ Sheet change makes a line that changes the sheet and stays out of the block', async () => {
     const user = userEvent.setup();
     render();
@@ -236,6 +247,31 @@ describe('Write: rewards', () => {
     expect(within(panel).getByTestId('reward-block')).toHaveTextContent('Coin: 0');
     await waitFor(() => expect(syncs).toHaveLength(1), { timeout: 4000 });
     expect(JSON.parse((syncs[0].body.updates as { field_value: string }[])[0].field_value)).toEqual([{ id: 'n1', name: 'Coin', amount: { value: 0 } }]);
+  });
+
+  it('a sheet change edits an entry in the sheet’s own form, shows the tab before and after, and saves it as a draft', async () => {
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    const panel = await screen.findByTestId('write-rewards');
+    await user.click(within(panel).getByRole('button', { name: '+ Sheet change' }));
+    const editor = await screen.findByTestId('reward-line-editor');
+
+    await user.selectOptions(within(editor).getByLabelText('Change'), 'edit');
+    await user.type(within(editor).getByLabelText('Entry'), 'Coin');
+    await user.click(await within(editor).findByRole('option', { name: 'Coin' }));
+    await user.click(within(editor).getByRole('button', { name: 'Edit Coin' }));
+    const form = within(editor).getByTestId('line-edit-0-form');
+    await user.clear(within(form).getByLabelText('Name *'));
+    await user.type(within(form).getByLabelText('Name *'), 'Gold Coin');
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+
+    const preview = within(editor).getByTestId('sheet-change-preview');
+    expect(within(preview).getByTestId('preview-changed')).toHaveTextContent('Name: Coin → Gold Coin');
+    await user.click(within(editor).getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(syncs).toHaveLength(1), { timeout: 4000 });
+    expect(JSON.parse((syncs[0].body.updates as { field_value: string }[])[0].field_value)).toEqual([{ id: 'n1', name: 'Gold Coin', amount: { value: 1 } }]);
   });
 
   it('“In the reward block” turns a sheet change into a reward, and back', async () => {

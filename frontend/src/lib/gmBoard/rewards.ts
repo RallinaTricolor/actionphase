@@ -11,8 +11,8 @@
  * so the board writes one per changed tab, all on one result.
  */
 
-import { applyEntryEdit, createEntry, normalizeEntry, type RawSheetEntry, type SheetEntry, type TrackValue } from '@/lib/sheetEntries';
-import { fieldCodecOf, trackToDraft } from '@/lib/sheetFieldValues';
+import { applyEntryEdit, createEntry, normalizeEntry, type EntryEdit, type RawSheetEntry, type SheetEntry, type TrackValue } from '@/lib/sheetEntries';
+import { canonicalEntry, canonicalValue, fieldCodecOf, trackToDraft } from '@/lib/sheetFieldValues';
 import { storageFieldName, type CharacterData, type CharacterSheetField, type SheetTab } from '@/types/characters';
 import type { RewardItem, RewardLine, SheetOp } from './types';
 
@@ -235,6 +235,24 @@ export function applyOps(layout: readonly SheetTab[], tabs: SheetTabs, ops: read
       return { ...rec, after: 'removed' };
     }
 
+    if (op.act === 'edit') {
+      const values: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(op.values ?? {})) {
+        if (key === 'id' || key === 'name') continue;
+        const field = fieldOf(tab, key);
+        if (field && !fieldCodecOf(field)) return { ...rec, err: unwritable(tab, key) };
+        values[key] = value === null ? undefined : field ? storedOpValue(field, value, entry[key]) : value;
+      }
+      const rename = op.name?.trim();
+      // Saving the sheet's form stores every field it shows, so the edited
+      // entry is stored as a whole as the form would: a field the GM left
+      // alone is normalised too, not just the ones the op names.
+      const next = canonicalEntry(tab.fields, applyEntryEdit(entry, { name: rename || entry.name, values }));
+      list[list.indexOf(entry)] = next;
+      const clash = rename ? list.find((e) => e !== next && e.name.trim().toLowerCase() === rename.toLowerCase()) : undefined;
+      return { ...rec, before: entry.name, after: next.name, warn: clash ? `${tab.label} already has an entry named ${clash.name}` : undefined };
+    }
+
     if (op.act === 'inc') {
       const key = op.field || mainNumberField(tab);
       if (!key) return { ...rec, err: `${tab.label} has no number to add to` };
@@ -271,6 +289,50 @@ export const lineKind = (line: Pick<RewardLine, 'kind' | 'text' | 'itemId' | 'ch
 /** A line's ops that touch the sheet: none for "Choose 1". */
 const effectiveOps = (line: Pick<RewardLine, 'choose' | 'ops'>) => (line.choose ? [] : line.ops);
 
+/**
+ * One line worked out op by op, for its editor: the sheet before it (after
+ * the character's earlier lines), before each of its ops, and after it. A line
+ * not in `lines` (being made) comes after all of them. Gives the same ids as
+ * `sheetFor`, so what the editor shows is what the drafts store.
+ */
+export interface LineSteps {
+  before: SheetTabs;
+  /** The sheet each op starts from: which entries it can pick, and what Edit entry opens. */
+  steps: SheetTabs[];
+  after: SheetTabs;
+  recs: OpRecord[];
+}
+
+export function lineSteps(layout: readonly SheetTab[], live: SheetTabs, lines: readonly RewardLine[], line: RewardLine): LineSteps {
+  const at = lines.findIndex((l) => l.id === line.id);
+  const before = sheetFor(layout, live, at < 0 ? lines : lines.slice(0, at)).after;
+  const after = cloneTabs(before);
+  const steps: SheetTabs[] = [];
+  const recs: OpRecord[] = [];
+  effectiveOps(line).forEach((op, i) => {
+    steps.push(cloneTabs(after));
+    recs.push(...applyOps(layout, after, [op], () => `rw-${line.id}-${i}`));
+  });
+  return { before, steps, after, recs };
+}
+
+/**
+ * An Edit entry op from what the sheet's entry form saved: only the fields it
+ * changed, compared as the editor would store them, so a field the GM didn't
+ * touch is left to whatever else changes it. `null` clears a field.
+ */
+export function editOpFrom(tab: SheetTab, entry: SheetEntry, edit: EntryEdit): Extract<SheetOp, { act: 'edit' }> {
+  const values: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(edit.values)) {
+    const field = fieldOf(tab, key);
+    const was = field ? canonicalValue(field, entry[key]) : entry[key];
+    if (stable(value) !== stable(was)) values[key] = value === undefined ? null : value;
+  }
+  const op: Extract<SheetOp, { act: 'edit' }> = { act: 'edit', tab: tab.key, entry: entry.name, values };
+  if (edit.name.trim() && edit.name.trim() !== entry.name) op.name = edit.name.trim();
+  return op;
+}
+
 export interface SheetState {
   before: SheetTabs;
   after: SheetTabs;
@@ -288,11 +350,19 @@ export function sheetFor(layout: readonly SheetTab[], live: SheetTabs, lines: re
   return { before, after, recs };
 }
 
-interface DiffField {
+export interface DiffField {
   key: string;
   label: string;
   before: string;
   after: string;
+}
+
+/** The fields that differ between two versions of an entry, the name first. */
+export function fieldChanges(tab: SheetTab, before: SheetEntry, after: SheetEntry): DiffField[] {
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((k) => k !== 'id' && stable(before[k]) !== stable(after[k]))
+    .sort((a, b) => (a === 'name' ? -1 : b === 'name' ? 1 : 0))
+    .map((k) => ({ key: k, label: k === 'name' ? 'Name' : fieldOf(tab, k)?.label ?? k, before: showValue(before, k), after: showValue(after, k) }));
 }
 type DiffRow = { kind: 'add'; name: string } | { kind: 'remove'; name: string } | { kind: 'change'; name: string; fields: DiffField[] };
 export interface TabDiff {
@@ -315,14 +385,8 @@ export function sheetDiff(layout: readonly SheetTab[], state: Pick<SheetState, '
         rows.push({ kind: 'add', name: e.name });
         continue;
       }
-      const keys = [...new Set([...Object.keys(o), ...Object.keys(e)])].filter((k) => k !== 'id' && stable(o[k]) !== stable(e[k]));
-      if (keys.length) {
-        rows.push({
-          kind: 'change',
-          name: e.name,
-          fields: keys.map((k) => ({ key: k, label: k === 'name' ? 'Name' : fieldOf(tab, k)?.label ?? k, before: showValue(o, k), after: showValue(e, k) })),
-        });
-      }
+      const fields = fieldChanges(tab, o, e);
+      if (fields.length) rows.push({ kind: 'change', name: e.name, fields });
     }
     for (const o of b) if (!a.some((e) => e.id === o.id)) rows.push({ kind: 'remove', name: o.name });
     if (rows.length) out.push({ tab, rows, value: a });
@@ -416,6 +480,11 @@ function opSummary(layout: readonly SheetTab[], op: SheetOp): string {
   const entry = op.entry.trim() || '?';
   if (op.act === 'add') return `${label}: + ${op.entry.trim() || '(name it)'}`;
   if (op.act === 'remove') return `${label}: − ${entry}`;
+  if (op.act === 'edit') {
+    const fields = Object.keys(op.values ?? {}).map((k) => (tab ? fieldOf(tab, k)?.label : undefined) ?? k);
+    const rename = op.name?.trim() ? ` → ${op.name.trim()}` : '';
+    return `${label} · ${entry}${rename}${fields.length ? `: ${fields.join(', ')}` : rename ? '' : ': no changes yet'}`;
+  }
   if (op.act === 'inc') {
     const n = Number(op.by) || 0;
     return `${label} · ${entry} ${n >= 0 ? '+' : '−'}${formatNumber(Math.abs(n))}`;

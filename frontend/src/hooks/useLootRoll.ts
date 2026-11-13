@@ -113,13 +113,13 @@ export function useLootRoll(characterId: number, onRolled: (entry: RawSheetEntry
 /**
  * Loot table rolls for a draft sheet update. The server only picks the item;
  * `onDrawn` adds it to the draft, which reaches the sheet when the result is
- * published. Nothing is written to the sheet or the game log.
+ * published. Nothing is written to the sheet or the game log. `doneMessage`
+ * is the toast, for a caller whose draft isn't "the staged updates".
  */
-export function useLootDraw(characterId: number, onDrawn: (item: RolledItem, tabKey: string) => void): LootRolling {
-  return useRoller(
-    characterId,
-    (gameId, lootTableId) => apiClient.games.drawLootTableContent(gameId, lootTableId),
-    onDrawn,
-    (name) => `Rolled ${name}: added to the staged updates`,
-  );
+export function useLootDraw(
+  characterId: number,
+  onDrawn: (item: RolledItem, tabKey: string) => void,
+  doneMessage: (name: string) => string = (name) => `Rolled ${name}: added to the staged updates`,
+): LootRolling {
+  return useRoller(characterId, (gameId, lootTableId) => apiClient.games.drawLootTableContent(gameId, lootTableId), onDrawn, doneMessage);
 }

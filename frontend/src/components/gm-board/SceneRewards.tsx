@@ -90,6 +90,7 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
         groups={rewards.groups}
         layout={rewards.layout}
         entryNames={(tab) => (editingState?.sheet.before[tab] ?? []).map((e) => e.name)}
+        sheet={editingState ? { live: editingState.sheet.before, lines: editingState.lines } : undefined}
         locked={editingState?.locked}
         onChange={(next) => editing && rewards.updateLine(editing.characterId, next.id, () => next)}
         onRemove={() => {

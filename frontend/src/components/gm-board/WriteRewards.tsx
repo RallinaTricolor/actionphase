@@ -317,6 +317,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
         groups={groups}
         layout={layout}
         entryNames={entryNames}
+        sheet={{ live: state.sheet.before, lines }}
         locked={ro}
         lockedNote={locked ? undefined : null}
         onChange={(line: RewardLine) => rewards.updateLine(characterId, line.id, () => fixEntryCase(line, state))}

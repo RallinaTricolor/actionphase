@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Badge, Button, Checkbox, Input, Modal, Radio, Select, Textarea } from '@/components/ui';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
-import { lineEffect, lineKind } from '@/lib/gmBoard/rewards';
+import { lineEffect, lineKind, lineSteps, type LineSteps, type SheetTabs } from '@/lib/gmBoard/rewards';
 import type { GameBoardSettings, RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
 import type { SheetTab } from '@/types/characters';
+import { SheetChangePreview } from './SheetChangePreview';
 import { SheetOpsEditor } from './SheetOpsEditor';
 
 const TEXT_HELP = 'Shown in the reward block. {{entry}}, {{before}} and {{after}} fill in from the first sheet change.';
@@ -18,14 +19,26 @@ interface FieldsProps {
   idPrefix: string;
   /** A sheet change: only the sheet changes, nothing for the block. */
   sheetOnly?: boolean;
+  /** One character's line worked out op by op; none for a list item. */
+  steps?: LineSteps;
 }
 
 /** Section, text, Choose 1 and sheet changes: what a list item and a line share. */
-function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false }: FieldsProps) {
+function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false, steps }: FieldsProps) {
   const known = groups.some((g) => g.key === value.group);
-  if (sheetOnly) {
-    return <SheetOpsEditor ops={value.ops} onChange={(ops) => onChange({ ops })} layout={layout} entryNames={entryNames} allowBlankEntry={allowBlankEntry} idPrefix={idPrefix} />;
-  }
+  const opsEditor = (
+    <SheetOpsEditor
+      ops={value.ops}
+      onChange={(ops) => onChange({ ops })}
+      layout={layout}
+      entryNames={entryNames}
+      steps={steps?.steps}
+      recs={steps?.recs}
+      allowBlankEntry={allowBlankEntry}
+      idPrefix={idPrefix}
+    />
+  );
+  if (sheetOnly) return opsEditor;
   return (
     <div className="space-y-3">
       <Select id={`${idPrefix}-section`} label="Section" value={value.group} onChange={(e) => onChange({ group: e.target.value })} data-testid={`${idPrefix}-group`}>
@@ -57,7 +70,7 @@ function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankE
       {!value.choose && (
         <div>
           <h4 className="mb-2 text-sm font-semibold text-content-primary">Sheet changes</h4>
-          <SheetOpsEditor ops={value.ops} onChange={(ops) => onChange({ ops })} layout={layout} entryNames={entryNames} allowBlankEntry={allowBlankEntry} idPrefix={idPrefix} />
+          {opsEditor}
         </div>
       )}
     </div>
@@ -82,6 +95,11 @@ interface LineEditorProps {
   locked?: boolean;
   /** Why it's locked; null for none (a read-only board). */
   lockedNote?: string | null;
+  /**
+   * The character's live sheet and all their lines this phase, so the editor
+   * can show the sheet at each change, and before and after the line.
+   */
+  sheet?: { live: SheetTabs; lines: readonly RewardLine[] };
 }
 
 /** One character's reward line: their own copy, so edits here change only theirs. */
@@ -99,10 +117,15 @@ export function RewardLineEditor({
   onAddToList,
   locked = false,
   lockedNote = 'This result is published, so its rewards can’t change.',
+  sheet,
 }: LineEditorProps) {
   const sheetOnly = !!line && lineKind(line) === 'sheet';
+  // Once the result is out, the line is already on the live sheet: working it
+  // out again would show it twice.
+  const steps = line && sheet && !locked ? lineSteps(layout, sheet.live, sheet.lines, line) : undefined;
+  const touched = line && !line.choose ? [...new Set(line.ops.map((op) => op.tab))] : [];
   return (
-    <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="lg">
+    <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="xl">
       {line && (
         <div className="space-y-4" data-testid="reward-line-editor">
           {!locked && !item && (
@@ -140,7 +163,14 @@ export function RewardLineEditor({
               {lineEffect(layout, line) && <p className="text-sm text-content-secondary">{lineEffect(layout, line)}</p>}
             </div>
           ) : (
-            <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" sheetOnly={sheetOnly} />
+            <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" sheetOnly={sheetOnly} steps={steps} />
+          )}
+          {steps && touched.length > 0 && (
+            <section className="space-y-2 border-t border-theme-default pt-3" aria-label={`On ${characterName}’s sheet`}>
+              <h4 className="text-sm font-semibold text-content-primary">On {characterName}’s sheet</h4>
+              <p className="text-xs text-content-tertiary">With this phase’s earlier lines already applied. The sheet changes when the result is published.</p>
+              <SheetChangePreview layout={layout} before={steps.before} after={steps.after} tabKeys={touched} />
+            </section>
           )}
           <div className="flex flex-wrap justify-between gap-2 border-t border-theme-default pt-3">
             {!item && onAddToList && !locked && !sheetOnly ? (

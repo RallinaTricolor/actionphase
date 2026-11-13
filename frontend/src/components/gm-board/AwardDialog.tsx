@@ -95,6 +95,7 @@ export function AwardDialog({ quote, characterId, name, onClose }: AwardDialogPr
         groups={rewards.groups}
         layout={rewards.layout}
         entryNames={(tab) => (state.sheet.before[tab] ?? []).map((e) => e.name)}
+        sheet={{ live: state.sheet.before, lines: state.lines }}
         onChange={(next) => rewards.updateLine(characterId, next.id, () => next)}
         onRemove={() => {
           if (line) rewards.removeLine(characterId, line.id);

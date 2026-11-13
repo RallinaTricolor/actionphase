@@ -116,12 +116,19 @@ export interface BoardDoc {
 /**
  * One change to a character sheet. `tab` is the tab key; `entry` names the
  * entry (case doesn't matter); `field` is a field key, defaulting to the tab's
- * first number or track field for `inc`.
+ * first number or track field for `inc`. Every value is stored through the
+ * sheet editor's codecs when applied (`lib/gmBoard/rewards.ts`).
  */
 export type SheetOp =
   | { act: 'inc'; tab: string; entry: string; field?: string; by: number }
   | { act: 'set'; tab: string; entry: string; field: string; value: string }
   | { act: 'add'; tab: string; entry: string; fields: Record<string, unknown> }
+  /**
+   * Several fields at once, and a rename: what the sheet's own entry form
+   * saved, kept as only the fields it changed (as stored; `null` clears one),
+   * so a change made earlier in the phase to another field still stands.
+   */
+  | { act: 'edit'; tab: string; entry: string; name?: string; values: Record<string, unknown> }
   | { act: 'remove'; tab: string; entry: string };
 
 /** A reward defined once in a list and given to many characters. */

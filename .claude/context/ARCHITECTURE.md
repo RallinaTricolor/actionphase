@@ -826,6 +826,14 @@ item means two editors only collide on the same item.
   real sheet. Giving any line to someone with no draft result makes an
   empty one (`usePhaseRewards.ensureDraft`; the create endpoint allows empty
   content for a draft), so the lines always have a result to carry them.
+  A line's ops (`SheetOp`) are inc, set, add, **edit** and remove. New entry
+  and Edit entry render the sheet's own `EntryForm` (New entry through
+  `LootModeForm`, rolls via `useLootDraw`, the result stored in the op).
+  An edit op keeps only the fields the form changed (`editOpFrom`; `null`
+  clears one), and applying it stores the whole entry as the form would
+  (`canonicalEntry`). `lineSteps` works one line out op by op for its
+  editor: the entries each op can pick, and the tabs before and after
+  (`SheetChangePreview`).
 
 **Access: the audience level plus a game setting.** Writes declare
 `access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,
