@@ -5,7 +5,9 @@ import {
   cardedSpans,
   defaultChunkId,
   DEFAULT_CHUNKS,
+  cardShades,
   findMatches,
+  findSheetMatches,
   flatIndexAt,
   flattenText,
   guessCondition,
@@ -111,6 +113,43 @@ describe('findMatches and submissionRefs', () => {
       mentions: [2],
       codexIds: ['ledger', 'mill'],
     });
+  });
+});
+
+describe('cardShades', () => {
+  it('alternates in reading order, whatever order the cards come in', () => {
+    const spans = [
+      { start: 20, end: 30, cardId: 'c' },
+      { start: 0, end: 10, cardId: 'a' },
+      { start: 10, end: 20, cardId: 'b' },
+    ];
+    const { even, odd } = cardShades(spans);
+    expect(even.map((s) => s.cardId)).toEqual(['a', 'c']);
+    expect(odd.map((s) => s.cardId)).toEqual(['b']);
+  });
+});
+
+describe('findSheetMatches', () => {
+  const items = [
+    { id: 'skill', name: 'Sharpshooter' },
+    { id: 'rifle', name: 'Hunting Rifle' },
+    { id: 'darts', name: 'Tranquilizer Dart' },
+    { id: 'rifle-short', name: 'Rifle' },
+    { id: 'tiny', name: 'Ox' },
+  ];
+  const found = (text: string) => findSheetMatches(text, items).map((m) => [text.slice(m.start, m.end), m.itemId]);
+
+  it('finds the owner’s entries in any case, longest first, with plurals', () => {
+    expect(found('Using my Sharpshooter ability. My hunting rifle is loaded with tranquilizer darts; a second rifle waits.')).toEqual([
+      ['Sharpshooter', 'skill'],
+      ['hunting rifle', 'rifle'],
+      ['tranquilizer darts', 'darts'],
+      ['rifle', 'rifle-short'],
+    ]);
+  });
+
+  it('matches whole words only, skips names under three characters, and leaves [[refs]] alone', () => {
+    expect(found('Sharpshooters? A sharpshooterly rifleman with an ox and [[Hunting Rifle|item:rifle]].')).toEqual([['Sharpshooters', 'skill']]);
   });
 });
 

@@ -324,7 +324,7 @@ function sceneOf(item: LiveItem): Scene {
   const s = withId<Partial<Scene> & { id: string }>(item);
   const list = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
   return {
-    title: '', locationId: '', chunkId: '', conflict: false, ...s,
+    title: '', locationId: '', chunkId: '', conflict: false, done: false, ...s,
     participants: list(s.participants),
     effects: list(s.effects),
     moments: list(s.moments).map((m) => ({ ...m, text: m.text ?? '', readers: list(m.readers), ownText: m.ownText ?? {} })),

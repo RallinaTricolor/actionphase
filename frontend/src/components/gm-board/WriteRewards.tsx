@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Alert, Badge, Button, Select, Textarea } from '@/components/ui';
 import { useBoardRewards } from './boardRewards';
 import { RewardLineEditor, GroupBadge } from './RewardEditors';
@@ -40,6 +40,8 @@ interface WriteRewardsProps {
 export function WriteRewards({ gameId, characterId, name, fullName, state, chains, sceneName, onPutBlock, putting, onCopy, onShowTable }: WriteRewardsProps) {
   const rewards = useBoardRewards();
   const { layout, groups, gameItems, phaseItems, items } = rewards;
+  const location = useLocation();
+  const here = location.pathname + location.search;
   const [editing, setEditing] = useState<string | null>(null);
   const sync = rewards.syncFor(characterId);
   const { lines, locked, carrier } = state;
@@ -178,7 +180,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           </div>
         ) : (
           <p className="text-sm text-content-secondary">
-            No reward lists yet. <Link to={boardSetupPath(gameId)} className="text-interactive-primary hover:underline">Make them on Game setup</Link>.
+            No reward lists yet. <Link to={boardSetupPath(gameId, here)} className="text-interactive-primary hover:underline">Make them on Game setup</Link>.
           </p>
         ))}
 

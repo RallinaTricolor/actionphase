@@ -113,6 +113,41 @@ export function paragraphCardCounts(blocks: Block[], cards: Card[], ownerId: num
   return counts;
 }
 
+/** Sheet references (`[[name|kind:id]]`) are the sheet's, not names or codex terms. */
+const SHEET_REF = /\[\[[^\]]*\]\]/g;
+
+// ------------------------------------------------------------------ sheet entries
+
+export interface SheetMatch {
+  start: number;
+  end: number;
+  itemId: string;
+}
+
+/**
+ * Where the submission names entries on its owner's sheet ("my hunting
+ * rifle", "Sharpshooter"), so Read can show the entry. Any case, whole words,
+ * a plural "s" or "es" allowed; longest first, never overlapping. Names
+ * shorter than three characters are skipped, and `[[refs]]` already show the
+ * entry themselves.
+ */
+export function findSheetMatches(text: string, items: { id: string; name: string }[]): SheetMatch[] {
+  const terms = items
+    .map((it) => ({ t: String(it.name ?? '').trim(), id: it.id }))
+    .filter((x) => x.t.length >= 3)
+    .sort((a, b) => b.t.length - a.t.length);
+  if (!terms.length) return [];
+  const blanked = text.replace(SHEET_REF, (s) => ' '.repeat(s.length));
+  const re = new RegExp(`(?<![\\w])(${terms.map((x) => escapeRegExp(x.t)).join('|')})(?:e?s)?(?![\\w])`, 'gi');
+  const out: SheetMatch[] = [];
+  for (const m of blanked.matchAll(re)) {
+    const lc = m[1].toLowerCase();
+    const hit = terms.find((x) => x.t.toLowerCase() === lc);
+    if (hit) out.push({ start: m.index, end: m.index + m[0].length, itemId: hit.id });
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ names and codex
 
 export interface NamedCharacter {
@@ -128,9 +163,6 @@ export interface Match {
   end: number;
   tag: MatchTag;
 }
-
-/** Sheet references (`[[name|kind:id]]`) are the sheet's, not names or codex terms. */
-const SHEET_REF = /\[\[[^\]]*\]\]/g;
 
 /**
  * Every character name and codex term in `text`, longest first so "the Old
@@ -318,6 +350,15 @@ export function cardedSpans(flat: string, cards: Card[], ownerId: number): Carde
     if (at >= 0) out.push({ start: at, end: at + len, cardId: c.id });
   }
   return out;
+}
+
+/**
+ * Which of two shades each card's highlight takes: they alternate in reading
+ * order, so two cards covering touching text don't merge into one block.
+ */
+export function cardShades(spans: CardedSpan[]): { even: CardedSpan[]; odd: CardedSpan[] } {
+  const sorted = [...spans].sort((a, b) => a.start - b.start || b.end - a.end);
+  return { even: sorted.filter((_, i) => i % 2 === 0), odd: sorted.filter((_, i) => i % 2 === 1) };
 }
 
 /** The card under a point in the text: the shortest span covering it, so a card inside a longer one stays clickable. */

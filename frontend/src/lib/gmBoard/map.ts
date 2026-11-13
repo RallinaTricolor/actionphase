@@ -72,6 +72,33 @@ export function nextSlotName(chunks: Chunk[]): string {
   return `Slot ${n}`;
 }
 
+const AUTO_SLOT_NAME = /^slot \d+$/i;
+
+/**
+ * The renames that number the auto-named slots ("Slot N") 1, 2, 3… in time
+ * order, so inserting or removing one keeps them in order. Slots the GM has
+ * named (and "Pre-…") keep their names and aren't counted.
+ */
+export function renumberSlots(chunks: Chunk[]): { id: string; name: string }[] {
+  let n = 0;
+  const renames: { id: string; name: string }[] = [];
+  for (const c of sortedChunks(chunks)) {
+    if (!AUTO_SLOT_NAME.test(c.name.trim())) continue;
+    n += 1;
+    const name = `Slot ${n}`;
+    if (c.name !== name) renames.push({ id: c.id, name });
+  }
+  return renames;
+}
+
+/** A new slot at `position`, named for where it lands, and the renames that keep the later slots in order. */
+export function insertSlot(chunks: Chunk[], id: string, position: number): { slot: Chunk; renames: { id: string; name: string }[] } {
+  const draft = { id, name: 'Slot 0', position };
+  const renames = renumberSlots([...chunks, draft]);
+  const name = renames.find((r) => r.id === id)?.name ?? draft.name;
+  return { slot: { ...draft, name }, renames: renames.filter((r) => r.id !== id) };
+}
+
 /** A slot with no cards or scenes can be removed. */
 export const isChunkEmpty = (board: Pick<BoardDoc, 'cards' | 'scenes'>, chunkId: string) =>
   !board.cards.some((c) => c.chunkId === chunkId) && !board.scenes.some((s) => s.chunkId === chunkId);

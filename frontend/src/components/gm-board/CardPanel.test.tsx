@@ -65,14 +65,24 @@ describe('CardPanel', () => {
     expect(onChange).toHaveBeenCalledWith({ outcome: 'failed' });
   });
 
-  it('toggles causes from the same cell', async () => {
+  it('shows the chosen causes to remove, and offers the same cell’s cards to add', async () => {
     const card = makeCard({ id: 'c', characterId: 1, chunkId: 'k2', locationId: 'mill', outcome: 'failed', causedBy: ['fight'] });
     const other = makeCard({ id: 'o', characterId: 2, chunkId: 'k2', locationId: 'mill', summary: 'Guard the ledger' });
     const { onChange } = renderPanel(card, [other]);
-    expect(screen.getByText('Same place and time')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Scene: Fight at the mill' })).toHaveAttribute('aria-pressed', 'true');
-    await userEvent.click(screen.getByRole('button', { name: 'Mara: Guard the ledger' }));
-    expect(onChange).toHaveBeenCalledWith({ causedBy: ['fight', 'o'] });
+    await userEvent.click(screen.getByRole('button', { name: '+ Mara: Guard the ledger' }));
+    expect(onChange).toHaveBeenLastCalledWith({ causedBy: ['fight', 'o'] });
+    await userEvent.click(screen.getByRole('button', { name: 'Remove cause: Scene: Fight at the mill' }));
+    expect(onChange).toHaveBeenLastCalledWith({ causedBy: [] });
+  });
+
+  it('finds causes further away by search, rather than listing them all', async () => {
+    const card = makeCard({ id: 'c', characterId: 1, chunkId: 'k2', locationId: 'mill', outcome: 'failed', causedBy: [] });
+    const far = makeCard({ id: 'far', characterId: 2, chunkId: 'k2', locationId: 'dock', summary: 'Cuts the rope' });
+    const { onChange } = renderPanel(card, [far]);
+    expect(screen.queryByRole('button', { name: '+ Mara: Cuts the rope' })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole('combobox', { name: 'Add a cause' }), 'rope');
+    await userEvent.click(await screen.findByRole('option', { name: /Mara: Cuts the rope/ }));
+    expect(onChange).toHaveBeenLastCalledWith({ causedBy: ['far'] });
   });
 
   it('takes focus when it opens, and Esc gives it back to what opened it, under StrictMode too', async () => {
@@ -97,7 +107,7 @@ describe('CardPanel', () => {
     const card = makeCard({ id: 'c', characterId: 1, chunkId: 'k2', locationId: 'mill', outcome: 'failed', causedBy: ['s2'] });
     const board = makeBoard({ cards: [card], scenes: [makeScene({ id: 's2', title: '', chunkId: 'k2', locationId: 'mill', participants: [1, 2] })] });
     render(<CardPanel card={card} board={board} names={names} locations={locations} onChange={vi.fn()} onCreateLocation={vi.fn()} onSplit={vi.fn()} onPushLater={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /^Scene: Harrison, Mara/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Remove cause: Scene: Harrison, Mara/ })).toBeInTheDocument();
   });
 
   it('offers Push later only when the character has later cards', async () => {

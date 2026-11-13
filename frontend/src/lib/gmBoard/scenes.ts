@@ -30,7 +30,7 @@ export function newScene(
         .map((c) => c.characterId),
     ),
   ];
-  const scene: Scene = { id: ids.scene, title: '', ...cell, conflict: false, participants, moments: [], effects: [] };
+  const scene: Scene = { id: ids.scene, title: '', ...cell, conflict: false, done: false, participants, moments: [], effects: [] };
   return { ...scene, moments: [newMoment(scene, canRead, ids.moment)] };
 }
 

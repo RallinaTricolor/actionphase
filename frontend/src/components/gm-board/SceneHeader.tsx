@@ -12,13 +12,14 @@ interface SceneHeaderProps {
   locations: BoardRow[];
   placeName: (locationId: string) => string;
   onGo: (sceneId: string) => void;
-  onChange: (fields: Partial<Pick<Scene, 'title' | 'locationId' | 'chunkId' | 'conflict'>>) => void;
+  onChange: (fields: Partial<Pick<Scene, 'title' | 'locationId' | 'chunkId' | 'conflict' | 'done'>>) => void;
   onDelete: () => void;
 }
 
 /**
  * The top of the Scenes step: every scene grouped by time slot, previous and
- * next in time order, and the open scene's title, place, time and Conflict tick.
+ * next in time order, and the open scene's title, place, time and Conflict tick,
+ * and marking it done once it's written.
  */
 export function SceneHeader({ model, slots, locations, placeName, onGo, onChange, onDelete }: SceneHeaderProps) {
   const { scene, board, names } = model;
@@ -36,6 +37,7 @@ export function SceneHeader({ model, slots, locations, placeName, onGo, onChange
             <optgroup key={g.chunk?.id ?? '__gone'} label={g.chunk?.name ?? 'Deleted time slot'}>
               {g.scenes.map((s) => (
                 <option key={s.id} value={s.id}>
+                  {s.done ? '✓ ' : ''}
                   {placeName(s.locationId)} · {sceneName(s, names)}
                 </option>
               ))}
@@ -60,6 +62,7 @@ export function SceneHeader({ model, slots, locations, placeName, onGo, onChange
             {placeName(scene.locationId)} · {slots.find((s) => s.id === scene.chunkId)?.name ?? 'Deleted time slot'}
           </span>
           {scene.conflict && <Badge variant="danger">Conflict</Badge>}
+          {scene.done && <Badge variant="success">Done</Badge>}
         </>
       ) : (
         <>
@@ -104,6 +107,18 @@ export function SceneHeader({ model, slots, locations, placeName, onGo, onChange
             checked={scene.conflict}
             onChange={(e) => onChange({ conflict: e.target.checked })}
           />
+          {scene.done ? (
+            <>
+              <Badge variant="success">✓ Done</Badge>
+              <Button type="button" size="sm" variant="ghost" onClick={() => onChange({ done: false })}>
+                Reopen
+              </Button>
+            </>
+          ) : (
+            <Button type="button" size="sm" variant="success" title="You've finished writing it" onClick={() => onChange({ done: true })}>
+              ✓ Mark done
+            </Button>
+          )}
           <Button type="button" size="sm" variant="ghost" onClick={onDelete}>
             Delete scene
           </Button>

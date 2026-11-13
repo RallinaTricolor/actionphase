@@ -60,7 +60,7 @@ describe('assembleBoard', () => {
 
   it('defaults a scene’s missing lists, so a partial item still opens', () => {
     const board = assembleBoard([{ kind: 'scene', key: 's1', doc: { title: 'Ambush', moments: [{ id: 'm1', text: 'x' }] } }]);
-    expect(board.scenes[0]).toMatchObject({ id: 's1', title: 'Ambush', participants: [], effects: [], conflict: false });
+    expect(board.scenes[0]).toMatchObject({ id: 's1', title: 'Ambush', participants: [], effects: [], conflict: false, done: false });
     expect(board.scenes[0].moments).toEqual([{ id: 'm1', text: 'x', readers: [], ownText: {} }]);
   });
 

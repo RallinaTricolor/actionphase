@@ -677,6 +677,7 @@ export function makeScene(overrides: Partial<Scene> & Pick<Scene, 'id'>): Scene 
     locationId: 'loc-hall',
     chunkId: 'k1',
     conflict: false,
+    done: false,
     participants: [],
     moments: [],
     effects: [],

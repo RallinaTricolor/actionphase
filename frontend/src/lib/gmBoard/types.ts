@@ -67,6 +67,8 @@ export interface Scene {
   chunkId: string;
   /** The GM marked it a conflict: the Map shows a Conflict pill instead of Scene. */
   conflict: boolean;
+  /** The GM has finished writing it: the picker, the Map and the Scenes tab count show it. */
+  done: boolean;
   participants: number[];
   moments: Moment[];
   effects: StateEffect[];

@@ -53,6 +53,32 @@ describe('SubmissionReader', () => {
     expect(painted('gm-codex-secret')).toEqual(['vault']);
   });
 
+  it('shades touching cards alternately, so each one’s extent shows', () => {
+    const cards = [makeCard({ id: 'c2', characterId: 1, quote: 'at the Old Mill.' }), makeCard({ id: 'c1', characterId: 1, quote: 'I meet Mara' })];
+    render(<SubmissionReader {...props} cards={cards} />);
+    expect(painted('gm-carded')).toEqual(['I meet Mara']);
+    expect(painted('gm-carded-alt')).toEqual(['at the Old Mill.']);
+  });
+
+  it('underlines entries on the owner’s sheet the text names, and lists them with their details', () => {
+    const sheetItems = [
+      { id: 's1', name: 'Ledger', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory', description: 'Debts, in code.', metadata: 'Quantity: 1' },
+      { id: 's2', name: 'Lockpicks', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory' },
+    ];
+    render(<SubmissionReader {...props} cards={[]} sheetItems={sheetItems} />);
+    expect(painted('gm-sheet')).toEqual(['ledger']);
+    const row = screen.getByTestId('submission-sheet-matches');
+    expect(row).toHaveTextContent('On the sheet:Ledger');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ledger' }));
+    const tip = screen.getByRole('dialog', { name: 'Ledger' });
+    expect(tip).toHaveTextContent('Inventory');
+    expect(tip).toHaveTextContent('Quantity: 1');
+    expect(tip).toHaveTextContent('Debts, in code.');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('doesn’t highlight the owner’s own name, or the board’s buttons', () => {
     const codex = [makeCodexEntry({ id: 'p', name: 'paragraph' })];
     render(

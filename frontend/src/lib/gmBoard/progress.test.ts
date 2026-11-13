@@ -44,9 +44,9 @@ describe('stepProgress (the step tabs)', () => {
         makeCard({ id: 'b', characterId: 2, chunkId: 'k2' }),
         makeCard({ id: 'c', characterId: 3, chunkId: 'k3' }),
       ],
-      scenes: [makeScene({ id: 's1', participants: [1] })],
+      scenes: [makeScene({ id: 's1', participants: [1], done: true }), makeScene({ id: 's2' })],
     });
-    expect(stepProgress(board, people)).toEqual({ read: '2/3 read', map: '2 to resolve', scenes: '1', write: '1/4 ready' });
+    expect(stepProgress(board, people)).toEqual({ read: '2/3 read', map: '2 to resolve', scenes: '1/2 done', write: '1/4 ready' });
   });
 
   it('leaves dismissed checks out of what is left to resolve', () => {

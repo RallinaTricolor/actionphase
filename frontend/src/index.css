@@ -808,6 +808,20 @@
 ::highlight(gm-carded) {
   background-color: rgb(var(--color-semantic-success-subtle));
 }
+/* Touching cards alternate with this lighter shade, so each one's extent shows. */
+::highlight(gm-carded-alt) {
+  background-color: rgb(var(--color-semantic-success-subtle) / 0.45);
+}
+/* The card under the pointer: what a click opens. */
+::highlight(gm-carded-hover) {
+  background-color: rgb(var(--color-semantic-success) / 0.3);
+  text-decoration: underline solid rgb(var(--color-semantic-success));
+}
+/* An entry on the owner's sheet; hover it for the entry. */
+::highlight(gm-sheet) {
+  text-decoration: underline solid rgb(var(--color-semantic-warning));
+  text-decoration-thickness: 2px;
+}
 ::highlight(gm-name) {
   color: rgb(var(--color-interactive-primary));
 }
@@ -825,6 +839,10 @@
 :root.dark ::highlight(gm-carded),
 :root.highContrastDark ::highlight(gm-carded) {
   background-color: rgb(var(--color-semantic-success-subtle) / 0.55);
+}
+:root.dark ::highlight(gm-carded-alt),
+:root.highContrastDark ::highlight(gm-carded-alt) {
+  background-color: rgb(var(--color-semantic-success-subtle) / 0.25);
 }
 :root.dark ::highlight(gm-codex-secret),
 :root.highContrastDark ::highlight(gm-codex-secret) {

@@ -11,7 +11,7 @@ import { ARROW_MODES, isArrowMode } from '@/lib/gmBoard/arrows';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
 import { codexDoc, newCodexEntry } from '@/lib/gmBoard/codex';
 import type { BoardFlag } from '@/lib/gmBoard/flags';
-import { dropCard, nextSlotName, positionAtEnd, positionBefore } from '@/lib/gmBoard/map';
+import { dropCard, insertSlot, positionAtEnd, positionBefore, renumberSlots } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS } from '@/lib/gmBoard/read';
 import { newScene, sceneDoc } from '@/lib/gmBoard/scenes';
 import { stanceKey } from '@/lib/gmBoard/stances';
@@ -122,10 +122,17 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   };
 
   const putChunk = (c: Chunk) => store.update('chunk', c.id, () => ({ name: c.name, position: c.position }));
+  /** Renames slots, returning what puts their names back. */
+  const renameSlots = (renames: { id: string; name: string }[]) => {
+    const before = renames.flatMap(({ id }) => board.chunks.filter((c) => c.id === id));
+    renames.forEach(({ id, name }) => store.update<Omit<Chunk, 'id'>>('chunk', id, (cur) => ({ position: 0, ...cur, name })));
+    return () => before.forEach(putChunk);
+  };
   const addSlot = (position: number) => {
-    const slot = { id: newItemKey('slot'), name: nextSlotName(board.chunks), position };
+    const { slot, renames } = insertSlot(board.chunks, newItemKey('slot'), position);
     putChunk(slot);
-    showToast(`Added ${slot.name}.`, 'success');
+    renameSlots(renames);
+    showToast(`Added ${slot.name}.${renames.length ? ' Renumbered the slots after it.' : ''}`, 'success');
   };
 
   const slotName = (id: string | null) => (id === null ? 'Contingencies' : (board.chunks.find((c) => c.id === id)?.name ?? ''));
@@ -155,8 +162,17 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
       const slot = board.chunks.find((c) => c.id === id);
       if (!slot) return;
       store.remove('chunk', id);
+      const restoreNames = renameSlots(renumberSlots(board.chunks.filter((c) => c.id !== id)));
       if (resolving === id) setResolving(null);
-      showToast(`Removed ${slot.name}.`, 'info', { action: { label: 'Undo', onClick: () => putChunk(slot) } });
+      showToast(`Removed ${slot.name}.`, 'info', {
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            putChunk(slot);
+            restoreNames();
+          },
+        },
+      });
     },
     resolveAt: setResolving,
     readSubmission: onReadSubmission,
@@ -307,7 +323,14 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             <Button type="button" size="sm" variant="secondary" onClick={() => addSlot(positionAtEnd(board.chunks))}>
               + Time slot
             </Button>
-            <Button type="button" size="sm" variant={resolving ? 'primary' : 'secondary'} onClick={() => setResolving(resolving ? null : (model.slots.find((s) => model.open.some((f) => f.chunkId === s.id)) ?? model.slots[0]).id)}>
+            {/* The way through the Map: primary while anything is left to resolve, so it reads as the next step. */}
+            <Button
+              type="button"
+              size="sm"
+              variant={resolving || model.open.length > 0 ? 'primary' : 'secondary'}
+              title="Walk the time slots in order, settling each card and check"
+              onClick={() => setResolving(resolving ? null : (model.slots.find((s) => model.open.some((f) => f.chunkId === s.id)) ?? model.slots[0]).id)}
+            >
               {resolving ? 'Stop resolving' : 'Resolve ▸'}
             </Button>
           </>

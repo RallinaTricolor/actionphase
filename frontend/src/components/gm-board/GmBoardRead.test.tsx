@@ -187,6 +187,30 @@ describe('GmBoardRead', () => {
     expect(boardSaves).toEqual([]);
   });
 
+  it('offers Done reading at the end of the submission too', async () => {
+    renderRead();
+    await userEvent.click(await screen.findByRole('button', { name: 'Done reading Harrison → next' }));
+    expect(await screen.findByRole('heading', { name: 'Mara' })).toBeInTheDocument();
+    await waitForBoardSave((c) => c.kind === 'progress' && c.key === '1');
+  });
+
+  it('says so when a carded submission is left unread for another, with Mark read', async () => {
+    renderRead();
+    await screen.findByText(/I sneak into the Old Mill/);
+    const list = screen.getByTestId('read-player-list');
+    // Nothing carded yet: browsing on says nothing.
+    await userEvent.click(within(list).getByRole('button', { name: /^Mara/ }));
+    await userEvent.click(within(list).getByRole('button', { name: /^Harrison Vale/ }));
+    expect(screen.queryByText(/isn’t marked read/)).not.toBeInTheDocument();
+
+    await userEvent.click(within(paragraph(0)).getByRole('button', { name: '+ Whole paragraph' }));
+    await waitForBoardSave((c) => c.kind === 'card');
+    await userEvent.click(within(list).getByRole('button', { name: /^Mara/ }));
+    expect(await screen.findByText('Harrison Vale isn’t marked read.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Mark read' }));
+    await waitForBoardSave((c) => c.kind === 'progress' && c.key === '1' && (c.doc as { readDone?: boolean }).readDone === true);
+  });
+
   it('marks a submission read and moves to the next unread one', async () => {
     board.set('progress/2', makeGmItem({ kind: 'progress', key: '2', doc: { readDone: true } }));
     const { router } = renderRead();

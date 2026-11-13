@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type SyntheticEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type SyntheticEvent } from 'react';
 import { Badge, Button, Textarea } from '@/components/ui';
 import { useBoundText } from '@/hooks/useBoundText';
 import { cardLabel, OUTCOMES } from '@/lib/gmBoard/cards';
@@ -127,7 +127,7 @@ export function MomentEditor({ moment, index, model, actions, focused, autoFocus
             <MomentText
               id={momentTextId(moment.id, id)}
               label={`${name(id)} reads instead`}
-              rows={2}
+              rows={3}
               saved={moment.ownText[id] ?? ''}
               onChange={(text) => change((m) => setOwnText(m, id, text))}
               field={(start, end) => actions.field({ momentId: moment.id, readerId: id, start, end })}
@@ -207,6 +207,14 @@ function MomentText({ id, label, placeholder, rows, saved, autoFocus, onChange, 
   useEffect(() => {
     if (autoFocus) ref.current?.focus();
   }, [autoFocus]);
+  // Grow with the text, so a long moment reads whole rather than through a
+  // small scrolling box; `rows` is the least it shows, the class caps it.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+  }, [bound.text]);
 
   const report = (e: SyntheticEvent<HTMLTextAreaElement>) => field(e.currentTarget.selectionStart, e.currentTarget.selectionEnd);
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -223,6 +231,7 @@ function MomentText({ id, label, placeholder, rows, saved, autoFocus, onChange, 
       label={label}
       placeholder={placeholder}
       rows={rows}
+      className="max-h-[60vh] overflow-y-auto"
       value={bound.text}
       onFocus={bound.bind.onFocus}
       onBlur={(e) => {

@@ -229,6 +229,27 @@ describe('GmBoardMap', () => {
     await saved((c) => c.kind === 'stance' && c.key === '2|3' && !!c.deleted);
   });
 
+  it('keeps the slots numbered in time order when one is inserted or removed', async () => {
+    renderMap();
+    await userEvent.click(await screen.findByRole('button', { name: 'Insert a time slot before Slot 1' }));
+    await saved((c) => c.kind === 'chunk' && c.key.startsWith('slot') && docOf(c).name === 'Slot 1' && docOf(c).position === 1.5);
+    await saved((c) => c.key === 'k2' && docOf(c).name === 'Slot 2');
+    await saved((c) => c.key === 'k3' && docOf(c).name === 'Slot 3');
+    expect(screen.getByText('Added Slot 1. Renumbered the slots after it.')).toBeInTheDocument();
+    expect(board.get('chunk/k1')?.doc).toMatchObject({ name: 'Pre-Scenario' });
+
+    boardSaves.length = 0;
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove the empty slot Slot 1' }));
+    await saved((c) => c.key === 'k2' && docOf(c).name === 'Slot 1');
+    await saved((c) => c.key === 'k3' && docOf(c).name === 'Slot 2');
+
+    boardSaves.length = 0;
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await saved((c) => c.key === 'k2' && docOf(c).name === 'Slot 2');
+    await saved((c) => c.key === 'k3' && docOf(c).name === 'Slot 3');
+    await saved((c) => c.key.startsWith('slot') && docOf(c).name === 'Slot 1' && !c.deleted);
+  });
+
   it('adds a time slot and resolves one slot at a time', async () => {
     renderMap();
     await userEvent.click(await screen.findByRole('button', { name: '+ Time slot' }));

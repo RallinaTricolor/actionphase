@@ -257,55 +257,6 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
 }
 
 /**
- * Adds text to the end of a character's draft from outside the Write
- * editor (Scenes' "Add to draft"): to `target`, a blank line before it, or
- * as their next result when `target` is null. A stale save is retried once
- * against the current copy, since adding to the end is safe to repeat on
- * whatever someone else saved. Returns the part written to.
- */
-export function useAppendToDraft(gameId: number) {
-  const qc = useQueryClient();
-  return useCallback(
-    async (
-      target: ActionResult | null,
-      text: string,
-      recipient: { userId: number; characterId: number; submissionId?: number },
-    ): Promise<ActionResult> => {
-      const refresh = () => qc.invalidateQueries({ queryKey: resultsKey(gameId) });
-      if (!target) {
-        const res = await apiClient.phases.createActionResult(gameId, {
-          user_id: recipient.userId,
-          character_id: recipient.characterId,
-          action_submission_id: recipient.submissionId,
-          content: text,
-          is_published: false,
-        });
-        await refresh();
-        void qc.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
-        return { ...(res.data as ActionResult), character_id: recipient.characterId };
-      }
-      const put = (base: ActionResult) =>
-        apiClient.phases.updateActionResult(gameId, base.id, {
-          content: base.content.replace(/\s+$/, '') ? `${base.content.replace(/\s+$/, '')}\n\n${text}` : text,
-          expected_updated_at: base.updated_at,
-        });
-      try {
-        await put(target);
-      } catch (error) {
-        if (!isAxiosError(error) || error.response?.status !== 409) throw error;
-        await refresh();
-        const fresh = qc.getQueryData<ActionResult[]>(resultsKey(gameId))?.find((r) => r.id === target.id);
-        if (!fresh || fresh.is_published) throw error;
-        await put(fresh);
-      }
-      await refresh();
-      return target;
-    },
-    [gameId, qc],
-  );
-}
-
-/**
  * Rewrites a draft part's whole text through the API, for a part the editor
  * isn't showing (Put block in result). Sends the updated_at it last saw; on a
  * 409 it reloads the part and tries once more on the fresh copy.

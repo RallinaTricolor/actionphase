@@ -20,7 +20,14 @@ export const boardPath = (gameId: number, phaseId: number, step?: BoardStep) =>
 /** The GM's results area on the game page, which the board was opened from. */
 export const resultsAreaPath = (gameId: number) => `/games/${gameId}?tab=actions`;
 
-export const boardSetupPath = (gameId: number) => `/games/${gameId}/board-setup`;
+/** Game setup. `from`: the board URL it was opened from, so setup can send the GM straight back there. */
+export const boardSetupPath = (gameId: number, from?: string) => `/games/${gameId}/board-setup${from ? `?from=${encodeURIComponent(from)}` : ''}`;
+
+/** Where Game setup's "Back to the board" goes: `from`, when it's one of this game's boards (never anywhere else). */
+export function boardReturnPath(gameId: number, from: string | null): string | null {
+  if (!from) return null;
+  return new RegExp(`^/games/${gameId}/phases/\\d+/board(?:\\?[^#]*)?$`).test(from) ? from : null;
+}
 
 /** A phase in the game's History tab, where viewers browse past phases. */
 export const historyPhasePath = (gameId: number, phaseId: number) => `/games/${gameId}?tab=history&phase=${phaseId}`;

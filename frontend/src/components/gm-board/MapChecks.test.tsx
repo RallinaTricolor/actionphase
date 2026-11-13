@@ -26,7 +26,7 @@ describe('MapChecks', () => {
     await userEvent.click(within(pending).getByRole('button', { name: 'Open card' }));
     expect(h.onOpenCard).toHaveBeenCalledWith('p');
     const meeting = screen.getByText('Harrison Vale, Ilse are at dock in Slot 2, with no scene.').closest('li') as HTMLElement;
-    await userEvent.click(within(meeting).getByRole('button', { name: 'Create scene' }));
+    await userEvent.click(within(meeting).getByRole('button', { name: '+ Create scene' }));
     expect(h.onCreateScene).toHaveBeenCalledWith('dock', 'k3');
   });
 

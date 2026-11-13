@@ -149,12 +149,12 @@ function LocationCell({ row, slot, cell, model, actions, drag }: LocationCellPro
           onClick={() => actions.openScene(s.id)}
           data-arrow-id={s.id}
         >
-          ▸ {sceneName(s, model.names)}
+          {s.done ? '✓' : '▸'} {sceneName(s, model.names)}
         </Button>
       ))}
       {busy && !scenes.length && !missing && !actions.readOnly && (
-        <Button type="button" variant="secondary" size="sm" className="!px-1.5 !py-0 text-xs" onClick={() => actions.createScene(row.id, slot.id)} aria-label={`Create scene at ${row.name}, ${slot.name}`}>
-          Create scene
+        <Button type="button" variant="outline" size="sm" className="!px-2 !py-0.5 text-xs" onClick={() => actions.createScene(row.id, slot.id)} aria-label={`Create scene at ${row.name}, ${slot.name}`}>
+          + Create scene
         </Button>
       )}
       {[...live, ...(showMoot ? moot : [])].map((card) => (

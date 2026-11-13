@@ -266,11 +266,10 @@ describe('the results board, read-only', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
     expect(await screen.findByText('Remember the bell.')).toBeInTheDocument();
     expectNoEditControls();
-    await userEvent.keyboard('{Escape}');
 
     await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
-    const drawer = await screen.findByRole('dialog');
-    await userEvent.click(await within(drawer).findByRole('button', { name: 'View Orrin' }));
+    const panel = await screen.findByRole('complementary', { name: 'Codex' });
+    await userEvent.click(await within(panel).findByRole('button', { name: 'View Orrin' }));
     expectNoEditControls();
     expect(writes).toEqual([]);
   });

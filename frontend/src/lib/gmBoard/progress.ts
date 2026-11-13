@@ -29,7 +29,7 @@ export const setReadDone = (progress: CharacterProgress | undefined, readDone: b
 
 /**
  * What each step tab says about the phase so far: "2/8 read", "3 to resolve"
- * (open checks, unresolved cards among them), the number of scenes, and
+ * (open checks, unresolved cards among them), "1/4 done" (scenes), and
  * "1/8 ready". A step with nothing in it yet says nothing. `submitters` are
  * Read's list and `recipients` Write's, so the counts match those lists.
  */
@@ -43,7 +43,7 @@ export function stepProgress(
     const open = openFlags(computeFlags(board), board.dismissedFlags).length;
     out.map = open ? `${open} to resolve` : 'all resolved';
   }
-  if (board.scenes.length) out.scenes = String(board.scenes.length);
+  if (board.scenes.length) out.scenes = `${board.scenes.filter((s) => s.done).length}/${board.scenes.length} done`;
   if (recipients.length) out.write = `${recipients.filter((id) => board.ready[id]).length}/${recipients.length} ready`;
   return out;
 }

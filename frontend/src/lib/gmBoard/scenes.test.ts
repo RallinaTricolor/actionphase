@@ -50,6 +50,7 @@ describe('newScene', () => {
       locationId: 'mill',
       chunkId: 'k2',
       conflict: false,
+      done: false,
       participants: [1, 9],
       moments: [{ id: 'm1', text: '', readers: [1], ownText: {} }],
       effects: [],

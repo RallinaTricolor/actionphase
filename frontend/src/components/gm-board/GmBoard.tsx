@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { Alert, Badge, Button, Drawer, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Spinner } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
 import { useGmBoard, useGmBoardStore, useGmSettings, useGmSettingsStore, type GmSaveStatus } from '@/hooks/useGmBoard';
@@ -18,7 +18,8 @@ import { BoardToolbarSlotContext } from './boardToolbarSlot';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardFirstRun } from './GmBoardFirstRun';
 import { GmBoardMap } from './GmBoardMap';
-import { GmBoardNotesDrawer } from './GmBoardNotesDrawer';
+import { GmBoardNotes } from './GmBoardNotes';
+import { BoardSidePanel, type SidePanelTab } from './BoardSidePanel';
 import { GmBoardRead } from './GmBoardRead';
 import { GmBoardScenes } from './GmBoardScenes';
 import { GmBoardWrite } from './GmBoardWrite';
@@ -53,11 +54,16 @@ const isRefused = (error: unknown) => isAxiosError(error) && error.response?.sta
 export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = false, back: backTo }: GmBoardProps) {
   const back = backTo ?? { to: resultsAreaPath(gameId), label: 'Back to the results' };
   const navigate = useNavigate();
+  const location = useLocation();
+  // Game setup, remembering where on the board the GM was, so they can come straight back.
+  const openSetup = () => navigate(boardSetupPath(gameId, location.pathname + location.search));
   const [params, setParams] = useSearchParams();
   const step = parseBoardStep(params.get('step'));
-  const [notesOpen, setNotesOpen] = useState(false);
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
-  const [codex, setCodex] = useState<{ name: string } | null>(null);
+  // The codex and the notes, docked beside the step. `codexName` prefills a new codex entry (+ Codex in Read).
+  const [panel, setPanel] = useState<{ tab: SidePanelTab; codexName: string } | null>(null);
+  const openCodex = (name = '') => setPanel({ tab: 'codex', codexName: name });
+  const togglePanel = (tab: SidePanelTab) => setPanel((p) => (p?.tab === tab ? null : { tab, codexName: '' }));
   const [selectedParts, setSelectedParts] = useState<Record<number, number | null>>({});
   const selectPart = useCallback((characterId: number, partId: number | null) => setSelectedParts((s) => ({ ...s, [characterId]: partId })), []);
   const { allGameCharacters } = useGameContext();
@@ -79,7 +85,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   const { settings, error: settingsError } = useGmSettings(gameId);
   // This component is above its own BoardReadOnlyContext, so the hooks here are told directly.
   const store = useGmBoardStore(gameId, phase.id, { readOnly });
-  // Game settings edited from the board: the codex drawer and the notes for every phase.
+  // Game settings edited from the board: the codex panel and the notes for every phase.
   const settingsStore = useGmSettingsStore(gameId, { readOnly });
   const saveStatus = worse(store.status, settingsStore.status);
   // Mounted for the whole board, so sheet drafts follow the lines from any step.
@@ -104,14 +110,6 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
     const nextParams = new URLSearchParams(params);
     nextParams.set('step', 'scenes');
     nextParams.set('scene', sceneId);
-    setParams(nextParams);
-    window.scrollTo?.(0, 0);
-  };
-
-  const writeFor = (characterId: number) => {
-    const nextParams = new URLSearchParams(params);
-    nextParams.set('step', 'write');
-    nextParams.set('who', String(characterId));
     setParams(nextParams);
     window.scrollTo?.(0, 0);
   };
@@ -177,13 +175,13 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
                   }}
                 />
               )}
-              <Button type="button" size="sm" variant="secondary" onClick={() => setCodex({ name: '' })}>
+              <Button type="button" size="sm" variant={panel?.tab === 'codex' ? 'primary' : 'secondary'} aria-pressed={panel?.tab === 'codex'} onClick={() => togglePanel('codex')}>
                 Codex
               </Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => setNotesOpen(true)} disabled={!board}>
+              <Button type="button" size="sm" variant={panel?.tab === 'notes' ? 'primary' : 'secondary'} aria-pressed={panel?.tab === 'notes'} onClick={() => togglePanel('notes')} disabled={!board}>
                 Notes
               </Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => navigate(boardSetupPath(gameId))}>
+              <Button type="button" size="sm" variant="ghost" onClick={openSetup}>
                 Game setup
               </Button>
             </div>
@@ -202,10 +200,12 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           />
         )}
         {!readOnly && board && (
-          <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => setCodex({ name: '' })} onOpenSetup={() => navigate(boardSetupPath(gameId))} />
+          <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => openCodex()} onOpenSetup={openSetup} />
         )}
 
 
+        <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
         <BoardToolbarSlotContext.Provider value={toolbarSlot}>
         {isLoading ? (
           <div className="flex justify-center py-16">
@@ -220,7 +220,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             gameId={gameId}
             phase={phase}
             board={board}
-            onOpenCodex={(name = '') => setCodex({ name })}
+            onOpenCodex={openCodex}
             onGoToMap={() => goToStep('map')}
           />
         ) : step === 'map' ? (
@@ -228,7 +228,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             gameId={gameId}
             phase={phase}
             board={board}
-            onOpenCodex={(name = '') => setCodex({ name })}
+            onOpenCodex={openCodex}
             onReadSubmission={readSubmission}
             onOpenScene={openScene}
           />
@@ -238,43 +238,32 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             phase={phase}
             board={board}
             onGoToMap={() => goToStep('map')}
-            selectedParts={selectedParts}
-            onSelectPart={selectPart}
-            onWrite={writeFor}
             onReadSubmission={readSubmission}
           />
         ) : (
           <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
         )}
         </BoardToolbarSlotContext.Provider>
+        </div>
 
-        <Drawer open={codex !== null} onClose={() => setCodex(null)} title="Codex" side="right">
-          {codex !== null && (
-            <div className="p-4">
-              <GmCodexManager
-                key={codex.name}
-                gameId={gameId}
-                phases={actionPhases}
-                players={players}
-                phaseId={phase.id}
-                initialName={codex.name}
+        {panel && (
+          <BoardSidePanel tab={panel.tab} onClose={() => setPanel(null)}>
+            {panel.tab === 'codex' ? (
+              <GmCodexManager key={panel.codexName} gameId={gameId} phases={actionPhases} players={players} phaseId={phase.id} initialName={panel.codexName} />
+            ) : board ? (
+              <GmBoardNotes
+                phaseTitle={phase.title || `Phase ${phase.phase_number}`}
+                notes={board.notes}
+                onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+                gameNotes={settings?.notes ?? ''}
+                onGameChange={(text) => settingsStore.update('notes', NOTES_KEY, () => ({ text }))}
+                readOnly={readOnly}
               />
-            </div>
-          )}
-        </Drawer>
-
-        {board && (
-          <GmBoardNotesDrawer
-            open={notesOpen}
-            onClose={() => setNotesOpen(false)}
-            phaseTitle={phase.title || `Phase ${phase.phase_number}`}
-            notes={board.notes}
-            onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
-            gameNotes={settings?.notes ?? ''}
-            onGameChange={(text) => settingsStore.update('notes', NOTES_KEY, () => ({ text }))}
-            readOnly={readOnly}
-          />
+            ) : null}
+          </BoardSidePanel>
         )}
+        </div>
+
       </div>
     </BoardRewardsContext.Provider>
     </BoardReadOnlyContext.Provider>

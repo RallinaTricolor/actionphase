@@ -16,7 +16,7 @@ import { boardRows } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS, guessCondition, placeNewCard, submissionLinks, type NamedCharacter } from '@/lib/gmBoard/read';
 import { stanceKey } from '@/lib/gmBoard/stances';
 import { newItemKey } from '@/lib/gmBoard/store';
-import { characterNames } from '@/lib/gmBoard/text';
+import { characterNames, shortName } from '@/lib/gmBoard/text';
 import type { BoardDoc, CharacterProgress, Chunk, Stance } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { AwardDialog } from './AwardDialog';
@@ -210,6 +210,18 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
 
   const ownerName = names.get(ownerId) ?? `Character ${ownerId}`;
   const cardsOf = (id: number) => board.cards.filter((c) => c.characterId === id && !c.gm).length;
+
+  // Leaving a carded submission for another without marking it read: say so,
+  // with the mark one click away, since "Done reading → next" is the way on.
+  const pickFromList = (id: number) => {
+    if (!readOnly && id !== ownerId && !isDone && cardsOf(ownerId) > 0) {
+      const left = ownerId;
+      showToast(`${ownerName} isn’t marked read.`, 'info', {
+        action: { label: 'Mark read', onClick: () => store.update<CharacterProgress>('progress', String(left), (p) => setReadDone(p, true)) },
+      });
+    }
+    pick(id);
+  };
   const words = submission.text.trim().split(/\s+/).filter(Boolean).length;
 
   return (
@@ -219,7 +231,7 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
           <ReadPlayerList
             players={order.map((id) => ({ id, name: names.get(id) ?? `Character ${id}`, cards: cardsOf(id), readDone: !!board.readDone[id] }))}
             selectedId={ownerId}
-            onSelect={pick}
+            onSelect={pickFromList}
           />
           {noCharacter > 0 && <NoCharacterNotice count={noCharacter} />}
         </div>
@@ -267,6 +279,13 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
             onAddAward={rewards && !readOnly ? setAwarding : undefined}
             onOpenCard={setOpenCardId}
           />
+          {!readOnly && !isDone && (
+            <div className="mt-6 flex justify-end border-t border-theme-default pt-4">
+              <Button type="button" variant="primary" onClick={toggleDone}>
+                Done reading {shortName(ownerName)} → next
+              </Button>
+            </div>
+          )}
           {rewards && !readOnly && <AwardDialog key={ownerId} quote={awarding} characterId={ownerId} name={ownerName} onClose={() => setAwarding(null)} />}
         </BoardPane>
 

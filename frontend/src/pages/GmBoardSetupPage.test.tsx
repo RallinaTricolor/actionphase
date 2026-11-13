@@ -48,6 +48,24 @@ describe('GmBoardSetupPage', () => {
     expect(screen.getByRole('link', { name: /Starfall/ })).toHaveAttribute('href', `/games/${GAME_ID}`);
   });
 
+  it('goes straight back to the board it was opened from', async () => {
+    serveGame({ state: 'in_progress' });
+    const from = `/games/${GAME_ID}/phases/70/board?step=write&who=3`;
+    const { router } = renderWithProviders(<GmBoardSetupPage />, {
+      gameId: GAME_ID,
+      initialRoute: `/games/${GAME_ID}/board-setup?from=${encodeURIComponent(from)}`,
+    });
+    await userEvent.click(await screen.findByRole('button', { name: '← Back to the board' }));
+    expect(router.state.location.pathname + router.state.location.search).toBe(from);
+  });
+
+  it('offers no way back to anywhere but this game’s boards', async () => {
+    serveGame({ state: 'in_progress' });
+    renderWithProviders(<GmBoardSetupPage />, { gameId: GAME_ID, initialRoute: `/games/${GAME_ID}/board-setup?from=${encodeURIComponent('https://evil.example/x')}` });
+    expect(await screen.findByRole('heading', { name: 'Results board setup' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '← Back to the board' })).not.toBeInTheDocument();
+  });
+
   it('offers nothing to a player', async () => {
     serveGame({ gm_user_id: 99, state: 'in_progress', share_gm_board: true });
     renderPage();

@@ -50,7 +50,7 @@ describe('GmBoard', () => {
     expect(guide).toHaveTextContent('How the results board works');
     expect(guide).toHaveTextContent('This phase has no locations yet');
     await userEvent.click(screen.getByRole('button', { name: 'Add locations in the codex' }));
-    expect(await screen.findByRole('dialog', { name: 'Codex' })).toBeInTheDocument();
+    expect(await screen.findByRole('complementary', { name: 'Codex' })).toBeInTheDocument();
   });
 
   it('drops the location warning once the phase has a location', async () => {
@@ -96,8 +96,28 @@ describe('GmBoard', () => {
   it('links back to the results area and on to game setup', async () => {
     const { router } = renderBoard();
     expect(screen.getByRole('link', { name: /Starfall: results/ })).toHaveAttribute('href', `/games/${GAME_ID}?tab=actions`);
+    await userEvent.click(screen.getByTestId('tab-write'));
     await userEvent.click(screen.getByRole('button', { name: 'Game setup' }));
     expect(router.state.location.pathname).toBe(`/games/${GAME_ID}/board-setup`);
+    // It remembers where on the board the GM was, for Game setup's way back.
+    expect(new URLSearchParams(router.state.location.search).get('from')).toBe(`/games/${GAME_ID}/phases/${phase.id}/board?step=write`);
+  });
+
+  it('docks the codex and the notes beside the step, switching between them from the header', async () => {
+    renderBoard();
+    expect(await screen.findByTestId('gm-board-step-read')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
+    expect(await screen.findByRole('complementary', { name: 'Codex' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Codex' })).toHaveAttribute('aria-pressed', 'true');
+    // Docked, not over the board: the step is still there to work in.
+    expect(screen.getByTestId('gm-board-step-read')).toBeVisible();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(screen.getByRole('complementary', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Codex' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    expect(screen.queryByTestId('board-side-panel')).not.toBeInTheDocument();
   });
 
   it('saves the notes, based on the version it loaded', async () => {

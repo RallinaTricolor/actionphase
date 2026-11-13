@@ -234,33 +234,68 @@ export function CardPanel({
       )}
 
       {causes && (
-        <fieldset className="space-y-2">
+        <fieldset className="space-y-2" data-testid="card-causes">
           <legend className="text-sm font-medium text-content-primary">
             Because of… <span className="font-normal text-content-tertiary">(optional)</span>
           </legend>
           {causes.length === 0 ? (
             <p className="text-sm text-content-tertiary">Nothing nearby on the board.</p>
           ) : (
-            causes.map((g) => (
-              <div key={g.kind}>
-                <p className="text-xs text-content-tertiary mb-1">{groupTitle(g)}</p>
-                <div className="flex flex-wrap gap-1">
-                  {g.items.map((x) => (
-                    <Button
-                      key={x.id}
-                      type="button"
+            (() => {
+              const chosen = causes.flatMap((g) => g.items).filter((x) => card.causedBy.includes(x.id));
+              const here = (causes.find((g) => g.kind === 'same')?.items ?? []).filter((x) => !card.causedBy.includes(x.id));
+              const suggested = here.slice(0, 6);
+              const rest = causes
+                .flatMap((g) => g.items.map((x) => ({ ...x, group: groupTitle(g) })))
+                .filter((x) => !card.causedBy.includes(x.id) && !suggested.some((s) => s.id === x.id));
+              return (
+                <>
+                  {chosen.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {chosen.map((x) => (
+                        <Button
+                          key={x.id}
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="gap-1"
+                          aria-label={`Remove cause: ${causeLabel(x.id, x.scene)}`}
+                          disabled={readOnly}
+                          onClick={() => toggleCause(x.id)}
+                        >
+                          {causeLabel(x.id, x.scene)}
+                          {!readOnly && <span aria-hidden="true">✕</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  {!readOnly && suggested.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-content-tertiary">Same place and time</p>
+                      <div className="flex flex-wrap gap-1">
+                        {suggested.map((x) => (
+                          <Button key={x.id} type="button" size="sm" variant="outline" onClick={() => toggleCause(x.id)}>
+                            + {causeLabel(x.id, x.scene)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!readOnly && rest.length > 0 && (
+                    <Combobox
+                      key={card.causedBy.join(',')}
+                      label="Add a cause"
                       size="sm"
-                      variant={card.causedBy.includes(x.id) ? 'secondary' : 'ghost'}
-                      aria-pressed={card.causedBy.includes(x.id)}
-                      disabled={readOnly}
-                      onClick={() => toggleCause(x.id)}
-                    >
-                      {causeLabel(x.id, x.scene)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ))
+                      placeholder={`Search ${rest.length} nearby card${rest.length === 1 ? '' : 's'} and scenes`}
+                      options={rest.map((x) => ({ value: x.id, label: causeLabel(x.id, x.scene), description: x.group }))}
+                      value={null}
+                      onChange={toggleCause}
+                    />
+                  )}
+                  {readOnly && chosen.length === 0 && <p className="text-sm text-content-tertiary">None.</p>}
+                </>
+              );
+            })()
           )}
         </fieldset>
       )}

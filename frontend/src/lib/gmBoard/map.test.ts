@@ -9,11 +9,13 @@ import {
   laterCardCount,
   locationAt,
   NO_LOCATION,
+  insertSlot,
   nextSlotName,
   positionAtEnd,
   positionBefore,
   presentInChunk,
   pushLater,
+  renumberSlots,
   rowIdOf,
   suggestClusters,
 } from './map';
@@ -62,6 +64,37 @@ describe('time slots', () => {
     expect(nextSlotName(chunks)).toBe('Slot 3');
     expect(nextSlotName([...chunks, { id: 'x', name: 'slot 3', position: 9 }])).toBe('Slot 4');
     expect(nextSlotName([])).toBe('Slot 1');
+  });
+
+  it('names an inserted slot for where it lands and renumbers the later ones, leaving named slots alone', () => {
+    const slots = [
+      { id: 'p', name: 'Pre-Scenario', position: 1 },
+      { id: 'a', name: 'Slot 1', position: 2 },
+      { id: 'n', name: 'Nightfall', position: 3 },
+      { id: 'b', name: 'Slot 2', position: 4 },
+    ];
+    expect(insertSlot(slots, 'x', 2.5)).toEqual({
+      slot: { id: 'x', name: 'Slot 2', position: 2.5 },
+      renames: [{ id: 'b', name: 'Slot 3' }],
+    });
+    expect(insertSlot(slots, 'x', 0)).toEqual({
+      slot: { id: 'x', name: 'Slot 1', position: 0 },
+      renames: [
+        { id: 'a', name: 'Slot 2' },
+        { id: 'b', name: 'Slot 3' },
+      ],
+    });
+    expect(insertSlot(slots, 'x', 9).renames).toEqual([]);
+  });
+
+  it('renumbers slots left out of order, as a removal leaves them', () => {
+    expect(
+      renumberSlots([
+        { id: 'a', name: 'Slot 1', position: 1 },
+        { id: 'b', name: 'slot 4', position: 2 },
+        { id: 'c', name: 'Slot 3', position: 3 },
+      ]),
+    ).toEqual([{ id: 'b', name: 'Slot 2' }]);
   });
 
   it('counts a slot as empty with no cards or scenes', () => {

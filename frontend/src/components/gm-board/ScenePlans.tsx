@@ -40,7 +40,7 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
     const cond = shownCondition(card, label);
     const used = scene.moments.some((m) => m.cardId === card.id);
     const openButton = (
-      <Button type="button" size="sm" variant="ghost" aria-label={`Open the card: ${truncate(label, 50)}`} title="Open the card: its note, causes, text and place" onClick={() => onOpenCard(card.id)}>
+      <Button type="button" size="sm" variant="secondary" aria-label={`Open the card: ${truncate(label, 50)}`} title="Open the card: its note, causes, text and place" onClick={() => onOpenCard(card.id)}>
         Card
       </Button>
     );
@@ -109,7 +109,7 @@ export function ScenePlans({ model, location, placeName, slotName, onSetOutcome,
               </Select>
             </div>
           )}
-          <Button type="button" size="sm" variant="ghost" title="A new moment with this plan shown above it" onClick={() => onMomentFromCard(card)}>
+          <Button type="button" size="sm" variant="outline" title="A new moment with this plan shown above it" onClick={() => onMomentFromCard(card)}>
             {used ? '+ Another moment' : '→ Moment'}
           </Button>
           {openButton}

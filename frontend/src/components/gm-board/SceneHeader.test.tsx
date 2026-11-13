@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { makeScene } from '@/test-utils/factories';
+import type { Scene } from '@/lib/gmBoard/types';
 import { SceneHeader } from './SceneHeader';
 import { sceneModel } from './sceneTestModel';
 
@@ -14,8 +15,8 @@ const locations = [
   { id: 'dock', name: 'dock', aliases: [], kind: 'phase' as const },
 ];
 
-function setup() {
-  const model = sceneModel({ participants: [1, 2] }, { scenes: others });
+function setup(scene: Partial<Scene> = {}, scenes = others) {
+  const model = sceneModel({ participants: [1, 2], ...scene }, { scenes });
   const props = { onGo: vi.fn(), onChange: vi.fn(), onDelete: vi.fn() };
   render(
     <SceneHeader
@@ -59,5 +60,23 @@ describe('SceneHeader', () => {
     expect(h.onChange).toHaveBeenLastCalledWith({ chunkId: 'k3' });
     await userEvent.click(screen.getByLabelText('Conflict'));
     expect(h.onChange).toHaveBeenLastCalledWith({ conflict: true });
+  });
+
+  it('marks the scene done, and shows done scenes with ✓ in the picker', async () => {
+    const h = setup();
+    await userEvent.click(screen.getByRole('button', { name: '✓ Mark done' }));
+    expect(h.onChange).toHaveBeenLastCalledWith({ done: true });
+  });
+
+  it('reopens a done scene', async () => {
+    const h = setup({ done: true }, [{ ...others[0], done: true }, others[1]]);
+    expect(screen.getByText('✓ Done')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Go to a scene')).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      '✓ dock · Harbour',
+      '✓ the Old Mill · Harrison, Mara',
+      'dock · Tov',
+    ]);
+    await userEvent.click(screen.getByRole('button', { name: 'Reopen' }));
+    expect(h.onChange).toHaveBeenLastCalledWith({ done: false });
   });
 });

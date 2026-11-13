@@ -85,8 +85,8 @@ function FlagRow({ flag, model, onOpenCard, onResolveAt, onCreateScene, onOpenSc
       <div className="flex justify-end gap-1">
         {flag.kind === 'meeting' ? (
           !readOnly && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onCreateScene(flag.locationId, flag.chunkId)}>
-              Create scene
+            <Button type="button" variant="outline" size="sm" onClick={() => onCreateScene(flag.locationId, flag.chunkId)}>
+              + Create scene
             </Button>
           )
         ) : sceneId ? (

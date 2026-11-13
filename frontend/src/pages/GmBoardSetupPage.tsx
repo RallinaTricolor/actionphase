@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { Alert, Badge, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, CardHeader, Spinner } from '@/components/ui';
 import { GmBoardConflicts } from '@/components/gm-board/GmBoardConflicts';
 import { GmBoardSharing } from '@/components/gm-board/GmBoardSharing';
 import { GmCharacterNames } from '@/components/gm-board/GmCharacterNames';
@@ -16,6 +16,7 @@ import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { apiClient } from '@/lib/api';
 import { isGameWritable } from '@/lib/gamePermissions';
 import { boardCast } from '@/lib/gmBoard/cast';
+import { boardReturnPath } from '@/lib/gmBoard/steps';
 
 /**
  * `/games/:gameId/board-setup`: the results board's game-level setup: sharing,
@@ -26,6 +27,10 @@ import { boardCast } from '@/lib/gmBoard/cast';
  */
 export function GmBoardSetupPage() {
   const { gameId, game, isLoadingGame, isGM, isAudience, allGameCharacters } = useGameContext();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Opened from a board: straight back to where the GM was on it.
+  const back = boardReturnPath(gameId, params.get('from'));
   const mayView = isGM || (isAudience && !!game?.share_gm_board);
   const readOnly = !isGM || !game || !isGameWritable(game.state);
   const { error: settingsError } = useGmSettings(gameId, { enabled: mayView });
@@ -70,6 +75,13 @@ export function GmBoardSetupPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6" data-testid="gm-board-setup">
+      {back && (
+        <div className="sticky top-20 z-30 -mx-2 flex items-center gap-2 rounded-lg border border-theme-default surface-raised px-2 py-1.5 shadow-sm">
+          <Button type="button" size="sm" variant="primary" onClick={() => navigate(back)}>
+            ← Back to the board
+          </Button>
+        </div>
+      )}
       <div>
         <Link to={`/games/${gameId}`} className="text-sm text-content-tertiary hover:underline">
           &larr; {game.title}
