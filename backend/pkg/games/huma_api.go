@@ -2547,46 +2547,14 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 			"Character edit permission denied", "character_id", in.CharacterID, "user_id", user.ID)
 	}
 
-	lootTable, err := h.GameService.GetGameLootTable(ctx, gameID, in.TableID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, h.logAndErr(ctx, core.ErrForbidden("loot table does not belong to this game"), "Loot table access forbidden")
-	}
+	lootTable, content, entry, rnd, err := h.pickLoot(ctx, gameID, in.TableID)
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table", "error", err, "table_id", in.TableID)
-	}
-	// The sheet editor won't remove a tab a table targets, but a table left
-	// pointing at a missing tab (a layout saved before targets existed) must
-	// not write data the sheet can't show.
-	if err := h.requireSheetTab(ctx, lootTable.TargetTab); err != nil {
 		return nil, err
-	}
-
-	contents, err := h.GameService.GetGameLootTableContents(ctx, in.TableID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table contents", "error", err, "table_id", in.TableID)
-	}
-
-	// A table with no items is reachable through normal use (the create endpoint
-	// accepts one), and rand.Intn(0) panics. Fail as a client error the GM can
-	// act on rather than letting the recovery middleware turn it into an opaque 500.
-	if len(contents) == 0 {
-		return nil, h.logAndErr(ctx, core.ErrInvalidRequest(fmt.Errorf("loot table is empty: add at least one item before rolling")),
-			"Roll requested on empty loot table", "table_id", in.TableID, "game_id", gameID)
 	}
 
 	character, err := h.CharacterService.GetCharacter(ctx, in.CharacterID)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get character", "error", err, "character_id", in.CharacterID)
-	}
-
-	rnd := rand.Intn(len(contents))
-	content := contents[rnd]
-
-	entry, err := rolledEntry(content.Data.String)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
-			fmt.Sprintf("rolled %q, but its item data is not a JSON object; fix it in the loot table", content.Name)),
-			"Rolled loot item data is not an object", "table_id", in.TableID, "content_id", content.ID)
 	}
 
 	if err := h.CharacterService.AddToCharacterData(ctx, core.CharacterDataRequest{
@@ -2616,6 +2584,77 @@ func (h *Handler) humaSetRandomLootForCharacter(ctx context.Context, in *randomL
 
 	// The entry as written, id included, so a client showing it locally uses
 	// the same id the sheet has.
+	content.Data = pgtype.Text{String: entry, Valid: true}
+	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
+}
+
+// pickLoot picks a random item from one of this game's loot tables and makes
+// it an entry (rolledEntry). It writes nothing: the give endpoint writes the
+// entry to the sheet, and the draw endpoint hands it back for a draft. rnd is
+// the item's 0-based position, for the game log.
+func (h *Handler) pickLoot(ctx context.Context, gameID, tableID int32) (lootTable *models.GameLootTable, content models.GameLootTableContent, entry string, rnd int, err error) {
+	lootTable, err = h.GameService.GetGameLootTable(ctx, gameID, tableID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return lootTable, content, "", 0, h.logAndErr(ctx, core.ErrForbidden("loot table does not belong to this game"), "Loot table access forbidden")
+	}
+	if err != nil {
+		return lootTable, content, "", 0, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table", "error", err, "table_id", tableID)
+	}
+	// The sheet editor won't remove a tab a table targets, but a table left
+	// pointing at a missing tab (a layout saved before targets existed) must
+	// not write data the sheet can't show.
+	if err = h.requireSheetTab(ctx, lootTable.TargetTab); err != nil {
+		return lootTable, content, "", 0, err
+	}
+
+	contents, err := h.GameService.GetGameLootTableContents(ctx, tableID)
+	if err != nil {
+		return lootTable, content, "", 0, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get loot table contents", "error", err, "table_id", tableID)
+	}
+
+	// A table with no items is reachable through normal use (the create endpoint
+	// accepts one), and rand.Intn(0) panics. Fail as a client error the GM can
+	// act on rather than letting the recovery middleware turn it into an opaque 500.
+	if len(contents) == 0 {
+		return lootTable, content, "", 0, h.logAndErr(ctx, core.ErrInvalidRequest(fmt.Errorf("loot table is empty: add at least one item before rolling")),
+			"Roll requested on empty loot table", "table_id", tableID, "game_id", gameID)
+	}
+
+	rnd = rand.Intn(len(contents))
+	content = contents[rnd]
+
+	entry, err = rolledEntry(content.Data.String)
+	if err != nil {
+		return lootTable, content, "", 0, h.logAndErr(ctx, core.ErrWithStatus(http.StatusUnprocessableEntity,
+			fmt.Sprintf("rolled %q, but its item data is not a JSON object; fix it in the loot table", content.Name)),
+			"Rolled loot item data is not an object", "table_id", tableID, "content_id", content.ID)
+	}
+	return lootTable, content, entry, rnd, nil
+}
+
+type drawLootInput struct {
+	GameID  int32 `path:"gameID" doc:"Game ID"`
+	TableID int32 `path:"tableId" doc:"Loot table ID"`
+}
+
+// humaDrawLoot rolls on a loot table without giving the item to anyone, for a
+// draft sheet update: the item reaches the sheet only when the result carrying
+// it is published. Nothing is written, so nothing goes in the game log either.
+func (h *Handler) humaDrawLoot(ctx context.Context, in *drawLootInput) (*lootContentOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_loot_tables")()
+
+	gameID, err := gameIDFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.requireGMFlag(ctx, "only the GM can see and edit loot tables", "Loot tables access forbidden"); err != nil {
+		return nil, err
+	}
+
+	_, content, entry, _, err := h.pickLoot(ctx, gameID, in.TableID)
+	if err != nil {
+		return nil, err
+	}
 	content.Data = pgtype.Text{String: entry, Valid: true}
 	return &lootContentOutput{Body: toGameLootTableContentResponse(&content)}, nil
 }
@@ -3406,4 +3445,21 @@ func RegisterHumaGameScoped(api huma.API, h *Handler) {
 			"403": {Description: "Not the GM, the table belongs to another game, or the character cannot be edited"},
 		},
 	}, h.humaSetRandomLootForCharacter)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "drawLoot",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodPost,
+		Path:        "/loot-tables/{tableId}/draw",
+		Summary:     "Roll loot without giving it",
+		Description: "Picks a random item from the table and returns it as a sheet entry (with a fresh id), without adding it to any character or the game log. For draft sheet updates, which add the item when the result is published. GM only.",
+		Tags:        []string{"Loot Tables"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation, or the rolled item's data is not a JSON object"},
+			"400": {Description: "The loot table is empty"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Not the GM, or the table belongs to another game"},
+		},
+	}, h.humaDrawLoot)
 }

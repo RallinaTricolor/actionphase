@@ -11,7 +11,8 @@
  * so the board writes one per changed tab, all on one result.
  */
 
-import { normalizeEntry, type RawSheetEntry, type SheetEntry, type TrackValue } from '@/lib/sheetEntries';
+import { applyEntryEdit, createEntry, normalizeEntry, type RawSheetEntry, type SheetEntry, type TrackValue } from '@/lib/sheetEntries';
+import { fieldCodecOf, trackToDraft } from '@/lib/sheetFieldValues';
 import { storageFieldName, type CharacterData, type CharacterSheetField, type SheetTab } from '@/types/characters';
 import type { RewardItem, RewardLine, SheetOp } from './types';
 
@@ -40,7 +41,33 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /** A number as the block shows it: up to two decimals, no trailing zeros. */
 export const formatNumber = (n: number) => (Number.isFinite(n) ? String(round2(n)) : '?');
 
-/** Reads a character's tabs from their sheet rows. Rows without an id get a stable one. */
+/**
+ * The row as stored, kept on each entry read from the sheet. Not enumerable,
+ * so it is never compared, spread or serialized: an op that changes an entry
+ * builds a new object without it.
+ */
+const STORED = Symbol('stored row');
+
+function withStored(entry: SheetEntry, raw: RawSheetEntry): SheetEntry {
+  Object.defineProperty(entry, STORED, { value: raw });
+  return entry;
+}
+
+/**
+ * An entry as it goes into a draft. One no op changed goes back exactly as it
+ * was stored (legacy shape, missing id and all), as the sheet editor writes
+ * only the entry it edits; a changed or new entry goes in its current shape.
+ */
+function entryToStore(tabKey: string, entry: SheetEntry): RawSheetEntry {
+  const raw = (entry as SheetEntry & { [STORED]?: RawSheetEntry })[STORED];
+  return raw && stable(normalizeEntry(tabKey, { ...raw, id: entry.id })) === stable(entry) ? raw : entry;
+}
+
+/**
+ * Reads a character's tabs from their sheet rows. Rows without an id get a
+ * stable one for the maths; it is stored only if an op changes the entry.
+ * Rows that aren't objects can't be shown or edited anywhere, and are dropped.
+ */
 export function sheetTabsFrom(rows: CharacterData[] | undefined, layout: readonly SheetTab[]): SheetTabs {
   const tabs: SheetTabs = {};
   for (const tab of layout) {
@@ -54,12 +81,23 @@ export function sheetTabsFrom(rows: CharacterData[] | undefined, layout: readonl
     const list = Array.isArray(raw) ? (raw as RawSheetEntry[]) : [];
     tabs[tab.key] = list
       .filter((e) => e && typeof e === 'object')
-      .map((e, i) => normalizeEntry(tab.key, { ...e, id: typeof e.id === 'string' && e.id ? e.id : `row-${i}` }));
+      .map((e, i) => withStored(normalizeEntry(tab.key, { ...e, id: typeof e.id === 'string' && e.id ? e.id : `row-${i}` }), e));
   }
   return tabs;
 }
 
-const cloneTabs = (tabs: SheetTabs): SheetTabs => JSON.parse(JSON.stringify(tabs)) as SheetTabs;
+/** A deep copy, keeping each entry's stored row. */
+const cloneTabs = (tabs: SheetTabs): SheetTabs =>
+  Object.fromEntries(
+    Object.entries(tabs).map(([key, list]) => [
+      key,
+      list.map((e) => {
+        const copy = JSON.parse(JSON.stringify(e)) as SheetEntry;
+        const raw = (e as SheetEntry & { [STORED]?: RawSheetEntry })[STORED];
+        return raw ? withStored(copy, raw) : copy;
+      }),
+    ]),
+  );
 
 /** A tab by key or name, ignoring case. */
 export function tabByRef(layout: readonly SheetTab[], ref: string): SheetTab | undefined {
@@ -114,12 +152,6 @@ export function maxOf(entry: SheetEntry | undefined, field: string): number | un
   return isTrack(v) && typeof v.max === 'number' ? v.max : undefined;
 }
 
-function setNumber(entry: SheetEntry, field: CharacterSheetField | undefined, key: string, n: number) {
-  const v = entry[key];
-  if (isTrack(v)) entry[key] = { ...v, value: round2(n) };
-  else if (field?.type === 'track') entry[key] = { value: round2(n) };
-  else entry[key] = round2(n);
-}
 
 /** A field's value as the block and the diff show it. */
 function showValue(entry: SheetEntry | undefined, key: string): string {
@@ -131,12 +163,38 @@ function showValue(entry: SheetEntry | undefined, key: string): string {
   return v === undefined || v === null || v === '' ? '—' : String(v);
 }
 
-/** A value typed for a field, as the sheet stores it. */
-function typedValue(field: CharacterSheetField | undefined, value: unknown): unknown {
-  if (field?.type === 'track') return { value: Number(value) || 0 };
-  if (field?.type === 'number') return Number(value) || 0;
-  if (field?.type === 'checkbox') return value === true || value === 'true';
-  return value;
+/**
+ * An op's value for a field, as the sheet editor's form would hold it: the
+ * draft that field type's codec stores (`lib/sheetFieldValues.ts`). An op's
+ * values are what the board's inputs typed (strings), or numbers it worked
+ * out. A track keeps the current entry's maximum and display, so setting or
+ * adding to it changes only its value.
+ */
+function opDraft(field: CharacterSheetField, value: unknown, current: unknown): unknown {
+  if (field.type === 'track') {
+    if (value !== null && typeof value === 'object') return trackToDraft(value);
+    return { ...trackToDraft(current), value: value === undefined || value === null ? '' : String(value) };
+  }
+  if (field.type === 'checkbox') return value === true || value === 'true';
+  return value === undefined || value === null ? '' : String(value);
+}
+
+/**
+ * An op's value as the sheet stores it: through the same codec as the sheet
+ * editor, so an entry the board writes is one the editor reads and saves back
+ * unchanged. `undefined` means the key is left out (an empty field).
+ */
+function storedOpValue(field: CharacterSheetField, value: unknown, current?: unknown): unknown {
+  const codec = fieldCodecOf(field);
+  return codec ? codec.fromDraft(opDraft(field, value, current)) : value;
+}
+
+/** Why the board can't write a field, if it can't: one the schema lacks or this client doesn't know. */
+function unwritable(tab: SheetTab, key: string): string | undefined {
+  const field = fieldOf(tab, key);
+  if (!field) return `${tab.label} has no field “${key}”`;
+  if (!fieldCodecOf(field)) return `${tab.label}’s ${field.label} can’t be changed here`;
+  return undefined;
 }
 
 /**
@@ -155,12 +213,16 @@ export function applyOps(layout: readonly SheetTab[], tabs: SheetTabs, ops: read
 
     if (op.act === 'add') {
       if (!name) return { ...rec, err: `A new ${tab.label} entry needs a name` };
-      const entry: SheetEntry = { id: idFor(i), name };
+      // Known fields go through their codec, as the editor's form would store
+      // them; a key the schema has since dropped is kept as it is, as a loot
+      // roll keeps it (lootDataToEdit).
+      const values: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(op.fields ?? {})) {
-        if (value === '' || value === null || value === undefined) continue;
-        entry[key] = typedValue(fieldOf(tab, key), value);
+        if (key === 'id' || key === 'name') continue;
+        const field = fieldOf(tab, key);
+        values[key] = field ? storedOpValue(field, value) : value === '' || value === null ? undefined : value;
       }
-      list.push(entry);
+      list.push(createEntry(idFor(i), { name, values }));
       return { ...rec, entry: name, after: 'added', warn: findEntry(list.slice(0, -1), name) ? `${tab.label} already has an entry named ${name}` : undefined };
     }
 
@@ -176,21 +238,25 @@ export function applyOps(layout: readonly SheetTab[], tabs: SheetTabs, ops: read
     if (op.act === 'inc') {
       const key = op.field || mainNumberField(tab);
       if (!key) return { ...rec, err: `${tab.label} has no number to add to` };
+      const cant = unwritable(tab, key);
+      if (cant) return { ...rec, err: cant };
       const before = numberOf(entry, key);
-      setNumber(entry, fieldOf(tab, key), key, before + (Number(op.by) || 0));
-      const after = numberOf(entry, key);
-      const max = maxOf(entry, key);
+      const next = applyEntryEdit(entry, { name: entry.name, values: { [key]: storedOpValue(fieldOf(tab, key)!, round2(before + (Number(op.by) || 0)), entry[key]) } });
+      list[list.indexOf(entry)] = next;
+      const after = numberOf(next, key);
+      const max = maxOf(next, key);
       let warn: string | undefined;
       if (max !== undefined && after > max) warn = `${entry.name} would be over its max (${formatNumber(after)}/${max})`;
       if (after < 0) warn = `${entry.name} would go below 0`;
       return { ...rec, field: key, before: formatNumber(before), after: formatNumber(after), warn };
     }
 
-    const field = fieldOf(tab, op.field);
+    const cant = unwritable(tab, op.field);
+    if (cant) return { ...rec, err: cant };
     const before = showValue(entry, op.field);
-    if (field?.type === 'track' || field?.type === 'number') setNumber(entry, field, op.field, Number(op.value) || 0);
-    else entry[op.field] = typedValue(field, op.value);
-    return { ...rec, field: op.field, before, after: showValue(entry, op.field) };
+    const next = applyEntryEdit(entry, { name: entry.name, values: { [op.field]: storedOpValue(fieldOf(tab, op.field)!, op.value, entry[op.field]) } });
+    list[list.indexOf(entry)] = next;
+    return { ...rec, field: op.field, before, after: showValue(next, op.field) };
   });
 }
 
@@ -268,7 +334,7 @@ export interface RewardSheetUpdate {
 
 /** The draft sheet updates a diff becomes: one whole-tab value per changed tab. */
 export function draftUpdates(diff: readonly TabDiff[]): RewardSheetUpdate[] {
-  return diff.map((d) => ({ module_type: d.tab.key, field_name: storageFieldName(d.tab.key), field_value: JSON.stringify(d.value) }));
+  return diff.map((d) => ({ module_type: d.tab.key, field_name: storageFieldName(d.tab.key), field_value: JSON.stringify(d.value.map((e) => entryToStore(d.tab.key, e))) }));
 }
 
 /** Whether two sets of drafts store the same values (key order doesn't matter). */

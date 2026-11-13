@@ -21,7 +21,8 @@ import {
   syncLine,
   type SheetTabs,
 } from './rewards';
-import type { RewardItem, RewardLine } from './types';
+import type { RewardItem, RewardLine, SheetOp } from './types';
+import { canonicalEntry } from '@/lib/sheetFieldValues';
 
 const challenges: SheetTab = {
   key: 't_chal01',
@@ -154,6 +155,107 @@ describe('applyOps', () => {
     );
     expect(recs.map((r) => r.err)).toEqual(['There’s no sheet tab “nope”', 'There’s no Numbers entry named “Gold”', 'Pick which Numbers entry']);
     expect(tabs).toEqual(liveSheet());
+  });
+});
+
+// The prod incident behind these: drafts wrote entries the sheet editor reads
+// differently, so the next time someone opened the sheet and saved, it erased
+// data. Every entry the board writes must be one the editor saves back as is.
+describe('applyOps writes entries the sheet editor saves back unchanged', () => {
+  const allTypes: SheetTab = {
+    key: 't_all001',
+    label: 'Contacts',
+    isBuiltIn: false,
+    fields: [
+      { key: 'rank', label: 'Rank', type: 'text' },
+      { key: 'quantity', label: 'Quantity', type: 'number' },
+      { key: 'description', label: 'Description', type: 'markdown' },
+      { key: 'kind', label: 'Kind', type: 'select', options: ['Ally', 'Rival'] },
+      { key: 'known', label: 'Known', type: 'checkbox' },
+      { key: 'trust', label: 'Trust', type: 'track' },
+      { key: 'dice', label: 'Dice', type: 'dice' as SheetTab['fields'][number]['type'] },
+    ],
+  };
+  const allLayout = [...layout, allTypes];
+  const mara = { id: 'm1', name: 'Mara', rank: 'Tier 1', quantity: 2, kind: 'Ally', known: true, trust: { value: 2, max: 5, display: 'boxes' }, dice: { sides: 6 } };
+  const sheet = (): SheetTabs => sheetTabsFrom([row('t_all001', 't_all001', [mara])], allLayout);
+
+  const expectEditorKeeps = (tabs: SheetTabs) => {
+    for (const entry of tabs.t_all001) expect(entry).toEqual(canonicalEntry(allTypes.fields, entry));
+  };
+
+  it.each([
+    ['set text, with spaces', { act: 'set', field: 'rank', value: '  Tier 2 ' }, { rank: 'Tier 2' }],
+    ['clear text', { act: 'set', field: 'rank', value: '' }, { rank: undefined }],
+    ['set a number', { act: 'set', field: 'quantity', value: '7' }, { quantity: 7 }],
+    ['clear a number', { act: 'set', field: 'quantity', value: '' }, { quantity: undefined }],
+    ['set a select', { act: 'set', field: 'kind', value: 'Rival' }, { kind: 'Rival' }],
+    ['untick a checkbox', { act: 'set', field: 'known', value: 'false' }, { known: undefined }],
+    ['set a track, keeping its max and display', { act: 'set', field: 'trust', value: '4' }, { trust: { value: 4, max: 5, display: 'boxes' } }],
+    ['add to a number', { act: 'inc', field: 'quantity', by: -1 }, { quantity: 1 }],
+    ['add to a track, keeping its max and display', { act: 'inc', field: 'trust', by: -3 }, { trust: { value: -1, max: 5, display: 'boxes' } }],
+  ])('%s', (_, op, expected) => {
+    const tabs = sheet();
+    const [rec] = applyOps(allLayout, tabs, [{ tab: 't_all001', entry: 'mara', ...op } as SheetOp], () => 'x');
+    expect(rec.err).toBeUndefined();
+    const entry = tabs.t_all001[0];
+    for (const [key, value] of Object.entries(expected)) {
+      if (value === undefined) expect(entry).not.toHaveProperty(key);
+      else expect(entry[key]).toEqual(value);
+    }
+    expect(entry.dice).toEqual({ sides: 6 });
+    expectEditorKeeps(tabs);
+  });
+
+  it('adds an entry from typed strings, blanks and an unticked box left out', () => {
+    const tabs = sheet();
+    applyOps(
+      allLayout,
+      tabs,
+      [{ act: 'add', tab: 't_all001', entry: 'Oskar', fields: { rank: ' Tier 1 ', quantity: '2', description: '', kind: 'Rival', known: 'false', trust: '3' } }],
+      () => 'new',
+    );
+    expect(tabs.t_all001[1]).toEqual({ id: 'new', name: 'Oskar', rank: 'Tier 1', quantity: 2, kind: 'Rival', trust: { value: 3 } });
+    expectEditorKeeps(tabs);
+  });
+
+  it('adds to a track the entry doesn’t have yet', () => {
+    const tabs = sheetTabsFrom([row('t_all001', 't_all001', [{ id: 'm1', name: 'Mara' }])], allLayout);
+    applyOps(allLayout, tabs, [{ act: 'inc', tab: 't_all001', entry: 'Mara', field: 'trust', by: 2 }], () => 'x');
+    expect(tabs.t_all001[0].trust).toEqual({ value: 2 });
+    expectEditorKeeps(tabs);
+  });
+
+  it('refuses a field of a type it can’t write, or one the tab doesn’t have, and changes nothing', () => {
+    const tabs = sheet();
+    const recs = applyOps(
+      allLayout,
+      tabs,
+      [
+        { act: 'set', tab: 't_all001', entry: 'Mara', field: 'dice', value: 'd8' },
+        { act: 'set', tab: 't_all001', entry: 'Mara', field: 'gone', value: 'x' },
+      ],
+      () => 'x',
+    );
+    expect(recs.map((r) => r.err)).toEqual(['Contacts’s Dice can’t be changed here', 'Contacts has no field “gone”']);
+    expect(tabs).toEqual(sheet());
+  });
+
+  it('writes the entries no op changed back exactly as they were stored, as the sheet editor does', () => {
+    const modern = { name: 'Gold', id: 'n1', amount: { value: 3 }, custom: { kept: [1, 2] } };
+    const legacy = { id: 'n2', type: 'Stress', amount: 2, max: 9, display: 'boxes' };
+    const noId = { name: 'Rep', amount: { value: 1 } };
+    const rows = [row('numbers', 'numbers', [modern, legacy, noId, { id: 'n4', name: 'XP', amount: { value: 5 } }])];
+    const state = sheetFor(layout, sheetTabsFrom(rows, layout), [line('l1', { ops: [{ act: 'inc', tab: 'numbers', entry: 'XP', by: 1 }] })]);
+    const [update] = draftUpdates(sheetDiff(layout, state));
+    expect(update.field_value).toBe(JSON.stringify([modern, legacy, noId, { id: 'n4', name: 'XP', amount: { value: 6 } }]));
+  });
+
+  it('writes an old-shape entry an op changed in the current shape', () => {
+    const rows = [row('numbers', 'numbers', [{ id: 'n2', type: 'Stress', amount: 2, max: 9, display: 'boxes' }])];
+    const state = sheetFor(layout, sheetTabsFrom(rows, layout), [line('l1', { ops: [{ act: 'inc', tab: 'numbers', entry: 'Stress', by: 1 }] })]);
+    const [update] = draftUpdates(sheetDiff(layout, state));
+    expect(JSON.parse(update.field_value)).toEqual([{ id: 'n2', name: 'Stress', amount: { value: 3, max: 9, display: 'boxes' } }]);
   });
 });
 

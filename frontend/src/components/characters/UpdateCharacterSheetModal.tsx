@@ -3,14 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/common/modals/Modal';
 import { Button, Alert, Spinner } from '@/components/ui';
 import { EntryManager } from './sheet-items/EntryManager';
-import type { RawSheetEntry } from '@/lib/sheetEntries';
+import { createEntry, type RawSheetEntry } from '@/lib/sheetEntries';
+import { lootDataToEdit } from '@/lib/sheetFieldValues';
 import { apiClient } from '@/lib/api';
 import type { CreateDraftCharacterUpdateRequest } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 import { useDiscardSheetDrafts } from '@/hooks/useDiscardSheetDrafts';
 import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
-import { useLootRoll } from '@/hooks/useLootRoll';
+import { useLootDraw } from '@/hooks/useLootRoll';
 import { generateId } from '@/utils/generateId';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { storageFieldName } from '@/types/characters';
@@ -272,32 +273,21 @@ export const UpdateCharacterSheetModal: React.FC<UpdateCharacterSheetModalProps>
     };
   }, []);
 
-  // A roll is written to the character's sheet by the server, not staged as a
-  // draft. Shown locally at once, and refetched so the published sheet agrees.
-  // The server gives the entry its id; the generated one only covers a server
-  // that predates that, and is overridden by the spread.
-  //
-  // A tab that already has a staged (or pending) snapshot is re-staged with the
-  // roll included: publishing replaces the tab's row with the snapshot, so one
-  // taken before the roll would erase it. A tab with nothing staged is left
-  // alone, since the roll is already on the published sheet.
-  const lootRolling = useLootRoll(characterId, (rolled, tabKey) => {
-    const fieldName = storageFieldName(tabKey);
-    const entries = [...(entriesByTab[tabKey] ?? []), { id: generateId(), ...rolled }];
-    setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));
-
-    const hasStagedSnapshot =
-      pendingSaves.current.has(`${tabKey}:${fieldName}`) ||
-      (existingDrafts ?? []).some(d => d.module_type === tabKey && d.field_name === fieldName);
-    if (hasStagedSnapshot) scheduleSave(tabKey, fieldName, entries);
-
-    queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
-  });
-
   const handleEntriesChange = (tabKey: string, entries: RawSheetEntry[]) => {
     setEntriesByTab(prev => ({ ...prev, [tabKey]: entries }));
     scheduleSave(tabKey, storageFieldName(tabKey), entries);
   };
+
+  // A roll here is staged like every other change in this modal: the server
+  // only picks the item (useLootDraw), and it reaches the sheet when the
+  // result is published. It used to be given at once, which wrote to the live
+  // sheet in the middle of drafting. The item is added the way a picked one
+  // is (lootDataToEdit, then createEntry), so it's stored as the editor
+  // stores it.
+  const lootRolling = useLootDraw(characterId, ({ name, data }, tabKey) => {
+    const fields = sections.find(s => s.key === tabKey)?.fields ?? [];
+    handleEntriesChange(tabKey, [...(entriesByTab[tabKey] ?? []), createEntry(generateId(), lootDataToEdit(fields, name, data))]);
+  });
 
   const hasStagedUpdates = (existingDrafts?.length ?? 0) > 0;
 

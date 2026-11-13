@@ -10,7 +10,7 @@ import type { EntryEdit } from '@/lib/sheetEntries';
 import type { LootMode } from '@/hooks/useLootRoll';
 import { EntryForm } from './EntryForm';
 import { LootTableSelector } from './LootTableSelector';
-import { lootDataToEdit } from './fieldTypes';
+import { lootDataToEdit } from '@/lib/sheetFieldValues';
 
 interface LootModeFormProps {
   fields: readonly CharacterSheetField[];

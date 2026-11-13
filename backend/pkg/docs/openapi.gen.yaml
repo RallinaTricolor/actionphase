@@ -11589,6 +11589,48 @@ paths:
             tags:
                 - Loot Tables
             x-access: gm
+    /games/{gameID}/loot-tables/{tableId}/draw:
+        post:
+            description: Picks a random item from the table and returns it as a sheet entry (with a fresh id), without adding it to any character or the game log. For draft sheet updates, which add the item when the result is published. GM only.
+            operationId: drawLoot
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+                - description: Loot table ID
+                  in: path
+                  name: tableId
+                  required: true
+                  schema:
+                    description: Loot table ID
+                    format: int32
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GameLootTableContentResponse'
+                    description: OK
+                "400":
+                    description: The loot table is empty
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Not the GM, or the table belongs to another game
+                "422":
+                    description: Request failed validation, or the rolled item's data is not a JSON object
+            security:
+                - BearerAuth: []
+            summary: Roll loot without giving it
+            tags:
+                - Loot Tables
+            x-access: gm
     /games/{gameID}/loot-tables/{tableId}/random/{characterId}:
         post:
             description: Picks a random item from the table, adds it to the character's inventory and records the roll in the game log. GM only.

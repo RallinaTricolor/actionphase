@@ -885,6 +885,19 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   (`lib/sheetEntries.ts`) absorbs legacy shapes on read (skill `level` → `rank`,
   number `type` → `name`, flat `amount`/`max`/`display` → a track); writes
   always use the new shape, and only the edited entry is rewritten.
+- **One way to store a field's value** (2026-11-13): every writer of sheet
+  entries stores values through the per-type codecs in
+  `lib/sheetFieldValues.ts` (`toDraft`/`fromDraft`). The writers are the
+  sheet editor (`fieldTypes.tsx` builds on them), loot tables
+  (`lootDataToEdit`) and the results board's sheet changes
+  (`lib/gmBoard/rewards.ts`). `canonicalEntry` is what an unchanged editor
+  save would store. A writer's entry must equal it, or the next save
+  rewrites it, and a value in a shape the editor can't read (e.g. a track
+  stored as a bare number) is erased. That happened in prod with draft
+  results. The board also writes back every row no op changed exactly as
+  stored. Tests: `sheetFieldValues.test.ts`, `rewards.test.ts`, and
+  `gm-board/boardSheetWrites.test.tsx` (board output saved unchanged
+  through the real `EntryForm`).
 - **Loot tables** (added 2026-09-30): each table has a `target_tab` (default
   `inventory`), validated against the game's layout; it can change only while
   the table is empty (409 otherwise). A roll writes into
@@ -895,6 +908,13 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   disables Remove on it. Loot entries use the target tab's schema, and CSV
   import maps columns by field label or key, coercing by field type, because a
   server-side roll writes the data verbatim.
+  **Two roll endpoints** (2026-11-13): `…/random/{characterId}` gives the
+  item to the live sheet and logs it (`useLootRoll`, the character sheet
+  only). `…/loot-tables/{tableId}/draw` only picks it and writes nothing
+  (`useLootDraw`). A result's sheet-update modal uses draw and stages the
+  item through `lootDataToEdit` + `createEntry`, like a picked item. Never
+  give while drafting: it wrote to the live sheet in the middle of a phase
+  (findings #14).
 - **Mentions**: `useCharacterSheetItems` offers every entry on every layout tab.
   The token is `[[Name|kind:id]]`, where kind is `skill`/`item` for
   Skills/Inventory (historic) and the tab key otherwise; the pattern lives in

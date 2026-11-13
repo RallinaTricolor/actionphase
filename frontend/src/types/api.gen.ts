@@ -2376,6 +2376,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/loot-tables/{tableId}/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll loot without giving it
+         * @description Picks a random item from the table and returns it as a sheet entry (with a fresh id), without adding it to any character or the game log. For draft sheet updates, which add the item when the result is published. GM only.
+         */
+        post: operations["drawLoot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/loot-tables/{tableId}/random/{characterId}": {
         parameters: {
             query?: never;
@@ -13592,6 +13612,59 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    drawLoot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Loot table ID */
+                tableId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameLootTableContentResponse"];
+                };
+            };
+            /** @description The loot table is empty */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, or the table belongs to another game */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation, or the rolled item's data is not a JSON object */
             422: {
                 headers: {
                     [name: string]: unknown;

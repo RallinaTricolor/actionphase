@@ -309,10 +309,11 @@ describe('UpdateCharacterSheetModal', () => {
       expect(screen.queryByText('Mira')).not.toBeInTheDocument();
     });
 
-    it('rolls on a loot table into the custom tab it targets and shows the entry there', async () => {
+    it('rolls on a loot table into the custom tab it targets, and stages the entry there', async () => {
       setupHandlers({ characterData: [], drafts: null });
       withLayout([{ key: 'inventory' }, CONTACTS]);
-      let rolledTable: string | undefined;
+      let drawnTable: string | undefined;
+      let staged: string | undefined;
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
           HttpResponse.json([
@@ -320,9 +321,13 @@ describe('UpdateCharacterSheetModal', () => {
             { id: 5, game_id: 1, name: 'Townsfolk', target_tab: 't_abc123', created_at: '', updated_at: '' },
           ])
         ),
-        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', ({ params }) => {
-          rolledTable = params.tableId as string;
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/draw', ({ params }) => {
+          drawnTable = params.tableId as string;
           return HttpResponse.json({ id: 9, loot_table_id: 5, name: 'Old Zadok', data: '{"id":"srv-1","name":"Old Zadok","f_loc001":"Docks"}' });
+        }),
+        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
+          staged = ((await request.json()) as { field_value: string }).field_value;
+          return HttpResponse.json({ id: 101, action_result_id: 10, character_id: 42, module_type: 't_abc123', field_name: 't_abc123', field_value: staged, field_type: 'json', operation: 'upsert', created_at: '', updated_at: '' });
         }),
       );
 
@@ -340,26 +345,9 @@ describe('UpdateCharacterSheetModal', () => {
       const section = await screen.findByTestId('t_abc123-section');
       expect(await within(section).findByText('Old Zadok')).toBeInTheDocument();
       expect(within(section).getByText('Docks')).toBeInTheDocument();
-      expect(rolledTable).toBe('5');
-
-      // Staging the tab afterwards keeps the id the server stored, so the
-      // draft doesn't fork the rolled entry into a copy with another id.
-      let staged: string | undefined;
-      server.use(
-        http.post('http://localhost:3000/api/v1/games/:gameId/results/:resultId/character-updates', async ({ request }) => {
-          staged = ((await request.json()) as { field_value: string }).field_value;
-          return HttpResponse.json({ id: 101, action_result_id: 10, character_id: 42, module_type: 't_abc123', field_name: 't_abc123', field_value: staged, field_type: 'json', operation: 'upsert', created_at: '', updated_at: '' });
-        }),
-      );
-      fireEvent.click(screen.getByTestId('add-t_abc123'));
-      fireEvent.change(await screen.findByRole('combobox', { name: 'Mode' }), { target: { value: 'manual' } });
-      fireEvent.change(screen.getByRole('textbox', { name: 'Name *' }), { target: { value: 'Mira' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(drawnTable).toBe('5');
       await waitFor(() => expect(staged).toBeDefined(), { timeout: 3000 });
-      expect(JSON.parse(staged!).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
-        ['srv-1', 'Old Zadok'],
-        [expect.any(String), 'Mira'],
-      ]);
+      expect(JSON.parse(staged!)).toEqual([{ id: expect.any(String), name: 'Old Zadok', f_loc001: 'Docks' }]);
     });
 
     it('stages an edit to a custom tab under the tab key', async () => {
@@ -394,20 +382,26 @@ describe('UpdateCharacterSheetModal', () => {
     });
   });
 
-  // A roll is written straight to the published sheet, but publishing replaces
-  // a tab's row with its staged snapshot. A snapshot staged before the roll
-  // would erase the rolled entry on publish.
-  describe('Loot rolls and staged drafts', () => {
-    function serveInventoryRoll() {
+  // #14: a roll used to give the item to the live sheet at once, in the middle
+  // of drafting a result. Now it's staged like every other change here, and
+  // reaches the sheet only when the result is published.
+  describe('Loot rolls are staged, never given', () => {
+    let gave: boolean;
+    function serveInventoryRoll(data = '{"id":"srv-1","name":"Rope"}') {
+      gave = false;
       server.use(
         http.get('http://localhost:3000/api/v1/games/:gameId/loot-tables', () =>
           HttpResponse.json([
             { id: 4, game_id: 1, name: 'Common Loot', target_tab: 'inventory', created_at: '', updated_at: '' },
           ])
         ),
-        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', () =>
-          HttpResponse.json({ id: 9, loot_table_id: 4, name: 'Rope', data: '{"id":"srv-1","name":"Rope"}' })
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/draw', () =>
+          HttpResponse.json({ id: 9, loot_table_id: 4, name: 'Rope', data })
         ),
+        http.post('http://localhost:3000/api/v1/games/:gameId/loot-tables/:tableId/random/:characterId', () => {
+          gave = true;
+          return HttpResponse.json({ id: 9, loot_table_id: 4, name: 'Rope', data });
+        }),
       );
     }
 
@@ -433,7 +427,9 @@ describe('UpdateCharacterSheetModal', () => {
       expect(await within(await screen.findByTestId('inventory-section')).findByText('Rope')).toBeInTheDocument();
     }
 
-    it('re-stages a tab with a staged draft so publishing keeps the rolled entry', async () => {
+    const names = (snapshot: string) => JSON.parse(snapshot).map((e: { name: string }) => e.name);
+
+    it('adds the roll to a tab that already has a staged draft', async () => {
       setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: DRAFT_ITEMS });
       serveInventoryRoll();
       const staged = captureStaged();
@@ -443,13 +439,11 @@ describe('UpdateCharacterSheetModal', () => {
       await rollOnInventory();
 
       await waitFor(() => expect(staged).toHaveLength(1), { timeout: 3000 });
-      expect(JSON.parse(staged[0]).map((e: { id: string; name: string }) => [e.id, e.name])).toEqual([
-        ['item-2', 'Magic Sword'],
-        ['srv-1', 'Rope'],
-      ]);
+      expect(names(staged[0])).toEqual(['Magic Sword', 'Rope']);
+      expect(gave).toBe(false);
     });
 
-    it('stages nothing for a tab with no draft: the roll is already on the published sheet', async () => {
+    it('stages a tab with no draft yet: the published entries plus the roll', async () => {
       setupHandlers({ characterData: CHAR_DATA_ITEMS, drafts: null });
       serveInventoryRoll();
       const staged = captureStaged();
@@ -458,9 +452,22 @@ describe('UpdateCharacterSheetModal', () => {
       await waitForLoaded();
       await rollOnInventory();
 
-      // Past the 800ms debounce, so a scheduled save would have fired.
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      expect(staged).toEqual([]);
+      await waitFor(() => expect(staged).toHaveLength(1), { timeout: 3000 });
+      expect(names(staged[0])).toEqual(['Healing Potion', 'Rope']);
+      expect(gave).toBe(false);
+    });
+
+    it('stores the rolled item as the editor would, as a picked one is', async () => {
+      setupHandlers({ characterData: [], drafts: null });
+      serveInventoryRoll('{"id":"srv-1","name":"Rope","quantity":"3","description":"  Hemp  "}');
+      const staged = captureStaged();
+
+      renderWithProviders(<UpdateCharacterSheetModal {...BASE_PROPS} />, { gameId: 1 });
+      await waitForLoaded();
+      await rollOnInventory();
+
+      await waitFor(() => expect(staged).toHaveLength(1), { timeout: 3000 });
+      expect(JSON.parse(staged[0])).toEqual([{ id: expect.any(String), name: 'Rope', quantity: 3, description: 'Hemp' }]);
     });
   });
 
