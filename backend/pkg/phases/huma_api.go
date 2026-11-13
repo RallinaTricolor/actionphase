@@ -277,15 +277,25 @@ type submitActionBody struct {
 
 func (b *submitActionBody) Resolve(huma.Context) []error { return humaconfig.TrimStrings(b) }
 
+// createActionResultBody allows empty content for a draft: the results board
+// makes a character's draft when the GM gives them their first reward or sheet
+// change, before any of the result is written, because sheet updates need a
+// result to carry them. A result published as it's made still needs content.
 type createActionResultBody struct {
 	UserID             int32  `json:"user_id" doc:"Recipient user ID"`
 	CharacterID        *int32 `json:"character_id,omitempty" required:"false"`
 	ActionSubmissionID *int32 `json:"action_submission_id,omitempty" required:"false"`
-	Content            string `json:"content" minLength:"1" doc:"Result content"`
+	Content            string `json:"content" required:"false" doc:"Result content. May be empty for a draft (is_published false)."`
 	IsPublished        bool   `json:"is_published,omitempty" required:"false"`
 }
 
-func (b *createActionResultBody) Resolve(huma.Context) []error { return humaconfig.TrimStrings(b) }
+func (b *createActionResultBody) Resolve(huma.Context) []error {
+	errs := humaconfig.TrimStrings(b)
+	if b.IsPublished && b.Content == "" {
+		errs = append(errs, &huma.ErrorDetail{Location: "body.content", Message: "a published result needs content", Value: b.Content})
+	}
+	return errs
+}
 
 // updateActionResultBody has no minLength on Content.
 //

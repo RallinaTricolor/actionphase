@@ -8,7 +8,7 @@
 import type { SheetTab } from '@/types/characters';
 import type { ActionResult } from '@/types/phases';
 import type { ResultChain } from './results';
-import { diffCount, draftUpdates, driftedItem, sheetDiff, sheetFor, type RewardSheetUpdate, type SheetState, type SheetTabs, type TabDiff } from './rewards';
+import { diffCount, draftUpdates, driftedItem, lineKind, sheetDiff, sheetFor, type RewardSheetUpdate, type SheetState, type SheetTabs, type TabDiff } from './rewards';
 import { renderBlock, slotsOf, type Block } from './template';
 import type { CharacterRewards, GameBoardSettings, RewardItem, RewardLine } from './types';
 
@@ -54,6 +54,7 @@ export type RewardCheck =
   | { kind: 'block'; message: string }
   | { kind: 'empty-slot'; slot: string }
   | { kind: 'no-result' }
+  | { kind: 'empty-result' }
   | { kind: 'block-missing' }
   | { kind: 'block-stale' };
 
@@ -94,16 +95,23 @@ export function rewardStateFor(inputs: RewardInputs): RewardState {
   const { lines } = rewards;
   const sheet = sheetFor(inputs.layout, inputs.live, lines);
   const diff = sheetDiff(inputs.layout, sheet);
+  // A sheet change (damage, an item used up) is not a reward: it never shows
+  // as a line, in {{changes}} or in {{gain}}, which come from the reward
+  // lines alone. Tags that state the sheet ({{value}} and the rest) read the
+  // real one, so the block never tells a player a wrong total.
+  const rewardLines = lines.filter((l) => lineKind(l) === 'reward');
+  const blockSheet = rewardLines.length === lines.length ? sheet : sheetFor(inputs.layout, inputs.live, rewardLines);
   const block = renderBlock({
     template: inputs.settings.rewardTemplate,
     groups: inputs.settings.rewardGroups,
     scales: inputs.settings.scales,
     layout: inputs.layout,
     name: inputs.name,
-    lines,
+    lines: rewardLines,
     texts: rewards.texts,
     sheet,
-    diff,
+    rewardSheet: blockSheet,
+    diff: blockSheet === sheet ? diff : sheetDiff(inputs.layout, blockSheet),
   });
   const carrier = carrierFor(inputs.chains, rewards.carrierHeadId);
   const locked = linesLocked(carrier);
@@ -122,8 +130,12 @@ export function rewardStateFor(inputs: RewardInputs): RewardState {
     }
     for (const message of block.problems) checks.push({ kind: 'block', message });
     for (const slot of slots) if (!rewards.texts[slot]?.trim()) checks.push({ kind: 'empty-slot', slot });
+    // The tail's text as typed, when Write passes it; else as saved.
+    const partText = (p: ActionResult) => (p.id === carrier.tail?.id && inputs.tailText !== undefined ? inputs.tailText : p.content);
     if (carrier.state === 'no-result') checks.push({ kind: 'no-result' });
-    else if (carrier.tail && block.text) {
+    // A draft made when a line was given starts empty: don't let it go out so.
+    else if (carrier.state === 'draft' && carrier.chain?.parts.every((p) => !partText(p).trim())) checks.push({ kind: 'empty-result' });
+    if (carrier.tail && block.text) {
       const text = inputs.tailText ?? carrier.tail.content;
       if (!holds(text, block.text)) checks.push(rewards.block && holds(text, rewards.block) ? { kind: 'block-stale' } : { kind: 'block-missing' });
     }

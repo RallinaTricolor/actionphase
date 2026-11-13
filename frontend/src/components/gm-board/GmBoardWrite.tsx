@@ -38,7 +38,7 @@ import type { WriteModel } from './writeTypes';
 
 const RESULT_TABS = [
   { id: 'result', label: 'Result' },
-  { id: 'rewards', label: 'Rewards' },
+  { id: 'rewards', label: 'Rewards & Sheet' },
   { id: 'checks', label: 'Checks' },
 ] as const;
 
@@ -461,6 +461,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                   return line ? truncate(lineText(line, reward?.sheet.recs[lineId]) || 'A sheet-only line', 50) : 'A line';
                 }}
                 onPutBlock={readOnly ? undefined : () => void putBlock()}
+                onMakeDraft={readOnly || !rewards ? undefined : () => rewards.ensureDraft(current)}
               />
             </div>
           </BoardPane>

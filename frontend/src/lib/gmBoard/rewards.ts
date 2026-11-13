@@ -260,6 +260,14 @@ export function applyOps(layout: readonly SheetTab[], tabs: SheetTabs, ops: read
   });
 }
 
+/**
+ * Whether a line is a reward (in the block) or a sheet change (sheet only).
+ * A line from before kinds existed is a sheet change when it has no text and
+ * wasn't given from a list: the old "sheet only" line.
+ */
+export const lineKind = (line: Pick<RewardLine, 'kind' | 'text' | 'itemId' | 'choose'>): 'reward' | 'sheet' =>
+  line.kind ?? (line.text.trim() || line.itemId || line.choose ? 'reward' : 'sheet');
+
 /** A line's ops that touch the sheet: none for "Choose 1". */
 const effectiveOps = (line: Pick<RewardLine, 'choose' | 'ops'>) => (line.choose ? [] : line.ops);
 

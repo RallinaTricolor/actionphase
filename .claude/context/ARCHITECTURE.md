@@ -818,6 +818,14 @@ item means two editors only collide on the same item.
   (`action_result_character_updates.from_rewards` marks them). Publishing uses
   the existing results endpoints and dialogs, so the old results area and the
   board can be used on the same phase.
+- **Rewards and sheet changes** (2026-11-13): a line's `kind` is `reward`
+  (in the reward block) or `sheet` (damage taken, an item used up: changes
+  the sheet only). Lines saved before `kind` existed are read by `lineKind`.
+  The block's `{{lines}}`, `{{changes}}` and `{{gain}}` come from reward
+  lines alone. `{{value}}` and the other tags that state the sheet read the
+  real sheet. Giving any line to someone with no draft result makes an
+  empty one (`usePhaseRewards.ensureDraft`; the create endpoint allows empty
+  content for a draft), so the lines always have a result to carry them.
 
 **Access: the audience level plus a game setting.** Writes declare
 `access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,

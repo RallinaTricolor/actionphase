@@ -24,6 +24,8 @@ let results: ActionResult[];
 let drafts: DraftCharacterUpdate[];
 let syncs: { characterId: number; body: Record<string, unknown> }[];
 let resultPuts: { id: number; content: string }[];
+/** Bodies of POST /results: drafts the board made. */
+let created: Record<string, unknown>[];
 
 const item = (kind: string, key: string, doc: Record<string, unknown>) => [`${kind}/${key}`, makeGmItem({ kind, key, doc })] as const;
 const stamp = (n: number) => `2026-11-03T10:00:${String(n).padStart(2, '0')}.000001Z`;
@@ -37,6 +39,7 @@ beforeEach(() => {
   boardSaves = [];
   syncs = [];
   resultPuts = [];
+  created = [];
   drafts = [];
   results = [makeActionResult({ id: 100, game_id: GAME_ID, phase_id: PHASE_ID, character_id: 1, user_id: 11, is_published: false, content: 'You wait by the wheel.', updated_at: stamp(1) })];
   board = new Map([item('chunk', 'k1', { name: 'Slot 1', position: 1 })]);
@@ -68,6 +71,13 @@ beforeEach(() => {
     }),
     http.get(`/api/v1/games/${GAME_ID}/gm-settings`, () => HttpResponse.json({ items: [...settings.values()], cursor: seq, share_gm_board: false })),
     http.get(RESULTS, () => HttpResponse.json(results)),
+    http.post(RESULTS, async ({ request }) => {
+      const body = (await request.json()) as { user_id: number; character_id: number; action_submission_id?: number; content: string };
+      created.push(body);
+      const row = makeActionResult({ id: 200 + created.length, game_id: GAME_ID, phase_id: PHASE_ID, character_id: body.character_id, user_id: body.user_id, action_submission_id: body.action_submission_id, is_published: false, content: body.content, updated_at: stamp(2) });
+      results.push(row);
+      return HttpResponse.json(row, { status: 201 });
+    }),
     http.get(`/api/v1/games/${GAME_ID}/phases/${PHASE_ID}/results/unpublished-count`, () => HttpResponse.json({ count: results.filter((r) => !r.is_published).length })),
     http.put(`${RESULTS}/:id`, async ({ request, params }) => {
       const body = (await request.json()) as { content: string };
@@ -146,12 +156,48 @@ describe('Write: rewards', () => {
     await waitFor(() => expect(syncs[0]?.body).toMatchObject({ result_id: 100, replace_hand_made: true }), { timeout: 4000 });
   });
 
-  it('rewards with no result: kept, with a check, and nothing written', async () => {
-    board.set('rewards/2', makeGmItem({ kind: 'rewards', key: '2', doc: { lines: [{ id: 'l2', group: 'result', text: 'Well done', ops: [], choose: false }], texts: {} } }));
+  // Manual pass #3: rewards with no draft to carry them shouldn't happen.
+  it('giving the first reward to someone with no result makes their draft, empty and linked to their submission', async () => {
+    server.use(
+      http.get(`/api/v1/games/${GAME_ID}/actions`, () => HttpResponse.json([makeActionWithDetails({ id: 77, game_id: GAME_ID, phase_id: PHASE_ID, character_id: 2, user_id: 12 })])),
+      http.get(`/api/v1/games/${GAME_ID}/characters/data`, () =>
+        HttpResponse.json({ 1: [], 2: [{ id: 2, character_id: 2, module_type: 'numbers', field_name: 'numbers', field_value: coinSheet, field_type: 'json' }] }),
+      ),
+    );
+    const user = userEvent.setup();
     render('step=write&who=2');
-    expect(await screen.findByText('Mara has rewards but no draft result to carry them.')).toBeInTheDocument();
+    await openResultTab(user, 'Rewards');
+    await user.click(await within(await screen.findByTestId('write-rewards')).findByRole('button', { name: '+ Partial' }));
+
+    await waitFor(() => expect(created).toHaveLength(1), { timeout: 3000 });
+    expect(created[0]).toEqual({ user_id: 12, character_id: 2, action_submission_id: 77, content: '' });
+    // The sheet changes go on the new draft, and the empty draft is a check.
+    await waitFor(() => expect(syncs.at(-1)?.body).toMatchObject({ result_id: 201 }), { timeout: 4000 });
+    await openResultTab(user, 'Checks');
+    expect(await screen.findByText('Mara’s result has no text yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/no draft result to carry them/)).not.toBeInTheDocument();
+  });
+
+  it('giving to someone who already has a draft makes no other', async () => {
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    await user.click(await within(await screen.findByTestId('write-rewards')).findByRole('button', { name: '+ Partial' }));
+    await waitFor(() => expect(syncs).toHaveLength(1), { timeout: 4000 });
+    expect(created).toHaveLength(0);
+  });
+
+  it('rewards with no result (the draft was deleted): kept, with a check that makes one', async () => {
+    board.set('rewards/2', makeGmItem({ kind: 'rewards', key: '2', doc: { lines: [{ id: 'l2', group: 'result', text: 'Well done', ops: [], choose: false }], texts: {} } }));
+    const user = userEvent.setup();
+    render('step=write&who=2');
+    await openResultTab(user, 'Checks');
+    const check = (await within(await screen.findByTestId('write-checks')).findByText('Mara has rewards but no draft result to carry them.')).closest('li')!;
     await new Promise((r) => setTimeout(r, 1500));
     expect(syncs).toHaveLength(0);
+    expect(created).toHaveLength(0);
+    await user.click(within(check as HTMLElement).getByRole('button', { name: 'Make a draft result' }));
+    await waitFor(() => expect(created).toEqual([{ user_id: 12, character_id: 2, content: '' }]), { timeout: 3000 });
   });
 
   it('once published, the rewards are locked', async () => {
@@ -160,7 +206,48 @@ describe('Write: rewards', () => {
     render();
     expect(await screen.findByTestId('rewards-locked')).toHaveTextContent('the sheet changes are applied');
     expect(screen.queryByRole('button', { name: '+ Partial' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '+ Line' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Reward' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Sheet change' })).not.toBeInTheDocument();
+  });
+
+  it('+ Sheet change makes a line that changes the sheet and stays out of the block', async () => {
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    const panel = await screen.findByTestId('write-rewards');
+    await user.click(within(panel).getByRole('button', { name: '+ Sheet change' }));
+
+    const editor = await screen.findByTestId('reward-line-editor');
+    expect(screen.getByRole('dialog', { name: /: sheet change$/ })).toBeInTheDocument();
+    // No text, section or Choose 1: nothing of it goes in the block. It opens
+    // with one change to fill in.
+    expect(within(editor).queryByTestId('line-text')).not.toBeInTheDocument();
+    expect(within(editor).getByTestId('line-kind')).not.toBeChecked();
+    expect(within(editor).getByTestId('line-by-0')).toHaveValue(-1);
+    await user.type(within(editor).getByLabelText('Entry'), 'Coin');
+    await user.click(await within(editor).findByRole('option', { name: 'Coin' }));
+    await user.click(within(editor).getByRole('button', { name: 'Done' }));
+
+    await rewardsSaved(1, (d) => (d.lines as { kind?: string; ops: unknown[] }[]).some((l) => l.kind === 'sheet' && l.ops.length === 1));
+    expect(within(screen.getByTestId('sheet-change-lines')).getByText('Numbers · Coin −1')).toBeInTheDocument();
+    expect(within(screen.getByTestId('reward-lines')).getByText(/No rewards yet/)).toBeInTheDocument();
+    expect(within(panel).getByTestId('reward-sheet')).toHaveTextContent('Coin: Amount 1 → 0');
+    // The block's Coin: {{value}} states the real sheet.
+    expect(within(panel).getByTestId('reward-block')).toHaveTextContent('Coin: 0');
+    await waitFor(() => expect(syncs).toHaveLength(1), { timeout: 4000 });
+    expect(JSON.parse((syncs[0].body.updates as { field_value: string }[])[0].field_value)).toEqual([{ id: 'n1', name: 'Coin', amount: { value: 0 } }]);
+  });
+
+  it('“In the reward block” turns a sheet change into a reward, and back', async () => {
+    board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', kind: 'sheet', group: 'result', text: '', ops: partial.ops, choose: false }], texts: {} } }));
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    await user.click(within(await screen.findByTestId('reward-line-l1')).getByRole('button', { name: 'Edit' }));
+    const editor = await screen.findByTestId('reward-line-editor');
+    await user.click(within(editor).getByTestId('line-kind'));
+    expect(await within(editor).findByTestId('line-text')).toBeInTheDocument();
+    await rewardsSaved(1, (d) => (d.lines as { kind?: string }[])[0]?.kind === 'reward');
   });
 
   it('the Rewards table gives and takes back a reward per character', async () => {
@@ -219,17 +306,27 @@ describe('rewards from Read and Scenes', () => {
     await rewardsSaved(1, (d) => (d.lines as { itemId?: string; quote?: string }[]).some((l) => l.itemId === 'rw-partial' && l.quote === 'I climb the wheel'));
   });
 
-  it('+ Sheet update makes a line for someone in the scene, tied to it', async () => {
+  it('+ Add makes a reward for someone in the scene, tied to it', async () => {
     board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: { title: 'At the mill', locationId: '', chunkId: 'k1', conflict: false, participants: [1, 2], moments: [], effects: [] } }));
     const user = userEvent.setup();
     render('step=scenes&scene=s1');
     const row = await screen.findByTestId('scene-rewards');
-    await user.selectOptions(within(row).getByTestId('scene-add-reward'), '2');
+    await user.selectOptions(within(row).getByTestId('scene-add-reward'), 'reward:2');
     const editor = await screen.findByTestId('reward-line-editor');
     expect(editor).toHaveTextContent('From the scene At the mill.');
     await user.type(within(editor).getByTestId('line-text'), 'Found the ledger');
     await user.click(within(editor).getByRole('button', { name: 'Done' }));
     await rewardsSaved(2, (d) => (d.lines as { sceneId?: string; text: string }[]).some((l) => l.sceneId === 's1' && l.text === 'Found the ledger'));
     expect(await within(row).findByText(/Mara: Found the ledger/)).toBeInTheDocument();
+  });
+
+  it('+ Add makes a sheet change for someone in the scene', async () => {
+    board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: { title: 'At the mill', locationId: '', chunkId: 'k1', conflict: false, participants: [1, 2], moments: [], effects: [] } }));
+    const user = userEvent.setup();
+    render('step=scenes&scene=s1');
+    const row = await screen.findByTestId('scene-rewards');
+    await user.selectOptions(within(row).getByTestId('scene-add-reward'), 'sheet:2');
+    expect(await screen.findByRole('dialog', { name: /: sheet change$/ })).toBeInTheDocument();
+    await rewardsSaved(2, (d) => (d.lines as { sceneId?: string; kind?: string }[]).some((l) => l.sceneId === 's1' && l.kind === 'sheet'));
   });
 });

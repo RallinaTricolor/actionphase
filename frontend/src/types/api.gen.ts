@@ -4661,8 +4661,8 @@ export interface components {
             action_submission_id?: number;
             /** Format: int32 */
             character_id?: number;
-            /** @description Result content */
-            content: string;
+            /** @description Result content. May be empty for a draft (is_published false). */
+            content?: string;
             is_published?: boolean;
             /**
              * Format: int32

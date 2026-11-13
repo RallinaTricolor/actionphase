@@ -18,8 +18,9 @@ interface SceneRewardsProps {
 }
 
 /**
- * The scene's sheet updates: reward lines made from it, each for one person
- * in the cast. They join that person's rewards in Write like any other line.
+ * What people get from the scene: rewards (in the reward block) and sheet
+ * changes (damage, an item used up), each for one person in the cast. They
+ * join that person's lines in Write like any other.
  */
 export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneRewardsProps) {
   const rewards = useOptionalBoardRewards();
@@ -32,15 +33,18 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
   const editingState = editing ? rewards.stateFor(editing.characterId) : null;
   const line = editingState?.lines.find((l) => l.id === editing?.lineId) ?? null;
 
-  const add = (characterId: number) => {
+  const add = (choice: string) => {
+    const [kind, id] = choice.split(':');
+    const characterId = Number(id);
+    if (kind !== 'reward' && kind !== 'sheet') return;
     if (rewards.stateFor(characterId).locked) return;
-    const lineId = rewards.addLine(characterId, { group: defaultGroup(rewards.groups), text: '', ops: [], choose: false, sceneId: scene.id });
+    const lineId = rewards.addLine(characterId, { kind, group: defaultGroup(rewards.groups), text: '', ops: [], choose: false, sceneId: scene.id });
     setEditing({ characterId, lineId });
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Sheet updates from the scene" data-testid="scene-rewards">
-      <span className={`mr-1 ${TOOLBAR_LABEL}`}>Sheet updates</span>
+    <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Rewards and sheet changes from the scene" data-testid="scene-rewards">
+      <span className={`mr-1 ${TOOLBAR_LABEL}`}>Rewards &amp; sheet</span>
       {fromScene.map(({ characterId, line: l }) => {
         const state = rewards.stateFor(characterId);
         const summary = lineText(l, state.sheet.recs[l.id]).trim() || lineEffect(rewards.layout, l) || 'Nothing yet';
@@ -58,15 +62,21 @@ export function SceneRewards({ scene, board, names, canRead, sceneName }: SceneR
         );
       })}
       {!fromScene.length && rewards.readOnly && <span className="text-xs text-content-secondary">None.</span>}
-      {!rewards.readOnly && <HelpTooltip text="Rewards or sheet changes someone gets from this scene. They show up in Write with their other rewards." />}
+      {!rewards.readOnly && (
+        <HelpTooltip text="What someone gets from this scene. A reward goes in their reward block; a sheet change (damage, an item used up) only changes their sheet. Both show up in Write." />
+      )}
       {who.length > 0 && !rewards.readOnly && (
         <span>
-          <Select aria-label="Add a sheet update for someone in the scene" selectSize="sm" value="" onChange={(e) => e.target.value && add(Number(e.target.value))} data-testid="scene-add-reward">
-            <option value="">+ Sheet update</option>
-            {who.map((id) => (
-              <option key={id} value={id} disabled={rewards.stateFor(id).locked}>
-                {name(id)}
-              </option>
+          <Select aria-label="Add a reward or sheet change for someone in the scene" selectSize="sm" value="" onChange={(e) => e.target.value && add(e.target.value)} data-testid="scene-add-reward">
+            <option value="">+ Add</option>
+            {(['reward', 'sheet'] as const).map((kind) => (
+              <optgroup key={kind} label={kind === 'reward' ? 'Reward for' : 'Sheet change for'}>
+                {who.map((id) => (
+                  <option key={id} value={`${kind}:${id}`} disabled={rewards.stateFor(id).locked}>
+                    {name(id)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </Select>
         </span>

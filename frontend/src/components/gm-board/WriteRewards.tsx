@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { Alert, Badge, Button, Select, Textarea } from '@/components/ui';
 import { useBoardRewards } from './boardRewards';
 import { RewardLineEditor, GroupBadge } from './RewardEditors';
-import { lineEffect, lineText, needsEntry, findEntry, keepLine, syncLine, driftedItem } from '@/lib/gmBoard/rewards';
+import { defaultOpTab, lineEffect, lineKind, lineText, needsEntry, findEntry, keepLine, syncLine, driftedItem } from '@/lib/gmBoard/rewards';
 import { defaultGroup, type RewardState } from '@/lib/gmBoard/rewardState';
 import { boardSetupPath } from '@/lib/gmBoard/steps';
 import type { ResultChain } from '@/lib/gmBoard/results';
 import { truncate } from '@/lib/gmBoard/text';
-import type { RewardItem, RewardLine } from '@/lib/gmBoard/types';
+import type { RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
 
 interface WriteRewardsProps {
   gameId: number;
@@ -29,10 +29,13 @@ interface WriteRewardsProps {
 }
 
 /**
- * A character's rewards in Write: their lines, quick-give chips from the
- * lists, the text slots, the block (put into their result), and their sheet
- * before and after. The sheet changes are saved as draft sheet updates on the
- * result that carries them, as the lines change.
+ * A character's rewards and sheet changes in Write.
+ * - Rewards: their reward lines, quick-give chips from the lists, the text
+ *   slots, and the block (put into their result).
+ * - Sheet changes: lines that change the sheet and stay out of the block
+ *   (damage taken, an item used up).
+ * - On the sheet: what both do to the sheet, saved as draft sheet updates on
+ *   the result that carries them, as the lines change.
  */
 export function WriteRewards({ gameId, characterId, name, fullName, state, chains, sceneName, onPutBlock, putting, onCopy, onShowTable }: WriteRewardsProps) {
   const rewards = useBoardRewards();
@@ -50,7 +53,15 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
     const id = rewards.giveItem(characterId, item);
     if (needsEntry(item.ops)) setEditing(id);
   };
-  const addLine = () => setEditing(rewards.addLine(characterId, { group: defaultGroup(groups), text: '', ops: [], choose: false }));
+  // A sheet change opens with one change to fill in, a loss by default: what most are.
+  const firstChange = (): SheetOp[] => {
+    const tab = defaultOpTab(layout, []);
+    return tab ? [{ act: 'inc', tab: tab.key, entry: '', by: -1 }] : [];
+  };
+  const addLine = (kind: 'reward' | 'sheet') =>
+    setEditing(rewards.addLine(characterId, { kind, group: defaultGroup(groups), text: '', ops: kind === 'sheet' ? firstChange() : [], choose: false }));
+  const rewardLines = lines.filter((l) => lineKind(l) === 'reward');
+  const sheetLines = lines.filter((l) => lineKind(l) === 'sheet');
 
   const draftChains = chains.filter((c) => !c.head.is_published);
   // By head id: the state builds its own copy of the chains.
@@ -65,27 +76,57 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
   const quickGame = gameItems.filter((i) => !given.has(i.id));
   const quickPhase = phaseItems.filter((i) => !given.has(i.id));
 
-  return (
-    <div className="space-y-4" data-testid="write-rewards">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-content-primary">Rewards</h3>
-          <span className="text-sm text-content-tertiary">
-            {lines.length} {lines.length === 1 ? 'line' : 'lines'}
-          </span>
-        </div>
-        <div className="flex gap-2">
+  const lineRow = (line: RewardLine) => {
+    const kind = lineKind(line);
+    const text = lineText(line, state.sheet.recs[line.id]);
+    const effect = lineEffect(layout, line);
+    const drift = driftedItem(line, items);
+    const label = kind === 'sheet' ? effect || 'this sheet change' : text || 'this reward';
+    return (
+      <li key={line.id} className="rounded border border-theme-default p-2" data-testid={`reward-line-${line.id}`}>
+        <div className="flex items-start gap-2">
+          {kind === 'reward' && <GroupBadge groups={groups} group={line.group} />}
+          <div className="min-w-0 flex-1 text-sm">
+            {kind === 'reward' && (
+              <p className="text-content-primary">{text.trim() ? truncate(text, 110) : <span className="text-content-tertiary">(no text yet: nothing in the block)</span>}</p>
+            )}
+            {kind === 'sheet' ? (
+              <p className="text-content-primary">{effect || <span className="text-content-tertiary">(no changes yet)</span>}</p>
+            ) : (
+              effect && <p className={line.choose ? 'text-semantic-warning' : 'text-content-tertiary'}>{effect}</p>
+            )}
+            {line.quote && <p className="text-content-tertiary">because “{truncate(line.quote, 70)}”</p>}
+            {line.sceneId && <p className="text-content-tertiary">from {sceneName(line.sceneId) ?? 'a deleted scene'}</p>}
+          </div>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(line.id)}>
+            {ro ? 'View' : 'Edit'}
+          </Button>
           {!ro && (
-            <Button type="button" size="sm" variant="secondary" onClick={addLine}>
-              + Line
+            <Button type="button" size="sm" variant="ghost" aria-label={`Remove ${truncate(label, 30)}`} onClick={() => rewards.removeLine(characterId, line.id)}>
+              ✕
             </Button>
           )}
-          <Button type="button" size="sm" variant="ghost" onClick={onShowTable}>
-            Rewards table
-          </Button>
         </div>
-      </div>
+        {drift && !ro && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <Badge size="sm" variant="warning">
+              Differs from the list
+            </Badge>
+            <span className="text-content-secondary">{drift.name} was changed in the list after you gave it.</span>
+            <Button type="button" size="sm" variant="secondary" onClick={() => rewards.updateLine(characterId, line.id, (l) => syncLine(l, drift))}>
+              Use the list’s version
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => rewards.updateLine(characterId, line.id, (l) => keepLine(l, drift))}>
+              Keep mine
+            </Button>
+          </div>
+        )}
+      </li>
+    );
+  };
 
+  return (
+    <div className="space-y-6" data-testid="write-rewards">
       {locked && (
         <Alert variant="info" data-testid="rewards-locked">
           {carrier.state === 'applied'
@@ -94,50 +135,29 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
         </Alert>
       )}
 
+      <section className="space-y-4" aria-labelledby={`rewards-heading-${characterId}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h3 id={`rewards-heading-${characterId}`} className="text-base font-semibold text-content-primary">Rewards</h3>
+          <span className="text-sm text-content-tertiary">{rewardLines.length}</span>
+        </div>
+        <div className="flex gap-2">
+          {!ro && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => addLine('reward')} data-testid="add-reward-line">
+              + Reward
+            </Button>
+          )}
+          <Button type="button" size="sm" variant="ghost" onClick={onShowTable}>
+            Rewards table
+          </Button>
+        </div>
+      </div>
+
       <ul className="space-y-2" data-testid="reward-lines">
-        {lines.length === 0 && (
-          <li className="text-sm text-content-secondary">{ro ? 'No rewards.' : 'No rewards yet. Give one from the lists below, or add a line.'}</li>
+        {rewardLines.length === 0 && (
+          <li className="text-sm text-content-secondary">{ro ? 'No rewards.' : 'No rewards yet. Give one from the lists below, or add one.'}</li>
         )}
-        {lines.map((line) => {
-          const text = lineText(line, state.sheet.recs[line.id]);
-          const effect = lineEffect(layout, line);
-          const drift = driftedItem(line, items);
-          return (
-            <li key={line.id} className="rounded border border-theme-default p-2" data-testid={`reward-line-${line.id}`}>
-              <div className="flex items-start gap-2">
-                <GroupBadge groups={groups} group={line.group} />
-                <div className="min-w-0 flex-1 text-sm">
-                  <p className="text-content-primary">{text.trim() ? truncate(text, 110) : <span className="text-content-tertiary">(sheet only, nothing in the block)</span>}</p>
-                  {effect && <p className={line.choose ? 'text-semantic-warning' : 'text-content-tertiary'}>{effect}</p>}
-                  {line.quote && <p className="text-content-tertiary">because “{truncate(line.quote, 70)}”</p>}
-                  {line.sceneId && <p className="text-content-tertiary">from {sceneName(line.sceneId) ?? 'a deleted scene'}</p>}
-                </div>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(line.id)}>
-                  {ro ? 'View' : 'Edit'}
-                </Button>
-                {!ro && (
-                  <Button type="button" size="sm" variant="ghost" aria-label={`Remove ${truncate(text || 'this line', 30)}`} onClick={() => rewards.removeLine(characterId, line.id)}>
-                    ✕
-                  </Button>
-                )}
-              </div>
-              {drift && !ro && (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                  <Badge size="sm" variant="warning">
-                    Differs from the list
-                  </Badge>
-                  <span className="text-content-secondary">{drift.name} was changed in the list after you gave it.</span>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => rewards.updateLine(characterId, line.id, (l) => syncLine(l, drift))}>
-                    Use the list’s version
-                  </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => rewards.updateLine(characterId, line.id, (l) => keepLine(l, drift))}>
-                    Keep mine
-                  </Button>
-                </div>
-              )}
-            </li>
-          );
-        })}
+        {rewardLines.map(lineRow)}
       </ul>
 
       {!ro &&
@@ -202,10 +222,34 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
         </pre>
       </section>
 
+      </section>
+
+      <section className="space-y-3" aria-labelledby={`sheet-changes-heading-${characterId}`} data-testid="sheet-change-lines-section">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h3 id={`sheet-changes-heading-${characterId}`} className="text-base font-semibold text-content-primary">Sheet changes</h3>
+            <span className="text-sm text-content-tertiary">{sheetLines.length}</span>
+          </div>
+          {!ro && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => addLine('sheet')} data-testid="add-sheet-change">
+              + Sheet change
+            </Button>
+          )}
+        </div>
+        <ul className="space-y-2" data-testid="sheet-change-lines">
+          {sheetLines.length === 0 && (
+            <li className="text-sm text-content-secondary">
+              {ro ? 'No sheet changes.' : 'Damage taken, an item used up: changes that aren’t rewards. They change the sheet and stay out of the reward block.'}
+            </li>
+          )}
+          {sheetLines.map(lineRow)}
+        </ul>
+      </section>
+
       <section className="space-y-2" data-testid="reward-sheet">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-sm font-semibold text-content-primary">
-            Sheet changes <span className="font-normal text-content-tertiary">{state.changes ? `${state.changes} in ${state.diff.map((d) => d.tab.label).join(', ')}` : 'none'}</span>
+            On the sheet <span className="font-normal text-content-tertiary">{state.changes ? `${state.changes} in ${state.diff.map((d) => d.tab.label).join(', ')}` : 'no changes'}</span>
           </h4>
           {!ro && draftChains.length > 1 ? (
             <Select
@@ -228,7 +272,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           )}
         </div>
         {state.diff.length === 0 ? (
-          <p className="text-sm text-content-secondary">No sheet changes yet.</p>
+          <p className="text-sm text-content-secondary">Nothing changes on {name}’s sheet yet.</p>
         ) : (
           state.diff.map((d) => (
             <div key={d.tab.key} className="text-sm">

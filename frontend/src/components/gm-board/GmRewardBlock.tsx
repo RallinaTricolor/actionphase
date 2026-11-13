@@ -34,13 +34,13 @@ const STARTER = {
 const TAGS: [string, string][] = [
   ['{{lines result}}', 'Every reward line in that section'],
   ['{{if bonus}}…{{end}}', 'Shown only when the section has lines, a text box is filled in, or a sheet value isn’t 0'],
-  ['{{value Numbers/Rating}}', 'A sheet value after this phase (Tab/Entry, or Tab/Entry/Field)'],
+  ['{{value Numbers/Rating}}', 'A sheet value after this phase, sheet changes included (Tab/Entry, or Tab/Entry/Field)'],
   ['{{before Numbers/Rating}}', 'The same, before this phase'],
-  ['{{gain Numbers/Rating}}', 'How much it changed, like +2'],
+  ['{{gain Numbers/Rating}}', 'How much the rewards added, like +2'],
   ['{{max Numbers/Stress}}', 'A track’s maximum'],
   ['{{label Numbers/Rating}}', 'The name for the number, from a scale'],
   ['{{text Comment}}', 'A box you fill in per person in Write'],
-  ['{{changes Inventory}}', 'Every change this phase makes on that tab'],
+  ['{{changes Inventory}}', 'Every change the rewards make on that tab (sheet changes aren’t listed)'],
   ['{{name}}', 'The character’s name'],
 ];
 

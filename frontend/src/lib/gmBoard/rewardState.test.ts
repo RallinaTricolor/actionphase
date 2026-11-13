@@ -53,6 +53,32 @@ describe('carrierFor', () => {
   });
 });
 
+describe('rewardStateFor: sheet changes', () => {
+  const hp = (id: string, by: number, over: Partial<RewardLine> = {}): RewardLine => ({ ...rating(id, by), text: '', kind: 'sheet', ...over });
+
+  it('a sheet change changes the sheet and the drafts, and never shows as a reward in the block', () => {
+    const s = rewardStateFor(
+      inputs({
+        settings: { rewardTemplate: '{{lines result}}\nTotal {{value Numbers/Rating}} ({{gain Numbers/Rating}})\n{{changes Numbers}}', rewardGroups: [{ key: 'result', label: 'Result' }], scales: [], rewardItems: [] },
+        rewards: { lines: [rating('a', 2), hp('b', -1, { text: 'Took a hit' })], texts: {} },
+      }),
+    );
+    // The sheet and the drafts get both lines: 1 + 2 - 1.
+    expect(s.sheet.after.numbers[0].amount).toEqual({ value: 2 });
+    expect(JSON.parse(s.updates[0].field_value)[0].amount).toEqual({ value: 2 });
+    // Not a line, and not in {{gain}} or {{changes}}: those are the reward's.
+    // {{value}} states the real sheet, so the total is right: 1 + 2 - 1.
+    expect(s.block.text).toBe('Rating +2\nTotal 2 (+2)\nRating: 1 → 3');
+  });
+
+  it('a line with no kind is a sheet change when it has no text and no list item, as the old "sheet only" line was', () => {
+    const legacy = { ...rating('c', -1), text: '' };
+    const s = rewardStateFor(inputs({ rewards: { lines: [rating('a', 2), legacy], texts: {} } }));
+    expect(s.block.text).toBe('Rating +2\nTotal 2');
+    expect(s.sheet.after.numbers[0].amount).toEqual({ value: 2 });
+  });
+});
+
 describe('rewardStateFor', () => {
   it('works out the block, the diff and the drafts', () => {
     const s = rewardStateFor(inputs());

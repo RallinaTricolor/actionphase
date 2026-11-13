@@ -137,7 +137,7 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, allowBlankEn
         onClick={() => first && onChange([...ops, { act: 'inc', tab: first.key, entry: '', by: 1 }])}
         data-testid={`${idPrefix}-add-op`}
       >
-        + Sheet change
+        + Change
       </Button>
     </div>
   );

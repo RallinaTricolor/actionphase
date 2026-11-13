@@ -240,9 +240,11 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
 - **Write** (draft `action_results`, all unpublished): Shade has a two-part
   staged result (part 2 after 15 minutes) covering all her moments, one
   ticked by hand, and is marked ready. Vex has one result answering his
-  submission that names the Silk-only secret (a leak check). Rook and Silk
-  have nothing written. Everyone gets one result (staged or not), as in real
-  play, so don't seed a second for anyone. The seed deletes the phase's
+  submission that names the Silk-only secret (a leak check). Rook has an
+  empty draft linked to his submission: the board makes one when a
+  character's first reward or sheet change is given. Silk has none. Everyone
+  gets one result (staged or not), as in real play, so don't seed a second
+  for anyone. The seed deletes the phase's
   results before writing these.
 - **Rewards**: a block template (sections Job result / Bonus objectives /
   Other, a Coin scale Broke/Flush/Rich, a "Crew note" text box), an
@@ -251,8 +253,9 @@ TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
   lines, one from the vault scene; her chain's part 2 carries the sheet
   changes. Vex has a one-off and a Choose 1, plus a sheet update made by hand
   in the results list (`from_rewards = false`), so the board asks before
-  replacing it. Rook has two lines and no result yet; his Shaken copy differs
-  from the list. Silk has none. Generated sheet drafts aren't seeded: the
+  replacing it. Rook has two rewards (his Shaken copy differs from the list)
+  and a sheet change: 2 Tranquilizer Darts used, which stays out of his
+  block. Every line carries `kind` (`reward` or `sheet`). Silk has none. Generated sheet drafts aren't seeded: the
   board writes them the first time it opens the phase.
 
 The content lives in `fixtures.seed_heist_board(game_id, phase_id)`

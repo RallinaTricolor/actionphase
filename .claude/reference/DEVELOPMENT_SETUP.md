@@ -78,6 +78,10 @@ just rebuild [svc]   # rebuild image(s) after Dockerfile/dependency changes
 
 Code changes hot-reload automatically — edit a `.go` or frontend file on the
 host and the running container picks it up. No manual restart for code changes.
+Both watchers poll, because Colima's bind mount drops file-change events now
+and then: Air has `poll = true` (`backend/.air.toml`), and Vite polls when
+`VITE_USE_POLLING=true`, which `docker-compose.dev.yml` sets. Without polling,
+Vite served modules from before an edit ("doesn't provide an export named …").
 
 ### Running tests, migrations, codegen
 

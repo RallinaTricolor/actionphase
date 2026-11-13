@@ -1801,8 +1801,7 @@ components:
                     format: int32
                     type: integer
                 content:
-                    description: Result content
-                    minLength: 1
+                    description: Result content. May be empty for a draft (is_published false).
                     type: string
                 is_published:
                     type: boolean
@@ -1812,7 +1811,6 @@ components:
                     type: integer
             required:
                 - user_id
-                - content
             type: object
         CreateBanInputBody:
             additionalProperties: false

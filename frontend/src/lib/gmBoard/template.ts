@@ -3,13 +3,19 @@
  * from their reward lines and sheet.
  *
  * Tags:
- * - `{{lines g}}`: every line in section g, one after another.
+ * - `{{lines g}}`: every reward line in section g, one after another.
  * - `{{if x}}…{{end}}`: shown only when x is a section with lines, a filled
  *   `{{text}}` slot, or a sheet value that isn't 0. Ifs can nest.
  * - `{{value|before|gain|max|label Tab/Entry[/Field]}}`: a sheet value after
- *   this phase, before it, the change, a track's max, or a scale's name.
+ *   this phase, before it, what the rewards added, a track's max, or a
+ *   scale's name.
  * - `{{text Slot}}`: a box the GM fills in per character.
- * - `{{changes Tab}}`: every change this phase makes on that tab.
+ * - `{{changes Tab}}`: every change the rewards make on that tab.
+ *
+ * Sheet changes (damage, an item used up) are not rewards: they never show
+ * as a line, in `{{changes}}` or in `{{gain}}`. Tags that state the sheet
+ * (`{{value}}`, `{{before}}`, `{{max}}`, `{{label}}`, `{{if Tab/Entry}}`)
+ * read the real sheet, so the block never tells a player a wrong total.
  * - `{{name}}`: the character's name.
  *
  * Problems come back as sentences, for the template preview and the checks
@@ -27,9 +33,14 @@ export interface BlockContext {
   layout: readonly SheetTab[];
   /** The character's name, for {{name}}. */
   name: string;
+  /** The reward lines (sheet changes left out). */
   lines: readonly RewardLine[];
   texts: Record<string, string>;
+  /** The sheet before and after every line, sheet changes included. */
   sheet: SheetState;
+  /** The sheet with the reward lines alone applied, for {{gain}} and {{changes}}. */
+  rewardSheet?: SheetState;
+  /** What the reward lines alone change, for {{changes}}. */
   diff: readonly TabDiff[];
 }
 
@@ -119,7 +130,8 @@ export function renderBlock(ctx: BlockContext): Block {
       return String(max);
     }
     if (kind === 'gain') {
-      const d = numberOf(after, r.field) - numberOf(entryIn(ctx.sheet.before, r), r.field);
+      const gained = ctx.rewardSheet ?? ctx.sheet;
+      const d = numberOf(entryIn(gained.after, r), r.field) - numberOf(entryIn(gained.before, r), r.field);
       return `${d >= 0 ? '+' : ''}${formatNumber(d)}`;
     }
     if (kind === 'label') {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Badge, Button, Checkbox, Input, Modal, Radio, Select, Textarea } from '@/components/ui';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
-import { lineEffect } from '@/lib/gmBoard/rewards';
+import { lineEffect, lineKind } from '@/lib/gmBoard/rewards';
 import type { GameBoardSettings, RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
 import type { SheetTab } from '@/types/characters';
 import { SheetOpsEditor } from './SheetOpsEditor';
@@ -16,11 +16,16 @@ interface FieldsProps {
   entryNames: (tabKey: string) => string[];
   allowBlankEntry?: boolean;
   idPrefix: string;
+  /** A sheet change: only the sheet changes, nothing for the block. */
+  sheetOnly?: boolean;
 }
 
 /** Section, text, Choose 1 and sheet changes: what a list item and a line share. */
-function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix }: FieldsProps) {
+function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false }: FieldsProps) {
   const known = groups.some((g) => g.key === value.group);
+  if (sheetOnly) {
+    return <SheetOpsEditor ops={value.ops} onChange={(ops) => onChange({ ops })} layout={layout} entryNames={entryNames} allowBlankEntry={allowBlankEntry} idPrefix={idPrefix} />;
+  }
   return (
     <div className="space-y-3">
       <Select id={`${idPrefix}-section`} label="Section" value={value.group} onChange={(e) => onChange({ group: e.target.value })} data-testid={`${idPrefix}-group`}>
@@ -95,10 +100,25 @@ export function RewardLineEditor({
   locked = false,
   lockedNote = 'This result is published, so its rewards can’t change.',
 }: LineEditorProps) {
+  const sheetOnly = !!line && lineKind(line) === 'sheet';
   return (
-    <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: reward line`} size="lg">
+    <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="lg">
       {line && (
         <div className="space-y-4" data-testid="reward-line-editor">
+          {!locked && !item && (
+            <Checkbox
+              id="line-kind-box"
+              label="In the reward block"
+              helperText={
+                sheetOnly
+                  ? 'Off: a sheet change. It changes their sheet, and nothing about it goes in the reward block.'
+                  : 'On: a reward. Its text goes in the reward block, and its sheet changes apply.'
+              }
+              checked={!sheetOnly}
+              onChange={(e) => onChange({ ...line, kind: e.target.checked ? 'reward' : 'sheet' })}
+              data-testid="line-kind"
+            />
+          )}
           {item && (
             <p className="text-sm text-content-secondary">
               Given from the {item.scope === 'game' ? 'every-phase' : 'this phase’s'} list: <strong>{item.name}</strong>. Edits here change only {characterName}’s copy.
@@ -111,8 +131,8 @@ export function RewardLineEditor({
           {locked ? (
             <div className="space-y-2" data-testid="reward-line-view">
               {lockedNote && <p className="text-sm text-content-secondary">{lockedNote}</p>}
-              <GroupBadge groups={groups} group={line.group} />
-              {line.text.trim() ? (
+              {!sheetOnly && <GroupBadge groups={groups} group={line.group} />}
+              {sheetOnly ? null : line.text.trim() ? (
                 <p className="whitespace-pre-wrap text-content-primary">{line.text}</p>
               ) : (
                 <p className="text-sm text-content-tertiary">Nothing in the block: sheet changes only.</p>
@@ -120,10 +140,10 @@ export function RewardLineEditor({
               {lineEffect(layout, line) && <p className="text-sm text-content-secondary">{lineEffect(layout, line)}</p>}
             </div>
           ) : (
-            <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" />
+            <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" sheetOnly={sheetOnly} />
           )}
           <div className="flex flex-wrap justify-between gap-2 border-t border-theme-default pt-3">
-            {!item && onAddToList && !locked ? (
+            {!item && onAddToList && !locked && !sheetOnly ? (
               <Button type="button" size="sm" variant="ghost" onClick={onAddToList}>
                 Add to this phase’s list for others
               </Button>
@@ -133,7 +153,7 @@ export function RewardLineEditor({
             <div className="flex gap-2">
               {!locked && (
                 <Button type="button" size="sm" variant="danger" onClick={onRemove}>
-                  Remove line
+                  {sheetOnly ? 'Remove sheet change' : 'Remove reward'}
                 </Button>
               )}
               <Button type="button" size="sm" variant="primary" onClick={onClose}>

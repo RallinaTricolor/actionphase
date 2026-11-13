@@ -101,12 +101,34 @@ func TestPhaseAPI_CreateActionResult(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
-	t.Run("rejects result with missing required content", func(t *testing.T) {
-		body := map[string]interface{}{
-			"user_id": player.ID,
-			// content missing
+	// The results board makes a character's draft when the GM gives their
+	// first reward, before any of it is written: sheet updates need a result
+	// to carry them.
+	t.Run("creates a draft with no content yet", func(t *testing.T) {
+		for _, content := range []any{nil, "", "   "} {
+			body := map[string]interface{}{"user_id": player.ID}
+			if content != nil {
+				body["content"] = content
+			}
+			bodyJSON, _ := json.Marshal(body)
+
+			req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/results", game.ID), bytes.NewBuffer(bodyJSON))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+gmToken)
+
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			require.Equal(t, http.StatusCreated, rec.Code, "content %#v: %s", content, rec.Body.String())
+			var response map[string]interface{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+			assert.Equal(t, "", response["content"])
+			assert.Equal(t, false, response["is_published"])
 		}
-		bodyJSON, _ := json.Marshal(body)
+	})
+
+	t.Run("refuses a result published as it's made with no content", func(t *testing.T) {
+		bodyJSON, _ := json.Marshal(map[string]interface{}{"user_id": player.ID, "content": "  ", "is_published": true})
 
 		req := httptest.NewRequest("POST", fmt.Sprintf("/api/v1/games/%d/results", game.ID), bytes.NewBuffer(bodyJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -115,9 +137,8 @@ func TestPhaseAPI_CreateActionResult(t *testing.T) {
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
 
-		// content is empty string — service will attempt to create with empty content
-		// The handler accepts it (validation is at service level), so we just verify it doesn't 500
-		assert.NotEqual(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), "A published result needs content")
 	})
 
 	_ = gm // used indirectly via gmToken

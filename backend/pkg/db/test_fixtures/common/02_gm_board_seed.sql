@@ -22,16 +22,20 @@
 --   Write   draft results (action_results, unpublished): Shade has a two-part
 --           staged result that covers her moments and is marked ready; Vex
 --           has one result answering his submission, which names a secret he
---           isn't allowed to know (a leak check). Rook and Silk have nothing
---           written yet. Everyone gets one result (staged or not), as in play.
+--           isn't allowed to know (a leak check). Rook has an empty draft,
+--           made when his first reward was given (the board does that), so
+--           nothing is written yet. Silk has none. Everyone gets one result
+--           (staged or not), as in play.
 --   Rewards a reward block template with sections and a Coin scale, an
 --           every-phase list and this phase's list. Shade has two lines (one
 --           from the vault scene) on her staged result, so the chain's last
 --           part carries the sheet changes. Vex has a hand-made sheet update
 --           from the results list, so the board asks before replacing it.
---           Rook has rewards but no result yet, and one copy that differs
---           from the list. Silk has none. The generated sheet drafts aren't
---           seeded: the board writes them when it opens, as it would.
+--           Rook has two rewards, one a copy that differs from the list, and
+--           a sheet change (two darts used), which stays out of his block.
+--           Silk has none. Every line has its kind (reward or sheet). The
+--           generated sheet drafts aren't seeded: the board writes them when
+--           it opens, as it would.
 --
 -- Every row is written the way the board's save path writes it (version 1,
 -- seq from gm_board_seq, updated_by the GM), and every doc has every field
@@ -173,9 +177,9 @@ BEGIN
 
     {"kind": "reward", "key": "rw-heist-ghost", "doc": {"name": "Bound the vault ghost", "group": "bonus", "text": "**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}", "ops": [{"act": "set", "tab": "skills", "entry": "Compel", "field": "rank", "value": "3"}], "choose": false, "position": 1}},
     {"kind": "reward", "key": "rw-heist-key", "doc": {"name": "Lifted the key", "group": "bonus", "text": "**Lifted the vault key** from the manager's waistcoat.", "ops": [{"act": "add", "tab": "inventory", "entry": "Vault Key", "fields": {"quantity": 1, "category": "Key", "description": "Opens the outer vault door at Goldstone Bank."}}], "choose": false, "position": 2}},
-    {"kind": "rewards", "key": "__SHADE__", "doc": {"lines": [{"id": "rl-heist-shade-messy", "itemId": "rw-heist-messy", "itemSig": "[\"result\",\"**Job result:** Messy. 1 coin, 1 stress.\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Coin\",\"tab\":\"numbers\"},{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Messy. 1 coin, 1 stress.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 1}, {"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false}, {"id": "rl-heist-shade-ghost", "itemId": "rw-heist-ghost", "itemSig": "[\"bonus\",\"**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}\",[{\"act\":\"set\",\"entry\":\"Compel\",\"field\":\"rank\",\"tab\":\"skills\",\"value\":\"3\"}],false]", "group": "bonus", "text": "**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}", "ops": [{"act": "set", "tab": "skills", "entry": "Compel", "field": "rank", "value": "3"}], "choose": false, "sceneId": "scene-heist-vault"}], "texts": {"Crew note": "You kept the ghost off our backs. Mostly."}}},
-    {"kind": "rewards", "key": "__VEX__", "doc": {"lines": [{"id": "rl-heist-vex-alchemy", "group": "other", "text": "**Acid recipe:** you can brew the lock acid again.", "ops": [{"act": "add", "tab": "skills", "entry": "Alchemy", "fields": {"rank": "1", "category": "Craft"}}], "choose": false, "quote": "I'll use my alchemical knowledge to create smoke bombs and a custom acid mixture that can dissolve the vault's lock mechanism without triggering the alarm system."}, {"id": "rl-heist-vex-gear", "itemId": "rw-heist-gear", "itemSig": "[\"other\",\"**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.\",[],true]", "group": "other", "text": "**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.", "ops": [], "choose": true}], "texts": {}}},
-    {"kind": "rewards", "key": "__ROOK__", "doc": {"lines": [{"id": "rl-heist-rook-clean", "itemId": "rw-heist-clean", "itemSig": "[\"result\",\"**Job result:** Clean. 2 coin.\",[{\"act\":\"inc\",\"by\":2,\"entry\":\"Coin\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Clean. 2 coin.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 2}], "choose": false}, {"id": "rl-heist-rook-shaken", "itemId": "rw-heist-shaken", "itemSig": "[\"other\",\"*You take 1 stress.*\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "other", "text": "*You take 1 stress.*", "ops": [{"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false, "quote": "I'll signal the team via our pre-arranged mirror flashes if I spot any patrols."}], "texts": {"Crew note": "Good eyes up top."}}}
+    {"kind": "rewards", "key": "__SHADE__", "doc": {"lines": [{"kind": "reward", "id": "rl-heist-shade-messy", "itemId": "rw-heist-messy", "itemSig": "[\"result\",\"**Job result:** Messy. 1 coin, 1 stress.\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Coin\",\"tab\":\"numbers\"},{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Messy. 1 coin, 1 stress.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 1}, {"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false}, {"kind": "reward", "id": "rl-heist-shade-ghost", "itemId": "rw-heist-ghost", "itemSig": "[\"bonus\",\"**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}\",[{\"act\":\"set\",\"entry\":\"Compel\",\"field\":\"rank\",\"tab\":\"skills\",\"value\":\"3\"}],false]", "group": "bonus", "text": "**Bound the vault ghost:** {{entry}} {{before}} -> {{after}}", "ops": [{"act": "set", "tab": "skills", "entry": "Compel", "field": "rank", "value": "3"}], "choose": false, "sceneId": "scene-heist-vault"}], "texts": {"Crew note": "You kept the ghost off our backs. Mostly."}}},
+    {"kind": "rewards", "key": "__VEX__", "doc": {"lines": [{"kind": "reward", "id": "rl-heist-vex-alchemy", "group": "other", "text": "**Acid recipe:** you can brew the lock acid again.", "ops": [{"act": "add", "tab": "skills", "entry": "Alchemy", "fields": {"rank": "1", "category": "Craft"}}], "choose": false, "quote": "I'll use my alchemical knowledge to create smoke bombs and a custom acid mixture that can dissolve the vault's lock mechanism without triggering the alarm system."}, {"kind": "reward", "id": "rl-heist-vex-gear", "itemId": "rw-heist-gear", "itemSig": "[\"other\",\"**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.\",[],true]", "group": "other", "text": "**New gear:** pick one of a grappling hook, a forged Watch badge or a set of fine picks.", "ops": [], "choose": true}], "texts": {}}},
+    {"kind": "rewards", "key": "__ROOK__", "doc": {"lines": [{"kind": "reward", "id": "rl-heist-rook-clean", "itemId": "rw-heist-clean", "itemSig": "[\"result\",\"**Job result:** Clean. 2 coin.\",[{\"act\":\"inc\",\"by\":2,\"entry\":\"Coin\",\"tab\":\"numbers\"}],false]", "group": "result", "text": "**Job result:** Clean. 2 coin.", "ops": [{"act": "inc", "tab": "numbers", "entry": "Coin", "by": 2}], "choose": false}, {"kind": "reward", "id": "rl-heist-rook-shaken", "itemId": "rw-heist-shaken", "itemSig": "[\"other\",\"*You take 1 stress.*\",[{\"act\":\"inc\",\"by\":1,\"entry\":\"Stress\",\"tab\":\"numbers\"}],false]", "group": "other", "text": "*You take 1 stress.*", "ops": [{"act": "inc", "tab": "numbers", "entry": "Stress", "by": 1}], "choose": false, "quote": "I'll signal the team via our pre-arranged mirror flashes if I spot any patrols."}, {"kind": "sheet", "id": "rl-heist-rook-darts", "group": "other", "text": "", "ops": [{"act": "inc", "tab": "inventory", "entry": "Tranquilizer Darts", "field": "quantity", "by": -2}], "choose": false, "quote": "My hunting rifle is loaded with tranquilizer darts as the first option"}], "texts": {"Crew note": "Good eyes up top."}}}
   ]$json$;
 
   -- Placeholders, longest first so __SHADE__ never eats part of another.
@@ -230,6 +234,14 @@ BEGIN
          false, NULL, NULL
   FROM characters c WHERE c.id = vex
   RETURNING id INTO head_id;
+
+  -- Rook: the empty draft the board made when his first reward was given
+  -- (rewards need a result to carry their sheet changes).
+  INSERT INTO action_results (game_id, user_id, phase_id, character_id, action_submission_id, gm_user_id, content, is_published, sent_at, released_at)
+  SELECT p_game_id, c.user_id, p_phase_id, rook,
+         (SELECT id FROM action_submissions WHERE phase_id = p_phase_id AND character_id = rook ORDER BY id LIMIT 1),
+         gm_id, '', false, NULL, NULL
+  FROM characters c WHERE c.id = rook;
 
   -- A sheet update Vex's GM made by hand in the results list (from_rewards
   -- false, as that path writes it), so the board asks before its rewards

@@ -22,6 +22,8 @@ interface WriteChecksProps {
   /** Line id → a few words of it, to name the line a check is about. */
   lineLabel?: (lineId: string) => string;
   onPutBlock?: () => void;
+  /** Makes the character's draft result, for the "no draft" check. */
+  onMakeDraft?: () => void;
 }
 
 const REWARD_BADGE: Record<RewardCheck['kind'], { label: string; variant: 'danger' | 'warning' | 'neutral' }> = {
@@ -32,6 +34,7 @@ const REWARD_BADGE: Record<RewardCheck['kind'], { label: string; variant: 'dange
   'empty-slot': { label: 'Empty', variant: 'neutral' },
   'no-result': { label: 'Rewards', variant: 'warning' },
   'block-missing': { label: 'Block', variant: 'warning' },
+  'empty-result': { label: 'Result', variant: 'warning' },
   'block-stale': { label: 'Block', variant: 'warning' },
 };
 
@@ -40,7 +43,7 @@ const REWARD_BADGE: Record<RewardCheck['kind'], { label: string; variant: 'dange
  * out-of-play and two-places flags, and the moments they read that no
  * result covers yet. Warnings, not rules.
  */
-export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onDismissFlag, rewardChecks = [], lineLabel = () => 'A line', onPutBlock }: WriteChecksProps) {
+export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onDismissFlag, rewardChecks = [], lineLabel = () => 'A line', onPutBlock, onMakeDraft }: WriteChecksProps) {
   const name = shortName(model.names.get(characterId) ?? `Character ${characterId}`);
   const who = (id: number) => shortName(model.names.get(id) ?? `Character ${id}`);
 
@@ -84,6 +87,8 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
         return `${c.slot} isn’t written yet.`;
       case 'no-result':
         return `${name} has rewards but no draft result to carry them.`;
+      case 'empty-result':
+        return `${name}’s result has no text yet.`;
       case 'block-missing':
         return `The reward block isn’t in ${name}’s result.`;
       case 'block-stale':
@@ -130,6 +135,11 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
               {(c.kind === 'block-missing' || c.kind === 'block-stale') && onPutBlock && (
                 <Button type="button" variant="ghost" size="sm" onClick={onPutBlock}>
                   Put block in result
+                </Button>
+              )}
+              {c.kind === 'no-result' && onMakeDraft && (
+                <Button type="button" variant="ghost" size="sm" onClick={onMakeDraft}>
+                  Make a draft result
                 </Button>
               )}
             </li>

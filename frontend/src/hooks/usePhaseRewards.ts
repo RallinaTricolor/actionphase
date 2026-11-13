@@ -6,13 +6,14 @@ import { useGameActionResults } from '@/hooks/useActionResults';
 import { useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { apiClient } from '@/lib/api';
+import { boardCast } from '@/lib/gmBoard/cast';
 import { chainsFor } from '@/lib/gmBoard/results';
 import { lineFromItem, sameUpdates, sheetTabsFrom, stable, type RewardSheetUpdate } from '@/lib/gmBoard/rewards';
-import { EMPTY_REWARDS, rewardStateFor, type RewardState } from '@/lib/gmBoard/rewardState';
+import { carrierFor, EMPTY_REWARDS, rewardStateFor, type RewardState } from '@/lib/gmBoard/rewardState';
 import { newItemKey } from '@/lib/gmBoard/store';
 import type { BoardDoc, CharacterRewards, RewardItem, RewardLine } from '@/lib/gmBoard/types';
 import type { CharacterData } from '@/types/characters';
-import type { DraftCharacterUpdate } from '@/types/phases';
+import type { ActionResult, ActionWithDetails, DraftCharacterUpdate } from '@/types/phases';
 import { logger } from '@/services/LoggingService';
 
 /** How long the sync waits after the last change before writing drafts. */
@@ -97,6 +98,50 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
     [settings, board, layout, names, sheets.data, phaseResults, phaseId],
   );
 
+  // ------------------------------------------------- a draft to carry lines
+
+  // The GM's list of submissions, shared with the board's cache (never asked
+  // for read-only): a character's first result links theirs.
+  const actions = useQuery<ActionWithDetails[]>({
+    queryKey: ['gameActions', gameId],
+    queryFn: () => apiClient.phases.getGameActions(gameId).then((res) => res.data),
+    enabled: !readOnly && gameId > 0,
+  });
+  const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
+  const makingDraft = useRef(new Set<number>());
+
+  /**
+   * Makes the character's draft result when they have none to carry their
+   * lines, so a reward or sheet change never waits on a result that doesn't
+   * exist (manual pass #3). Called when a line is given; the draft is empty
+   * until the GM writes it. Their first result this phase links their
+   * submission, as one started in Write does. Someone nobody plays can't get
+   * a result, so they get none.
+   */
+  const ensureDraft = useCallback(
+    (characterId: number) => {
+      if (readOnly || makingDraft.current.has(characterId)) return;
+      const chains = chainsFor(phaseResults, phaseId, characterId);
+      if (carrierFor(chains, board?.rewards[characterId]?.carrierHeadId).state !== 'no-result') return;
+      const userId = cast.find((c) => c.id === characterId)?.userId;
+      if (userId === undefined) return;
+      const submissionId = chains.length ? undefined : actions.data?.find((a) => a.phase_id === phaseId && a.character_id === characterId)?.id;
+      makingDraft.current.add(characterId);
+      apiClient.phases
+        .createActionResult(gameId, { user_id: userId, character_id: characterId, ...(submissionId ? { action_submission_id: submissionId } : {}), content: '' })
+        .then(({ data }) => {
+          // In the list at once, so another line given before the refetch
+          // lands finds this draft instead of making a second.
+          qc.setQueryData<ActionResult[]>(['actionResults', 'game', gameId], (old) => (old ? [...old, data] : old));
+          qc.invalidateQueries({ queryKey: ['actionResults', 'game', gameId] });
+          qc.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
+        })
+        .catch((error: unknown) => logger.error('Failed to make a draft result to carry rewards', { gameId, phaseId, characterId, error }))
+        .finally(() => makingDraft.current.delete(characterId));
+    },
+    [readOnly, phaseResults, phaseId, board?.rewards, cast, actions.data, gameId, qc],
+  );
+
   // ---------------------------------------------------------------- edits
 
   const updateRewards = useCallback(
@@ -108,17 +153,19 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
     (characterId: number, line: Omit<RewardLine, 'id'>): string => {
       const id = newItemKey('rl');
       updateRewards(characterId, (r) => ({ ...r, lines: [...r.lines, { ...line, id }] }));
+      ensureDraft(characterId);
       return id;
     },
-    [updateRewards],
+    [updateRewards, ensureDraft],
   );
   const giveItem = useCallback(
     (characterId: number, item: RewardItem, extra: Partial<RewardLine> = {}): string => {
       const id = newItemKey('rl');
       updateRewards(characterId, (r) => ({ ...r, lines: [...r.lines, lineFromItem(item, id, extra)] }));
+      ensureDraft(characterId);
       return id;
     },
-    [updateRewards],
+    [updateRewards, ensureDraft],
   );
   const updateLine = useCallback(
     (characterId: number, lineId: string, fn: (l: RewardLine) => RewardLine) =>
@@ -273,6 +320,7 @@ export function usePhaseRewards(gameId: number, phaseId: number, board: BoardDoc
     replaceHandMade,
     ensureSynced,
     updateRewards,
+    ensureDraft,
     addLine,
     giveItem,
     updateLine,

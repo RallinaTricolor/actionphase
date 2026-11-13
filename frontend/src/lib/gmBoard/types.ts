@@ -155,6 +155,12 @@ export interface RewardLine {
   quote?: string;
   /** The scene it was made from. */
   sceneId?: string;
+  /**
+   * A reward goes in the reward block; a sheet change (damage taken, an item
+   * used up) only changes the sheet. Lines from before this field existed
+   * have no kind: see `lineKind`.
+   */
+  kind?: 'reward' | 'sheet';
 }
 
 /** A character's rewards in one phase (the `rewards` item, keyed by character). */

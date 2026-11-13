@@ -10,7 +10,7 @@ describe('SheetOpsEditor', () => {
   it('starts a new sheet change on the Numbers tab in the default layout', async () => {
     const onChange = vi.fn();
     render(<SheetOpsEditor ops={[]} onChange={onChange} layout={layout} entryNames={() => []} idPrefix="t" />);
-    await userEvent.click(screen.getByRole('button', { name: '+ Sheet change' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Change' }));
     expect(onChange).toHaveBeenCalledWith([{ act: 'inc', tab: 'numbers', entry: '', by: 1 }]);
   });
 
@@ -19,7 +19,7 @@ describe('SheetOpsEditor', () => {
     const ops = [{ act: 'remove' as const, tab: 'inventory', entry: 'Rope' }];
     render(<SheetOpsEditor ops={ops} onChange={onChange} layout={layout} entryNames={() => ['Rope']} idPrefix="t" />);
     expect(screen.getByLabelText('Tab')).toHaveValue('inventory');
-    await userEvent.click(screen.getByRole('button', { name: '+ Sheet change' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Change' }));
     expect(onChange).toHaveBeenCalledWith([...ops, { act: 'inc', tab: 'inventory', entry: '', by: 1 }]);
   });
 });
