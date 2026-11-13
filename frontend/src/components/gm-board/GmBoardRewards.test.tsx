@@ -274,6 +274,30 @@ describe('Write: rewards', () => {
     expect(JSON.parse((syncs[0].body.updates as { field_value: string }[])[0].field_value)).toEqual([{ id: 'n1', name: 'Gold Coin', amount: { value: 1 } }]);
   });
 
+  it('asks before closing over an entry form with unsaved edits, as the sheet does', async () => {
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    await user.click(within(await screen.findByTestId('write-rewards')).getByRole('button', { name: '+ Sheet change' }));
+    const editor = await screen.findByTestId('reward-line-editor');
+    await user.selectOptions(within(editor).getByLabelText('Change'), 'edit');
+    await user.type(within(editor).getByLabelText('Entry'), 'Coin');
+    await user.click(await within(editor).findByRole('option', { name: 'Coin' }));
+    await user.click(within(editor).getByRole('button', { name: 'Edit Coin' }));
+    await user.type(within(within(editor).getByTestId('line-edit-0-form')).getByLabelText('Name *'), 's');
+
+    // Toggling the kind would remount the form and lose the edit.
+    expect(within(editor).getByTestId('line-kind')).toBeDisabled();
+    await user.click(within(editor).getByRole('button', { name: 'Done' }));
+    expect(within(editor).getByTestId('confirm-close-unsaved')).toHaveTextContent('Unsaved edits open. Close anyway?');
+    await user.click(within(editor).getByRole('button', { name: 'Keep editing' }));
+    expect(within(editor).getByLabelText('Name *')).toHaveValue('Coins');
+
+    await user.click(within(editor).getByRole('button', { name: 'Save' }));
+    await user.click(within(editor).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByTestId('reward-line-editor')).not.toBeInTheDocument());
+  });
+
   it('“In the reward block” turns a sheet change into a reward, and back', async () => {
     board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', kind: 'sheet', group: 'result', text: '', ops: partial.ops, choose: false }], texts: {} } }));
     const user = userEvent.setup();

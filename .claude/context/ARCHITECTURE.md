@@ -833,7 +833,11 @@ item means two editors only collide on the same item.
   clears one), and applying it stores the whole entry as the form would
   (`canonicalEntry`). `lineSteps` works one line out op by op for its
   editor: the entries each op can pick, and the tabs before and after
-  (`SheetChangePreview`).
+  (`SheetChangePreview`). Like the sheet, an entry form with unsaved edits
+  holds the controls that would lose them (`SheetOpsEditor`'s
+  `onDirtyChange`), and the line and list item editors ask before closing
+  (`ConfirmDiscardEdits`). The modal-to-board mapping is the plan's Parity
+  table.
 
 **Access: the audience level plus a game setting.** Writes declare
 `access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,

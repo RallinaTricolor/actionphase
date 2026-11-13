@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Badge, Button, Checkbox, Input, Modal, Radio, Select, Textarea } from '@/components/ui';
+import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { lineEffect, lineKind, lineSteps, type LineSteps, type SheetTabs } from '@/lib/gmBoard/rewards';
 import type { GameBoardSettings, RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
@@ -21,10 +22,13 @@ interface FieldsProps {
   sheetOnly?: boolean;
   /** One character's line worked out op by op; none for a list item. */
   steps?: LineSteps;
+  /** An entry form below holds unsaved edits: hiding the changes would lose them. */
+  dirty?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /** Section, text, Choose 1 and sheet changes: what a list item and a line share. */
-function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false, steps }: FieldsProps) {
+function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false, steps, dirty = false, onDirtyChange }: FieldsProps) {
   const known = groups.some((g) => g.key === value.group);
   const opsEditor = (
     <SheetOpsEditor
@@ -36,6 +40,7 @@ function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankE
       recs={steps?.recs}
       allowBlankEntry={allowBlankEntry}
       idPrefix={idPrefix}
+      onDirtyChange={onDirtyChange}
     />
   );
   if (sheetOnly) return opsEditor;
@@ -64,6 +69,7 @@ function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankE
         label="Player chooses (“Choose 1”)"
         helperText="The text goes in the block and nothing goes on the sheet. Once results are out and they pick, update their sheet yourself."
         checked={value.choose}
+        disabled={dirty}
         onChange={(e) => onChange({ choose: e.target.checked })}
         data-testid={`${idPrefix}-choose`}
       />
@@ -75,6 +81,29 @@ function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankE
       )}
     </div>
   );
+}
+
+/**
+ * Closing a reward editor with an entry form open asks first, as the sheet
+ * does (ConfirmDiscardEdits): the form's edits aren't in the line until Save.
+ */
+function useCloseGuard(onClose: () => void) {
+  const [dirty, setDirty] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const requestClose = () => (dirty ? setConfirming(true) : onClose());
+  const footer = (buttons: ReactNode) =>
+    confirming ? (
+      <ConfirmDiscardEdits
+        onDiscard={() => {
+          setConfirming(false);
+          onClose();
+        }}
+        onKeepEditing={() => setConfirming(false)}
+      />
+    ) : (
+      buttons
+    );
+  return { dirty, onDirtyChange: setDirty, requestClose, footer };
 }
 
 interface LineEditorProps {
@@ -124,8 +153,9 @@ export function RewardLineEditor({
   // out again would show it twice.
   const steps = line && sheet && !locked ? lineSteps(layout, sheet.live, sheet.lines, line) : undefined;
   const touched = line && !line.choose ? [...new Set(line.ops.map((op) => op.tab))] : [];
+  const guard = useCloseGuard(onClose);
   return (
-    <Modal isOpen={line !== null} onClose={onClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="xl">
+    <Modal isOpen={line !== null} onClose={guard.requestClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="xl">
       {line && (
         <div className="space-y-4" data-testid="reward-line-editor">
           {!locked && !item && (
@@ -138,6 +168,7 @@ export function RewardLineEditor({
                   : 'On: a reward. Its text goes in the reward block, and its sheet changes apply.'
               }
               checked={!sheetOnly}
+              disabled={guard.dirty}
               onChange={(e) => onChange({ ...line, kind: e.target.checked ? 'reward' : 'sheet' })}
               data-testid="line-kind"
             />
@@ -163,7 +194,18 @@ export function RewardLineEditor({
               {lineEffect(layout, line) && <p className="text-sm text-content-secondary">{lineEffect(layout, line)}</p>}
             </div>
           ) : (
-            <RewardFields value={line} onChange={(patch) => onChange({ ...line, ...patch })} groups={groups} layout={layout} entryNames={entryNames} idPrefix="line" sheetOnly={sheetOnly} steps={steps} />
+            <RewardFields
+              value={line}
+              onChange={(patch) => onChange({ ...line, ...patch })}
+              groups={groups}
+              layout={layout}
+              entryNames={entryNames}
+              idPrefix="line"
+              sheetOnly={sheetOnly}
+              steps={steps}
+              dirty={guard.dirty}
+              onDirtyChange={guard.onDirtyChange}
+            />
           )}
           {steps && touched.length > 0 && (
             <section className="space-y-2 border-t border-theme-default pt-3" aria-label={`On ${characterName}’s sheet`}>
@@ -180,16 +222,18 @@ export function RewardLineEditor({
             ) : (
               <span />
             )}
-            <div className="flex gap-2">
-              {!locked && (
-                <Button type="button" size="sm" variant="danger" onClick={onRemove}>
-                  {sheetOnly ? 'Remove sheet change' : 'Remove reward'}
+            {guard.footer(
+              <div className="flex gap-2">
+                {!locked && (
+                  <Button type="button" size="sm" variant="danger" onClick={onRemove}>
+                    {sheetOnly ? 'Remove sheet change' : 'Remove reward'}
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="primary" onClick={guard.requestClose}>
+                  Done
                 </Button>
-              )}
-              <Button type="button" size="sm" variant="primary" onClick={onClose}>
-                Done
-              </Button>
-            </div>
+              </div>,
+            )}
           </div>
         </div>
       )}
@@ -217,8 +261,9 @@ interface ItemEditorProps {
 /** A reward in a list: defined once, given to many. */
 export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, entryNames, onChange, onMove, onDelete, givenTo, onToggleGiven }: ItemEditorProps) {
   const [confirming, setConfirming] = useState(false);
+  const guard = useCloseGuard(onClose);
   return (
-    <Modal isOpen={item !== null} onClose={onClose} title={item?.name || 'New reward'} size="lg">
+    <Modal isOpen={item !== null} onClose={guard.requestClose} title={item?.name || 'New reward'} size="lg">
       {item && (
         <div className="space-y-4" data-testid="reward-item-editor">
           <Input id="reward-item-name" label="Name" value={item.name} onChange={(e) => onChange({ ...item, name: e.target.value })} data-testid="item-name" />
@@ -239,6 +284,8 @@ export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, en
             entryNames={entryNames}
             allowBlankEntry
             idPrefix="item"
+            dirty={guard.dirty}
+            onDirtyChange={guard.onDirtyChange}
           />
           {givenTo && onToggleGiven && (
             <div>
@@ -257,9 +304,11 @@ export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, en
             <Button type="button" size="sm" variant="danger" onClick={() => setConfirming(true)}>
               Delete from list
             </Button>
-            <Button type="button" size="sm" variant="primary" onClick={onClose}>
-              Done
-            </Button>
+            {guard.footer(
+              <Button type="button" size="sm" variant="primary" onClick={guard.requestClose}>
+                Done
+              </Button>,
+            )}
           </div>
           <ConfirmModal
             isOpen={confirming}

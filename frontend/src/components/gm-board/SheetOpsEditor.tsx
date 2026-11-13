@@ -3,6 +3,7 @@ import { Badge, Button, Combobox, Input, Select, Textarea } from '@/components/u
 import { EntryCard } from '@/components/characters/sheet-items/EntryCard';
 import { EntryForm } from '@/components/characters/sheet-items/EntryForm';
 import { LootModeForm } from '@/components/characters/sheet-items/LootModeForm';
+import { useDirtyChildren } from '@/hooks/useDirtyChildren';
 import { useLootDraw } from '@/hooks/useLootRoll';
 import { applyOps, defaultOpTab, editOpFrom, fieldChanges, findEntry, mainNumberField, numberFields, type OpRecord, type SheetTabs } from '@/lib/gmBoard/rewards';
 import type { SheetOp } from '@/lib/gmBoard/types';
@@ -27,6 +28,8 @@ interface SheetOpsEditorProps {
   allowBlankEntry?: boolean;
   /** Prefix for test ids and labels, unique on the page. */
   idPrefix: string;
+  /** Reports whether an entry form below holds edits its own Save hasn't committed. */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 type Act = SheetOp['act'];
@@ -65,9 +68,14 @@ function addFromEdit(op: AddOp, edit: EntryEdit): AddOp {
  * loot tables, so what the board stores is what the sheet editor would. A
  * rolled item is stored in the op: working the line out again never rerolls.
  */
-export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs, allowBlankEntry = false, idPrefix }: SheetOpsEditorProps) {
+export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs, allowBlankEntry = false, idPrefix, onDirtyChange }: SheetOpsEditorProps) {
   const set = (i: number, op: SheetOp) => onChange(ops.map((o, j) => (j === i ? op : o)));
   const first = defaultOpTab(layout, ops);
+  // An entry form's edits live in its own state until Save. Changing an op's
+  // tab, kind or entry resets it, and removing an op moves the forms below it
+  // onto other ops, so those wait until the form is saved or cancelled, like
+  // the sheet's own tabs (EditorLockNotice).
+  const { isAnyDirty: locked, report } = useDirtyChildren(onDirtyChange);
 
   return (
     <div className="space-y-3" data-testid={`${idPrefix}-ops`}>
@@ -84,6 +92,7 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs,
                 id={`${idPrefix}-tab-${i}`}
                 label="Tab"
                 value={op.tab}
+                disabled={locked}
                 onChange={(e) => {
                   const next = layout.find((t) => t.key === e.target.value);
                   set(i, reshape({ ...op, tab: e.target.value }, op.act, next));
@@ -96,7 +105,7 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs,
                   </option>
                 ))}
               </Select>
-              <Select id={`${idPrefix}-act-${i}`} label="Change" value={op.act} onChange={(e) => set(i, reshape(op, e.target.value as Act, tab))}>
+              <Select id={`${idPrefix}-act-${i}`} label="Change" value={op.act} disabled={locked} onChange={(e) => set(i, reshape(op, e.target.value as Act, tab))}>
                 {acts.map((a) => (
                   <option key={a.value} value={a.value}>
                     {a.label}
@@ -110,11 +119,12 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs,
                   value={op.entry}
                   names={names}
                   allowBlank={allowBlankEntry}
+                  disabled={locked}
                   onChange={(entry) => set(i, op.act === 'edit' ? { act: 'edit', tab: op.tab, entry, values: {} } : { ...op, entry })}
                   testId={`${idPrefix}-entry-${i}`}
                 />
               )}
-              <Button type="button" variant="ghost" aria-label="Remove this sheet change" onClick={() => onChange(ops.filter((_, j) => j !== i))}>
+              <Button type="button" variant="ghost" aria-label="Remove this sheet change" disabled={locked} onClick={() => onChange(ops.filter((_, j) => j !== i))}>
                 ✕
               </Button>
             </div>
@@ -155,13 +165,18 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs,
                 <FieldInput id={`${idPrefix}-value-${i}`} field={tab.fields.find((f) => f.key === op.field)} label="New value" value={op.value} onChange={(value) => set(i, { ...op, value })} />
               </div>
             )}
-            {tab && op.act === 'add' && <NewEntryOp op={op} tab={tab} onChange={(next) => set(i, next)} testId={`${idPrefix}-new-${i}`} />}
-            {tab && op.act === 'edit' && <EditEntryOp op={op} tab={tab} before={before} onChange={(next) => set(i, next)} testId={`${idPrefix}-edit-${i}`} />}
+            {tab && op.act === 'add' && <NewEntryOp op={op} tab={tab} onChange={(next) => set(i, next)} onDirtyChange={(d) => report(`op-${i}`, d)} testId={`${idPrefix}-new-${i}`} />}
+            {tab && op.act === 'edit' && <EditEntryOp op={op} tab={tab} before={before} onChange={(next) => set(i, next)} onDirtyChange={(d) => report(`op-${i}`, d)} testId={`${idPrefix}-edit-${i}`} />}
 
             {rec && <OpOutcome rec={rec} tab={tab} testId={`${idPrefix}-outcome-${i}`} />}
           </div>
         );
       })}
+      {locked && (
+        <p className="text-xs text-content-tertiary" data-testid={`${idPrefix}-lock-notice`}>
+          Save or cancel the entry form to change the rest.
+        </p>
+      )}
       <Button
         type="button"
         size="sm"
@@ -200,7 +215,7 @@ function OpOutcome({ rec, tab, testId }: { rec: OpRecord; tab: SheetTab | undefi
  * New entry: the sheet's own add form, with its loot table modes. Once filled
  * in, the entry shows as the sheet will, with Edit to change it.
  */
-function NewEntryOp({ op, tab, onChange, testId }: { op: AddOp; tab: SheetTab; onChange: (op: AddOp) => void; testId: string }) {
+function NewEntryOp({ op, tab, onChange, onDirtyChange, testId }: { op: AddOp; tab: SheetTab; onChange: (op: AddOp) => void; onDirtyChange: (dirty: boolean) => void; testId: string }) {
   const blank = !op.entry.trim() && Object.keys(op.fields ?? {}).length === 0;
   const [editing, setEditing] = useState(blank);
   const draw = useLootDraw(
@@ -230,6 +245,7 @@ function NewEntryOp({ op, tab, onChange, testId }: { op: AddOp; tab: SheetTab; o
             }}
             onAddRandom={(tableId) => void draw.roll(tableId, tab.key)}
             onCancel={() => setEditing(false)}
+            onDirtyChange={onDirtyChange}
           />
         ) : (
           <EntryForm
@@ -242,6 +258,7 @@ function NewEntryOp({ op, tab, onChange, testId }: { op: AddOp; tab: SheetTab; o
             onCancel={() => setEditing(false)}
             submitLabel="Save"
             variant="inline"
+            onDirtyChange={onDirtyChange}
           />
         )}
       </div>
@@ -265,7 +282,7 @@ function NewEntryOp({ op, tab, onChange, testId }: { op: AddOp; tab: SheetTab; o
  * Edit entry: the sheet's own edit form, opened on the entry as it stands at
  * this point in the phase. Only the fields the GM changes are kept.
  */
-function EditEntryOp({ op, tab, before, onChange, testId }: { op: EditOp; tab: SheetTab; before: SheetTabs | undefined; onChange: (op: EditOp) => void; testId: string }) {
+function EditEntryOp({ op, tab, before, onChange, onDirtyChange, testId }: { op: EditOp; tab: SheetTab; before: SheetTabs | undefined; onChange: (op: EditOp) => void; onDirtyChange: (dirty: boolean) => void; testId: string }) {
   const [editing, setEditing] = useState(false);
   const list = before?.[tab.key] ?? [];
   const entry = findEntry(list, op.entry);
@@ -289,6 +306,7 @@ function EditEntryOp({ op, tab, before, onChange, testId }: { op: EditOp; tab: S
           onCancel={() => setEditing(false)}
           submitLabel="Save"
           variant="inline"
+          onDirtyChange={onDirtyChange}
         />
       </div>
     );
@@ -319,7 +337,7 @@ const entryList = (names: string[]) => names.map((name) => ({ id: name, name }))
  * The entry an op names: the tab's entries to pick from, or a typed name. A
  * typed name that matches an entry but for capitals takes the entry's.
  */
-function EntryPicker({ value, names, allowBlank, onChange, testId }: { value: string; names: string[]; allowBlank: boolean; onChange: (name: string) => void; testId: string }) {
+function EntryPicker({ value, names, allowBlank, disabled, onChange, testId }: { value: string; names: string[]; allowBlank: boolean; disabled: boolean; onChange: (name: string) => void; testId: string }) {
   const existing = findEntry(entryList(names), value)?.name;
   const options = [
     ...(allowBlank ? [{ value: '', label: 'Pick per person' }] : []),
@@ -335,6 +353,7 @@ function EntryPicker({ value, names, allowBlank, onChange, testId }: { value: st
       onCreate={(text) => onChange(findEntry(entryList(names), text)?.name ?? text)}
       createLabel={(text) => `Use “${text}”`}
       placeholder="Entry name"
+      disabled={disabled}
       data-testid={testId}
     />
   );

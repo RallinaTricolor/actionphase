@@ -109,6 +109,23 @@ describe('SheetOpsEditor', () => {
     expect(screen.getByTestId('t-edit-1')).toHaveTextContent('Category: Tools → Climbing');
   });
 
+  it('holds the changes’ tabs, kinds, entries and removal while an entry form has unsaved edits', async () => {
+    const user = userEvent.setup();
+    render(<Harness sheet={live()} initial={[{ act: 'remove', tab: 'inventory', entry: 'Lantern' }, { act: 'edit', tab: 'inventory', entry: 'Rope', values: {} }]} />);
+    await user.click(screen.getByRole('button', { name: 'Edit Rope' }));
+    // Opening the form isn't an edit yet.
+    expect(screen.queryByTestId('t-lock-notice')).not.toBeInTheDocument();
+    await user.type(within(screen.getByTestId('t-edit-1-form')).getByLabelText('Category'), 'X');
+
+    expect(screen.getByTestId('t-lock-notice')).toHaveTextContent('Save or cancel the entry form to change the rest.');
+    for (const label of ['Tab', 'Change']) screen.getAllByLabelText(label).forEach((el) => expect(el).toBeDisabled());
+    screen.getAllByRole('button', { name: 'Remove this sheet change' }).forEach((el) => expect(el).toBeDisabled());
+
+    await user.click(within(screen.getByTestId('t-edit-1-form')).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByTestId('t-lock-notice')).not.toBeInTheDocument();
+    screen.getAllByRole('button', { name: 'Remove this sheet change' }).forEach((el) => expect(el).toBeEnabled());
+  });
+
   it('makes a new entry in the sheet’s own add form, then shows it as the sheet will', async () => {
     const user = userEvent.setup();
     const onOps = vi.fn();
