@@ -2,24 +2,26 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { Alert, Badge, Button, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Modal, Spinner } from '@/components/ui';
+import { useToast } from '@/contexts/ToastContext';
 import { useGameContext } from '@/contexts/GameContext';
 import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
 import { useGmBoard, useGmBoardStore, useGmSettings, useGmSettingsStore, type GmSaveStatus } from '@/hooks/useGmBoard';
 import { usePhaseRewards } from '@/hooks/usePhaseRewards';
 import { apiClient } from '@/lib/api';
 import { boardCast } from '@/lib/gmBoard/cast';
+import { codexDoc } from '@/lib/gmBoard/codex';
 import { NOTES_KEY } from '@/lib/gmBoard/store';
 import { boardSetupPath, parseBoardStep, resultsAreaPath } from '@/lib/gmBoard/steps';
 import type { GamePhase } from '@/types/phases';
 import { BoardRewardsContext } from './boardRewards';
 import { BoardStepTabs } from './BoardStepTabs';
 import { BoardToolbarSlotContext } from './boardToolbarSlot';
+import { CodexAddForm } from './CodexAddForm';
 import { GmBoardConflicts } from './GmBoardConflicts';
 import { GmBoardFirstRun } from './GmBoardFirstRun';
 import { GmBoardMap } from './GmBoardMap';
 import { GmBoardNotes } from './GmBoardNotes';
-import { BoardSidePanel, type SidePanelTab } from './BoardSidePanel';
 import { GmBoardRead } from './GmBoardRead';
 import { GmBoardScenes } from './GmBoardScenes';
 import { GmBoardWrite } from './GmBoardWrite';
@@ -47,9 +49,9 @@ const isRefused = (error: unknown) => isAxiosError(error) && error.response?.sta
 
 /**
  * The GM results board for one action phase: the Read → Map → Scenes → Write
- * steps, with the step in the URL (`?step=`). Which result part the GM last
- * picked for each character lives here, so Scenes' "Add to draft" and Write
- * agree on it.
+ * steps, then the Codex and Notes tabs, with the tab in the URL (`?step=`).
+ * Which result part the GM last picked for each character lives here, so
+ * Write keeps it across tabs.
  */
 export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = false, back: backTo }: GmBoardProps) {
   const back = backTo ?? { to: resultsAreaPath(gameId), label: 'Back to the results' };
@@ -60,10 +62,9 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   const [params, setParams] = useSearchParams();
   const step = parseBoardStep(params.get('step'));
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null);
-  // The codex and the notes, docked beside the step. `codexName` prefills a new codex entry (+ Codex in Read).
-  const [panel, setPanel] = useState<{ tab: SidePanelTab; codexName: string } | null>(null);
-  const openCodex = (name = '') => setPanel({ tab: 'codex', codexName: name });
-  const togglePanel = (tab: SidePanelTab) => setPanel((p) => (p?.tab === tab ? null : { tab, codexName: '' }));
+  // + Codex on text selected in Read: a quick add in a dialog, so the GM stays on the submission.
+  const [quickCodex, setQuickCodex] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [selectedParts, setSelectedParts] = useState<Record<number, number | null>>({});
   const selectPart = useCallback((characterId: number, partId: number | null) => setSelectedParts((s) => ({ ...s, [characterId]: partId })), []);
   const { allGameCharacters } = useGameContext();
@@ -96,6 +97,15 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
     if (next === 'read') nextParams.delete('step');
     else nextParams.set('step', next);
     setParams(nextParams);
+  };
+
+  /** The Codex tab, or with a name (text selected in Read) the quick-add dialog. */
+  const openCodex = (name?: string) => {
+    if (name) setQuickCodex(name);
+    else {
+      goToStep('codex');
+      window.scrollTo?.(0, 0);
+    }
   };
 
   const readSubmission = (characterId: number) => {
@@ -175,12 +185,6 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
                   }}
                 />
               )}
-              <Button type="button" size="sm" variant={panel?.tab === 'codex' ? 'primary' : 'secondary'} aria-pressed={panel?.tab === 'codex'} onClick={() => togglePanel('codex')}>
-                Codex
-              </Button>
-              <Button type="button" size="sm" variant={panel?.tab === 'notes' ? 'primary' : 'secondary'} aria-pressed={panel?.tab === 'notes'} onClick={() => togglePanel('notes')} disabled={!board}>
-                Notes
-              </Button>
               <Button type="button" size="sm" variant="ghost" onClick={openSetup}>
                 Game setup
               </Button>
@@ -203,9 +207,6 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => openCodex()} onOpenSetup={openSetup} />
         )}
 
-
-        <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
         <BoardToolbarSlotContext.Provider value={toolbarSlot}>
         {isLoading ? (
           <div className="flex justify-center py-16">
@@ -240,29 +241,38 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
             onGoToMap={() => goToStep('map')}
             onReadSubmission={readSubmission}
           />
-        ) : (
+        ) : step === 'write' ? (
           <GmBoardWrite gameId={gameId} phase={phase} board={board} selectedParts={selectedParts} onSelectPart={selectPart} onOpenScene={openScene} />
+        ) : step === 'codex' ? (
+          <div className="mx-auto max-w-4xl" data-testid="gm-board-step-codex">
+            <GmCodexManager gameId={gameId} phases={actionPhases} players={players} phaseId={phase.id} />
+          </div>
+        ) : (
+          <GmBoardNotes
+            phaseTitle={phase.title || `Phase ${phase.phase_number}`}
+            notes={board.notes}
+            onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
+            gameNotes={settings?.notes ?? ''}
+            onGameChange={(text) => settingsStore.update('notes', NOTES_KEY, () => ({ text }))}
+            readOnly={readOnly}
+          />
         )}
         </BoardToolbarSlotContext.Provider>
-        </div>
 
-        {panel && (
-          <BoardSidePanel tab={panel.tab} onClose={() => setPanel(null)}>
-            {panel.tab === 'codex' ? (
-              <GmCodexManager key={panel.codexName} gameId={gameId} phases={actionPhases} players={players} phaseId={phase.id} initialName={panel.codexName} />
-            ) : board ? (
-              <GmBoardNotes
-                phaseTitle={phase.title || `Phase ${phase.phase_number}`}
-                notes={board.notes}
-                onChange={(text) => store.update('notes', NOTES_KEY, () => ({ text }))}
-                gameNotes={settings?.notes ?? ''}
-                onGameChange={(text) => settingsStore.update('notes', NOTES_KEY, () => ({ text }))}
-                readOnly={readOnly}
-              />
-            ) : null}
-          </BoardSidePanel>
+        {quickCodex !== null && (
+          <Modal isOpen onClose={() => setQuickCodex(null)} title="Add to the codex" size="lg">
+            <CodexAddForm
+              phases={actionPhases}
+              phaseId={phase.id}
+              initialName={quickCodex}
+              onAdd={(entry) => {
+                settingsStore.update('codex', entry.id, () => codexDoc(entry));
+                setQuickCodex(null);
+                showToast(`Added “${entry.name}” to the codex.`, 'success', { action: { label: 'Open the codex', onClick: () => openCodex() } });
+              }}
+            />
+          </Modal>
         )}
-        </div>
 
       </div>
     </BoardRewardsContext.Provider>

@@ -1,12 +1,11 @@
-import { useState, type FormEvent } from 'react';
-import { Badge, Button, Checkbox, Input, Select, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, Button, Checkbox, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
-import { CODEX_TYPES, codexDoc, codexTone, inPhase, newCodexEntry } from '@/lib/gmBoard/codex';
-import { newItemKey } from '@/lib/gmBoard/store';
-import { splitList } from '@/lib/gmBoard/text';
-import type { CodexEntry, CodexType } from '@/lib/gmBoard/types';
+import { codexDoc, codexTone, inPhase } from '@/lib/gmBoard/codex';
+import type { CodexEntry } from '@/lib/gmBoard/types';
+import { CodexAddForm } from './CodexAddForm';
 import { CodexEntryEditor, type CodexCharacter, type CodexPhase } from './CodexEntryEditor';
 
 interface GmCodexManagerProps {
@@ -29,7 +28,7 @@ interface GmCodexManagerProps {
  * The game's codex: an add form, then every entry with its type, scope and
  * other names. Edit opens the entry in place. Only GMs see the codex (and
  * viewers, when the board is shared). Used on the setup page and in the
- * board's codex drawer; both edit the same settings.
+ * board's Codex tab; both edit the same settings.
  */
 export function GmCodexManager({
   gameId,
@@ -46,11 +45,6 @@ export function GmCodexManager({
   const { showToast } = useToast();
   const [open, setOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-
-  const [type, setType] = useState<CodexType>('Location');
-  const [name, setName] = useState(initialName);
-  const [aliases, setAliases] = useState('');
-  const [thisPhaseOnly, setThisPhaseOnly] = useState(phaseId !== undefined);
 
   if (isLoading || !settings) {
     return (
@@ -69,22 +63,6 @@ export function GmCodexManager({
   const change = (id: string, fields: Partial<CodexEntry>) =>
     store.update<Omit<CodexEntry, 'id'>>('codex', id, (current) => ({ ...(current as Omit<CodexEntry, 'id'>), ...fields }));
 
-  const add = (event: FormEvent) => {
-    event.preventDefault();
-    if (!name.trim()) return;
-    const entry = newCodexEntry({
-      id: newItemKey('cx'),
-      type,
-      name: name.trim(),
-      aliases: splitList(aliases),
-      phases: thisPhaseOnly && phaseId !== undefined ? [phaseId] : [],
-    });
-    save(entry);
-    setName('');
-    setAliases('');
-    onCreated?.(entry);
-  };
-
   const remove = (entry: CodexEntry) => {
     store.remove('codex', entry.id);
     setOpen(null);
@@ -95,42 +73,15 @@ export function GmCodexManager({
   return (
     <div className="space-y-6" data-testid="gm-codex">
       {!readOnly && (
-        <form onSubmit={add} className="space-y-3 rounded-lg border border-theme-default surface-raised p-4" aria-label="Add to the codex">
-          <div className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-3">
-            <Select id="codex-new-type" label="Type" value={type} onChange={(e) => setType(e.target.value as CodexType)}>
-              {CODEX_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-            <Input id="codex-new-name" label="Name" placeholder="e.g. The Sunken Market" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <Input
-            id="codex-new-aliases"
-            label="Other names"
-            optional
-            placeholder="market, the stalls"
-            helperText="Comma separated."
-            value={aliases}
-            onChange={(e) => setAliases(e.target.value)}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {phaseId !== undefined ? (
-              <Checkbox
-                id="codex-new-this-phase"
-                label={`${phaseTitle(phaseId)} only`}
-                checked={thisPhaseOnly}
-                onChange={(e) => setThisPhaseOnly(e.target.checked)}
-              />
-            ) : (
-              <span className="text-sm text-content-secondary">Applies to every phase. Narrow it after adding.</span>
-            )}
-            <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-              Add to codex
-            </Button>
-          </div>
-        </form>
+        <CodexAddForm
+          phases={phases}
+          phaseId={phaseId}
+          initialName={initialName}
+          onAdd={(entry) => {
+            save(entry);
+            onCreated?.(entry);
+          }}
+        />
       )}
 
       {phaseId !== undefined && (hidden > 0 || showAll) && (

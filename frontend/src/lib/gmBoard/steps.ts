@@ -1,9 +1,14 @@
-/** The board's steps, in the order a GM works through a phase. */
+/**
+ * The board's tabs: its steps, in the order a GM works through a phase, then
+ * the codex and the notes, which get a whole tab each so there's room to write.
+ */
 export const BOARD_STEPS = [
   { id: 'read', label: 'Read' },
   { id: 'map', label: 'Map' },
   { id: 'scenes', label: 'Scenes' },
   { id: 'write', label: 'Write' },
+  { id: 'codex', label: 'Codex' },
+  { id: 'notes', label: 'Notes' },
 ] as const;
 
 export type BoardStep = (typeof BOARD_STEPS)[number]['id'];

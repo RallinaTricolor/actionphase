@@ -838,12 +838,13 @@ item means two editors only collide on the same item.
   `onDirtyChange`), and the line and list item editors ask before closing
   (`ConfirmDiscardEdits`). The modal-to-board mapping is the plan's Parity
   table.
-- **Side panel, not drawers** (2026-11-13): the codex and the notes open in
-  `BoardSidePanel`, docked beside the step so the GM can keep working in
-  it. Use it, not `ui/Drawer` (a modal `Dialog`), for anything read
-  alongside a step. Game setup is reached with `boardSetupPath(gameId,
-  from)`, and returns through `boardReturnPath`, which only accepts this
-  game's board URLs.
+- **Codex and Notes are tabs** (2026-11-13): after the four steps in
+  `BOARD_STEPS` (`?step=codex`, `?step=notes`), full width, because a docked
+  side panel left too little room to write. Notes use `CommentEditor`, the
+  site's markdown editor. Read's "+ Codex" on selected text opens
+  `CodexAddForm` in a `Modal`, so the GM stays on the submission. Game setup
+  is reached with `boardSetupPath(gameId, from)`, and returns through
+  `boardReturnPath`, which only accepts this game's board URLs.
 
 **Access: the audience level plus a game setting.** Writes declare
 `access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,

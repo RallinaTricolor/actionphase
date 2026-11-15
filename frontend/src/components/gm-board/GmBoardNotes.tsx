@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Button, Textarea } from '@/components/ui';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { useBoundText } from '@/hooks/useBoundText';
 
@@ -15,16 +14,19 @@ interface GmBoardNotesProps {
 }
 
 /**
- * The GM's scratch notes, in the board's side panel: the game's, which every
- * phase's board shows, and this phase's. Markdown, with a preview. Each box
- * keeps its own text while focused (see `useBoundText`).
+ * The board's Notes tab: this phase's notes and the game's (which every
+ * phase's board shows), side by side on a wide screen, in the editor the
+ * rest of the site writes markdown in. Each box keeps its own text while
+ * focused (see `useBoundText`).
  */
 export function GmBoardNotes({ phaseTitle, notes, onChange, gameNotes, onGameChange, readOnly = false }: GmBoardNotesProps) {
   return (
-    <div className="space-y-6">
-      <NotesBox id="gm-board-game-notes" label="Notes for every phase" notes={gameNotes} onChange={onGameChange} readOnly={readOnly} rows={8} />
-      <NotesBox id="gm-board-notes" label={`Notes for ${phaseTitle}`} notes={notes} onChange={onChange} readOnly={readOnly} rows={16} />
-      {!readOnly && <p className="text-sm text-content-tertiary">Markdown works here. Only you and your co-GMs can see these, unless you share the board.</p>}
+    <div className="space-y-3" data-testid="gm-board-step-notes">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <NotesBox id="gm-board-notes" label={`Notes for ${phaseTitle}`} notes={notes} onChange={onChange} readOnly={readOnly} />
+        <NotesBox id="gm-board-game-notes" label="Notes for every phase" notes={gameNotes} onChange={onGameChange} readOnly={readOnly} />
+      </div>
+      {!readOnly && <p className="text-sm text-content-tertiary">Saved as you type. Only you and your co-GMs can see these, unless you share the board.</p>}
     </div>
   );
 }
@@ -35,50 +37,37 @@ interface NotesBoxProps {
   notes: string;
   onChange: (text: string) => void;
   readOnly: boolean;
-  rows: number;
 }
 
-function NotesBox({ id, label, notes, onChange, readOnly, rows }: NotesBoxProps) {
+function NotesBox({ id, label, notes, onChange, readOnly }: NotesBoxProps) {
   const { text, setText, bind } = useBoundText(notes);
-  const [preview, setPreview] = useState(false);
 
   if (readOnly) {
     return (
-      <div data-testid={id}>
-        <h3 className="text-sm font-medium text-content-primary mb-2">{label}</h3>
+      <section data-testid={id}>
+        <h2 className="mb-2 text-base font-semibold text-content-primary">{label}</h2>
         {notes.trim() ? <MarkdownPreview content={notes} /> : <p className="text-content-tertiary">No notes.</p>}
-      </div>
+      </section>
     );
   }
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-end gap-1" role="group" aria-label={`${label}: view`}>
-        <Button type="button" size="sm" variant={preview ? 'ghost' : 'secondary'} aria-pressed={!preview} onClick={() => setPreview(false)}>
-          Write
-        </Button>
-        <Button type="button" size="sm" variant={preview ? 'secondary' : 'ghost'} aria-pressed={preview} onClick={() => setPreview(true)}>
-          Preview
-        </Button>
-      </div>
-      {preview ? (
-        <div data-testid={`${id}-preview`}>
-          <h3 className="text-sm font-medium text-content-primary mb-2">{label}</h3>
-          {text.trim() ? <MarkdownPreview content={text} /> : <p className="text-content-tertiary">Nothing to preview.</p>}
-        </div>
-      ) : (
-        <Textarea
-          id={id}
-          label={label}
-          rows={rows}
-          value={text}
-          {...bind}
-          onChange={(e) => {
-            setText(e.target.value);
-            onChange(e.target.value);
-          }}
-          data-testid={id}
-        />
-      )}
-    </div>
+    // React's focus events bubble, so the wrapper sees the editor's box gain and lose focus.
+    <section className="min-w-0" {...bind}>
+      <label htmlFor={id} className="mb-2 block text-base font-semibold text-content-primary">
+        {label}
+      </label>
+      <CommentEditor
+        id={id}
+        textareaTestId={id}
+        value={text}
+        onChange={(next) => {
+          setText(next);
+          onChange(next);
+        }}
+        rows={24}
+        maxLength={100000}
+        placeholder="Plans, reminders, what the players are up to…"
+      />
+    </section>
   );
 }

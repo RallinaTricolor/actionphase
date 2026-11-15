@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { API, performAndWaitForMutation } from '../utils/waits';
 
-export type BoardStep = 'read' | 'map' | 'scenes' | 'write';
+export type BoardStep = 'read' | 'map' | 'scenes' | 'write' | 'codex' | 'notes';
 
 /** Poll interval of an open board (hooks/useGmBoard.ts), plus a margin. */
 const POLL_MS = 15_000 + 500;

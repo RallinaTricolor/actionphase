@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+
 import userEvent from '@testing-library/user-event';
 import { GmBoardNotes } from './GmBoardNotes';
 
@@ -55,13 +56,13 @@ describe('GmBoardNotes', () => {
     expect(screen.getByText('vault').tagName).toBe('STRONG');
   });
 
-  it('previews the markdown, and goes back to writing with the text kept', async () => {
+  it('writes in the standard markdown editor, with its preview', async () => {
     render(<GmBoardNotes {...props} notes={'- check the **vault**'} />);
-    const group = screen.getByRole('group', { name: 'Notes for Day 2: view' });
-    await userEvent.click(within(group).getByRole('button', { name: 'Preview' }));
-    expect(screen.getByTestId('gm-board-notes-preview')).toHaveTextContent('check the vault');
-    expect(screen.getByText('vault').tagName).toBe('STRONG');
-    await userEvent.click(within(group).getByRole('button', { name: 'Write' }));
-    expect(screen.getByLabelText('Notes for Day 2')).toHaveValue('- check the **vault**');
+    const box = screen.getByLabelText('Notes for Day 2');
+    expect(box).toHaveValue('- check the **vault**');
+    // Two editors, one per box, each with the editor's own Write/Preview switch.
+    expect(screen.getAllByRole('button', { name: /preview/i }).length).toBeGreaterThanOrEqual(2);
+    await userEvent.click(screen.getAllByRole('button', { name: /preview/i })[0]);
+    expect(await screen.findByText('vault')).toHaveProperty('tagName', 'STRONG');
   });
 });

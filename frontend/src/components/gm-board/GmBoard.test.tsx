@@ -50,7 +50,8 @@ describe('GmBoard', () => {
     expect(guide).toHaveTextContent('How the results board works');
     expect(guide).toHaveTextContent('This phase has no locations yet');
     await userEvent.click(screen.getByRole('button', { name: 'Add locations in the codex' }));
-    expect(await screen.findByRole('complementary', { name: 'Codex' })).toBeInTheDocument();
+    expect(await screen.findByTestId('gm-board-step-codex')).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'Add to the codex' })).toBeInTheDocument();
   });
 
   it('drops the location warning once the phase has a location', async () => {
@@ -103,27 +104,23 @@ describe('GmBoard', () => {
     expect(new URLSearchParams(router.state.location.search).get('from')).toBe(`/games/${GAME_ID}/phases/${phase.id}/board?step=write`);
   });
 
-  it('docks the codex and the notes beside the step, switching between them from the header', async () => {
-    renderBoard();
+  it('gives the codex and the notes a tab each, after the steps', async () => {
+    const { router } = renderBoard();
     expect(await screen.findByTestId('gm-board-step-read')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
-    expect(await screen.findByRole('complementary', { name: 'Codex' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Codex' })).toHaveAttribute('aria-pressed', 'true');
-    // Docked, not over the board: the step is still there to work in.
-    expect(screen.getByTestId('gm-board-step-read')).toBeVisible();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
-    expect(screen.getByRole('complementary', { name: 'Notes' })).toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Codex' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
-    expect(screen.queryByTestId('board-side-panel')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('tab-codex'));
+    expect(await screen.findByTestId('gm-codex')).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?step=codex');
+
+    await userEvent.click(screen.getByTestId('tab-notes'));
+    expect(await screen.findByLabelText('Notes for Day 2')).toHaveValue('check the vault');
+    expect(router.state.location.search).toBe('?step=notes');
+    expect(screen.queryByTestId('gm-codex')).not.toBeInTheDocument();
   });
 
   it('saves the notes, based on the version it loaded', async () => {
     renderBoard();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.click(await screen.findByTestId('tab-notes'));
 
     const box = await screen.findByLabelText('Notes for Day 2');
     expect(box).toHaveValue('check the vault');
@@ -148,8 +145,7 @@ describe('GmBoard', () => {
       ),
     );
     renderBoard();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.click(await screen.findByTestId('tab-notes'));
     await userEvent.type(await screen.findByLabelText('Notes for Day 2'), '!');
 
     expect(await screen.findByText('Someone else changed what you were editing', {}, { timeout: 3000 })).toBeInTheDocument();
@@ -170,8 +166,7 @@ describe('GmBoard', () => {
       }),
     );
     renderBoard();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.click(await screen.findByTestId('tab-notes'));
 
     const box = await screen.findByLabelText('Notes for every phase');
     await waitFor(() => expect(box).toHaveValue('the heist is a front'));
@@ -195,8 +190,7 @@ describe('GmBoard', () => {
       ),
     );
     renderBoard();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Notes' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.click(await screen.findByTestId('tab-notes'));
     await userEvent.type(await screen.findByLabelText('Notes for every phase'), '!');
 
     expect(await screen.findByText('Someone else changed what you were editing', {}, { timeout: 3000 })).toBeInTheDocument();

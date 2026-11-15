@@ -263,12 +263,12 @@ describe('the results board, read-only', () => {
   it('the notes and the codex open to read', async () => {
     renderViewer('who=1');
     expect(await screen.findByTestId('gm-board-step-read')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    await userEvent.click(screen.getByTestId('tab-notes'));
     expect(await screen.findByText('Remember the bell.')).toBeInTheDocument();
     expectNoEditControls();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Codex' }));
-    const panel = await screen.findByRole('complementary', { name: 'Codex' });
+    await userEvent.click(screen.getByTestId('tab-codex'));
+    const panel = await screen.findByTestId('gm-codex');
     await userEvent.click(await within(panel).findByRole('button', { name: 'View Orrin' }));
     expectNoEditControls();
     expect(writes).toEqual([]);
