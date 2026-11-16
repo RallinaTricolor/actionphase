@@ -124,11 +124,11 @@ describe('CharacterStateTable', () => {
   it('shows each player’s state per slot, starting open', async () => {
     render(
       <CharacterStateTable
-        model={testModel({ scenes: [makeScene({ id: 's', chunkId: 'k2', participants: [1], effects: [{ characterId: 1, state: 'injured' }] })] })}
+        model={testModel({ scenes: [makeScene({ id: 's', chunkId: 'k2', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' }] })] })}
       />,
     );
     const row = screen.getByRole('rowheader', { name: 'Harrison Vale' }).closest('tr') as HTMLElement;
-    expect(within(row).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Active', 'Injured', 'Injured']);
+    expect(within(row).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Active', 'Incapacitated', 'Incapacitated']);
     expect(screen.queryByRole('rowheader', { name: 'Bo Hale' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Character state over the phase/ }));
     expect(screen.queryByRole('table')).not.toBeInTheDocument();

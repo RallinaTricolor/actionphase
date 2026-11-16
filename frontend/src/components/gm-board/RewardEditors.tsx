@@ -1,14 +1,55 @@
-import { useState, type ReactNode } from 'react';
-import { Badge, Button, Checkbox, Input, Modal, Radio, Select, Textarea } from '@/components/ui';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Badge, Button, Checkbox, Input, Label, Modal, Radio, Select } from '@/components/ui';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
+import { CommentEditor } from '@/components/messages/CommentEditor';
 import { ConfirmDiscardEdits } from '@/components/common/modals/ConfirmDiscardEdits';
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { lineEffect, lineKind, lineSteps, type LineSteps, type SheetTabs } from '@/lib/gmBoard/rewards';
+import { renderLine } from '@/lib/gmBoard/template';
 import type { GameBoardSettings, RewardItem, RewardLine, SheetOp } from '@/lib/gmBoard/types';
 import type { SheetTab } from '@/types/characters';
 import { SheetChangePreview } from './SheetChangePreview';
 import { SheetOpsEditor } from './SheetOpsEditor';
+import { useOptionalBoardRewards } from './boardRewards';
 
-const TEXT_HELP = 'Shown in the reward block. {{entry}}, {{before}} and {{after}} fill in from the first sheet change.';
+const TEXT_HELP = 'One line in the reward block. What everyone gets once, like a total, goes in the block template instead.';
+
+/** Whose sheet a reward's text is previewed on. */
+interface PreviewSheet {
+  name: string;
+  live: SheetTabs;
+  /** Their other lines this phase, which come first. */
+  lines: readonly RewardLine[];
+  scales: GameBoardSettings['scales'];
+}
+
+/** A reward's text as it will read in the block, with anything a tag couldn't find. */
+function RewardTextPreview({ line, sheet, layout, picker }: { line: RewardLine; sheet: PreviewSheet; layout: readonly SheetTab[]; picker?: ReactNode }) {
+  const block = renderLine({ line, lines: sheet.lines, live: sheet.live, layout, scales: sheet.scales, name: sheet.name });
+  return (
+    <section className="space-y-1" aria-label="How it reads" data-testid="reward-text-preview">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <h4 className="text-sm font-semibold text-content-primary">In {sheet.name}’s block</h4>
+        {picker}
+      </div>
+      <div className="rounded surface-sunken p-2" data-testid="reward-text-preview-text">
+        <MarkdownPreview content={block.text} />
+      </div>
+      {block.problems.length > 0 && (
+        <ul className="space-y-1 text-sm" data-testid="reward-text-problems">
+          {block.problems.map((p) => (
+            <li key={p} className="flex items-baseline gap-1.5">
+              <Badge size="sm" variant="warning">
+                Tag
+              </Badge>
+              <span className="text-content-primary">{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 interface FieldsProps {
   value: { group: string; text: string; choose: boolean; ops: SheetOp[] };
@@ -25,10 +66,12 @@ interface FieldsProps {
   /** An entry form below holds unsaved edits: hiding the changes would lose them. */
   dirty?: boolean;
   onDirtyChange?: (isDirty: boolean) => void;
+  /** Shows the text as it will read, on this sheet. */
+  preview?: { id: string; sheet: PreviewSheet; picker?: ReactNode };
 }
 
 /** Section, text, Choose 1 and sheet changes: what a list item and a line share. */
-function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false, steps, dirty = false, onDirtyChange }: FieldsProps) {
+function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankEntry, idPrefix, sheetOnly = false, steps, dirty = false, onDirtyChange, preview }: FieldsProps) {
   const known = groups.some((g) => g.key === value.group);
   const opsEditor = (
     <SheetOpsEditor
@@ -54,16 +97,21 @@ function RewardFields({ value, onChange, groups, layout, entryNames, allowBlankE
           </option>
         ))}
       </Select>
-      <Textarea
-        id={`${idPrefix}-text-box`}
-        label="Text"
-        helperText={TEXT_HELP}
-        rows={5}
-        value={value.text}
-        onChange={(e) => onChange({ text: e.target.value })}
-        placeholder="**Fall Guy:** Cause someone to fall into the abyss"
-        data-testid={`${idPrefix}-text`}
-      />
+      <div>
+        <Label htmlFor={`${idPrefix}-text-box`}>Text</Label>
+        <CommentEditor
+          id={`${idPrefix}-text-box`}
+          textareaTestId={`${idPrefix}-text`}
+          rows={4}
+          value={value.text}
+          onChange={(text) => onChange({ text })}
+          placeholder="**Fall Guy:** Cause someone to fall into the abyss"
+        />
+        <p className="mt-1 text-sm text-content-secondary">{TEXT_HELP}</p>
+      </div>
+      {preview && value.text.trim() && (
+        <RewardTextPreview line={{ id: preview.id, group: value.group, text: value.text, ops: value.ops, choose: value.choose }} sheet={preview.sheet} layout={layout} picker={preview.picker} />
+      )}
       <Checkbox
         id={`${idPrefix}-choose-box`}
         label="Player chooses (“Choose 1”)"
@@ -154,6 +202,11 @@ export function RewardLineEditor({
   const steps = line && sheet && !locked ? lineSteps(layout, sheet.live, sheet.lines, line) : undefined;
   const touched = line && !line.choose ? [...new Set(line.ops.map((op) => op.tab))] : [];
   const guard = useCloseGuard(onClose);
+  const scales = useOptionalBoardRewards()?.scales;
+  const previewSheet = useMemo(
+    () => (sheet && !locked ? { name: characterName, live: sheet.live, lines: sheet.lines, scales: scales ?? [] } : undefined),
+    [sheet, locked, characterName, scales],
+  );
   return (
     <Modal isOpen={line !== null} onClose={guard.requestClose} title={`${characterName}: ${sheetOnly ? 'sheet change' : 'reward'}`} size="xl">
       {line && (
@@ -205,6 +258,7 @@ export function RewardLineEditor({
               steps={steps}
               dirty={guard.dirty}
               onDirtyChange={guard.onDirtyChange}
+              preview={previewSheet && { id: line.id, sheet: previewSheet }}
             />
           )}
           {steps && touched.length > 0 && (
@@ -256,12 +310,31 @@ interface ItemEditorProps {
   /** Given-to chips for the phase in view, when there is one. */
   givenTo?: { id: number; name: string; given: boolean }[];
   onToggleGiven?: (characterId: number) => void;
+  /** Who the text can be previewed for: as if given to them alone. */
+  previewFor?: { players: { id: number; name: string }[]; live: (characterId: number) => SheetTabs; scales: GameBoardSettings['scales'] };
 }
 
 /** A reward in a list: defined once, given to many. */
-export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, entryNames, onChange, onMove, onDelete, givenTo, onToggleGiven }: ItemEditorProps) {
+export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, entryNames, onChange, onMove, onDelete, givenTo, onToggleGiven, previewFor }: ItemEditorProps) {
   const [confirming, setConfirming] = useState(false);
   const guard = useCloseGuard(onClose);
+  const [whoPicked, setWho] = useState<number | null>(null);
+  const players = previewFor?.players ?? [];
+  const who = players.find((p) => p.id === whoPicked) ?? players[0];
+  const previewSheet = useMemo(
+    () => (previewFor && who ? { name: who.name, live: previewFor.live(who.id), lines: [], scales: previewFor.scales } : undefined),
+    [previewFor, who],
+  );
+  const picker =
+    players.length > 1 && who ? (
+      <Select id="reward-item-preview-who" label="Preview for" selectSize="sm" value={String(who.id)} onChange={(e) => setWho(Number(e.target.value))} data-testid="item-preview-who">
+        {players.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </Select>
+    ) : undefined;
   return (
     <Modal isOpen={item !== null} onClose={guard.requestClose} title={item?.name || 'New reward'} size="lg">
       {item && (
@@ -286,6 +359,7 @@ export function RewardItemEditor({ item, onClose, phaseTitle, groups, layout, en
             idPrefix="item"
             dirty={guard.dirty}
             onDirtyChange={guard.onDirtyChange}
+            preview={previewSheet && { id: item.id, sheet: previewSheet, picker }}
           />
           {givenTo && onToggleGiven && (
             <div>

@@ -458,7 +458,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
                 rewardChecks={reward?.checks}
                 lineLabel={(lineId) => {
                   const line = reward?.lines.find((l) => l.id === lineId);
-                  return line ? truncate(lineText(line, reward?.sheet.recs[lineId]) || 'A sheet-only line', 50) : 'A line';
+                  return line ? truncate(lineText(line, reward?.sheet.recs[lineId], rewards?.layout) || 'A sheet-only line', 50) : 'A line';
                 }}
                 onPutBlock={readOnly ? undefined : () => void putBlock()}
                 onMakeDraft={readOnly || !rewards ? undefined : () => rewards.ensureDraft(current)}

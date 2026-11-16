@@ -44,7 +44,7 @@ const BOARD_ITEMS: GmItem[] = [
       { id: 'm1', text: 'Harrison waits by the wheel.', readers: [1, 2], ownText: { 2: 'You see Harrison by the wheel.' } },
       { id: 'm2', text: 'The miller is the informant.', readers: [], ownText: {} },
     ],
-    effects: [{ characterId: 2, state: 'injured' }],
+    effects: [{ characterId: 2, state: 'incapacitated' }],
   }),
   item('rewards', '1', { lines: [{ id: 'rl1', group: 'job', text: 'Kept watch all night', ops: [], choose: false }], texts: {} }),
   item('notes', 'notes', { text: 'Remember the bell.' }),
@@ -218,7 +218,7 @@ describe('the results board, read-only', () => {
     expect(screen.getByText('You see Harrison by the wheel.')).toBeInTheDocument();
     expect(screen.getByText('The miller is the informant.')).toBeInTheDocument();
     expect(screen.getByText('GM note: nobody reads it')).toBeInTheDocument();
-    expect(screen.getByTestId('effect-0')).toHaveTextContent('Mara: Injured');
+    expect(screen.getByTestId('effect-0')).toHaveTextContent('Mara: Incapacitated');
     expect(screen.queryByRole('button', { name: '+ Moment' })).not.toBeInTheDocument();
     expectNoEditControls();
 

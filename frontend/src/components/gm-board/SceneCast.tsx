@@ -132,7 +132,7 @@ export function SceneCast({ model, onJoin, onLeave, onEffects, onRemoveEffect }:
         ))}
         {!model.readOnly && (
           <>
-            <HelpTooltip text="Who ends up injured, captured or out of play. The Map uses it to check later cards." />
+            <HelpTooltip text="Who ends up incapacitated or dead. The Map flags any later card or scene they’re still in." />
             <Button type="button" size="sm" variant="secondary" disabled={!scene.participants.length} onClick={() => onEffects((s) => addEffect(s, s.participants[0]))}>
               + State
             </Button>

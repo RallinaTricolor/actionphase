@@ -17,7 +17,7 @@ beforeEach(() => {
       HttpResponse.json([
         makeCharacter({ id: 1, game_id: GAME_ID, name: 'Harrison Vale', user_id: 11 }),
         makeCharacter({ id: 2, game_id: GAME_ID, name: 'Mara', user_id: 12 }),
-        // An NPC a player runs gets a result; one nobody runs doesn't.
+        // NPCs never get a result, even one a player runs.
         makeCharacter({ id: 3, game_id: GAME_ID, name: 'Tom Brewer', character_type: 'npc', user_id: undefined, assigned_user_id: 13 }),
         makeCharacter({ id: 4, game_id: GAME_ID, name: 'The Watch', character_type: 'npc', user_id: undefined }),
       ]),
@@ -47,7 +47,7 @@ describe('BoardStepTabs', () => {
     await waitFor(() => expect(screen.getByTestId('tab-read')).toHaveTextContent('1/2 read'));
     expect(screen.getByTestId('tab-map')).toHaveTextContent('1 to resolve');
     expect(screen.getByTestId('tab-scenes')).toHaveTextContent(/^Scenes$/);
-    await waitFor(() => expect(screen.getByTestId('tab-write')).toHaveTextContent('1/3 ready'));
+    await waitFor(() => expect(screen.getByTestId('tab-write')).toHaveTextContent('1/2 ready'));
   });
 
   it('counts someone who only has a result this phase on Write, as the Write list does', async () => {
@@ -57,7 +57,7 @@ describe('BoardStepTabs', () => {
       ),
     );
     renderWithProviders(<BoardStepTabs gameId={GAME_ID} phaseId={PHASE_ID} board={board} step="read" onStep={() => {}} />, { gameId: GAME_ID });
-    await waitFor(() => expect(screen.getByTestId('tab-write')).toHaveTextContent('1/4 ready'));
+    await waitFor(() => expect(screen.getByTestId('tab-write')).toHaveTextContent('1/3 ready'));
   });
 
   it('shows plain tabs while the board loads, and switches step on click', async () => {

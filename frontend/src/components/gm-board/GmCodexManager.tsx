@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Button, Checkbox, Spinner } from '@/components/ui';
+import { Badge, Button, Checkbox, Select, Spinner } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
@@ -17,6 +17,8 @@ interface GmCodexManagerProps {
    * list shows that phase's entries (with a switch for the rest).
    */
   phaseId?: number;
+  /** On Game setup: the phase new locations and objectives start as (the current one). */
+  defaultPhaseId?: number;
   /** A name to start the add form with (text the GM selected in a submission). */
   initialName?: string;
   /** Called with a new entry's id, after it's added. */
@@ -35,6 +37,7 @@ export function GmCodexManager({
   phases,
   players,
   phaseId,
+  defaultPhaseId,
   initialName = '',
   onCreated,
   readOnly: readOnlyProp = false,
@@ -45,6 +48,8 @@ export function GmCodexManager({
   const { showToast } = useToast();
   const [open, setOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  // Game setup's "Show": '' everything, 'every' the every-phase entries, else a phase id.
+  const [filter, setFilter] = useState('');
 
   if (isLoading || !settings) {
     return (
@@ -56,8 +61,20 @@ export function GmCodexManager({
 
   const phaseTitle = (id: number) => phases.find((p) => p.id === id)?.title ?? `Phase ${id}`;
   const scopeLabel = (e: CodexEntry) => (e.phases.length ? e.phases.map(phaseTitle).join(', ') : 'Every phase');
-  const shown = phaseId === undefined || showAll ? settings.codex : settings.codex.filter((e) => inPhase(e, phaseId));
+  // The phase being worked on: the board's, or the one Game setup is showing.
+  const focus = phaseId ?? (filter && filter !== 'every' ? Number(filter) : undefined);
+  const shown =
+    phaseId !== undefined
+      ? showAll
+        ? settings.codex
+        : settings.codex.filter((e) => inPhase(e, phaseId))
+      : filter === 'every'
+        ? settings.codex.filter((e) => !e.phases.length)
+        : focus !== undefined
+          ? settings.codex.filter((e) => inPhase(e, focus))
+          : settings.codex;
   const hidden = settings.codex.length - shown.length;
+  const countIn = (id: number) => settings.codex.filter((e) => inPhase(e, id)).length;
 
   const save = (entry: CodexEntry) => store.update('codex', entry.id, () => codexDoc(entry));
   const change = (id: string, fields: Partial<CodexEntry>) =>
@@ -70,18 +87,51 @@ export function GmCodexManager({
     showToast(`Deleted “${entry.name}”.${hint}`, 'info', { action: { label: 'Undo', onClick: () => save(entry) } });
   };
 
+  /**
+   * Takes an entry other phases use off this phase only, so deleting isn't
+   * the only way to clear a reused place from a Map. An every-phase entry
+   * keeps every other phase.
+   */
+  const removeFromPhase = (e: CodexEntry) => {
+    if (focus === undefined || !inPhase(e, focus)) return undefined;
+    const rest = (e.phases.length ? e.phases : phases.map((p) => p.id)).filter((p) => p !== focus);
+    if (!rest.length) return undefined;
+    return {
+      label: `Remove from ${phaseTitle(focus)}`,
+      onRemove: () => {
+        change(e.id, { phases: rest });
+        setOpen(null);
+        showToast(`Removed “${e.name}” from ${phaseTitle(focus)}.`, 'info', { action: { label: 'Undo', onClick: () => change(e.id, { phases: e.phases }) } });
+      },
+    };
+  };
+
   return (
     <div className="space-y-6" data-testid="gm-codex">
       {!readOnly && (
         <CodexAddForm
           phases={phases}
-          phaseId={phaseId}
+          phaseId={focus ?? defaultPhaseId}
           initialName={initialName}
           onAdd={(entry) => {
             save(entry);
             onCreated?.(entry);
           }}
         />
+      )}
+
+      {phaseId === undefined && phases.length > 0 && settings.codex.length > 0 && (
+        <div className="w-72">
+          <Select id="codex-filter" label="Show" selectSize="sm" value={filter} onChange={(e) => setFilter(e.target.value)} data-testid="codex-filter">
+            <option value="">Everything ({settings.codex.length})</option>
+            <option value="every">Every-phase entries ({settings.codex.filter((e) => !e.phases.length).length})</option>
+            {phases.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title} ({countIn(p.id)})
+              </option>
+            ))}
+          </Select>
+        </div>
       )}
 
       {phaseId !== undefined && (hidden > 0 || showAll) && (
@@ -95,7 +145,9 @@ export function GmCodexManager({
 
       {shown.length === 0 ? (
         <p className="text-sm text-content-secondary">
-          The codex is empty. Add the places first: locations become the rows of the board’s map.
+          {settings.codex.length
+            ? 'Nothing here yet.'
+            : 'The codex is empty. Add the places first: locations become the rows of the board’s map.'}
         </p>
       ) : (
         <ul className="divide-y divide-theme-default rounded-lg border border-theme-default" aria-label="Codex entries">
@@ -137,6 +189,7 @@ export function GmCodexManager({
                     readOnly={readOnly}
                     onChange={(fields) => change(e.id, fields)}
                     onDelete={() => remove(e)}
+                    removeFromPhase={readOnly ? undefined : removeFromPhase(e)}
                   />
                 </div>
               )}

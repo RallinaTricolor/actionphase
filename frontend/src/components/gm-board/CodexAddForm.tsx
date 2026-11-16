@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Button, Checkbox, Input, Select } from '@/components/ui';
-import { CODEX_TYPES, newCodexEntry } from '@/lib/gmBoard/codex';
+import { Button, Input, Select } from '@/components/ui';
+import { CODEX_TYPES, defaultPhases, newCodexEntry } from '@/lib/gmBoard/codex';
 import { newItemKey } from '@/lib/gmBoard/store';
 import { splitList } from '@/lib/gmBoard/text';
 import type { CodexEntry, CodexType } from '@/lib/gmBoard/types';
@@ -8,7 +8,10 @@ import type { CodexPhase } from './CodexEntryEditor';
 
 interface CodexAddFormProps {
   phases: CodexPhase[];
-  /** Opened from a phase's board: the new entry can be scoped to it (and is, unless unticked). */
+  /**
+   * The phase a location or objective starts as: the board's, or on Game
+   * setup the current one. None (no action phases yet): every phase.
+   */
   phaseId?: number;
   /** A name to start with (text the GM selected in a submission). */
   initialName?: string;
@@ -17,16 +20,20 @@ interface CodexAddFormProps {
 }
 
 /**
- * The codex's add form: type, name, other names, and (on a board) whether
- * it's for this phase only. Clears itself after adding. Used by the codex
- * tab and Game setup (GmCodexManager) and by Read's "+ Codex" dialog.
+ * The codex's add form: type, name, other names, and which phase it applies
+ * to. Locations and objectives start as one phase's, the rest as every
+ * phase's (`defaultPhases`), until the GM picks. Clears itself after adding.
+ * Used by the codex tab and Game setup (GmCodexManager) and by Read's
+ * "+ Codex" dialog.
  */
 export function CodexAddForm({ phases, phaseId, initialName = '', onAdd }: CodexAddFormProps) {
   const [type, setType] = useState<CodexType>('Location');
   const [name, setName] = useState(initialName);
   const [aliases, setAliases] = useState('');
-  const [thisPhaseOnly, setThisPhaseOnly] = useState(phaseId !== undefined);
-  const phaseTitle = (id: number) => phases.find((p) => p.id === id)?.title ?? `Phase ${id}`;
+  // '' is every phase. Follows the type until the GM picks one.
+  const [picked, setPicked] = useState<string | null>(null);
+  const scope = picked ?? String(defaultPhases(type, phaseId)[0] ?? '');
+  const scopeOptions = phaseId !== undefined && !phases.some((p) => p.id === phaseId) ? [...phases, { id: phaseId, title: `Phase ${phaseId}` }] : phases;
 
   const add = (event: FormEvent) => {
     event.preventDefault();
@@ -37,7 +44,7 @@ export function CodexAddForm({ phases, phaseId, initialName = '', onAdd }: Codex
         type,
         name: name.trim(),
         aliases: splitList(aliases),
-        phases: thisPhaseOnly && phaseId !== undefined ? [phaseId] : [],
+        phases: scope ? [Number(scope)] : [],
       }),
     );
     setName('');
@@ -65,17 +72,17 @@ export function CodexAddForm({ phases, phaseId, initialName = '', onAdd }: Codex
         value={aliases}
         onChange={(e) => setAliases(e.target.value)}
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {phaseId !== undefined ? (
-          <Checkbox
-            id="codex-new-this-phase"
-            label={`${phaseTitle(phaseId)} only`}
-            checked={thisPhaseOnly}
-            onChange={(e) => setThisPhaseOnly(e.target.checked)}
-          />
-        ) : (
-          <span className="text-sm text-content-secondary">Applies to every phase. Narrow it after adding.</span>
-        )}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="w-64">
+          <Select id="codex-new-phase" label="Applies to" value={scope} onChange={(e) => setPicked(e.target.value)}>
+            <option value="">Every phase</option>
+            {scopeOptions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </Select>
+        </div>
         <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
           Add to codex
         </Button>

@@ -52,7 +52,19 @@ export default defineConfig({
           text: 'Running a Game',
           items: [
             { text: 'Phases', link: '/guide/phases' },
-            { text: 'Results Board Rewards', link: '/guide/results-board-rewards' },
+          ]
+        },
+        {
+          text: 'Results Board',
+          items: [
+            { text: 'Overview', link: '/guide/results-board' },
+            { text: 'Game Setup', link: '/guide/results-board-setup' },
+            { text: 'Read', link: '/guide/results-board-read' },
+            { text: 'Map', link: '/guide/results-board-map' },
+            { text: 'Scenes', link: '/guide/results-board-scenes' },
+            { text: 'Write', link: '/guide/results-board-write' },
+            { text: 'Codex and Notes', link: '/guide/results-board-codex-notes' },
+            { text: 'Rewards', link: '/guide/results-board-rewards' },
           ]
         }
       ],

@@ -14,23 +14,23 @@ describe('boardCast', () => {
     expect(cast.map(({ id, name, npc, reads }) => ({ id, name, npc, reads }))).toEqual([
       { id: 2, name: 'Mara', npc: false, reads: true },
       { id: 5, name: 'Harrison', npc: false, reads: true },
-      { id: 1, name: 'Old Tom', npc: true, reads: true },
+      { id: 1, name: 'Old Tom', npc: true, reads: false },
     ]);
   });
 });
 
 describe('canReadRule', () => {
-  it('lets players and NPCs assigned to a player read, not unassigned NPCs', () => {
+  it('lets players read, never NPCs, even one assigned to a player', () => {
     const cast = boardCast([
       makeCharacter({ id: 1, name: 'Mara' }),
       makeCharacter({ id: 2, name: 'Old Tom', character_type: 'npc', user_id: undefined, assigned_user_id: 100 }),
       makeCharacter({ id: 3, name: 'The Watch', character_type: 'npc', user_id: undefined }),
     ]);
     const canRead = canReadRule(cast);
-    expect([1, 2, 3, 44].map(canRead)).toEqual([true, true, false, false]);
+    expect([1, 2, 3, 44].map(canRead)).toEqual([true, false, false, false]);
   });
 
-  it('a result goes to the player, or the player an NPC is assigned to', () => {
+  it('knows who plays each character, the player an NPC is assigned to included', () => {
     const cast = boardCast([
       makeCharacter({ id: 1, name: 'Mara', user_id: 7 }),
       makeCharacter({ id: 2, name: 'Old Tom', character_type: 'npc', user_id: undefined, assigned_user_id: 100 }),

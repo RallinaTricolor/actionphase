@@ -85,16 +85,12 @@ export function presentIn(cell: CellContents | undefined): number[] {
 
 export const STATE_LABELS: Record<CharState, string> = {
   active: 'Active',
-  injured: 'Injured',
-  captured: 'Captured',
   incapacitated: 'Incapacitated',
   dead: 'Dead',
 };
 
 export const STATE_TONE: Record<CharState, 'neutral' | 'warning' | 'danger'> = {
   active: 'neutral',
-  injured: 'warning',
-  captured: 'danger',
   incapacitated: 'danger',
   dead: 'danger',
 };

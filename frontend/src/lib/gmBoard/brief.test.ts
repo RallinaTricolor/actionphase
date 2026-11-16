@@ -20,7 +20,7 @@ const board = makeBoard({
       chunkId: 'k2',
       locationId: 'dock',
       participants: [1, 2, 9],
-      effects: [{ characterId: 2, state: 'captured' }, { characterId: 1, state: 'injured', untilChunkId: 'k3' }],
+      effects: [{ characterId: 2, state: 'incapacitated' }, { characterId: 1, state: 'dead', untilChunkId: 'k3' }],
       moments: [
         makeMoment({ id: 'clash', text: 'Harrison and Mara meet the guards.', readers: [1, 2] }),
         makeMoment({ id: 'aside', text: 'Mara palms the key.', readers: [2] }),
@@ -66,9 +66,9 @@ describe('briefFor', () => {
   });
 
   it('their state changes, and their state at the end of the phase', () => {
-    expect(brief.slots[0].effects).toEqual([{ state: 'injured', untilChunkId: 'k3' }]);
+    expect(brief.slots[0].effects).toEqual([{ state: 'dead', untilChunkId: 'k3' }]);
     expect(brief.endState).toBe('active');
-    expect(briefFor(board, 2, []).endState).toBe('captured');
+    expect(briefFor(board, 2, []).endState).toBe('incapacitated');
   });
 
   it('waiting IF cards, and stances both ways without neutral ones', () => {

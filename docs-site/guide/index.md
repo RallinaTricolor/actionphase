@@ -34,3 +34,14 @@ Throughout this guide, sections with headings prefixed **GM:** describe controls
 ## Running a Game
 
 - [Phases](./phases) — Creating and managing phases through the game lifecycle
+
+## Results Board
+
+- [Overview](./results-board) — A GM workspace for turning submissions into results, with a worked example
+- [Game Setup](./results-board-setup) — The codex, character names, sharing and reward settings
+- [Read](./results-board-read) — Reading submissions and pulling out plans as cards
+- [Map](./results-board-map) — Laying out cards by place and time, and deciding outcomes
+- [Scenes](./results-board-scenes) — Writing what happens where people meet, once, for every reader
+- [Write](./results-board-write) — Writing, checking and publishing each result
+- [Codex and Notes](./results-board-codex-notes) — Reference material and your own notes
+- [Rewards](./results-board-rewards) — Reward lists, the reward block and sheet updates

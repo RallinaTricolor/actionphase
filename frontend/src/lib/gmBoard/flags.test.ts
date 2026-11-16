@@ -7,7 +7,7 @@ const kinds = (flags: BoardFlag[], kind: BoardFlag['kind']) => flags.filter((f) 
 describe('computeFlags', () => {
   it('flags a live card of someone out of play, but not in the slot they’re taken out', () => {
     const board = makeBoard({
-      scenes: [makeScene({ id: 's1', chunkId: 'k1', locationId: 'loc-pit', participants: [1], effects: [{ characterId: 1, state: 'captured' }] })],
+      scenes: [makeScene({ id: 's1', chunkId: 'k1', locationId: 'loc-pit', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' }] })],
       cards: [
         makeCard({ id: 'here', characterId: 1, chunkId: 'k1', locationId: 'loc-pit', outcome: 'happened' }),
         makeCard({ id: 'later', characterId: 1, chunkId: 'k2', locationId: 'loc-pit', outcome: 'happened' }),
@@ -16,7 +16,7 @@ describe('computeFlags', () => {
       ],
     });
     expect(kinds(computeFlags(board), 'out')).toEqual([
-      { kind: 'out', key: 'out:later', characterId: 1, chunkId: 'k2', state: 'captured', cardId: 'later' },
+      { kind: 'out', key: 'out:later', characterId: 1, chunkId: 'k2', state: 'incapacitated', cardId: 'later' },
     ]);
   });
 

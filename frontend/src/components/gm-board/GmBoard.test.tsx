@@ -49,9 +49,9 @@ describe('GmBoard', () => {
     const guide = await screen.findByTestId('gm-board-first-run');
     expect(guide).toHaveTextContent('How the results board works');
     expect(guide).toHaveTextContent('This phase has no locations yet');
-    await userEvent.click(screen.getByRole('button', { name: 'Add locations in the codex' }));
-    expect(await screen.findByTestId('gm-board-step-codex')).toBeInTheDocument();
-    expect(screen.getByRole('form', { name: 'Add to the codex' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Add locations' }));
+    expect(await screen.findByTestId('gm-board-step-map')).toBeInTheDocument();
+    expect(screen.getByTestId('phase-locations-form')).toBeInTheDocument();
   });
 
   it('drops the location warning once the phase has a location', async () => {

@@ -64,6 +64,19 @@ describe('assembleBoard', () => {
     expect(board.scenes[0].moments).toEqual([{ id: 'm1', text: 'x', readers: [], ownText: {} }]);
   });
 
+  it('reads an older scene’s Captured as Incapacitated and drops Injured', () => {
+    const effects = [
+      { characterId: 1, state: 'captured', untilChunkId: 'k3' },
+      { characterId: 2, state: 'injured' },
+      { characterId: 3, state: 'dead' },
+    ];
+    const board = assembleBoard([{ kind: 'scene', key: 's1', doc: { effects } }]);
+    expect(board.scenes[0].effects).toEqual([
+      { characterId: 1, state: 'incapacitated', untilChunkId: 'k3' },
+      { characterId: 3, state: 'dead' },
+    ]);
+  });
+
   it('starts empty', () => {
     const board = assembleBoard([]);
     expect(board.notes).toBe('');

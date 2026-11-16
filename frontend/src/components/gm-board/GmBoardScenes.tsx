@@ -11,7 +11,7 @@ import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { isCovered } from '@/lib/gmBoard/coverage';
 import { chainsFor, draftTexts } from '@/lib/gmBoard/results';
-import { codexDoc, inPhase, newCodexEntry } from '@/lib/gmBoard/codex';
+import { codexDoc, inPhase, newLocation } from '@/lib/gmBoard/codex';
 import { boardRows, NO_LOCATION, sortedChunks } from '@/lib/gmBoard/map';
 import { insertMoment, joinScene, leaveScene, newMoment, sceneReaders, scenesInOrder } from '@/lib/gmBoard/moments';
 import type { NamedCharacter } from '@/lib/gmBoard/read';
@@ -27,7 +27,6 @@ import { BoardToolbar } from './BoardToolbar';
 import { TOOLBAR_ROW } from './boardToolbarSlot';
 import { CardPanel } from './CardPanel';
 import { MomentEditor } from './MomentEditor';
-import { SceneRewards } from './SceneRewards';
 import { SceneCast } from './SceneCast';
 import { SceneHeader } from './SceneHeader';
 import { SceneReadsAs } from './SceneReadsAs';
@@ -243,7 +242,7 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, onReadSubmissio
   };
 
   const createLocation = (name: string) => {
-    const entry = newCodexEntry({ id: newItemKey('cx'), type: 'Location', name });
+    const entry = newLocation(newItemKey('cx'), name, phase.id);
     settingsStore.update('codex', entry.id, () => codexDoc(entry));
     return entry.id;
   };
@@ -424,7 +423,6 @@ export function GmBoardScenes({ gameId, phase, board, onGoToMap, onReadSubmissio
               showToast('Effect removed.', 'info', { action: { label: 'Undo', onClick: () => put(before) } });
             }}
           />
-          <SceneRewards scene={scene} board={board} names={model.names} canRead={canRead} sceneName={sceneName(scene, model.names)} />
         </div>
       </BoardToolbar>
 

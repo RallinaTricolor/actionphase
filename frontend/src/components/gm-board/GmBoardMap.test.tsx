@@ -258,3 +258,48 @@ describe('GmBoardMap', () => {
     expect(screen.getByRole('heading', { name: 'Resolving Slot 1' })).toBeInTheDocument();
   });
 });
+
+describe('GmBoardMap: adding locations', () => {
+  let settings: Map<string, GmItem>;
+  let settingsSaves: SettingsItemChange[];
+  const earlier = makeGamePhase({ id: 69, game_id: GAME_ID, phase_type: 'action', title: 'Day 1', phase_number: 1 });
+
+  beforeEach(() => {
+    settingsSaves = [];
+    settings = new Map([
+      item('codex', 'mill', { type: 'Location', name: 'the Old Mill', phases: [69] }),
+      item('codex', 'dock', { type: 'Location', name: 'dock', phases: [69] }),
+    ]);
+    server.use(
+      http.get(`/api/v1/games/${GAME_ID}/phases`, () => HttpResponse.json([earlier, { ...phase, phase_number: 2 }])),
+      http.get(SETTINGS, () => HttpResponse.json({ items: [...settings.values()], cursor: seq, share_gm_board: false })),
+      http.post(`${SETTINGS}/changes`, serveItems(settings, settingsSaves)),
+    );
+  });
+
+  const settingSaved = (match: (c: SettingsItemChange) => boolean) => waitFor(() => expect(settingsSaves.some(match)).toBe(true), { timeout: 3000 });
+
+  it('on an empty Map, adds an earlier phase’s places to this one, keeping the same entries', async () => {
+    board = new Map(SLOTS);
+    renderMap();
+    const form = await screen.findByTestId('phase-locations-form');
+    const reuse = within(form).getByTestId('phase-locations-reuse');
+    expect(within(reuse).getByLabelText('the Old Mill')).toBeChecked();
+    await userEvent.click(within(reuse).getByLabelText('dock'));
+    await userEvent.click(within(reuse).getByRole('button', { name: 'Add 1 from Day 1' }));
+    await settingSaved((c) => c.key === 'mill');
+    expect(settingsSaves.map((c) => [c.key, (c.doc as { phases: number[] }).phases])).toEqual([['mill', [69, 70]]]);
+    expect(await screen.findByTestId('map-by-location')).toHaveTextContent('the Old Mill');
+  });
+
+  it('+ Location adds a new place for this phase only', async () => {
+    settings.set('codex/here', makeGmItem({ kind: 'codex', key: 'here', doc: { type: 'Location', name: 'the Pier', phases: [70] } }));
+    renderMap();
+    await screen.findByTestId('map-by-location');
+    await userEvent.click(screen.getByRole('button', { name: '+ Location' }));
+    await userEvent.type(await screen.findByLabelText('New location'), 'Lantern Bridge');
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+    await settingSaved((c) => (c.doc as { name?: string }).name === 'Lantern Bridge');
+    expect(settingsSaves[0].doc).toMatchObject({ type: 'Location', name: 'Lantern Bridge', phases: [70] });
+  });
+});

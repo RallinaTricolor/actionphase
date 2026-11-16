@@ -33,11 +33,11 @@ describe('MapChecks', () => {
   it('opens the scene that someone out of play is in', async () => {
     const handlers = { onOpenCard: vi.fn(), onResolveAt: vi.fn(), onDismiss: vi.fn(), onRestore: vi.fn(), onCreateScene: vi.fn(), onOpenScene: vi.fn() };
     const scenes = [
-      makeScene({ id: 'fight', locationId: 'dock', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'captured' as const }] }),
+      makeScene({ id: 'fight', locationId: 'dock', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' as const }] }),
       makeScene({ id: 'later', locationId: 'mill', chunkId: 'k3', participants: [1] }),
     ];
     render(<MapChecks model={testModel({ scenes })} {...handlers} />);
-    const out = screen.getByText('Harrison Vale is captured but is in a scene in Slot 2.').closest('li') as HTMLElement;
+    const out = screen.getByText('Harrison Vale is incapacitated but is in a scene in Slot 2.').closest('li') as HTMLElement;
     await userEvent.click(within(out).getByRole('button', { name: 'Open scene' }));
     expect(handlers.onOpenScene).toHaveBeenCalledWith('later');
   });

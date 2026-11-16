@@ -47,7 +47,7 @@ test.describe('GM results board: setup', () => {
     await emptyTheGame(page);
   });
 
-  test('the first-run guide asks for a location, and the one added becomes a row on the Map', async ({ page }, testInfo) => {
+  test('the first-run guide asks for a location, and the one added on the Map becomes this phase’s row', async ({ page }, testInfo) => {
     const place = `Counting House ${runTag(testInfo)}`;
     await board.open();
 
@@ -55,14 +55,12 @@ test.describe('GM results board: setup', () => {
     await expect(guide).toBeVisible();
     await expect(guide).toContainText('This phase has no locations yet');
 
-    await guide.getByRole('button', { name: 'Add locations in the codex' }).click();
-    const codex = page.getByTestId('gm-codex');
-    await codex.getByLabel('Type').first().selectOption('Location');
-    await codex.getByRole('textbox', { name: 'Name' }).first().fill(place);
-    await performAndWaitForMutation(page, () => codex.getByRole('button', { name: 'Add to codex' }).click(), API.saveBoardSettings);
+    await guide.getByRole('button', { name: 'Add locations' }).click();
+    const form = page.getByTestId('phase-locations-form');
+    await form.getByRole('textbox', { name: 'New location' }).fill(place);
+    await performAndWaitForMutation(page, () => form.getByRole('button', { name: 'Add', exact: true }).click(), API.saveBoardSettings);
 
     // The guide stays (nothing is on the board yet) but stops asking.
-    await page.keyboard.press('Escape');
     await expect(guide).toBeVisible();
     await expect(guide).not.toContainText('This phase has no locations yet');
 
@@ -71,7 +69,7 @@ test.describe('GM results board: setup', () => {
       (i) => i.kind === 'codex' && (i.doc as { name: string }).name === place,
     );
     expect(location).toBeDefined();
-    await board.goToStep('map');
+    expect((location!.doc as { phases: number[] }).phases).toEqual([board.phaseId]);
     await board.saving(() => page.getByRole('button', { name: 'Add Pre-Scenario and Slots 1–3' }).click());
     await expect(page.getByTestId('map-by-location')).toContainText(place);
     await expect(board.cell(location!.key, 'pre')).toBeVisible();

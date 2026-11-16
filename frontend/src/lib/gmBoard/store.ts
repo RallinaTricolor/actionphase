@@ -319,6 +319,17 @@ function characterRewardsOf(item: LiveItem): CharacterRewards {
   };
 }
 
+/**
+ * A state effect as it's used now. Boards from before the states were cut to
+ * three may hold Captured (out of play, so Incapacitated) or Injured (which
+ * changed nothing, so it's dropped).
+ */
+function effectOf(e: Scene['effects'][number]): Scene['effects'] {
+  const state: string = e.state;
+  if (state === 'captured') return [{ ...e, state: 'incapacitated' }];
+  return state === 'active' || state === 'incapacitated' || state === 'dead' ? [e] : [];
+}
+
 /** A scene, with its lists defaulted, so an older or hand-made item can't break the Scenes step. */
 function sceneOf(item: LiveItem): Scene {
   const s = withId<Partial<Scene> & { id: string }>(item);
@@ -326,7 +337,7 @@ function sceneOf(item: LiveItem): Scene {
   return {
     title: '', locationId: '', chunkId: '', conflict: false, done: false, ...s,
     participants: list(s.participants),
-    effects: list(s.effects),
+    effects: list(s.effects).flatMap(effectOf),
     moments: list(s.moments).map((m) => ({ ...m, text: m.text ?? '', readers: list(m.readers), ownText: m.ownText ?? {} })),
   };
 }

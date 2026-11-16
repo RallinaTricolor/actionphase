@@ -137,13 +137,13 @@ const progressSaved = (id: number, match: (doc: Record<string, unknown>) => bool
   waitFor(() => expect(boardSaves.some((c) => c.kind === 'progress' && c.key === String(id) && !!c.doc && match(c.doc as Record<string, unknown>))).toBe(true), { timeout: 3000 });
 
 describe('GmBoardWrite', () => {
-  it('lists everyone who can get a result, including an assigned NPC, not only those who submitted', async () => {
+  it('lists every player character, not only those who submitted, and no NPCs', async () => {
     renderWrite();
     const list = await screen.findByTestId('write-player-list');
-    await waitFor(() => expect(within(list).getAllByRole('button').map((b) => b.textContent)).toHaveLength(3));
+    await waitFor(() => expect(within(list).getAllByRole('button').map((b) => b.textContent)).toHaveLength(2));
     expect(list).toHaveTextContent('Harrison');
     expect(list).toHaveTextContent('Mara');
-    expect(list).toHaveTextContent('Tom');
+    expect(list).not.toHaveTextContent('Tom');
     expect(list).not.toHaveTextContent('The Watch');
     expect(list).toHaveTextContent('not started');
   });
@@ -276,14 +276,16 @@ describe('GmBoardWrite', () => {
   });
 
   it('Ready → next marks them ready and opens the next person not ready; Reopen undoes it', async () => {
-    board.set('progress/2', makeGmItem({ kind: 'progress', key: '2', doc: { ready: true } }));
-    const { router } = renderWrite(1);
+    board.set('progress/1', makeGmItem({ kind: 'progress', key: '1', doc: { ready: true } }));
+    const { router } = renderWrite(2);
     await userEvent.click(await screen.findByRole('button', { name: 'Ready → next' }));
-    await progressSaved(1, (doc) => doc.ready === true);
-    // Mara is ready already, so Tom is next.
-    await waitFor(() => expect(router.state.location.search).toContain('who=3'));
+    await progressSaved(2, (doc) => doc.ready === true);
+    // Harrison is ready already and NPCs get no result, so nobody is next: Mara stays open.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reopen' })).toBeInTheDocument());
+    expect(router.state.location.search).toContain('who=2');
 
     await userEvent.click(within(screen.getByTestId('write-player-list')).getByRole('button', { name: /Harrison/ }));
+    await waitFor(() => expect(router.state.location.search).toContain('who=1'));
     await userEvent.click(await screen.findByRole('button', { name: 'Reopen' }));
     await progressSaved(1, (doc) => doc.ready === false);
   });

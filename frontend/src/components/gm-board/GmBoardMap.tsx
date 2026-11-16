@@ -9,14 +9,14 @@ import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useGmBoardStore, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { ARROW_MODES, isArrowMode } from '@/lib/gmBoard/arrows';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
-import { codexDoc, newCodexEntry } from '@/lib/gmBoard/codex';
+import { codexDoc, newLocation, withPhase } from '@/lib/gmBoard/codex';
 import type { BoardFlag } from '@/lib/gmBoard/flags';
 import { dropCard, insertSlot, positionAtEnd, positionBefore, renumberSlots } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS } from '@/lib/gmBoard/read';
 import { newScene, sceneDoc } from '@/lib/gmBoard/scenes';
 import { stanceKey } from '@/lib/gmBoard/stances';
 import { newItemKey } from '@/lib/gmBoard/store';
-import type { BoardDoc, Card as BoardCard, Chunk, Cluster, Stance, StanceValue } from '@/lib/gmBoard/types';
+import type { BoardDoc, Card as BoardCard, Chunk, Cluster, CodexEntry, Stance, StanceValue } from '@/lib/gmBoard/types';
 import type { GamePhase } from '@/types/phases';
 import { BoardPane } from './BoardPane';
 import { BoardToolbar } from './BoardToolbar';
@@ -28,6 +28,8 @@ import { MapByCharacter } from './MapByCharacter';
 import { MapByLocation } from './MapByLocation';
 import { MapChecks } from './MapChecks';
 import { MapResolveBar } from './MapResolveBar';
+import { PhaseLocationsForm } from './PhaseLocationsForm';
+import type { CodexPhase } from './CodexEntryEditor';
 import { buildMapModel } from './mapModel';
 import type { DragState, DropTarget, MapActions } from './mapTypes';
 import { StanceMatrix } from './StanceMatrix';
@@ -35,6 +37,8 @@ import { StanceMatrix } from './StanceMatrix';
 interface GmBoardMapProps {
   gameId: number;
   phase: GamePhase;
+  /** The game's action phases, in order: for using another phase's locations. */
+  phases: CodexPhase[];
   board: BoardDoc;
   onOpenCodex: (name?: string) => void;
   /** Opens a submission in Read. */
@@ -64,7 +68,7 @@ type Doc = Omit<BoardCard, 'id'>;
  * with checks for likely mistakes, Resolve mode, clusters and stances. The
  * view and cluster are in the URL (`?view=`, `?cluster=`).
  */
-export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission, onOpenScene }: GmBoardMapProps) {
+export function GmBoardMap({ gameId, phase, phases, board, onOpenCodex, onReadSubmission, onOpenScene }: GmBoardMapProps) {
   const [params, setParams] = useSearchParams();
   const view = parseView(params.get('view'));
   const clusterId = params.get('cluster');
@@ -78,6 +82,7 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   const [resolving, setResolving] = useState<string | null>(null);
   const [gmCards, setGmCards] = useState<Parameters<MapActions['addGmCards']>[0] | null>(null);
   const [clustersOpen, setClustersOpen] = useState(false);
+  const [placesOpen, setPlacesOpen] = useState(false);
   // The Checks column opens on demand, so the grid gets the width the rest of the time.
   const [checksOpen, setChecksOpen] = useState(false);
   const [stanceFocus, setStanceFocus] = useState<number | null>(null);
@@ -116,10 +121,29 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
   );
 
   const createLocation = (name: string) => {
-    const entry = newCodexEntry({ id: newItemKey('cx'), type: 'Location', name });
+    const entry = newLocation(newItemKey('cx'), name, phase.id);
     settingsStore.update('codex', entry.id, () => codexDoc(entry));
     return entry.id;
   };
+  const addPlace = (name: string) => {
+    createLocation(name);
+    showToast(`Added “${name}” to ${phase.title || 'this phase'}.`, 'success');
+  };
+  /** Puts other phases' locations on this phase's Map: the same entries, with this phase added. */
+  const reusePlaces = (entries: CodexEntry[]) => {
+    const setPhases = (e: CodexEntry, phases: (cur: CodexEntry) => number[]) =>
+      settingsStore.update<Omit<CodexEntry, 'id'>>('codex', e.id, (cur) => {
+        const entry = { ...e, ...(cur as Omit<CodexEntry, 'id'>), id: e.id };
+        return codexDoc({ ...entry, phases: phases(entry) });
+      });
+    entries.forEach((e) => setPhases(e, (cur) => withPhase(cur, phase.id).phases));
+    showToast(`Added ${entries.length} location${entries.length === 1 ? '' : 's'} to ${phase.title || 'this phase'}.`, 'success', {
+      action: { label: 'Undo', onClick: () => entries.forEach((e) => setPhases(e, (cur) => cur.phases.filter((p) => p !== phase.id))) },
+    });
+  };
+  const placesForm = (
+    <PhaseLocationsForm codex={settings?.codex ?? []} phases={phases} phaseId={phase.id} onCreate={addPlace} onReuse={reusePlaces} />
+  );
 
   const putChunk = (c: Chunk) => store.update('chunk', c.id, () => ({ name: c.name, position: c.position }));
   /** Renames slots, returning what puts their names back. */
@@ -242,9 +266,15 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
         <CardBody className="space-y-3">
           <p className="text-content-primary">The Map’s rows are this phase’s locations, and there are none yet.</p>
           {!readOnly && (
-            <Button type="button" variant="primary" onClick={() => onOpenCodex()}>
-              Add a location in the codex
-            </Button>
+            <>
+              {placesForm}
+              <p className="text-sm text-content-secondary">
+                Locations are codex entries, kept for this phase only.{' '}
+                <Button type="button" variant="ghost" size="sm" onClick={() => onOpenCodex()}>
+                  Open the codex
+                </Button>
+              </p>
+            </>
           )}
         </CardBody>
       </Card>
@@ -319,6 +349,9 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
           <>
             <Button type="button" size="sm" variant="secondary" onClick={() => setGmCards({})}>
               + GM cards…
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setPlacesOpen(true)}>
+              + Location
             </Button>
             <Button type="button" size="sm" variant="secondary" onClick={() => addSlot(positionAtEnd(board.chunks))}>
               + Time slot
@@ -428,6 +461,10 @@ export function GmBoardMap({ gameId, phase, board, onOpenCodex, onReadSubmission
             onCancel={() => setGmCards(null)}
           />
         )}
+      </Drawer>
+
+      <Drawer open={placesOpen} onClose={() => setPlacesOpen(false)} title={`Locations for ${phase.title || 'this phase'}`} side="right">
+        {placesForm}
       </Drawer>
 
       <Drawer open={clustersOpen} onClose={() => setClustersOpen(false)} title="Clusters" side="right">

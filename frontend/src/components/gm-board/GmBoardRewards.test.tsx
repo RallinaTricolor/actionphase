@@ -340,9 +340,31 @@ describe('Write: rewards', () => {
     await user.click(await screen.findByRole('option', { name: 'Coin' }));
     await waitFor(() => expect(within(checks).queryByText(/no Numbers entry/)).not.toBeInTheDocument());
   });
+
+  it('the line editor previews the text as it will read, in markdown, and lists tags that find nothing', async () => {
+    board.set(
+      'rewards/1',
+      makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', group: 'result', text: '**Partial:** {{gain}} coin, {{value Numbers/Coin}} now', ops: partial.ops, choose: false }], texts: {} } }),
+    );
+    const user = userEvent.setup();
+    render();
+    await openResultTab(user, 'Rewards');
+    await user.click(within(await screen.findByTestId('reward-line-l1')).getByRole('button', { name: 'Edit' }));
+    const editor = await screen.findByTestId('reward-line-editor');
+    expect(within(editor).getByTestId('reward-text-preview')).toHaveTextContent('In Harrison Vale’s block');
+    expect(within(editor).getByTestId('reward-text-preview-text')).toHaveTextContent('Partial: +2 coin, 3 now');
+    // Rendered as markdown, as the player will see it.
+    expect(within(within(editor).getByTestId('reward-text-preview-text')).getByText('Partial:').tagName).toBe('STRONG');
+    expect(within(editor).queryByTestId('reward-text-problems')).not.toBeInTheDocument();
+
+    await user.click(within(editor).getByTestId('line-text'));
+    await user.paste(' {{gain Numbers/XP}}');
+    expect(within(editor).getByTestId('reward-text-preview-text')).toHaveTextContent('3 now ?');
+    expect(within(editor).getByTestId('reward-text-problems')).toHaveTextContent('the reward doesn’t change Numbers/XP');
+  });
 });
 
-describe('rewards from Read and Scenes', () => {
+describe('rewards from Read', () => {
   it('+ Award gives a reward from the lists, keeping the passage', async () => {
     server.use(
       http.get(`/api/v1/games/${GAME_ID}/actions`, () =>
@@ -364,29 +386,5 @@ describe('rewards from Read and Scenes', () => {
     expect(dialog).toHaveTextContent('“I climb the wheel”');
     await user.click(within(dialog).getByRole('button', { name: 'Partial' }));
     await rewardsSaved(1, (d) => (d.lines as { itemId?: string; quote?: string }[]).some((l) => l.itemId === 'rw-partial' && l.quote === 'I climb the wheel'));
-  });
-
-  it('+ Add makes a reward for someone in the scene, tied to it', async () => {
-    board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: { title: 'At the mill', locationId: '', chunkId: 'k1', conflict: false, participants: [1, 2], moments: [], effects: [] } }));
-    const user = userEvent.setup();
-    render('step=scenes&scene=s1');
-    const row = await screen.findByTestId('scene-rewards');
-    await user.selectOptions(within(row).getByTestId('scene-add-reward'), 'reward:2');
-    const editor = await screen.findByTestId('reward-line-editor');
-    expect(editor).toHaveTextContent('From the scene At the mill.');
-    await user.type(within(editor).getByTestId('line-text'), 'Found the ledger');
-    await user.click(within(editor).getByRole('button', { name: 'Done' }));
-    await rewardsSaved(2, (d) => (d.lines as { sceneId?: string; text: string }[]).some((l) => l.sceneId === 's1' && l.text === 'Found the ledger'));
-    expect(await within(row).findByText(/Mara: Found the ledger/)).toBeInTheDocument();
-  });
-
-  it('+ Add makes a sheet change for someone in the scene', async () => {
-    board.set('scene/s1', makeGmItem({ kind: 'scene', key: 's1', doc: { title: 'At the mill', locationId: '', chunkId: 'k1', conflict: false, participants: [1, 2], moments: [], effects: [] } }));
-    const user = userEvent.setup();
-    render('step=scenes&scene=s1');
-    const row = await screen.findByTestId('scene-rewards');
-    await user.selectOptions(within(row).getByTestId('scene-add-reward'), 'sheet:2');
-    expect(await screen.findByRole('dialog', { name: /: sheet change$/ })).toBeInTheDocument();
-    await rewardsSaved(2, (d) => (d.lines as { sceneId?: string; kind?: string }[]).some((l) => l.sceneId === 's1' && l.kind === 'sheet'));
   });
 });

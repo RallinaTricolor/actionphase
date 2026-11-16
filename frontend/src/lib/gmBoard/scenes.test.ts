@@ -165,10 +165,10 @@ describe('effects', () => {
 
   it('adds, changes and removes effects; an empty "until" means the end of the phase', () => {
     const one = addEffect(scene, 1);
-    expect(one.effects).toEqual([{ characterId: 1, state: 'injured' }]);
-    const until = updateEffect(one, 0, { state: 'captured', untilChunkId: 'k3' });
-    expect(until.effects).toEqual([{ characterId: 1, state: 'captured', untilChunkId: 'k3' }]);
-    expect(updateEffect(until, 0, { untilChunkId: '' }).effects).toEqual([{ characterId: 1, state: 'captured' }]);
+    expect(one.effects).toEqual([{ characterId: 1, state: 'incapacitated' }]);
+    const until = updateEffect(one, 0, { state: 'dead', untilChunkId: 'k3' });
+    expect(until.effects).toEqual([{ characterId: 1, state: 'dead', untilChunkId: 'k3' }]);
+    expect(updateEffect(until, 0, { untilChunkId: '' }).effects).toEqual([{ characterId: 1, state: 'dead' }]);
     expect(removeEffect(until, 0).effects).toEqual([]);
   });
 

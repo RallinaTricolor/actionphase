@@ -76,6 +76,22 @@ describe('Game setup: reward lists', () => {
   });
 });
 
+describe('Game setup: a reward’s text', () => {
+  it('previews as it would read for a player, with tags that find nothing listed', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByTestId('new-game-reward'));
+    const editor = await screen.findByTestId('reward-item-editor');
+    expect(within(editor).queryByTestId('reward-text-preview')).not.toBeInTheDocument();
+    await user.click(within(editor).getByTestId('item-text'));
+    await user.paste('Well done {{name}}: {{value Numbers/Coin}} coin {{gain Numbers/Coin}}');
+    const preview = await within(editor).findByTestId('reward-text-preview');
+    expect(preview).toHaveTextContent('In Harrison Vale’s block');
+    expect(within(preview).getByTestId('reward-text-preview-text')).toHaveTextContent('Well done Harrison Vale: 4 coin ?');
+    expect(within(preview).getByTestId('reward-text-problems')).toHaveTextContent('the reward doesn’t change Numbers/Coin');
+  });
+});
+
 describe('Game setup: a phase’s reward list', () => {
   it('tells the GM when another editor saved the same reward first', async () => {
     server.use(
@@ -109,7 +125,7 @@ describe('Game setup: reward block', () => {
     await user.click(await screen.findByRole('button', { name: 'Start from a simple template' }));
     await settingsSaved((c) => c.kind === 'template' && String((c.doc as { text: string }).text).includes('{{lines result}}'));
     await settingsSaved((c) => c.kind === 'groups' && (c.doc as { groups: unknown[] }).groups.length === 3);
-    expect(await screen.findByTestId('reward-preview')).toHaveTextContent('# Rewards');
+    expect(within(await screen.findByTestId('reward-preview')).getByRole('heading', { name: 'Rewards' })).toBeInTheDocument();
 
     const template = screen.getByTestId('reward-template');
     await user.clear(template);

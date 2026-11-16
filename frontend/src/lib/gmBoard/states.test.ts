@@ -20,15 +20,15 @@ describe('characterStates', () => {
   });
 
   it('lasts from the scene’s slot to the end of the phase', () => {
-    const s = characterStates(board([makeScene({ id: 's1', chunkId: 'k2', effects: [{ characterId: 5, state: 'captured' }] })]));
-    expect(s[5]).toEqual(['active', 'captured', 'captured', 'captured']);
+    const s = characterStates(board([makeScene({ id: 's1', chunkId: 'k2', effects: [{ characterId: 5, state: 'incapacitated' }] })]));
+    expect(s[5]).toEqual(['active', 'incapacitated', 'incapacitated', 'incapacitated']);
   });
 
   it('stops before `until`', () => {
     const s = characterStates(
-      board([makeScene({ id: 's1', chunkId: 'k2', effects: [{ characterId: 5, state: 'injured', untilChunkId: 'k4' }] })]),
+      board([makeScene({ id: 's1', chunkId: 'k2', effects: [{ characterId: 5, state: 'dead', untilChunkId: 'k4' }] })]),
     );
-    expect(s[5]).toEqual(['active', 'injured', 'injured', 'active']);
+    expect(s[5]).toEqual(['active', 'dead', 'dead', 'active']);
   });
 
   it('ignores an `until` that isn’t after the start', () => {
@@ -42,10 +42,10 @@ describe('characterStates', () => {
     const s = characterStates(
       board([
         makeScene({ id: 's2', chunkId: 'k3', effects: [{ characterId: 5, state: 'active' }] }),
-        makeScene({ id: 's1', chunkId: 'k1', effects: [{ characterId: 5, state: 'captured' }] }),
+        makeScene({ id: 's1', chunkId: 'k1', effects: [{ characterId: 5, state: 'incapacitated' }] }),
       ]),
     );
-    expect(s[5]).toEqual(['captured', 'captured', 'active', 'active']);
+    expect(s[5]).toEqual(['incapacitated', 'incapacitated', 'active', 'active']);
   });
 
   it('treats everyone without an effect as active', () => {
@@ -65,9 +65,14 @@ describe('outEntering', () => {
     expect(outEntering(s, 5, 3)).toBe('incapacitated');
   });
 
-  it('never counts injured as out of play', () => {
-    const hurt = characterStates(board([makeScene({ id: 's1', chunkId: 'k1', effects: [{ characterId: 5, state: 'injured' }] })]));
-    expect(outEntering(hurt, 5, 2)).toBeNull();
+  it('never counts active as out of play: a later Active effect brings them back', () => {
+    const back = characterStates(
+      board([
+        makeScene({ id: 's1', chunkId: 'k1', effects: [{ characterId: 5, state: 'incapacitated' }] }),
+        makeScene({ id: 's2', chunkId: 'k2', effects: [{ characterId: 5, state: 'active' }] }),
+      ]),
+    );
+    expect(outEntering(back, 5, 2)).toBeNull();
   });
 });
 

@@ -40,6 +40,14 @@ When the game moves into a Common Room phase after an action phase, your most re
 
 ---
 
+## GM: The Results Board
+
+For a phase with a lot going on, the [results board](./results-board) is a
+workspace for reading the submissions, working out where the players' plans
+meet, and writing every result from one place. Open it with **Open results
+board** on the Actions tab. It's optional, and works on the same drafts as
+the tools below, so you can switch between them at any time.
+
 ## GM: Viewing Submissions
 
 The **Submitted Actions** list is on the **Actions** tab. It shows every player's submission for the current or selected phase. Use the phase filter to switch between past action phases.

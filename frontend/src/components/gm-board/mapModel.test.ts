@@ -8,7 +8,7 @@ describe('buildMapModel', () => {
   it('marks cards played by someone out of play, unless that check was dismissed', () => {
     const board = {
       cards: [makeCard({ id: 'late', characterId: 1, locationId: 'mill', chunkId: 'k3', outcome: 'happened' as const })],
-      scenes: [makeScene({ id: 's', locationId: 'dock', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'captured' as const }] })],
+      scenes: [makeScene({ id: 's', locationId: 'dock', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' as const }] })],
     };
     expect(testModel(board).outCards).toEqual(new Set(['late']));
     expect(testModel({ ...board, dismissedFlags: { 'out:late': true } }).outCards).toEqual(new Set());
@@ -98,7 +98,7 @@ describe('flagSentence', () => {
   });
 
   it.each([
-    [{ kind: 'out', key: 'o', characterId: 1, chunkId: 'k2', state: 'captured', cardId: 'p' }, 'Harrison Vale is captured but has a card in Slot 1: “Burns the ledger”.'],
+    [{ kind: 'out', key: 'o', characterId: 1, chunkId: 'k2', state: 'incapacitated', cardId: 'p' }, 'Harrison Vale is incapacitated but has a card in Slot 1: “Burns the ledger”.'],
     [{ kind: 'out', key: 'o', characterId: 1, chunkId: 'k2', state: 'dead', sceneId: 's' }, 'Harrison Vale is dead but is in a scene in Slot 1.'],
     [{ kind: 'two', key: 't', characterId: 3, chunkId: 'k3', locationIds: ['mill', 'dock'] }, 'Ilse is in 2 places in Slot 2: the Old Mill, dock.'],
     [{ kind: 'meeting', key: 'm', locationId: 'dock', chunkId: 'k1', characterIds: [1, 3] }, 'Harrison Vale, Ilse are at dock in Pre-Scenario, with no scene.'],

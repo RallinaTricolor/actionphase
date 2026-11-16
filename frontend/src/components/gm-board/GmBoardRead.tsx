@@ -10,7 +10,7 @@ import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
 import { useGmBoardStore, useGmSettings, useGmSettingsStore } from '@/hooks/useGmBoard';
 import { cardDoc, newCard } from '@/lib/gmBoard/cards';
 import { boardCast } from '@/lib/gmBoard/cast';
-import { codexDoc, inPhase, newCodexEntry, phaseLocations } from '@/lib/gmBoard/codex';
+import { codexDoc, inPhase, newLocation, phaseLocations } from '@/lib/gmBoard/codex';
 import { nextNotDone, setReadDone } from '@/lib/gmBoard/progress';
 import { boardRows } from '@/lib/gmBoard/map';
 import { DEFAULT_CHUNKS, guessCondition, placeNewCard, submissionLinks, type NamedCharacter } from '@/lib/gmBoard/read';
@@ -163,8 +163,8 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
       isIF,
     });
     if (!placement) {
-      showToast('Add a location to the codex first: every card needs a row on the map.', 'warning', {
-        action: { label: 'Open the codex', onClick: () => onOpenCodex() },
+      showToast('Add this phase’s locations first: every card needs a row on the Map.', 'warning', {
+        action: { label: 'Add locations', onClick: onGoToMap },
       });
       return;
     }
@@ -187,7 +187,7 @@ export function GmBoardRead({ gameId, phase, board, onOpenCodex, onGoToMap }: Gm
   };
 
   const createLocation = (name: string) => {
-    const entry = newCodexEntry({ id: newItemKey('cx'), type: 'Location', name });
+    const entry = newLocation(newItemKey('cx'), name, phase.id);
     settingsStore.update('codex', entry.id, () => codexDoc(entry));
     return entry.id;
   };

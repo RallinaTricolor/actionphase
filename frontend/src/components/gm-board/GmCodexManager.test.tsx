@@ -45,7 +45,7 @@ const mill = (overrides: Record<string, unknown> = {}) =>
   makeGmItem({ kind: 'codex', key: 'cx-mill', doc: { type: 'Location', name: 'The Old Mill', aliases: ['mill'], ...overrides } });
 
 describe('GmCodexManager', () => {
-  it('adds a location for every phase', async () => {
+  it('with no phase to start it in, adds a location for every phase', async () => {
     renderWithProviders(<GmCodexManager gameId={GAME_ID} phases={phases} players={players} />);
     expect(await screen.findByText(/The codex is empty/)).toBeInTheDocument();
 
@@ -74,11 +74,73 @@ describe('GmCodexManager', () => {
     await userEvent.click(screen.getByLabelText('Show entries for other phases (1 hidden)'));
     expect(screen.getByText('The Old Mill')).toBeInTheDocument();
 
+    // A location starts as this phase's; an item as every phase's, until the GM picks.
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Day 2');
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'Item');
-    expect(screen.getByLabelText('Day 2 only')).toBeChecked();
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Every phase');
+    await userEvent.selectOptions(screen.getByLabelText('Applies to'), 'Day 2');
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'NPC');
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'Item');
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Day 2');
     await userEvent.click(screen.getByRole('button', { name: 'Add to codex' }));
     await waitForSave();
     expect(savedChanges()[0].doc).toMatchObject({ type: 'Item', name: 'the ledger', phases: [71] });
+  });
+
+  it('on Game setup, starts a new location as the current phase’s', async () => {
+    renderWithProviders(<GmCodexManager gameId={GAME_ID} phases={phases} players={players} defaultPhaseId={71} />);
+    await userEvent.type(await screen.findByLabelText('Name'), 'The Old Mill');
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Day 2');
+    await userEvent.click(screen.getByRole('button', { name: 'Add to codex' }));
+    await waitForSave();
+    expect(savedChanges()[0].doc).toMatchObject({ type: 'Location', name: 'The Old Mill', phases: [71] });
+    // Every phase is still listed, so nothing is hidden on Game setup.
+    expect(await within(await screen.findByRole('list', { name: 'Codex entries' })).findByText(/^Day 2/)).toBeInTheDocument();
+  });
+
+  it('on a board, takes an entry other phases use off this phase only', async () => {
+    stored = [mill({ phases: [70, 71] })];
+    renderWithProviders(<GmCodexManager gameId={GAME_ID} phases={phases} players={players} phaseId={71} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit The Old Mill' }));
+    expect(screen.getByRole('button', { name: 'Delete from every phase' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove from Day 2' }));
+    await waitForSave();
+    await waitFor(() => expect(savedChanges().at(-1)?.doc).toMatchObject({ name: 'The Old Mill', phases: [70] }));
+    expect(savedChanges().some((c) => c.deleted)).toBe(false);
+  });
+
+  it('on a board, an entry for this phase alone can only be deleted', async () => {
+    stored = [mill({ phases: [71] })];
+    renderWithProviders(<GmCodexManager gameId={GAME_ID} phases={phases} players={players} phaseId={71} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit The Old Mill' }));
+    expect(screen.queryByRole('button', { name: /Remove from/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete entry' })).toBeInTheDocument();
+  });
+
+  it('on Game setup, shows one phase’s entries, adds there, and can take a shared entry off it', async () => {
+    stored = [
+      mill({ phases: [70, 71] }),
+      makeGmItem({ kind: 'codex', key: 'cx-dock', doc: { type: 'Location', name: 'The Dock', phases: [70] } }),
+      makeGmItem({ kind: 'codex', key: 'cx-hale', doc: { type: 'NPC', name: 'Captain Hale' } }),
+    ];
+    renderWithProviders(<GmCodexManager gameId={GAME_ID} phases={phases} players={players} defaultPhaseId={70} />);
+    const show = await screen.findByLabelText('Show');
+    expect([...(show as HTMLSelectElement).options].map((o) => o.text)).toEqual(['Everything (3)', 'Every-phase entries (1)', 'Day 1 (3)', 'Day 2 (2)']);
+    // With everything shown there's no phase to take an entry off.
+    await userEvent.click(screen.getByRole('button', { name: 'Edit The Old Mill' }));
+    expect(screen.queryByRole('button', { name: /Remove from/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Close The Old Mill' }));
+
+    await userEvent.selectOptions(show, 'Day 2 (2)');
+    const list = screen.getByRole('list', { name: 'Codex entries' });
+    expect(within(list).queryByText('The Dock')).not.toBeInTheDocument();
+    expect(within(list).getByText('Captain Hale')).toBeInTheDocument();
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Day 2');
+
+    await userEvent.click(within(list).getByRole('button', { name: 'Edit The Old Mill' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove from Day 2' }));
+    await waitForSave();
+    await waitFor(() => expect(savedChanges().at(-1)?.doc).toMatchObject({ name: 'The Old Mill', phases: [70] }));
   });
 
   it('edits an entry in place: secret, allowed to know, phases', async () => {

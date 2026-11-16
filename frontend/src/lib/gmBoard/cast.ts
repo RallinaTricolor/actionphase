@@ -8,8 +8,8 @@ export interface CastMember {
   npc: boolean;
   avatarUrl?: string | null;
   /**
-   * Gets results: someone plays them (their own player, or the player an NPC
-   * is assigned to). Only they can read a scene's moments.
+   * Gets results: a player character someone plays. NPCs never do, even one
+   * assigned to a player. Only they can read a scene's moments.
    */
   reads?: boolean;
   /** Who a result for them goes to: their player, or the player an NPC is assigned to. */
@@ -31,19 +31,16 @@ interface CharacterLike {
 export function boardCast(characters: CharacterLike[]): CastMember[] {
   const live = characters
     .filter((c) => c.is_active && c.status === 'approved')
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      npc: c.character_type === 'npc',
-      avatarUrl: c.avatar_url,
-      // A result goes to a user, as in the standalone result composer.
-      reads: (c.user_id ?? c.assigned_user_id) !== undefined,
-      userId: c.user_id ?? c.assigned_user_id,
-    }));
+    .map((c) => {
+      const npc = c.character_type === 'npc';
+      const userId = c.user_id ?? c.assigned_user_id;
+      // A result goes to a player's own character; NPCs can't receive one.
+      return { id: c.id, name: c.name, npc, avatarUrl: c.avatar_url, reads: !npc && userId !== undefined, userId };
+    });
   return [...live.filter((c) => !c.npc), ...live.filter((c) => c.npc)];
 }
 
-/** Who can read moments: cast members someone plays. */
+/** Who can read moments: player characters someone plays. */
 export function canReadRule(cast: CastMember[]): CanRead {
   const readers = new Set(cast.filter((c) => c.reads).map((c) => c.id));
   return (id) => readers.has(id);

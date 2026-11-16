@@ -173,7 +173,7 @@ describe('GmBoardRead', () => {
 
     await userEvent.click(within(await screen.findByTestId('selection-toolbar')).getByRole('button', { name: '+ Codex' }));
     expect(await screen.findByLabelText('Name')).toHaveValue('the wheel');
-    expect(screen.getByLabelText('Day 2 only')).toBeChecked();
+    expect(screen.getByLabelText('Applies to')).toHaveDisplayValue('Day 2');
   });
 
   it('asks for a location before the first card', async () => {
@@ -181,9 +181,9 @@ describe('GmBoardRead', () => {
     renderRead();
     await screen.findByText(/I sneak into the Old Mill/);
     await userEvent.click(within(paragraph(0)).getByRole('button', { name: '+ Whole paragraph' }));
-    expect(await screen.findByText(/Add a location to the codex first/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Open the codex' }));
-    expect(await screen.findByRole('button', { name: 'Add to codex' })).toBeInTheDocument();
+    const toast = (await screen.findByText(/Add this phase’s locations first/)).closest('[role="alert"]') as HTMLElement;
+    await userEvent.click(within(toast).getByRole('button', { name: 'Add locations' }));
+    expect(await screen.findByTestId('phase-locations-form')).toBeInTheDocument();
     expect(boardSaves).toEqual([]);
   });
 
@@ -286,7 +286,7 @@ describe('GmBoardRead', () => {
       await userEvent.click(within(panel).getByRole('option', { name: 'Add “Lighthouse” to the codex' }));
 
       await waitFor(() => expect(settingsSaves.length).toBe(1), { timeout: 3000 });
-      expect(settingsSaves[0]).toMatchObject({ kind: 'codex', doc: { type: 'Location', name: 'Lighthouse', phases: [] } });
+      expect(settingsSaves[0]).toMatchObject({ kind: 'codex', doc: { type: 'Location', name: 'Lighthouse', phases: [PHASE_ID] } });
       await waitForBoardSave((c) => c.kind === 'card');
       expect(boardSaves.find((c) => c.kind === 'card')?.doc).toMatchObject({ locationId: settingsSaves[0].key });
     });

@@ -10,7 +10,7 @@ const board = makeBoard({
       chunkId: 'k1',
       locationId: 'loc-dock',
       participants: [1, 2],
-      effects: [{ characterId: 1, state: 'captured' }],
+      effects: [{ characterId: 1, state: 'incapacitated' }],
       moments: [
         makeMoment({ id: 'grab', text: 'Guards seize Harrison on the dock.', readers: [1, 2] }),
         makeMoment({ id: 'escape', text: 'Mara slips away under the pier.', readers: [2] }),

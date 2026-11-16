@@ -13,7 +13,7 @@ export type Outcome = 'pending' | 'happened' | 'partial' | 'failed' | 'interrupt
 
 export type StanceValue = 'ally' | 'deal' | 'neutral' | 'wary' | 'target' | 'ally_target';
 
-export type CharState = 'active' | 'injured' | 'captured' | 'incapacitated' | 'dead';
+export type CharState = 'active' | 'incapacitated' | 'dead';
 
 export interface Chunk {
   id: string;
@@ -141,7 +141,7 @@ export interface RewardItem {
   name: string;
   /** A section key from the game's reward groups. */
   group: string;
-  /** Block text. `{{entry}}`, `{{before}}` and `{{after}}` fill in from the first op. */
+  /** Block text. `{{entry}}`, `{{before}}`, `{{after}}` and `{{gain}}` fill in from the first op, or the op a Tab/Entry ref names. */
   text: string;
   ops: SheetOp[];
   /** "Choose 1": the text goes in the block, nothing goes on the sheet. */

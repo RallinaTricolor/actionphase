@@ -27,16 +27,16 @@ describe('MapByCharacter', () => {
   it('hatches slots where someone is out of play, and marks where their state changes', () => {
     renderRows(
       testModel({
-        scenes: [makeScene({ id: 's', locationId: 'mill', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'captured' }] })],
+        scenes: [makeScene({ id: 's', locationId: 'mill', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' }] })],
       }),
     );
     const k1 = screen.getByTestId('char-cell-1-k1');
     const k2 = screen.getByTestId('char-cell-1-k2');
-    expect(within(k1).getByText('Captured')).toBeInTheDocument();
+    expect(within(k1).getByText('Incapacitated')).toBeInTheDocument();
     expect(k1.className).not.toContain('gm-out-of-play');
     expect(k2.className).toContain('gm-out-of-play');
-    expect(k2).toHaveAttribute('title', 'Harrison Vale is captured here');
-    expect(within(k2).queryByText('Captured')).not.toBeInTheDocument();
+    expect(k2).toHaveAttribute('title', 'Harrison Vale is incapacitated here');
+    expect(within(k2).queryByText('Incapacitated')).not.toBeInTheDocument();
   });
 
   it('lists each character’s scenes in their slot, opening one in Scenes', async () => {

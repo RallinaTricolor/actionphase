@@ -32,18 +32,18 @@ describe('SceneCast', () => {
   });
 
   it('shows someone’s state in this time slot', () => {
-    setup({}, { scenes: [makeScene({ id: 'before', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'injured' as const }] })] });
-    expect(screen.getByText('Injured')).toBeInTheDocument();
+    setup({}, { scenes: [makeScene({ id: 'before', chunkId: 'k1', participants: [1], effects: [{ characterId: 1, state: 'incapacitated' as const }] })] });
+    expect(screen.getByText('Incapacitated')).toBeInTheDocument();
   });
 
   it('adds a state effect that lasts until a later slot or the end of the phase', async () => {
-    const h = setup({ effects: [{ characterId: 1, state: 'injured' }] });
-    await userEvent.selectOptions(screen.getByLabelText('Effect 1: state'), 'Captured');
-    expect(h.after().effects).toEqual([{ characterId: 1, state: 'captured' }]);
+    const h = setup({ effects: [{ characterId: 1, state: 'incapacitated' }] });
+    await userEvent.selectOptions(screen.getByLabelText('Effect 1: state'), 'Dead');
+    expect(h.after().effects).toEqual([{ characterId: 1, state: 'dead' }]);
     const until = screen.getByLabelText('Effect 1: until');
     expect([...(until as HTMLSelectElement).options].map((o) => o.text)).toEqual(['until the end of the phase', 'back by Slot 2']);
     await userEvent.selectOptions(until, 'back by Slot 2');
-    expect(h.after().effects[0]).toEqual({ characterId: 1, state: 'captured', untilChunkId: 'k3' });
+    expect(h.after().effects[0]).toEqual({ characterId: 1, state: 'dead', untilChunkId: 'k3' });
     await userEvent.click(screen.getByRole('button', { name: 'Remove effect 1' }));
     expect(h.onRemoveEffect).toHaveBeenCalledWith(0);
   });
@@ -51,6 +51,6 @@ describe('SceneCast', () => {
   it('adds an effect for the first person in the scene', async () => {
     const h = setup();
     await userEvent.click(screen.getByRole('button', { name: '+ State' }));
-    expect(h.after().effects).toEqual([{ characterId: 1, state: 'injured' }]);
+    expect(h.after().effects).toEqual([{ characterId: 1, state: 'incapacitated' }]);
   });
 });

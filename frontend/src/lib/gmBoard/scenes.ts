@@ -155,7 +155,7 @@ export function readersNote(moment: Moment, scene: Scene, canRead: CanRead, name
 
 // ── Effects ──
 
-export const addEffect = (scene: Scene, characterId: number, state: CharState = 'injured'): Scene => ({
+export const addEffect = (scene: Scene, characterId: number, state: CharState = 'incapacitated'): Scene => ({
   ...scene,
   effects: [...scene.effects, { characterId, state }],
 });

@@ -48,6 +48,11 @@ export function GmBoardSetupPage() {
         .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}` })),
     [phases.data],
   );
+  // Where new locations go by default: the action phase that's running, else the latest.
+  const currentPhaseId = useMemo(() => {
+    const action = (phases.data ?? []).filter((p) => p.phase_type === 'action');
+    return (action.find((p) => p.is_active) ?? [...action].sort((a, b) => b.phase_number - a.phase_number)[0])?.id;
+  }, [phases.data]);
   const cast = useMemo(() => boardCast(allGameCharacters), [allGameCharacters]);
   // Who can get a result, and so a reward: the cast someone plays.
   const recipients = useMemo(() => cast.filter((c) => c.reads).map((c) => ({ id: c.id, name: c.name })), [cast]);
@@ -145,7 +150,7 @@ export function GmBoardSetupPage() {
                 </p>
               </CardHeader>
               <CardBody>
-                <GmCodexManager gameId={gameId} phases={actionPhases} players={cast.filter((c) => !c.npc)} />
+                <GmCodexManager gameId={gameId} phases={actionPhases} defaultPhaseId={currentPhaseId} players={cast.filter((c) => !c.npc)} />
               </CardBody>
             </Card>
             <Card variant="bordered" padding="md">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { Alert, Badge, Button, Select, Textarea } from '@/components/ui';
 import { useBoardRewards } from './boardRewards';
 import { RewardLineEditor, GroupBadge } from './RewardEditors';
@@ -80,7 +81,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
 
   const lineRow = (line: RewardLine) => {
     const kind = lineKind(line);
-    const text = lineText(line, state.sheet.recs[line.id]);
+    const text = lineText(line, state.sheet.recs[line.id], layout);
     const effect = lineEffect(layout, line);
     const drift = driftedItem(line, items);
     const label = kind === 'sheet' ? effect || 'this sheet change' : text || 'this reward';
@@ -219,9 +220,9 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
             )}
           </div>
         </div>
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded surface-sunken p-2 font-mono text-xs text-content-primary" data-testid="reward-block">
-          {state.block.text || '(empty: no lines with text yet)'}
-        </pre>
+        <div className="max-h-72 overflow-auto rounded surface-sunken p-2" data-testid="reward-block">
+          {state.block.text ? <MarkdownPreview content={state.block.text} /> : <p className="text-sm text-content-tertiary">(empty: no lines with text yet)</p>}
+        </div>
       </section>
 
       </section>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveSheetLayout } from '@/hooks/useSheetLayout';
 import type { SheetTab } from '@/types/characters';
 import { sheetDiff, sheetFor, type SheetTabs } from './rewards';
-import { renderBlock, scaleLabel, slotsOf, type BlockContext } from './template';
+import { renderBlock, renderLine, scaleLabel, slotsOf, type BlockContext } from './template';
 import type { RewardLine } from './types';
 
 // A hand-built game shaped like Starlight's Day 2 rewards: a Challenges tab
@@ -140,6 +140,21 @@ describe('renderBlock: tags', () => {
     expect(text).toBe('Vex Morrow 4.5 +1.5 +0\nGot Rating: 4.5 -> 6\n**Key** (new)\nRating: 4.5 → 6');
   });
 
+  it('a reward\u2019s text: {{gain}} and a ref are its own change; value, max, label and name are the block\u2019s', () => {
+    const lines = [
+      line('a', 'result', '**Complete:** {{gain Challenges/Rating}} rating', [inc('Rating', 2)]),
+      line('b', 'result', '**Showman:** {{gain}}, now {{value Challenges/Rating}} ({{label Challenges/Rating}}), {{value Challenges/Versatile}}/{{max Challenges/Versatile}} for {{name}}', [inc('Rating', 1)]),
+    ];
+    const { text, problems } = block({ ...base, lines, template: '{{lines result}}' });
+    expect(problems).toEqual([]);
+    expect(text).toBe('**Complete:** +2 rating\n\n**Showman:** +1, now 7.5 (Glowing), 3/7 for Vex Morrow');
+  });
+
+  it('an unknown tag in a reward\u2019s text is a problem, not left raw for the player', () => {
+    const { problems } = block({ ...base, lines: [line('a', 'result', '{{gian}}', [inc('Rating', 1)])], template: '{{lines result}}' });
+    expect(problems).toEqual(['{{gian}} isn’t a tag the block knows.']);
+  });
+
   it('a field by label, and a set field', () => {
     const lines = [line('a', 'result', '', [{ act: 'set', tab: 'skills', entry: 'x', field: 'rank', value: '2' }])];
     const { text } = block({ ...base, lines, template: '{{value Challenges/Versatile/Progress}}' });
@@ -186,6 +201,13 @@ describe('renderBlock: problems', () => {
     expect(block({ template: '{{value Nope/X}}' }).text).toBe('?');
   });
 
+  it('a tag in a reward\u2019s text that finds nothing', () => {
+    expect(problems('{{lines result}}', [line('a', 'result', 'Got {{gain Challenges/Versatile}}', [inc('Rating', 1)])])).toEqual([
+      '{{gain Challenges/Versatile}} in “Got {{gain Challenges/Versatile}}”: the reward doesn’t change Challenges/Versatile.',
+    ]);
+    expect(problems('{{lines result}}', [line('a', 'result', 'Pick {{entry}}', [], { choose: true })])).toEqual(['{{entry}} in “Pick {{entry}}”: the reward has no sheet change.']);
+  });
+
   it('lines in a section the template never lists', () => {
     expect(problems('{{lines result}}', [line('a', 'bonus', 'B')])).toEqual(['Lines in “Bonus objectives” don’t appear: the template has no {{lines bonus}}.']);
   });
@@ -222,5 +244,27 @@ describe('parseGroups and parseScales', () => {
     expect(parseScales('Challenges/Rating: 0 Flickering, 5.5 Glowing, oops\nno colon')).toEqual([
       { name: 'Challenges/Rating', steps: [{ min: 0, label: 'Flickering' }, { min: 5.5, label: 'Glowing' }] },
     ]);
+  });
+});
+
+describe('renderLine', () => {
+  const args = { layout, scales, name: 'Vex Morrow', live: live() };
+
+  it('shows one reward as the block would, after the character\u2019s other lines', () => {
+    const earlier = line('a', 'result', 'Earlier', [inc('Rating', 1)]);
+    const r = renderLine({ ...args, lines: [earlier], line: line('b', 'bonus', '**Showman:** {{gain}}, now {{value Challenges/Rating}} ({{label Challenges/Rating}})', [inc('Rating', 0.5)]) });
+    expect(r).toEqual({ text: '**Showman:** +0.5, now 6 (Glowing)', problems: [] });
+  });
+
+  it('uses the line as edited, not the stored copy', () => {
+    const stored = line('a', 'result', 'Old', [inc('Rating', 1)]);
+    expect(renderLine({ ...args, lines: [stored], line: { ...stored, text: '{{after}}', ops: [inc('Rating', 2)] } }).text).toBe('6.5');
+  });
+
+  it('lists what finds nothing', () => {
+    expect(renderLine({ ...args, lines: [], line: line('a', 'result', '{{gain Numbers/Coin}}', [inc('Rating', 1)]) })).toEqual({
+      text: '?',
+      problems: ['{{gain Numbers/Coin}} in “{{gain Numbers/Coin}}”: the reward doesn’t change Numbers/Coin.'],
+    });
   });
 });

@@ -22,11 +22,13 @@ interface CodexEntryEditorProps {
   players: CodexCharacter[];
   onChange: (fields: Partial<CodexEntry>) => void;
   onDelete: () => void;
+  /** On a board, for an entry other phases use too: takes it off this phase only. */
+  removeFromPhase?: { label: string; onRemove: () => void };
   readOnly?: boolean;
 }
 
 /** Edits one codex entry. Every change saves as it's made; text boxes keep their text while focused. */
-export function CodexEntryEditor({ entry, phases, players, onChange, onDelete, readOnly = false }: CodexEntryEditorProps) {
+export function CodexEntryEditor({ entry, phases, players, onChange, onDelete, removeFromPhase, readOnly = false }: CodexEntryEditorProps) {
   const name = useBoundText(entry.name);
   const aliases = useBoundText(entry.aliases.join(', '));
   const notes = useBoundText(entry.notes);
@@ -143,9 +145,14 @@ export function CodexEntryEditor({ entry, phases, players, onChange, onDelete, r
       )}
 
       {!readOnly && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          {removeFromPhase && (
+            <Button type="button" variant="secondary" size="sm" onClick={removeFromPhase.onRemove}>
+              {removeFromPhase.label}
+            </Button>
+          )}
           <Button type="button" variant="danger" size="sm" onClick={onDelete}>
-            Delete entry
+            {removeFromPhase ? 'Delete from every phase' : 'Delete entry'}
           </Button>
         </div>
       )}

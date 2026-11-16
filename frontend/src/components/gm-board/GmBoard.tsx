@@ -204,7 +204,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           />
         )}
         {!readOnly && board && (
-          <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onOpenCodex={() => openCodex()} onOpenSetup={openSetup} />
+          <GmBoardFirstRun gameId={gameId} phaseId={phase.id} board={board} onAddLocations={() => goToStep('map')} onOpenSetup={openSetup} />
         )}
 
         <BoardToolbarSlotContext.Provider value={toolbarSlot}>
@@ -228,6 +228,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           <GmBoardMap
             gameId={gameId}
             phase={phase}
+            phases={actionPhases}
             board={board}
             onOpenCodex={openCodex}
             onReadSubmission={readSubmission}

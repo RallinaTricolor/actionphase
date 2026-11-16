@@ -59,6 +59,11 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
     return (tabKey: string) => [...(byTab.get(tabKey) ?? [])].sort();
   }, [sheets.data, layout]);
 
+  const previewFor = useMemo(
+    () => ({ players, live: (id: number) => sheetTabsFrom(sheets.data?.[String(id)], layout), scales: settings?.scales ?? [] }),
+    [players, sheets.data, layout, settings?.scales],
+  );
+
   const given = (itemId: string) => Object.entries(board?.rewards ?? {}).filter(([, r]) => r.lines.some((l) => l.itemId === itemId)).map(([id]) => Number(id));
 
   const save = (item: RewardItem) => {
@@ -196,6 +201,7 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
         }}
         givenTo={board && editingItem ? players.map((p) => ({ ...p, given: given(editingItem.id).includes(p.id) })) : undefined}
         onToggleGiven={editingItem ? (id) => toggleGiven(editingItem, id) : undefined}
+        previewFor={previewFor}
       />
     </div>
   );

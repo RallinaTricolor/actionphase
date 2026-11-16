@@ -76,7 +76,7 @@ test.describe('GM results board: Scenes', () => {
     expect(stored.readers).toEqual([cast['Silk (Spider)']]);
   });
 
-  test('a captured effect puts the character out of play, and the Map flags their later card', async ({ page }) => {
+  test('a Dead effect puts the character out of play, and the Map flags their later card', async ({ page }) => {
     const rook = cast['Rook (Hound)'];
     const cardId = `card-${tag}`;
     const ids = await arrangeScene(
@@ -89,7 +89,7 @@ test.describe('GM results board: Scenes', () => {
     const after = page.getByRole('group', { name: 'After the scene' });
     await board.saving(() => after.getByRole('button', { name: '+ State' }).click());
     await board.saving(() => after.getByRole('combobox', { name: 'Effect 1: who' }).selectOption(String(rook)));
-    await board.saving(() => after.getByRole('combobox', { name: 'Effect 1: state' }).selectOption('captured'));
+    await board.saving(() => after.getByRole('combobox', { name: 'Effect 1: state' }).selectOption('dead'));
     // Back by this test's last slot, so the effect can't reach a later attempt's slots.
     await board.saving(() => after.getByRole('combobox', { name: 'Effect 1: until' }).selectOption(ids.c));
 

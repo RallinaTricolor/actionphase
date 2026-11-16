@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { Badge, Button, Select, Spinner, Textarea } from '@/components/ui';
 import { useGameContext } from '@/contexts/GameContext';
 import { useGameActionResults } from '@/hooks/useActionResults';
@@ -183,9 +184,9 @@ function BlockEditor({ gameId, settings, phases, players }: { gameId: number; se
               </Select>
             )}
           </div>
-          <pre className="min-h-[12rem] whitespace-pre-wrap rounded surface-sunken p-2 font-mono text-xs text-content-primary" data-testid="reward-preview">
-            {preview.text || '(empty)'}
-          </pre>
+          <div className="min-h-[12rem] rounded surface-sunken p-2" data-testid="reward-preview">
+            {preview.text ? <MarkdownPreview content={preview.text} /> : <p className="text-sm text-content-tertiary">(empty)</p>}
+          </div>
           {preview.problems.length > 0 && (
             <ul className="space-y-1 text-sm" data-testid="reward-template-problems">
               {preview.problems.map((p) => (

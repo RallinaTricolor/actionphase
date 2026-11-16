@@ -18,12 +18,16 @@
  * read the real sheet, so the block never tells a player a wrong total.
  * - `{{name}}`: the character's name.
  *
+ * In a reward's own text, `{{entry}}`, `{{before}}`, `{{after}}` and
+ * `{{gain}}` are that reward's change (see lineText); the rest fill in as in
+ * the template.
+ *
  * Problems come back as sentences, for the template preview and the checks
  * before publishing. A tag that can't find what it names renders as "?".
  */
 
 import type { SheetTab } from '@/types/characters';
-import { findEntry, fieldByRef, formatNumber, lineText, mainNumberField, maxOf, numberOf, tabByRef, type SheetState, type SheetTabs, type TabDiff } from './rewards';
+import { findEntry, fieldByRef, formatNumber, lineText, mainNumberField, maxOf, numberOf, sheetFor, tabByRef, type SheetState, type SheetTabs, type TabDiff } from './rewards';
 import type { GameBoardSettings, RewardLine } from './types';
 
 export interface BlockContext {
@@ -50,7 +54,7 @@ export interface Block {
 }
 
 const IF_INNERMOST = /\{\{\s*if\s+([^}]+?)\s*\}\}((?:(?!\{\{\s*if\b)[\s\S])*?)\{\{\s*end\s*\}\}/;
-const VALUE_TAGS = /\{\{\s*(lines|value|before|max|gain|label|text|name|changes)\b\s*([^}]*?)\s*\}\}/g;
+const VALUE_TAGS = /\{\{\s*(value|before|max|gain|label|text|name|changes)\b\s*([^}]*?)\s*\}\}/g;
 
 /** The `{{text …}}` slot names in a template, in order. */
 export function slotsOf(template: string): string[] {
@@ -168,13 +172,18 @@ export function renderBlock(ctx: BlockContext): Block {
   }
   t = t.replace(/\{\{\s*(if|end)\b[^}]*\}\}/g, '');
 
+  // Lines go in first, so tags in a reward's own text that aren't about its
+  // own change ({{value}}, {{max}}, {{label}}, {{name}}) fill in like the
+  // template's.
+  t = t.replace(/\{\{\s*lines\b\s*([^}]*?)\s*\}\}/g, (_, arg: string) =>
+    withText
+      .filter((l) => l.group === arg)
+      .map((l) => lineText(l, ctx.sheet.recs[l.id], ctx.layout, problems))
+      .join('\n\n'),
+  );
+
   t = t.replace(VALUE_TAGS, (_, kind: string, arg: string) => {
     if (kind === 'name') return ctx.name;
-    if (kind === 'lines')
-      return withText
-        .filter((l) => l.group === arg)
-        .map((l) => lineText(l, ctx.sheet.recs[l.id]))
-        .join('\n\n');
     if (kind === 'text') return ctx.texts[arg] ?? '';
     if (kind === 'changes') {
       const tab = tabByRef(ctx.layout, arg);
@@ -207,6 +216,26 @@ export function renderBlock(ctx: BlockContext): Block {
       .trim(),
     problems: [...new Set(problems)],
   };
+}
+
+/**
+ * One reward's text as the block will show it, for the preview under its
+ * text box: `line` with the character's other `lines` this phase on `live`.
+ * A line not among them (a list item, or one being made) comes last.
+ */
+export function renderLine(args: {
+  line: RewardLine;
+  lines: readonly RewardLine[];
+  live: SheetTabs;
+  layout: readonly SheetTab[];
+  scales: GameBoardSettings['scales'];
+  name: string;
+}): Block {
+  const { line, layout } = args;
+  const lines = args.lines.some((l) => l.id === line.id) ? args.lines.map((l) => (l.id === line.id ? line : l)) : [...args.lines, line];
+  const sheet = sheetFor(layout, args.live, lines);
+  const key = '__preview';
+  return renderBlock({ template: `{{lines ${key}}}`, groups: [{ key, label: '' }], scales: args.scales, layout, name: args.name, lines: [{ ...line, group: key }], texts: {}, sheet, diff: [] });
 }
 
 // ------------------------------------------------------------------ Game setup's text boxes

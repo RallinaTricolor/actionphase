@@ -501,11 +501,54 @@ export function lineEffect(layout: readonly SheetTab[], line: Pick<RewardLine, '
 /** A list item's ops leave an entry blank when it's picked per person ("Concept upgrade"). */
 export const needsEntry = (ops: readonly SheetOp[]) => ops.some((op) => !op.entry.trim());
 
-/** Line text with {{entry}}, {{before}} and {{after}} filled from its first op. */
-export function lineText(line: Pick<RewardLine, 'text'>, recs: readonly OpRecord[] | undefined): string {
-  const rec = recs?.[0];
-  return line.text.replace(/\{\{\s*(entry|before|after)\s*\}\}/g, (_, k: 'entry' | 'before' | 'after') => (k === 'entry' ? rec?.entry || '?' : rec?.[k] || '?'));
+/** The op a line-text ref names: Tab/Entry, with an optional /Field. */
+function recFor(recs: readonly OpRecord[], ref: string, layout: readonly SheetTab[]): OpRecord | undefined {
+  const parts = ref.split('/').map((p) => p.trim());
+  if (parts.length < 2) return undefined;
+  const tab = tabByRef(layout, parts[0]);
+  const tabKey = (tab?.key ?? parts[0]).toLowerCase();
+  const named = (n: string) => recs.filter((r) => r.tab.toLowerCase() === tabKey && (r.entry.trim().toLowerCase() === n || r.op.entry.trim().toLowerCase() === n));
+  // "Tab/Entry/Field" when the last part is a field of the tab, else an
+  // entry with a slash in its name.
+  const whole = named(parts.slice(1).join('/').toLowerCase());
+  if (parts.length === 2 || whole.length) return whole[0];
+  const field = parts[parts.length - 1];
+  const key = (tab && fieldByRef(tab, field)?.key) ?? field;
+  return named(parts.slice(1, -1).join('/').toLowerCase()).find((r) => r.field?.toLowerCase() === key.toLowerCase());
 }
+
+/** How much an op added to a number, like "+2"; "?" when it changed no number. */
+function gainOf(rec: OpRecord | undefined): string {
+  if (!rec || rec.err || !rec.field) return '?';
+  const before = rec.before.trim() === '' ? 0 : Number(rec.before);
+  const after = Number(rec.after);
+  if (!Number.isFinite(before) || !Number.isFinite(after) || rec.after.trim() === '') return '?';
+  const d = round2(after - before);
+  return `${d >= 0 ? '+' : ''}${formatNumber(d)}`;
+}
+
+/**
+ * Line text with {{entry}}, {{before}}, {{after}} and {{gain}} filled from
+ * this line's own change: its first op, or the op on the entry a Tab/Entry
+ * ref names ({{gain Numbers/Coin}}). A ref to an entry the line doesn't
+ * change is "?". Other tags are left for the block to fill.
+ */
+export function lineText(line: Pick<RewardLine, 'text'>, recs: readonly OpRecord[] | undefined, layout: readonly SheetTab[] = [], problems?: string[]): string {
+  return line.text.replace(/\{\{\s*(entry|before|after|gain)\b\s*([^}]*?)\s*\}\}/g, (tag: string, k: 'entry' | 'before' | 'after' | 'gain', ref: string) => {
+    const rec = ref ? recFor(recs ?? [], ref, layout) : recs?.[0];
+    const out = k === 'gain' ? gainOf(rec) : (k === 'entry' ? rec?.entry : rec?.[k]) || '?';
+    if (out === '?' && problems) {
+      const why = !rec ? (ref ? `the reward doesn’t change ${ref}` : 'the reward has no sheet change') : rec.err ? rec.err : 'it changes no number';
+      problems.push(`${tag} in “${truncateText(line.text, 40)}”: ${why}.`);
+    }
+    return out;
+  });
+}
+
+const truncateText = (s: string, n: number) => {
+  const flat = s.replace(/\s+/g, ' ').trim();
+  return flat.length > n ? `${flat.slice(0, n - 1)}…` : flat;
+};
 
 // ------------------------------------------------------------------ sheet text
 

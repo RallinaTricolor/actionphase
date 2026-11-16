@@ -7,7 +7,8 @@ interface GmBoardFirstRunProps {
   gameId: number;
   phaseId: number;
   board: BoardDoc;
-  onOpenCodex: () => void;
+  /** Opens the Map, which offers new locations and other phases' for this one. */
+  onAddLocations: () => void;
   onOpenSetup: () => void;
 }
 
@@ -17,7 +18,7 @@ interface GmBoardFirstRunProps {
  * away once the board has a card or a scene, so nothing needs remembering.
  * Not shown to viewers.
  */
-export function GmBoardFirstRun({ gameId, phaseId, board, onOpenCodex, onOpenSetup }: GmBoardFirstRunProps) {
+export function GmBoardFirstRun({ gameId, phaseId, board, onAddLocations, onOpenSetup }: GmBoardFirstRunProps) {
   const { settings } = useGmSettings(gameId);
   if (board.cards.length || board.scenes.length || !settings) return null;
   const noPlaces = phaseLocations(settings.codex, phaseId).length === 0;
@@ -47,10 +48,10 @@ export function GmBoardFirstRun({ gameId, phaseId, board, onOpenCodex, onOpenSet
       </p>
       {noPlaces && (
         <Alert variant="warning" className="mt-3" title="This phase has no locations yet">
-          <p>Locations are the Map’s rows, so every card needs one. Add this phase’s places to the codex first.</p>
+          <p>Locations are the Map’s rows, so every card needs one. Add this phase’s places first, or reuse an earlier phase’s.</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="primary" onClick={onOpenCodex}>
-              Add locations in the codex
+            <Button type="button" size="sm" variant="primary" onClick={onAddLocations}>
+              Add locations
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={onOpenSetup}>
               Open game setup

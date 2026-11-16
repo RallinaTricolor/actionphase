@@ -1,12 +1,13 @@
 /**
  * Character state over a phase. Scene effects set a character's state from the
  * scene's time slot until a later one (`untilChunkId`, not included) or the end
- * of the phase. Captured, incapacitated and dead are out of play.
+ * of the phase. Incapacitated and dead are out of play; active undoes an
+ * earlier effect.
  */
 
 import type { BoardDoc, CharState } from './types';
 
-const OUT_OF_PLAY: ReadonlySet<CharState> = new Set<CharState>(['captured', 'incapacitated', 'dead']);
+const OUT_OF_PLAY: ReadonlySet<CharState> = new Set<CharState>(['incapacitated', 'dead']);
 
 /** chunkId → its index in time order. */
 export function chunkIndex(board: Pick<BoardDoc, 'chunks'>): Map<string, number> {

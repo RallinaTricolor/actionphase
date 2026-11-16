@@ -517,6 +517,32 @@ describe('lineText', () => {
     expect(lineText(l, state.recs.a)).toBe('Upgraded Bane Tier 2 -> Tier 3');
     expect(lineText({ text: '{{entry}}' }, [])).toBe('?');
   });
+
+  it('{{gain}} is what the first op added; ? when it changed no number', () => {
+    const l = line('a', { text: '{{gain}} / {{before}} -> {{after}}', ops: [{ act: 'inc', tab: 'numbers', entry: 'rating', by: 2 }] });
+    expect(lineText(l, sheetFor(layout, liveSheet(), [l]).recs.a)).toBe('+2 / 4 -> 6');
+    const down = line('b', { text: '{{gain}}', ops: [{ act: 'inc', tab: 'numbers', entry: 'Rating', by: -1.5 }] });
+    expect(lineText(down, sheetFor(layout, liveSheet(), [down]).recs.b)).toBe('-1.5');
+    const add = line('c', { text: '{{gain}}', ops: [{ act: 'add', tab: 'inventory', entry: 'Key', fields: {} }] });
+    expect(lineText(add, sheetFor(layout, liveSheet(), [add]).recs.c)).toBe('?');
+  });
+
+  it('a Tab/Entry ref picks the op on that entry, by tab label or key, any capitals', () => {
+    const l = line('a', {
+      text: '{{gain Numbers/Rating}} {{after numbers/rating}} {{before Challenges/Versatile}} {{gain t_chal01/Versatile/Progress}} {{entry Inventory/Key}}',
+      ops: [
+        { act: 'add', tab: 'inventory', entry: 'Key', fields: {} },
+        { act: 'inc', tab: 'numbers', entry: 'Rating', by: 3 },
+        { act: 'inc', tab: 't_chal01', entry: 'Versatile', by: 1 },
+      ],
+    });
+    expect(lineText(l, sheetFor(layout, liveSheet(), [l]).recs.a, layout)).toBe('+3 7 2 +1 Key');
+  });
+
+  it('a ref to an entry the line doesn\u2019t change is ?, and other tags are left for the block', () => {
+    const l = line('a', { text: '{{gain Numbers/Gold}} {{after Skills/Bane}} {{value Numbers/Rating}}', ops: [{ act: 'inc', tab: 'numbers', entry: 'Rating', by: 1 }] });
+    expect(lineText(l, sheetFor(layout, liveSheet(), [l]).recs.a, layout)).toBe('? ? {{value Numbers/Rating}}');
+  });
 });
 
 describe('descriptionOnly', () => {
