@@ -24,6 +24,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"actionphase/pkg/access"
 	"actionphase/pkg/core"
 )
 
@@ -257,28 +258,13 @@ func (h *Handler) humaDeleteDocument(ctx context.Context, in *documentPathInput)
 
 // humaListGameCommunityDocuments backs the Game Info tab (req 8).
 //
-// Gated on GAME visibility rather than community standing: a player reading
-// their own game's Info tab is not necessarily anything in that community.
+// Open to any logged-in user, like the community's own document list: a
+// community's published rules are what someone reads before joining.
 //
 // A legacy game with no community returns an EMPTY LIST, not a 404 -- the
 // grandfathering lives in the SQL join, so the tab renders no community section
 // and nothing has to special-case it.
 func (h *Handler) humaListGameCommunityDocuments(ctx context.Context, in *gameDocumentsInput) (*documentListOutput, error) {
-	userID, err := h.authUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	canView, err := h.GameService.CanUserViewGame(ctx, in.GameID, userID)
-	if err != nil {
-		h.App.ObsLogger.LogError(ctx, err, "Failed to check game visibility",
-			"game_id", in.GameID, "user_id", userID)
-		return nil, huma.Error500InternalServerError("Failed to check game access")
-	}
-	if !canView {
-		return nil, huma.Error403Forbidden("you do not have access to this game")
-	}
-
 	docs, err := h.CommunityService.ListPublishedDocumentsForGame(ctx, in.GameID)
 	if err != nil {
 		h.App.ObsLogger.LogError(ctx, err, "Failed to list community documents for game",
@@ -408,17 +394,17 @@ func RegisterHumaCommunityDocuments(api huma.API, h *Handler) {
 func RegisterHumaGameCommunityDocuments(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameCommunityDocuments",
+		Extensions:  access.PublicRoute("a community's published documents are open to any logged-in user, as on the community's own page"),
 		Method:      http.MethodGet,
 		Path:        "/community-documents",
 		Summary:     "List the published documents of the game's community",
-		Description: "Backs the Info tab. Requires access to the GAME, not standing in the " +
-			"community. A game with no community returns an empty list rather than 404, so " +
+		Description: "Backs the Info tab. Open to any authenticated user, like the community's " +
+			"own document list. A game with no community returns an empty list rather than 404, so " +
 			"legacy games simply render no community section.",
 		Tags:     []string{"Games", "Communities"},
 		Security: []map[string][]string{{"BearerAuth": {}}},
 		Responses: map[string]*huma.Response{
 			"401": {Description: "Not authenticated"},
-			"403": {Description: "Caller cannot view this game"},
 		},
 	}, h.humaListGameCommunityDocuments)
 }

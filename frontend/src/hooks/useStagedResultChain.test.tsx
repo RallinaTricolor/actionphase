@@ -7,6 +7,8 @@ import {
   useCancelPendingStagedPart,
   useAppendStagedPart,
   useUpdateStagedPartDelay,
+  usePublishActionResult,
+  usePublishAllPhaseResults,
 } from './useActionResults';
 import { apiClient } from '../lib/api';
 
@@ -17,6 +19,8 @@ vi.mock('../lib/api', () => ({
       cancelPendingStagedPart: vi.fn(),
       appendStagedPart: vi.fn(),
       updateStagedPartDelay: vi.fn(),
+      publishActionResult: vi.fn(),
+      publishAllPhaseResults: vi.fn(),
     },
   },
 }));
@@ -133,6 +137,34 @@ describe('useCreateStagedResultChain', () => {
   });
 });
 
+describe('publishing', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('one result: refreshes the draft count and the sheets the board reads', async () => {
+    mockedApi.publishActionResult.mockResolvedValue({ data: {} } as never);
+    const { wrapper, queryClient } = makeWrapper();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => usePublishActionResult(GAME_ID), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync(42);
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['unpublishedResultsCount'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['gameCharacterData', GAME_ID] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['phaseDraftUpdates', GAME_ID] });
+  });
+
+  it('a whole phase: refreshes the sheets the board reads', async () => {
+    mockedApi.publishAllPhaseResults.mockResolvedValue({ data: {} } as never);
+    const { wrapper, queryClient } = makeWrapper();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => usePublishAllPhaseResults(GAME_ID, 3), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['gameCharacterData', GAME_ID] });
+  });
+});
+
 describe('useCancelPendingStagedPart', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,7 +183,42 @@ describe('useCancelPendingStagedPart', () => {
     expect(mockedApi.cancelPendingStagedPart).toHaveBeenCalledWith(GAME_ID, 42);
   });
 
-  it('refreshes result lists but not the unpublished count', async () => {
+  it('refreshes the results first, so the card never asks for the cancelled part’s count', async () => {
+    mockedApi.cancelPendingStagedPart.mockResolvedValue({ data: undefined } as never);
+    const { wrapper, queryClient } = makeWrapper();
+    let finishResults = () => {};
+    const resultsRefreshed = new Promise<void>((resolve) => { finishResults = resolve; });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(((filters: { queryKey: unknown[] }) =>
+      filters.queryKey[0] === 'actionResults' && filters.queryKey[1] === 'game' ? resultsRefreshed : Promise.resolve()) as never);
+
+    const { result } = renderHook(() => useCancelPendingStagedPart(GAME_ID), { wrapper });
+    act(() => result.current.mutate(42));
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['actionResults', 'game', GAME_ID] }));
+    expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['draftUpdateCount', GAME_ID] }));
+
+    finishResults();
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['draftUpdateCount', GAME_ID] })));
+  });
+
+  it('refreshes the counts of the parts that are left, not of the one cancelled', async () => {
+    mockedApi.cancelPendingStagedPart.mockResolvedValue({ data: undefined } as never);
+    const { wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(['actionResults', 'game', GAME_ID], [{ id: 41 }]);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useCancelPendingStagedPart(GAME_ID), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync(42);
+    });
+
+    const call = invalidate.mock.calls.find(([filters]) => filters?.queryKey?.[0] === 'draftUpdateCount');
+    const refreshes = (id: number) => call?.[0]?.predicate?.({ queryKey: ['draftUpdateCount', GAME_ID, id] } as never);
+    expect(refreshes(41)).toBe(true);
+    expect(refreshes(42)).toBe(false);
+  });
+
+  it('refreshes the result lists, the unpublished count and the sheet update counts', async () => {
     mockedApi.cancelPendingStagedPart.mockResolvedValue({ data: undefined } as never);
     const { wrapper, queryClient } = makeWrapper();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
@@ -167,9 +234,10 @@ describe('useCancelPendingStagedPart', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['actionResults', 'game', GAME_ID] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['actionResults', 'user', GAME_ID] });
 
-    // A pending part is already published — it waits on its timer, not on the
-    // GM — so cancelling it cannot change the unpublished count.
-    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['unpublishedResultsCount'] });
+    // A draft part counts as unpublished, and its sheet updates just moved.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['unpublishedResultsCount'] });
+    expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['draftUpdateCount', GAME_ID] }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['phaseDraftUpdates', GAME_ID] });
   });
 });
 

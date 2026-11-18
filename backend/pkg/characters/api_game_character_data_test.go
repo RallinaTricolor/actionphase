@@ -276,9 +276,10 @@ func TestGetGameCharacterData_PublicArchiveOpensWholeCast(t *testing.T) {
 	}
 }
 
-// TestGetGameCharacterData_NonParticipantForbidden: the game read gate runs
-// before any sheet is considered.
-func TestGetGameCharacterData_NonParticipantForbidden(t *testing.T) {
+// TestGetGameCharacterData_NonParticipantSeesPublicFieldsOnly: the roster is
+// public, so a logged-in outsider gets the batch, but only the public rows --
+// the same rule as the single-character route.
+func TestGetGameCharacterData_NonParticipantSeesPublicFieldsOnly(t *testing.T) {
 	testDB := core.NewTestDatabase(t)
 	defer testDB.Close()
 	defer testDB.CleanupTables(t, "character_data", "characters", "game_participants", "games", "users")
@@ -306,7 +307,18 @@ func TestGetGameCharacterData_NonParticipantForbidden(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code == http.StatusOK {
-		t.Errorf("SECURITY: a non-participant read a private game's character data (status %d, body %s)", w.Code, w.Body.String())
+	if w.Code != http.StatusOK {
+		t.Fatalf("A logged-in outsider should get the public roster data, got %d: %s", w.Code, w.Body.String())
+	}
+	var body map[string][]CharacterDataResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	mods := modulesFor(body, char.ID)
+	if !contains(mods, "bio") {
+		t.Errorf("An outsider should see the public bio row, got modules %v", mods)
+	}
+	if contains(mods, "skills") {
+		t.Errorf("SECURITY: an outsider saw a private sheet row, got modules %v", mods)
 	}
 }

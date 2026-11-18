@@ -2,7 +2,7 @@
 
 **IMPORTANT: Read this file before implementing new features or making architectural changes.**
 
-**Last Verified**: 2026-10-05
+**Last Verified**: 2026-11-04
 
 ## Core Architectural Principles
 
@@ -203,6 +203,56 @@ huma.Register(api, huma.Operation{
     },
 }, h.humaCreateCharacter)
 ```
+
+**Every route under `/games/{gameID}` declares who may call it** via
+`Extensions: access.GMOnly()` / `access.AudienceOnly()` / `access.MembersOnly()` /
+`access.PublicRoute(reason)` / `access.CheckedInHandler(reason)`
+(`backend/pkg/access`). The access
+middleware enforces it before the handler runs; an undeclared route is refused
+with a 500 and fails `TestGameScopedOperationsDeclareAccess`. Pick `audience`,
+not a participant check, for anything showing other players' secrets: any
+player is a participant. The level is a floor; the handler may be stricter
+(primary GM only, row filtering, scoping child IDs to the game).
+`member` means an *active* participant (or the GM flag, or anyone once the game
+is a public archive): a removed player is refused. The GM flag (`is_gm`: GM,
+co-GM, or a site admin in admin mode) passes every level, `audience` included. Use `public` for game info,
+Common Room reads and the caller's own records (shared reasons:
+`access.ReasonGameInfo` / `ReasonCommonRoom` / `ReasonOwnRecords`); every write
+to shared content is `member` or stricter. `TestDeclaredAccessLevelsAreEnforced`
+drives every declared route through the real router as gm, player, audience,
+outsider, removed player and admin in admin mode. Don't restate a level's rule
+inline in the handler: the middleware is the gate. Package test routers that
+register game-scoped routes install it too (`newGatedGameAPI` in the games and
+phases tests).
+
+Routes that name a game's row by its own ID, with no `{gameID}` in the path
+(`/characters/{id}`, `/phases/{id}`, `/polls/{pollId}`, `/deadlines/{deadlineId}`,
+`/exports/{exportID}`), declare levels the same way. `access.ResourceMiddleware`
+reads the game from that row on every route that names it, Public included (404
+if the row or its game is gone), then applies the same rule. It puts the game
+and `is_gm` in the context under GameMiddleware's keys: handlers read them via
+`core.GameForRequest` / `core.IsRequestGameMaster` rather than loading them
+again. Favorites (`/comments/{commentId}/favorite`, `/favorites/*`) are the
+caller's own rows and run no access middleware. A new mount must be listed
+in `resourceRoutePrefixes` (wired with `gateResource` in `root.go`) or
+`nonGameRoutePrefixes` in `pkg/http/access_spec_test.go`; the spec test fails
+on a path in neither.
+
+**Child IDs under `/games/{gameID}` must belong to that game.** After the level
+check, `access.ChildScope` looks up every other ID in the path (`handoutId`,
+`resultId`, `conversationId`, ...) and answers 404 "<kind> not found in this
+game" unless the row is in `{gameID}`. A nested ID (`InParent`) must also
+belong to the ID before it: a comment to its thread's root post, a private
+message to its conversation, a handout comment to its handout, a character
+update to its result. Lookups are keyed by path *shape* in
+`childParams` (`pkg/http/access_resources.go`), because one parameter name can
+mean different tables (`commentId` under `/handouts` vs `/posts`); the queries
+live in `pkg/db/queries/access_scope.sql`. A new child-ID route needs a
+`childParams` entry, or it answers 500 and fails the spec test.
+`TestChildIDsMustBelongToTheGame` calls every such route with another game's
+IDs, and every nested route with a child from a sibling parent in the same
+game. IDs in request *bodies* (e.g. `character_id`) are not covered by this;
+handlers still check those.
 
 **Request validation lives in schema tags**, enforced by huma before the handler
 runs (422, with the field named). The same tags are published in the spec, so
@@ -714,6 +764,135 @@ spec `e2e/messaging/restricted-posts.spec.ts` runs on its own fixture
 (`33_restricted_posts.sql`, games 708 and 709) and logs each user in once, in
 their own browser context.
 
+### GM Results Board (added 2026-11-04)
+
+An opt-in workspace for resolving one action phase: Read (submissions into
+cards) → Map (cards by place and time slot) → Scenes (moments, each with its
+readers) → Write (results), plus a per-game Game setup page (codex, names,
+reward lists, reward block). Route `/games/:gameId/phases/:phaseId/board`
+(`pages/GmBoardPage.tsx`) and `/games/:gameId/board-setup`. Desktop only (1024px
+and up; `BOARD_NARROW_QUERY` shows a notice below that). A board that has been
+shown stays mounted, hidden behind the notice, so narrowing the window doesn't
+lose the open tab or dialogs.
+
+**Layout (2026-11-12): chrome is sunken, content is base.** `GmBoard` draws one
+header block (title, step tabs, Codex/Notes/Game setup); each step puts its own
+controls in it with `BoardToolbar` (a portal into a sunken slot, via
+`BoardToolbarSlotContext`; inline when a step renders alone, as in its tests).
+Each workspace area is a `BoardPane` (base card, sunken title strip; `sticky`
+pins it below the site nav with `PANE_STICKY`). Don't use `surface-raised` on
+the board: in the dark theme it's the page colour, so it reads as no box at all.
+
+**Storage is an item store, not a document** (migration
+`20261102185548_add_gm_board_items.sql`):
+
+| Table | Holds | Key |
+|---|---|---|
+| `gm_board_items` | one action phase's working state: `card`, `scene` (moments and effects inside), `chunk` (time slot), `cluster`, `stance` (`a\|b`), `progress` (per character: read, ready, covered ticks), `flag` (dismissed), `notes`, `reward` (this phase's list), `rewards` (a character's reward lines) | `(phase_id, kind, item_key)` |
+| `gm_settings_items` | per game: `codex` entries, `names` (per character), `template`, `groups`, `scales`, `prefs`, `reward` (every-phase list) | `(game_id, kind, item_key)` |
+
+Each row has `doc JSONB`, `version`, `seq` (one Postgres sequence, so it only
+goes up) and `deleted` (tombstones, so pollers learn of deletes). One row per
+item means two editors only collide on the same item.
+
+- **Writes** (`POST …/phases/{phaseId}/gm-board/changes`,
+  `POST …/gm-settings/changes`) take `[{kind, key, base_version, doc | deleted}]`
+  and apply in one transaction. A stale `base_version` writes nothing: the 409
+  carries the current copy of each conflicting item. A 409 with no conflicts
+  means the game is archived. A phase that has ended answers 423
+  (`core.ErrPhaseEnded`). Byte and item-count caps answer 422.
+- **Reads** take `?since=<seq>`; the client polls every 15 seconds while
+  visible, on focus and after each save.
+- **Client**: `lib/gmBoard/store.ts` (`assembleBoard`, `assembleSettings`)
+  builds `BoardDoc` / `GameBoardSettings` from items in any order;
+  `hooks/useGmBoard.ts` (`useGmBoardStore`, `useGmSettingsStore`) is the
+  optimistic item store: `update(kind, key, fn)` / `remove`, dirty items
+  flushed about a second after the last edit, conflicts handled once there.
+  Unsaved edits are not kept in browser storage: closing the tab with some
+  pending gets the browser's "leave page?" prompt. Components never write
+  items any other way.
+- **Logic is pure**: `lib/gmBoard/*.ts` holds no React and no I/O (perception,
+  coverage, leak checks, flags, second person, the reward template, sheet
+  diffs, arrows), each with its own Vitest file. Components call it.
+- **What isn't in the store**: result text stays in `action_results`
+  (unpublished drafts; the board's saves send `expected_updated_at`, so a stale
+  save is a 409). Draft sheet updates are generated from reward lines in the
+  browser and written by `PUT …/phases/{pid}/characters/{cid}/reward-sheet-updates`
+  (`action_result_character_updates.from_rewards` marks them). Publishing uses
+  the existing results endpoints and dialogs, so the old results area and the
+  board can be used on the same phase. The board's creates send `phase_id`
+  (423 unless it's the active phase) and, for a character's first draft,
+  `first_draft`: the server serializes these per character and returns an
+  existing unpublished result, and `lib/gmBoard/firstDraft.ts` shares one
+  in-flight create between the editor and the reward sync. Publishing a blank
+  result or part answers 409 (`core.ErrEmptyResult`); publish all then sends
+  nothing.
+- **Locked rewards** (2026-11-18): publishing deletes a result's draft sheet
+  updates, and the live sheet may already hold the lines, so the "before" values
+  can't be worked out afterwards. While the carrier is a draft,
+  `usePhaseRewards` records the tabs the lines change as `sheetBefore` on the
+  `rewards` item (`sheetBeforeFor`, 24 KB cap). Once locked, `rewardStateFor`
+  works from it. With no record, an applied carrier's lines aren't applied again
+  and `sheetAlreadyApplied` is set.
+- **Rewards and sheet changes** (2026-11-13): a line's `kind` is `reward`
+  (in the reward block) or `sheet` (damage taken, an item used up: changes
+  the sheet only). Lines saved before `kind` existed are read by `lineKind`.
+  The block's `{{lines}}`, `{{changes}}` and `{{gain}}` come from reward
+  lines alone. `{{value}}` and the other tags that state the sheet read the
+  real sheet. Giving any line to someone with no draft result makes an
+  empty one (`usePhaseRewards.ensureDraft`; the create endpoint allows empty
+  content for a draft), so the lines always have a result to carry them.
+  A line's ops (`SheetOp`) are inc, set, add, **edit** and remove. New entry
+  and Edit entry render the sheet's own `EntryForm` (New entry through
+  `LootModeForm`, rolls via `useLootDraw`, the result stored in the op).
+  An edit op keeps only the fields the form changed (`editOpFrom`; `null`
+  clears one), and applying it stores the whole entry as the form would
+  (`canonicalEntry`). `lineSteps` works one line out op by op for its
+  editor: the entries each op can pick, and the tabs before and after
+  (`SheetChangePreview`). Like the sheet, an entry form with unsaved edits
+  holds the controls that would lose them (`SheetOpsEditor`'s
+  `onDirtyChange`), and the line and list item editors ask before closing
+  (`ConfirmDiscardEdits`). The modal-to-board mapping is the plan's Parity
+  table.
+- **Codex and Notes are tabs** (2026-11-13): after the four steps in
+  `BOARD_STEPS` (`?step=codex`, `?step=notes`), full width, because a docked
+  side panel left too little room to write. Notes use `CommentEditor`, the
+  site's markdown editor. Read's "+ Codex" on selected text opens
+  `CodexAddForm` in a `Modal`, so the GM stays on the submission. Game setup
+  is reached with `boardSetupPath(gameId, from)`, and returns through
+  `boardReturnPath`, which only accepts this game's board URLs.
+
+**Access: the audience level plus a game setting.** Writes declare
+`access.GMOnly()`. Reads (`GET …/gm-board`, `GET …/gm-settings`,
+`GET …/gm-board-phases`) declare `access.AudienceOnly()` as the floor, and the
+handler's `requireViewer` (`pkg/gmboard/huma_api.go`) also refuses (403
+`NotSharedMessage`) anyone without the GM flag unless
+`games.share_gm_board` is on. So while the game runs the audience can view a
+shared board; once it's a public archive (epilogue or completed), anyone who
+can see the game can. The GM toggles it with `PUT …/gm-settings/sharing`; the
+game response carries `share_gm_board`. Viewers see everything on the board,
+GM notes and codex secrets included: the audience already reads every
+submission and result.
+
+**Read-only mode** (`hooks/useBoardReadOnly.ts`, `BoardReadOnlyContext`) is
+for viewers, for the GM of an archived game, and for the GM of a phase that has
+ended (`has_ended` on the phase list, from `core.PhaseHasEnded`). The stores
+drop edits while it is set, it still polls, and viewers read submissions from
+the audience listing (`useBoardSubmissions`), never the GM-only
+`GET …/actions`. An open board refreshes the phase list, so it locks itself when
+the phase changes; a result editor that gets a 423 keeps its text, and
+`BoardUnsavedTextContext` shows any it couldn't save once it closes.
+`GmBoardReadOnly.test.tsx` walks every step as a viewer and fails on any
+enabled edit control, write request or GM-only read: add a new view-only
+control to its allow-lists when you add one.
+
+**Tests and fixtures**: `fixtures.seed_heist_board(game, phase)`
+(`test_fixtures/common/02_gm_board_seed.sql`) fills a partly resolved board.
+The demo Heist calls it (and shares its board). The E2E games 711-720 in
+`e2e/34_gm_board.sql` call it, one per spec in `e2e/gm-board/` (721 stays
+empty for the first-run guide); see TEST_DATA.md and TESTING.md. When the
+board's model changes, change the seed with it.
+
 ### Character Sheet Storage
 
 *(Rewritten 2026-09-30 for GM-composed sheets. The decision and its
@@ -753,6 +932,19 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   (`lib/sheetEntries.ts`) absorbs legacy shapes on read (skill `level` → `rank`,
   number `type` → `name`, flat `amount`/`max`/`display` → a track); writes
   always use the new shape, and only the edited entry is rewritten.
+- **One way to store a field's value** (2026-11-13): every writer of sheet
+  entries stores values through the per-type codecs in
+  `lib/sheetFieldValues.ts` (`toDraft`/`fromDraft`). The writers are the
+  sheet editor (`fieldTypes.tsx` builds on them), loot tables
+  (`lootDataToEdit`) and the results board's sheet changes
+  (`lib/gmBoard/rewards.ts`). `canonicalEntry` is what an unchanged editor
+  save would store. A writer's entry must equal it, or the next save
+  rewrites it, and a value in a shape the editor can't read (e.g. a track
+  stored as a bare number) is erased. That happened in prod with draft
+  results. The board also writes back every row no op changed exactly as
+  stored. Tests: `sheetFieldValues.test.ts`, `rewards.test.ts`, and
+  `gm-board/boardSheetWrites.test.tsx` (board output saved unchanged
+  through the real `EntryForm`).
 - **Loot tables** (added 2026-09-30): each table has a `target_tab` (default
   `inventory`), validated against the game's layout; it can change only while
   the table is empty (409 otherwise). A roll writes into
@@ -763,6 +955,13 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   disables Remove on it. Loot entries use the target tab's schema, and CSV
   import maps columns by field label or key, coercing by field type, because a
   server-side roll writes the data verbatim.
+  **Two roll endpoints** (2026-11-13): `…/random/{characterId}` gives the
+  item to the live sheet and logs it (`useLootRoll`, the character sheet
+  only). `…/loot-tables/{tableId}/draw` only picks it and writes nothing
+  (`useLootDraw`). A result's sheet-update modal uses draw and stages the
+  item through `lootDataToEdit` + `createEntry`, like a picked item. Never
+  give while drafting: it wrote to the live sheet in the middle of a phase
+  (findings #14).
 - **Mentions**: `useCharacterSheetItems` offers every entry on every layout tab.
   The token is `[[Name|kind:id]]`, where kind is `skill`/`item` for
   Skills/Inventory (historic) and the tab key otherwise; the pattern lives in

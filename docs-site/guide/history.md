@@ -24,3 +24,5 @@ Players see only their own submission and result. Action text and results are co
 ## GM: History View
 
 GMs see all players' submissions and results, not just their own. The History tab shows the same data available in the All Submissions view during an active phase, preserved after the phase ends.
+
+A past action phase is read-only. To change or publish its results, [activate it again](./phases#activating-a-phase) from the **Phases** tab.

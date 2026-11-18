@@ -45,6 +45,7 @@ Automatically activates when working on:
 - [ ] **Service**: Implement business logic
 - [ ] **Request/Response**: Structs in `requests.go` / `responses.go` with schema tags
 - [ ] **Handler**: `func(ctx, *Input) (*Output, error)` + `huma.Register` in `huma_api.go`
+- [ ] **Access level** (game-scoped routes, and per-ID routes like `/characters/{id}`): `Extensions: access.GMOnly()` / `AudienceOnly()` / `MembersOnly()` / `PublicRoute(reason)` / `CheckedInHandler(reason)` on the `huma.Operation` — see `backend/pkg/access`. Writes to shared content are never `public`. A new child ID in a `/games/{gameID}` path needs a `childParams` entry (`pkg/http/access_resources.go`)
 - [ ] **Regenerate the spec**: `just gen-openapi`, and commit `openapi.gen.yaml`
 - [ ] **Regenerate frontend types**: `just gen-api-types`, and commit `api.gen.ts`
 - [ ] **API Tests**: Test endpoints with curl

@@ -11,6 +11,10 @@ vi.mock('@/components/actions/GameResultsManager', () => ({
   ),
 }));
 
+vi.mock('@/components/gm-board/OpenResultsBoardButton', () => ({
+  OpenResultsBoardButton: () => <div data-testid="open-results-board">OpenResultsBoardButton</div>,
+}));
+
 vi.mock('@/components/actions/ActionsList', () => ({
   ActionsList: () => <div data-testid="actions-list">ActionsList</div>,
 }));
@@ -74,6 +78,7 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
     auto_accept_audience: false,
     allow_group_conversations: false,
     portrait_avatars: false,
+    share_gm_board: false,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   };

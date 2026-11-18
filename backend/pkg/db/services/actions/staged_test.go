@@ -587,6 +587,36 @@ func TestAppendStagedPart(t *testing.T) {
 		assert.Equal(t, appended.ID, full[3].ID)
 	})
 
+	// Sheet drafts live on a chain's last part. Left on the old tail, they'd
+	// sit on a middle part that no editor shows, and apply when it's revealed.
+	t.Run("moves the tail's sheet drafts to the new part", func(t *testing.T) {
+		env := setupStagedTest(t)
+
+		draft := env.createDraftResult(t)
+		characterService := &db.CharacterService{DB: env.testDB.Pool, Logger: env.actionService.Logger}
+		userID := env.playerID
+		character, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+			GameID: env.gameID, UserID: &userID, Name: "Append Drafts Character", CharacterType: "player_character",
+		})
+		require.NoError(t, err)
+		_, err = env.actionService.CreateDraftCharacterUpdate(ctx, core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: draft.ID, CharacterID: character.ID, ModuleType: "inventory", FieldName: "items",
+			FieldValue: `[]`, FieldType: "json", Operation: "upsert",
+		})
+		require.NoError(t, err)
+
+		appended, err := env.actionService.AppendStagedPart(ctx, draft.ID, core.StagedResultPart{Content: "Later", DelayMinutes: 5})
+		require.NoError(t, err)
+
+		onOld, err := env.actionService.GetDraftCharacterUpdates(ctx, draft.ID)
+		require.NoError(t, err)
+		assert.Empty(t, onOld, "nothing stays on what is now a middle part")
+		onNew, err := env.actionService.GetDraftCharacterUpdates(ctx, appended.ID)
+		require.NoError(t, err)
+		require.Len(t, onNew, 1)
+		assert.Equal(t, character.ID, onNew[0].CharacterID)
+	})
+
 	t.Run("copies the recipient from the chain", func(t *testing.T) {
 		env := setupStagedTest(t)
 
@@ -998,5 +1028,71 @@ func TestGetResultChain(t *testing.T) {
 			assert.Equal(t, int32(3), got[2].PartNumber)
 			assert.Equal(t, int64(3), got[0].PartCount)
 		}
+	})
+}
+
+func TestCancelPendingPart_DraftChainKeepsItsSheetUpdates(t *testing.T) {
+	env := setupStagedTest(t)
+	ctx := context.Background()
+	app := core.NewTestApp(env.testDB.Pool)
+	characters := &db.CharacterService{DB: env.testDB.Pool, Logger: app.ObsLogger}
+	userID := env.playerID
+	character, err := characters.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID: env.gameID, UserID: &userID, Name: "Vex", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	characterID := character.ID
+
+	addUpdate := func(resultID int32, value string) {
+		t.Helper()
+		_, err := env.actionService.CreateDraftCharacterUpdate(ctx, core.CreateDraftCharacterUpdateRequest{
+			ActionResultID: resultID, CharacterID: characterID, ModuleType: "inventory", FieldName: "items",
+			FieldValue: value, FieldType: "json", Operation: "upsert",
+		})
+		require.NoError(t, err)
+	}
+	newChain := func() (head, second, third int32) {
+		t.Helper()
+		first, err := env.actionService.CreateActionResult(ctx, core.CreateActionResultRequest{
+			GameID: env.gameID, PhaseID: env.phaseID, UserID: env.playerID, CharacterID: &characterID, Content: "One",
+		})
+		require.NoError(t, err)
+		p2, err := env.actionService.AppendStagedPart(ctx, first.ID, core.StagedResultPart{Content: "Two", DelayMinutes: 5})
+		require.NoError(t, err)
+		p3, err := env.actionService.AppendStagedPart(ctx, first.ID, core.StagedResultPart{Content: "Three", DelayMinutes: 5})
+		require.NoError(t, err)
+		return first.ID, p2.ID, p3.ID
+	}
+	valueOn := func(resultID int32) []string {
+		t.Helper()
+		updates, err := env.actionService.GetDraftCharacterUpdates(ctx, resultID)
+		require.NoError(t, err)
+		values := []string{}
+		for _, u := range updates {
+			values = append(values, u.FieldValue.String)
+		}
+		return values
+	}
+
+	t.Run("cancelling the last part hands them to the part before it", func(t *testing.T) {
+		_, second, third := newChain()
+		addUpdate(third, `["Acid Vial"]`)
+		require.NoError(t, env.actionService.CancelPendingPart(ctx, third))
+		assert.Equal(t, []string{`["Acid Vial"]`}, valueOn(second))
+	})
+
+	t.Run("cancelling a middle part takes the later parts, and the updates survive them", func(t *testing.T) {
+		head, second, third := newChain()
+		addUpdate(third, `["Rope"]`)
+		require.NoError(t, env.actionService.CancelPendingPart(ctx, second))
+		assert.Equal(t, []string{`["Rope"]`}, valueOn(head))
+	})
+
+	t.Run("the last part's update wins over one already on the part before it", func(t *testing.T) {
+		_, second, third := newChain()
+		addUpdate(second, `["Old"]`)
+		addUpdate(third, `["New"]`)
+		require.NoError(t, env.actionService.CancelPendingPart(ctx, third))
+		assert.Equal(t, []string{`["New"]`}, valueOn(second))
 	})
 }

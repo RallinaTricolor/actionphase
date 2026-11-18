@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { chainHeadId } from '../lib/resultParts';
 import { useGameActionResults } from './useActionResults';
 import type { ActionResult } from '../types/phases';
 
@@ -17,7 +18,8 @@ function recipientKey(result: ActionResult): string {
 
 /**
  * Detects whether other unpublished results in the same phase have staged character
- * sheet updates for the same recipient as `result`.
+ * sheet updates for the same recipient as `result`. Parts of one staged chain are a
+ * single result here: its sheet updates live on its last part and apply once.
  *
  * Why this matters: a draft sheet update stores a whole-array snapshot under a fixed
  * field name (e.g. inventory/items), and each result's editor seeds from character_data,
@@ -36,6 +38,7 @@ export function useConflictingSheetDrafts(
   phaseResults: ActionResult[]
 ): { conflictCount: number; hasConflict: boolean } {
   const target = recipientKey(result);
+  const ownChain = chainHeadId(result, phaseResults);
 
   // A published result can neither clobber nor be clobbered — its drafts are already
   // applied and deleted — and its callers discard this value anyway. Skip the fan-out
@@ -46,7 +49,7 @@ export function useConflictingSheetDrafts(
       // written their snapshot and had their drafts deleted.
       phaseResults.filter(
         (candidate) =>
-          candidate.id !== result.id &&
+          chainHeadId(candidate, phaseResults) !== ownChain &&
           !candidate.is_published &&
           recipientKey(candidate) === target
       );
@@ -118,22 +121,25 @@ export function usePhaseSheetDraftConflicts(
     })),
   });
 
-  // Count staged results per recipient; a recipient with two or more will be clobbered.
+  // Count staged results (chains, not parts) per recipient; a recipient with two or more
+  // will be clobbered.
   //
   // A count still in flight counts as staged, matching useConflictingSheetDrafts above.
   // Bulk publishing is the worst case for this bug — it applies every conflicting result
   // in one transaction — so a GM who opens the dialog before the counts settle is exactly
   // who the warning is for. Failing open here would hide it from them.
-  const stagedPerRecipient = new Map<string, number>();
+  const stagedPerRecipient = new Map<string, Set<number>>();
   unpublished.forEach((result, index) => {
     const query = counts[index];
     const staged = query?.isPending || (query?.data ?? 0) > 0;
     if (!staged) return;
     const key = recipientKey(result);
-    stagedPerRecipient.set(key, (stagedPerRecipient.get(key) ?? 0) + 1);
+    const chains = stagedPerRecipient.get(key) ?? new Set<number>();
+    chains.add(chainHeadId(result, results ?? []));
+    stagedPerRecipient.set(key, chains);
   });
 
-  const affectedCharacterCount = [...stagedPerRecipient.values()].filter((n) => n > 1).length;
+  const affectedCharacterCount = [...stagedPerRecipient.values()].filter((chains) => chains.size > 1).length;
 
   return { affectedCharacterCount, hasConflict: affectedCharacterCount > 0 };
 }

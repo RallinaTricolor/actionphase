@@ -21,12 +21,6 @@ type Handler struct {
 	UserService      core.UserServiceInterface
 	CommunityService core.CommunityServiceInterface
 
-	// GameService answers CanUserViewGame for the one game-scoped endpoint
-	// here: the Info tab's community document list (req 8). That read is gated
-	// on GAME visibility, not on community standing -- a player in a game may
-	// read its community's published rules without moderating that community.
-	GameService core.GameServiceInterface
-
 	// WebhookSender backs the synchronous "send a test message" button only.
 	// Game-state announcements are dispatched by GameService, not from here.
 	//

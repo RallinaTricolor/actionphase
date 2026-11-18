@@ -163,6 +163,40 @@ notifications, and a 404 identical to "missing" on any direct link.
 **See**: `.claude/context/ARCHITECTURE.md` ("Restricted Common Room Posts") for
 the query rule every new `messages` query must follow
 
+### GM results board (added 2026-11-04)
+
+An optional workspace for resolving one **action phase**, opened from the GM's
+results area ("Open results board"). The old results area keeps working, and
+the two can be used on the same phase: result text, staged parts and sheet
+drafts live in the same tables both use. Only board data (cards, scenes,
+stances, the codex) is invisible to the old view.
+
+- Steps: **Read** (submissions into plan cards) → **Map** (cards by location
+  and time slot; outcomes, causes, clusters, stances) → **Scenes** (moments,
+  each ticked for who reads it, rewritten in second person per reader) →
+  **Write** (each character's results, checks, rewards, publish through the
+  usual endpoints). **Game setup** is per game: codex, character names, reward
+  lists and the reward block.
+- Results are still `action_results` rows. The board never publishes any other
+  way, and the parity rule holds: anything the results area can do, the board
+  can.
+- **Who edits**: the GM flag (GM, co-GMs, admin mode). In an archived game
+  (completed or cancelled) nobody can, and the GM gets the read-only view. The
+  same goes for a phase that has ended, until the GM activates it again: see
+  `resources/phase-system.md` ("Ended Phases").
+- **Who views**: `games.share_gm_board`, off by default. When on, the audience
+  can view every phase's board while the game runs, and anyone who can see the
+  game once it's a public archive (epilogue or completed). Viewers see
+  everything, GM notes and codex secrets included, read-only, from a "View
+  results board" button on the phase in the History tab. Turning sharing off
+  refuses a viewer's next poll.
+- Desktop only (1024px and up).
+- ❌ NOT TRUE: "the board stores the results" — it stores working state; result
+  text is the same `action_results` drafts the results area edits
+
+**See**: `.claude/context/ARCHITECTURE.md` ("GM Results Board") for storage,
+the item store and the access rule
+
 
 
 ---
@@ -267,7 +301,25 @@ What *does* stay hidden: drafts (`is_draft`) and soft-deleted content
 normal permission rules, keeping both restrictions above.
 
 **Always reuse `CanUserViewGame` for read authorization rather than
-hand-rolling a participant check.**
+hand-rolling a participant check** — except for the audience oversight
+endpoints above (all PMs, all action submissions).
+`CanUserViewGame` admits every *player*, so those declare
+`Extensions: access.AudienceOnly()` (`backend/pkg/access`): GM, co-GM, audience,
+an admin in admin mode, or a public archive, enforced before the handler runs. Any endpoint that reads by a child ID (e.g. a conversation)
+must also scope that ID to the URL's game, or access to one game unlocks all.
+
+**What any logged-in user may read in a running game** (confirmed by the
+owner, 2026-10-29): the game page, roster and participants, phases, deadlines,
+polls (not individual votes), published handouts, and the whole Common Room
+except restricted posts. These routes declare `access.PublicRoute(...)`.
+Writing to any of it, and every conversation route, is `access.MembersOnly()`,
+which means an *active* participant: a removed player loses access.
+The same holds for a single character's page (profile, public sheet fields,
+stats, post history): public, with hidden NPCs, and other players' unapproved
+characters while the game is running, answering 404 on all four alike
+(`core.CanViewCharacterProfile`). Editing a
+character (rename, sheet, avatar) and voting are member-only, so a removed
+player can no longer edit the character they still own.
 
 ---
 
@@ -355,10 +407,21 @@ GET   /api/v1/games/{gameID}/comments/recent
 ```
 POST/GET  /api/v1/games/{gameID}/actions
 GET       /api/v1/games/{gameID}/actions/mine
-POST/GET  /api/v1/games/{gameID}/results
+POST/GET  /api/v1/games/{gameID}/results                            -- POST: optional phase_id, first_draft
 GET       /api/v1/games/{gameID}/results/mine
-POST      /api/v1/games/{gameID}/results/{resultId}/publish
-POST      /api/v1/games/{gameID}/phases/{phaseId}/results/publish   -- bulk
+POST      /api/v1/games/{gameID}/results/{resultId}/publish          -- 409 if blank; 423 if the phase has ended
+POST      /api/v1/games/{gameID}/phases/{phaseId}/results/publish    -- bulk; same refusals, nothing is published
+```
+
+### Results board
+```
+GET   /api/v1/games/{gameID}/phases/{phaseId}/gm-board          -- ?since=<seq>; audience floor + share_gm_board
+POST  /api/v1/games/{gameID}/phases/{phaseId}/gm-board/changes  -- GM only; 409 on a stale item, 423 if the phase has ended
+GET   /api/v1/games/{gameID}/gm-settings                        -- game setup items; same rule as the board
+POST  /api/v1/games/{gameID}/gm-settings/changes                -- GM only
+PUT   /api/v1/games/{gameID}/gm-settings/sharing                -- GM only; turns share_gm_board on/off
+GET   /api/v1/games/{gameID}/gm-board-phases                    -- action phases with a board
+PUT   /api/v1/games/{gameID}/phases/{phaseId}/characters/{characterId}/reward-sheet-updates  -- GM only
 ```
 
 ### Audience / Archive Access

@@ -1250,7 +1250,7 @@ describe('ActionsList', () => {
       const user = userEvent.setup({ delay: null });
       setupDefaultHandlers(mockActions, [mockActionPhase1, mockActionPhase2], 2);
 
-      renderWithProviders(<ActionsList gameId={1} />, { gameId: 1 });
+      renderWithProviders(<ActionsList gameId={1} currentPhase={mockActionPhase1} />, { gameId: 1 });
 
       await waitFor(() => {
         expect(screen.getByText('Submitted Actions')).toBeInTheDocument();
@@ -1263,6 +1263,22 @@ describe('ActionsList', () => {
         expect(
           screen.getByRole('button', { name: /Publish All Results/i })
         ).toBeInTheDocument();
+      });
+    });
+
+    // An ended phase's drafts stay as they are until it's activated again.
+    it('offers publishing only for the running phase, whatever the filter shows', async () => {
+      const user = userEvent.setup({ delay: null });
+      setupDefaultHandlers(mockActions, [mockActionPhase1, mockActionPhase2], 2);
+
+      renderWithProviders(<ActionsList gameId={1} currentPhase={mockActionPhase2} />, { gameId: 1 });
+
+      expect(await screen.findByRole('button', { name: /Publish All Results/i })).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByRole('combobox'), '1');
+
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /Publish All Results/i })).not.toBeInTheDocument();
       });
     });
   });

@@ -140,6 +140,21 @@ const handlers = [
     return HttpResponse.json([]);
   }),
 
+  // GmSettingsResponse (gmBoard.ts getSettings): an empty board setup.
+  http.get('/api/v1/games/:gameId/gm-settings', () => {
+    return HttpResponse.json({ items: [], cursor: 0, share_gm_board: false });
+  }),
+
+  // BoardPhasesResponse (gmBoard.ts listBoardPhases): no phase has a board.
+  http.get('/api/v1/games/:gameId/gm-board-phases', () => {
+    return HttpResponse.json({ phase_ids: [] });
+  }),
+
+  // The audience listing of submissions (History, and the board for viewers).
+  http.get('/api/v1/games/:gameId/action-submissions/all', () => {
+    return HttpResponse.json({ action_submissions: [], total: 0 });
+  }),
+
   http.get('/api/v1/games/:gameId/phases', () => {
     return HttpResponse.json([]);
   }),
@@ -158,6 +173,15 @@ const handlers = [
 
   http.get('/api/v1/games/:gameId/results/:resultId/character-updates/count', () => {
     return HttpResponse.json({ count: 0 });
+  }),
+
+  // The results board's rewards: every sheet draft in the phase, and the sync.
+  http.get('/api/v1/games/:gameId/phases/:phaseId/draft-character-updates', () => {
+    return HttpResponse.json([]);
+  }),
+
+  http.put('/api/v1/games/:gameId/phases/:phaseId/characters/:characterId/reward-sheet-updates', () => {
+    return HttpResponse.json([]);
   }),
 
   http.get('/api/v1/games/:gameId/characters', () => {

@@ -1195,4 +1195,44 @@ describe('Tab Layout', () => {
       expect(notCancelled).toBe(true);
     });
   });
+
+  describe('insertTextRef and transformTextRef (outside edits)', () => {
+    type Refs = {
+      insert: { current: ((text: string) => void) | null };
+      transform: { current: ((fn: (text: string) => string) => void) | null };
+    };
+    function Harness({ initial, refs }: { initial: string; refs: Refs }) {
+      const [value, setValue] = useState(initial);
+      return <CommentEditor value={value} onChange={setValue} insertTextRef={refs.insert} transformTextRef={refs.transform} />;
+    }
+    const setup = (initial: string) => {
+      const refs: Refs = { insert: { current: null }, transform: { current: null } };
+      render(<Harness initial={initial} refs={refs} />);
+      return { refs, box: screen.getByRole('textbox') as HTMLTextAreaElement };
+    };
+
+    it('inserts at the end until the box has been focused', () => {
+      const { refs, box } = setup('Mara waits.');
+      act(() => refs.insert.current!('The bell rings.'));
+      expect(box.value).toBe('Mara waits. The bell rings.');
+    });
+
+    it('inserts at the cursor once focused, spaced so it doesn’t run into a word', () => {
+      const { refs, box } = setup('Mara the door.');
+      fireEvent.focus(box);
+      box.setSelectionRange(5, 5);
+      act(() => refs.insert.current!('opens'));
+      expect(box.value).toBe('Mara opens the door.');
+    });
+
+    it('rewrites the selection, or everything when nothing is selected', () => {
+      const { refs, box } = setup('one two three');
+      act(() => refs.transform.current!((t) => t.toUpperCase()));
+      expect(box.value).toBe('ONE TWO THREE');
+      fireEvent.focus(box);
+      box.setSelectionRange(4, 7);
+      act(() => refs.transform.current!((t) => t.toLowerCase()));
+      expect(box.value).toBe('ONE two THREE');
+    });
+  });
 });

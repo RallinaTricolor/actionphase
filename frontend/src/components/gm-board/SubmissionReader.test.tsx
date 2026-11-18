@@ -1,0 +1,151 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { makeCard, makeCodexEntry } from '@/test-utils/factories';
+import { SubmissionReader } from './SubmissionReader';
+
+// jsdom has no CSS Custom Highlight API: stand in a registry that records
+// which text each highlight covers.
+let registry: Map<string, { ranges: Range[] }>;
+
+beforeEach(() => {
+  registry = new Map();
+  vi.stubGlobal('CSS', { highlights: registry });
+  vi.stubGlobal(
+    'Highlight',
+    class {
+      ranges: Range[];
+      constructor(...ranges: Range[]) {
+        this.ranges = ranges;
+      }
+    },
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
+
+const painted = (name: string) => registry.get(name)?.ranges.map((r) => r.toString()) ?? [];
+
+const TEXT = 'I meet Mara at the Old Mill.\n\nThen I hide the ledger in the vault.';
+const props = {
+  ownerId: 1,
+  text: TEXT,
+  characters: [
+    { id: 1, names: ['Harrison'] },
+    { id: 2, names: ['Mara'] },
+  ],
+  codex: [
+    makeCodexEntry({ id: 'mill', type: 'Location', name: 'the Old Mill' }),
+    makeCodexEntry({ id: 'ledger', type: 'Item', name: 'ledger' }),
+    makeCodexEntry({ id: 'vault', type: 'Secret', name: 'vault' }),
+  ],
+  onAddCard: vi.fn(),
+  onAddCodex: vi.fn(),
+  onOpenCard: vi.fn(),
+};
+
+describe('SubmissionReader', () => {
+  it('highlights carded text, names and codex terms by kind', () => {
+    const cards = [makeCard({ id: 'c1', characterId: 1, quote: 'Then I hide the ledger' })];
+    render(<SubmissionReader {...props} cards={cards} />);
+    expect(painted('gm-carded')).toEqual(['Then I hide the ledger']);
+    expect(painted('gm-name')).toEqual(['Mara']);
+    expect(painted('gm-codex-location')).toEqual(['the Old Mill']);
+    expect(painted('gm-codex')).toEqual(['ledger']);
+    expect(painted('gm-codex-secret')).toEqual(['vault']);
+  });
+
+  it('shades touching cards alternately, so each one’s extent shows', () => {
+    const cards = [makeCard({ id: 'c2', characterId: 1, quote: 'at the Old Mill.' }), makeCard({ id: 'c1', characterId: 1, quote: 'I meet Mara' })];
+    render(<SubmissionReader {...props} cards={cards} />);
+    expect(painted('gm-carded')).toEqual(['I meet Mara']);
+    expect(painted('gm-carded-alt')).toEqual(['at the Old Mill.']);
+  });
+
+  it('underlines entries on the owner’s sheet the text names, and lists them with their details', () => {
+    const sheetItems = [
+      { id: 's1', name: 'Ledger', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory', description: 'Debts, in code.', metadata: 'Quantity: 1' },
+      { id: 's2', name: 'Lockpicks', refKind: 'item', tabKey: 'inventory', tabLabel: 'Inventory' },
+    ];
+    render(<SubmissionReader {...props} cards={[]} sheetItems={sheetItems} />);
+    expect(painted('gm-sheet')).toEqual(['ledger']);
+    const row = screen.getByTestId('submission-sheet-matches');
+    expect(row).toHaveTextContent('On the sheet:Ledger');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ledger' }));
+    const tip = screen.getByRole('dialog', { name: 'Ledger' });
+    expect(tip).toHaveTextContent('Inventory');
+    expect(tip).toHaveTextContent('Quantity: 1');
+    expect(tip).toHaveTextContent('Debts, in code.');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('doesn’t highlight the owner’s own name, or the board’s buttons', () => {
+    const codex = [makeCodexEntry({ id: 'p', name: 'paragraph' })];
+    render(
+      <SubmissionReader {...props} codex={codex} text={'Harrison plans.'} cards={[makeCard({ id: 'c', characterId: 1, quote: 'Harrison plans.' })]} />,
+    );
+    expect(screen.getByRole('button', { name: '+ Whole paragraph' })).toBeInTheDocument();
+    expect(painted('gm-codex')).toEqual([]);
+    expect(painted('gm-name')).toEqual([]);
+    expect(painted('gm-carded')).toEqual(['Harrison plans.']);
+  });
+
+  it('clears its highlights when it closes', () => {
+    const { unmount } = render(<SubmissionReader {...props} cards={[makeCard({ id: 'c1', characterId: 1, quote: 'Then I hide' })]} />);
+    expect(registry.has('gm-carded')).toBe(true);
+    unmount();
+    expect(registry.size).toBe(0);
+  });
+
+  it('opens the card under a click', () => {
+    const onOpenCard = vi.fn();
+    const cards = [makeCard({ id: 'c1', characterId: 1, quote: 'Then I hide the ledger' })];
+    render(<SubmissionReader {...props} cards={cards} onOpenCard={onOpenCard} />);
+    const node = screen.getByText(/Then I hide/).firstChild as Text;
+    const caret = vi.fn(() => ({ offsetNode: node, offset: 5 }));
+    Object.assign(document, { caretPositionFromPoint: caret });
+    fireEvent.click(node.parentElement!);
+    expect(onOpenCard).toHaveBeenCalledWith('c1');
+
+    caret.mockReturnValue({ offsetNode: node, offset: node.data.indexOf('vault') });
+    fireEvent.click(node.parentElement!);
+    expect(onOpenCard).toHaveBeenCalledTimes(1);
+    delete (document as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
+  it('shows how many cards came from each paragraph', () => {
+    render(<SubmissionReader {...props} cards={[makeCard({ id: 'c1', characterId: 1, quote: 'x', src: [1] })]} />);
+    expect(screen.getByTestId('submission-block-1')).toHaveTextContent(/^1/);
+    expect(screen.getByTestId('submission-block-0')).not.toHaveTextContent(/^1/);
+  });
+
+  it('offers no carding to a viewer', () => {
+    render(<SubmissionReader {...props} cards={[]} readOnly />);
+    expect(screen.queryByRole('button', { name: '+ Whole paragraph' })).not.toBeInTheDocument();
+  });
+
+  it('offers only moments in the Scenes step: from a selection or a whole paragraph', () => {
+    const onAddMoment = vi.fn();
+    render(<SubmissionReader {...props} onAddCard={undefined} onAddCodex={undefined} onAddMoment={onAddMoment} cards={[]} />);
+    expect(screen.queryByRole('button', { name: '+ Whole paragraph' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: '→ Moment from paragraph' })[1]);
+    expect(onAddMoment).toHaveBeenLastCalledWith('Then I hide the ledger in the vault.');
+
+    const node = screen.getByText(/I meet Mara/).firstChild as Text;
+    const range = document.createRange();
+    range.setStart(node, 0);
+    range.setEnd(node, 'I meet Mara'.length);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    fireEvent.mouseUp(node.parentElement as HTMLElement);
+    const toolbar = screen.getByTestId('selection-toolbar');
+    expect(toolbar).not.toHaveTextContent('+ Card');
+    fireEvent.click(screen.getByRole('button', { name: '→ Moment' }));
+    expect(onAddMoment).toHaveBeenLastCalledWith('I meet Mara');
+  });
+
+  it('says so when a submission is empty', () => {
+    render(<SubmissionReader {...props} text="  " cards={[]} />);
+    expect(screen.getByText('This submission is empty.')).toBeInTheDocument();
+  });
+});

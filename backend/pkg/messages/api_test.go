@@ -1924,3 +1924,94 @@ func TestMessageAPI_SoftDeletedGame(t *testing.T) {
 		assert.Zero(t, count, "no favorite row may be written")
 	})
 }
+
+// TestMessageAPI_GetCharacterComments_HiddenNPC: a character's comment history
+// is part of its profile, so a hidden NPC's history 404s for a regular player
+// exactly as its record and stats do. The NPC's comments still show in the
+// common room itself; what is concealed is looking the character up by ID.
+func TestMessageAPI_GetCharacterComments_HiddenNPC(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+	defer testDB.CleanupTables(t, "messages", "npc_assignments", "characters", "game_participants", "games", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupMessageAPITestRouter(app, testDB)
+	ctx := context.Background()
+
+	gm := testDB.CreateTestUser(t, "gm", "gm@example.com")
+	player := testDB.CreateTestUser(t, "player", "player@example.com")
+	audience := testDB.CreateTestUser(t, "audience", "audience@example.com")
+
+	game := testDB.CreateTestGame(t, int32(gm.ID), "Test Game")
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	messageService := &messages.MessageService{DB: testDB.Pool, Logger: app.ObsLogger}
+
+	_, err := gameService.AddGameParticipant(ctx, game.ID, int32(player.ID), "player")
+	require.NoError(t, err)
+	_, err = gameService.AddGameParticipant(ctx, game.ID, int32(audience.ID), "audience")
+	require.NoError(t, err)
+
+	narrator, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{
+		GameID: game.ID, UserID: int32Ptr(int32(gm.ID)), Name: "Narrator", CharacterType: "player_character",
+	})
+	require.NoError(t, err)
+	post, err := messageService.CreatePost(ctx, core.CreatePostRequest{
+		GameID: game.ID, AuthorID: int32(gm.ID), CharacterID: narrator.ID, Content: "The tavern fills.", Visibility: "game",
+	})
+	require.NoError(t, err)
+
+	newNPC := func(name string, hidden bool) int32 {
+		npc, err := characterService.CreateCharacter(ctx, db.CreateCharacterRequest{GameID: game.ID, Name: name, CharacterType: "npc"})
+		require.NoError(t, err)
+		_, err = characterService.ApproveCharacter(ctx, npc.ID)
+		require.NoError(t, err)
+		if hidden {
+			_, err = characterService.SetCharacterHidden(ctx, npc.ID, true)
+			require.NoError(t, err)
+		}
+		_, err = messageService.CreateComment(ctx, core.CreateCommentRequest{
+			GameID: game.ID, ParentID: post.ID, AuthorID: int32(gm.ID), CharacterID: npc.ID,
+			Content: name + " speaks.", Visibility: "game",
+		})
+		require.NoError(t, err)
+		return npc.ID
+	}
+	hiddenNPC := newNPC("Masked Informant", true)
+	visibleNPC := newNPC("Town Crier", false)
+
+	get := func(u *core.User, characterID int32) *httptest.ResponseRecorder {
+		tok, err := core.CreateTestJWTTokenForUser(app, u)
+		require.NoError(t, err)
+		req := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/characters/%d/comments", characterID), nil)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec
+	}
+
+	t.Run("player gets 404 for a hidden NPC", func(t *testing.T) {
+		rec := get(player, hiddenNPC)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.NotContains(t, rec.Body.String(), "Masked Informant speaks.")
+	})
+
+	t.Run("player still sees a visible NPC", func(t *testing.T) {
+		assert.Equal(t, http.StatusOK, get(player, visibleNPC).Code)
+	})
+
+	t.Run("GM sees the hidden NPC's history", func(t *testing.T) {
+		rec := get(gm, hiddenNPC)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), "Masked Informant speaks.")
+	})
+
+	t.Run("audience sees the hidden NPC's history", func(t *testing.T) {
+		assert.Equal(t, http.StatusOK, get(audience, hiddenNPC).Code)
+	})
+
+	t.Run("anyone sees it once the game is a public archive", func(t *testing.T) {
+		testDB.SetGameStateDirectly(t, game.ID, core.GameStateCompleted)
+		assert.Equal(t, http.StatusOK, get(player, hiddenNPC).Code)
+	})
+}

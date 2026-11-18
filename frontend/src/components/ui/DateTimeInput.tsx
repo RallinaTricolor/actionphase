@@ -1,4 +1,4 @@
-import { forwardRef, useState, useEffect } from 'react';
+import { forwardRef, useId, useState, useEffect } from 'react';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { tv } from '../../lib/theme/utils';
@@ -99,7 +99,8 @@ export const DateTimeInput = forwardRef<HTMLInputElement, DateTimeInputProps>(
     },
     _ref
   ) => {
-    const inputId = id || props.name;
+    const autoId = useId();
+    const inputId = id || props.name || autoId;
     const showError = variant === 'error' || error;
 
     // Convert string value to Date object for react-datepicker

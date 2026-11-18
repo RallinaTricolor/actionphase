@@ -34,6 +34,7 @@ describe('EditGameModal', () => {
     auto_accept_audience: false,
     allow_group_conversations: false,
     portrait_avatars: false,
+    share_gm_board: false,
     current_players: 3,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',

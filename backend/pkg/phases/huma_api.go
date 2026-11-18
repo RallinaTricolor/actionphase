@@ -8,7 +8,9 @@ package phases
 // /phases.
 
 import (
+	"actionphase/pkg/access"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -96,15 +98,14 @@ func (h *Handler) loadPhaseGame(ctx context.Context, phaseID int32, authUser *co
 		return h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get phase", "error", err)
 	}
 
-	game, err := h.GameService.GetGame(ctx, phase.GameID)
+	// The access middleware on /phases/{id} has usually loaded the game and
+	// resolved is_gm already; these reuse that rather than querying again.
+	game, err := core.GameForRequest(ctx, phase.GameID, h.GameService.GetGame)
 	if err != nil {
 		return h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", phase.GameID), "Failed to get game", "error", err)
 	}
 
-	// The Ctx form of the same check the chi handlers made through
-	// core.IsUserGameMaster, which is itself only a *http.Request wrapper
-	// around this. Admin mode is read from the context either way.
-	if !core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, *game, h.App.Pool) {
+	if !core.IsRequestGameMaster(ctx, h.App.Pool, authUser, *game) {
 		return h.logAndErr(ctx, core.ErrForbidden(forbiddenMsg), logMsg,
 			"phase_id", phaseID, "game_id", phase.GameID, "user_id", authUser.ID)
 	}
@@ -276,15 +277,33 @@ type submitActionBody struct {
 
 func (b *submitActionBody) Resolve(huma.Context) []error { return humaconfig.TrimStrings(b) }
 
+// createActionResultBody allows empty content for a draft: the results board
+// makes a character's draft when the GM gives them their first reward or sheet
+// change, before any of the result is written, because sheet updates need a
+// result to carry them. A result published as it's made still needs content.
 type createActionResultBody struct {
+	PhaseID            *int32 `json:"phase_id,omitempty" required:"false" doc:"The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase."`
 	UserID             int32  `json:"user_id" doc:"Recipient user ID"`
 	CharacterID        *int32 `json:"character_id,omitempty" required:"false"`
 	ActionSubmissionID *int32 `json:"action_submission_id,omitempty" required:"false"`
-	Content            string `json:"content" minLength:"1" doc:"Result content"`
+	Content            string `json:"content" required:"false" doc:"Result content. May be empty for a draft (is_published false)."`
 	IsPublished        bool   `json:"is_published,omitempty" required:"false"`
+	FirstDraft         bool   `json:"first_draft,omitempty" required:"false" doc:"Start this character's draft: if they already have an unpublished result in the phase, it is returned unchanged and nothing new is made. Needs character_id, and can't be combined with is_published."`
 }
 
-func (b *createActionResultBody) Resolve(huma.Context) []error { return humaconfig.TrimStrings(b) }
+func (b *createActionResultBody) Resolve(huma.Context) []error {
+	errs := humaconfig.TrimStrings(b)
+	if b.FirstDraft && b.CharacterID == nil {
+		errs = append(errs, &huma.ErrorDetail{Location: "body.first_draft", Message: "first_draft needs a character_id", Value: b.FirstDraft})
+	}
+	if b.FirstDraft && b.IsPublished {
+		errs = append(errs, &huma.ErrorDetail{Location: "body.first_draft", Message: "first_draft is for unpublished results", Value: b.FirstDraft})
+	}
+	if b.IsPublished && b.Content == "" {
+		errs = append(errs, &huma.ErrorDetail{Location: "body.content", Message: "a published result needs content", Value: b.Content})
+	}
+	return errs
+}
 
 // updateActionResultBody has no minLength on Content.
 //
@@ -295,6 +314,11 @@ func (b *createActionResultBody) Resolve(huma.Context) []error { return humaconf
 // track tightening it separately.
 type updateActionResultBody struct {
 	Content string `json:"content" required:"false"`
+	// ExpectedUpdatedAt is the updated_at the caller last saw. When it no
+	// longer matches, someone saved since, and the update is refused with 409
+	// instead of overwriting their text. Optional, so callers that don't send
+	// it (the results list) save as before.
+	ExpectedUpdatedAt *time.Time `json:"expected_updated_at,omitempty" required:"false" doc:"The updated_at last seen; a mismatch is refused with 409"`
 }
 
 type stagedPartBody struct {
@@ -308,6 +332,7 @@ type stagedPartBody struct {
 func (b *stagedPartBody) Resolve(huma.Context) []error { return humaconfig.TrimStrings(b) }
 
 type createStagedChainBody struct {
+	PhaseID            *int32           `json:"phase_id,omitempty" required:"false" doc:"The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase."`
 	UserID             int32            `json:"user_id" doc:"Recipient user ID"`
 	CharacterID        *int32           `json:"character_id,omitempty" required:"false"`
 	ActionSubmissionID *int32           `json:"action_submission_id,omitempty" required:"false"`
@@ -399,6 +424,25 @@ type updateStagedDelayInput struct {
 	Body     *updateStagedDelayBody
 }
 
+type rewardSheetUpdateBody struct {
+	ModuleType string `json:"module_type" pattern:"^(skills|inventory|numbers|t_[a-z0-9]{6})$" doc:"Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout"`
+	FieldName  string `json:"field_name" minLength:"1" doc:"The tab's storage field: items for inventory, else the tab key"`
+	FieldValue string `json:"field_value" minLength:"2" maxLength:"262144" doc:"The tab's whole new value, as a JSON array of entries"`
+}
+
+type replaceRewardSheetUpdatesBody struct {
+	ResultID        *int32                  `json:"result_id,omitempty" required:"false" doc:"The result that carries the sheet changes: an unpublished last part of one of this character's results in this phase. Leave out to clear them."`
+	Updates         []rewardSheetUpdateBody `json:"updates" maxItems:"50" doc:"One whole-tab value per changed tab. Empty clears the generated drafts."`
+	ReplaceHandMade bool                    `json:"replace_hand_made,omitempty" required:"false" doc:"Also replace sheet drafts made by hand in the results list. Without it, those make the request fail with 409."`
+}
+
+type replaceRewardSheetUpdatesInput struct {
+	GameID      int32 `path:"gameID" doc:"Game ID"`
+	PhaseID     int32 `path:"phaseId" doc:"Phase ID"`
+	CharacterID int32 `path:"characterId" doc:"Character ID"`
+	Body        *replaceRewardSheetUpdatesBody
+}
+
 type createDraftUpdateInput struct {
 	GameID   int32 `path:"gameID" doc:"Game ID"`
 	ResultID int32 `path:"resultId" doc:"Action result ID"`
@@ -488,7 +532,9 @@ func (h *Handler) humaGetGamePhases(ctx context.Context, in *gameScopedInput) (*
 	// the same way, so an empty list has always serialized as [].
 	response := make([]*PhaseResponse, 0, len(phases))
 	for i := range phases {
-		response = append(response, withCalculatedFields(convertPhaseToResponse(&phases[i])))
+		phase := withCalculatedFields(convertPhaseToResponse(&phases[i]))
+		phase.HasEnded = core.PhaseHasEnded(phases[i], phases)
+		response = append(response, phase)
 	}
 	return &phaseListOutput{Body: response}, nil
 }
@@ -615,7 +661,7 @@ func (h *Handler) humaPublishAllPhaseResults(ctx context.Context, in *phaseScope
 	}
 
 	if err := h.ActionSubmissionService.PublishAllPhaseResults(ctx, in.PhaseID); err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to publish all phase results", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to publish all phase results")
 	}
 
 	out := &messageOutput{}
@@ -830,6 +876,37 @@ func (h *Handler) humaGetGameActions(ctx context.Context, in *gameScopedInput) (
 
 // Action results
 
+// resultPhase is the phase a new result goes in: always the active one. A
+// caller working on a particular phase (the results board) names it, so a
+// result is refused rather than filed under a different phase when that one
+// is no longer active.
+func (h *Handler) resultPhase(ctx context.Context, gameID int32, requested *int32, logMsg string) (*models.GamePhase, error) {
+	activePhase, err := h.PhaseService.GetActivePhase(ctx, gameID)
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get active phase", "error", err)
+	}
+	if requested != nil && (activePhase == nil || activePhase.ID != *requested) {
+		return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusLocked, core.PhaseNotActiveMessage), logMsg, "requested_phase_id", *requested)
+	}
+	if activePhase == nil {
+		return nil, h.logAndErr(ctx, core.ErrBadRequest(fmt.Errorf("no active phase for this game")), logMsg)
+	}
+	return activePhase, nil
+}
+
+// resultWriteErr answers a failed change to a result or its sheet updates: 423
+// when the phase has ended, 409 when publishing would send a blank result, else
+// a server error.
+func (h *Handler) resultWriteErr(ctx context.Context, err error, logMsg string) error {
+	if errors.Is(err, core.ErrPhaseEnded) {
+		return h.logAndErr(ctx, core.ErrWithStatus(http.StatusLocked, core.PhaseEndedMessage), logMsg, "error", err)
+	}
+	if errors.Is(err, core.ErrEmptyResult) {
+		return h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrEmptyResult)), logMsg, "error", err)
+	}
+	return h.logAndErr(ctx, core.ErrInternalError(err), logMsg, "error", err)
+}
+
 func (h *Handler) humaCreateActionResult(ctx context.Context, in *createActionResultInput) (*actionResultOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_create_action_result")()
 
@@ -848,12 +925,9 @@ func (h *Handler) humaCreateActionResult(ctx context.Context, in *createActionRe
 		return nil, err
 	}
 
-	activePhase, err := h.PhaseService.GetActivePhase(ctx, gameID)
+	activePhase, err := h.resultPhase(ctx, gameID, in.Body.PhaseID, "Bad create action result request")
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get active phase", "error", err)
-	}
-	if activePhase == nil {
-		return nil, h.logAndErr(ctx, core.ErrBadRequest(fmt.Errorf("no active phase for this game")), "Bad create action result request")
+		return nil, err
 	}
 
 	result, err := h.ActionSubmissionService.CreateActionResult(ctx, core.CreateActionResultRequest{
@@ -865,6 +939,7 @@ func (h *Handler) humaCreateActionResult(ctx context.Context, in *createActionRe
 		GMUserID:           gmUser.ID,
 		Content:            in.Body.Content,
 		IsPublished:        in.Body.IsPublished,
+		FirstDraft:         in.Body.FirstDraft,
 	})
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to create action result", "error", err)
@@ -888,6 +963,9 @@ func actionResultResponse(result *models.ActionResult) *ActionResultResponse {
 	}
 	if result.SentAt.Valid {
 		resp.SentAt = &result.SentAt.Time
+	}
+	if result.UpdatedAt.Valid {
+		resp.UpdatedAt = &result.UpdatedAt.Time
 	}
 	return resp
 }
@@ -962,37 +1040,10 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 		return nil, err
 	}
 
-	authUser, err := h.requireAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	canManage, err := h.PhaseService.CanUserManagePhases(ctx, gameID, authUser.ID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to check phase management permission", "error", err)
-	}
-
-	game, err := h.GameService.GetGame(ctx, gameID)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.HandleDBErrorWithID(err, "game", gameID), "Failed to get game", "error", err)
-	}
-
-	isAudience := core.IsUserAudience(ctx, h.App.Pool, gameID, authUser.ID)
-
-	// Allow access if: GM, audience, or the game is a public archive.
-	//
-	// The archive branch deliberately has no membership check -- a public-archive
-	// game (completed OR epilogue) is readable by any authenticated user. It is
-	// broader than the other two arms, which are scoped to a role: this one
-	// admits non-participants.
-	//
-	// Epilogue must be included: a player writing an epilogue needs to see what
+	// Gated by the declared Audience level alone: the GM, co-GMs, audience
+	// members, or anyone once the game is a public archive. Epilogue counts as
+	// an archive on purpose: a player writing an epilogue needs to see what
 	// happened to everyone else, which is the whole reason that state exists.
-	if !canManage && !isAudience && !core.IsPublicArchive(game.State) {
-		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM, audience, or any user of a public archive game can view all action results"),
-			"Get game action results forbidden")
-	}
-
 	results, err := h.ActionSubmissionService.GetGameResults(ctx, gameID)
 	if err != nil {
 		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get game action results", "error", err)
@@ -1052,6 +1103,17 @@ func (h *Handler) humaGetGameActionResults(ctx context.Context, in *gameScopedIn
 		// are entitled to read a part before it releases.
 		applyStagedFields(&resultResp, result.PartNumber, result.PartCount, result.ReleasedAt, result.UnlocksAt, result.RevealDelayMinutes)
 
+		// The chain link and the last save, for the results board: it groups a
+		// character's parts into chains by parent, and sends UpdatedAt back as
+		// expected_updated_at so it can't save over a co-GM's newer text.
+		if result.ParentResultID.Valid {
+			parentID := result.ParentResultID.Int32
+			resultResp.ParentResultID = &parentID
+		}
+		if result.UpdatedAt.Valid {
+			resultResp.UpdatedAt = &result.UpdatedAt.Time
+		}
+
 		response = append(response, resultResp)
 	}
 
@@ -1076,9 +1138,16 @@ func (h *Handler) humaUpdateActionResult(ctx context.Context, in *updateActionRe
 		return nil, err
 	}
 
-	result, err := h.ActionSubmissionService.UpdateActionResult(ctx, in.ResultID, in.Body.Content)
-	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update action result", "error", err)
+	result, err := h.ActionSubmissionService.UpdateActionResult(ctx, in.ResultID, in.Body.Content, in.Body.ExpectedUpdatedAt)
+	switch {
+	case errors.Is(err, core.ErrResultNotEditable):
+		// Published, or saved by someone else since: the request was well
+		// formed and the world moved, so 409, as for staged-chain edits.
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrResultNotEditable)), "Action result not editable", "error", err)
+	case errors.Is(err, core.ErrActionResultNotFound):
+		return nil, h.logAndErr(ctx, core.ErrNotFound("This result no longer exists"), "Action result not found", "error", err)
+	case err != nil:
+		return nil, h.resultWriteErr(ctx, err, "Failed to update action result")
 	}
 
 	return &actionResultOutput{Body: actionResultResponse(result)}, nil
@@ -1103,7 +1172,7 @@ func (h *Handler) humaDeleteActionResult(ctx context.Context, in *resultIDInput)
 	}
 
 	if err := h.ActionSubmissionService.DeleteActionResult(ctx, in.ResultID); err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete action result", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to delete action result")
 	}
 
 	return &noContentOutput{}, nil
@@ -1128,7 +1197,7 @@ func (h *Handler) humaPublishActionResult(ctx context.Context, in *resultIDInput
 	}
 
 	if err := h.ActionSubmissionService.PublishActionResult(ctx, in.ResultID, authUser.ID); err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to publish action result", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to publish action result")
 	}
 
 	out := &messageOutput{}
@@ -1156,12 +1225,9 @@ func (h *Handler) humaCreateStagedResultChain(ctx context.Context, in *createSta
 		return nil, err
 	}
 
-	activePhase, err := h.PhaseService.GetActivePhase(ctx, gameID)
+	activePhase, err := h.resultPhase(ctx, gameID, in.Body.PhaseID, "Bad create staged result chain request")
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to get active phase", "error", err)
-	}
-	if activePhase == nil {
-		return nil, h.logAndErr(ctx, core.ErrBadRequest(fmt.Errorf("no active phase for this game")), "Bad create staged result chain request")
+		return nil, err
 	}
 
 	parts := make([]core.StagedResultPart, 0, len(in.Body.Parts))
@@ -1228,6 +1294,15 @@ func (h *Handler) humaCreateStagedResultChain(ctx context.Context, in *createSta
 
 		if result.ReleasedAt.Valid {
 			resultResp.ReleasedAt = &result.ReleasedAt.Time
+		}
+
+		if result.ParentResultID.Valid {
+			parentID := result.ParentResultID.Int32
+			resultResp.ParentResultID = &parentID
+		}
+
+		if result.UpdatedAt.Valid {
+			resultResp.UpdatedAt = &result.UpdatedAt.Time
 		}
 
 		response = append(response, resultResp)
@@ -1299,7 +1374,7 @@ func (h *Handler) humaCancelPendingStagedPart(ctx context.Context, in *resultIDI
 			return nil, h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrCannotCancelPart)),
 				"Cannot cancel staged part", "error", err)
 		}
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to cancel pending part", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to cancel pending part")
 	}
 
 	return &noContentOutput{}, nil
@@ -1352,6 +1427,8 @@ func (h *Handler) requireStagedChainManagerCtx(ctx context.Context, gameID, resu
 // already released) is 409 and no amount of editing the request will help.
 func (h *Handler) stagedEditErr(ctx context.Context, err error, logMsg string) error {
 	switch {
+	case errors.Is(err, core.ErrPhaseEnded):
+		return h.resultWriteErr(ctx, err, logMsg)
 	case errors.Is(err, core.ErrInvalidStagedChain):
 		return h.logAndErr(ctx, core.ErrWithStatus(http.StatusBadRequest, core.UserMessage(err, core.ErrInvalidStagedChain)), logMsg, "error", err)
 	case errors.Is(err, core.ErrCannotEditChain):
@@ -1448,7 +1525,7 @@ func (h *Handler) humaCreateDraftCharacterUpdate(ctx context.Context, in *create
 		Operation:      in.Body.Operation,
 	})
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to create draft character update", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to create draft character update")
 	}
 
 	return &draftUpdateOutput{Body: draftUpdateResponse(draft)}, nil
@@ -1464,6 +1541,7 @@ func draftUpdateResponse(draft *models.ActionResultCharacterUpdate) *DraftCharac
 		FieldValue:     draft.FieldValue.String,
 		FieldType:      draft.FieldType,
 		Operation:      draft.Operation,
+		FromRewards:    draft.FromRewards,
 		CreatedAt:      draft.CreatedAt.Time,
 		UpdatedAt:      draft.UpdatedAt.Time,
 	}
@@ -1508,7 +1586,7 @@ func (h *Handler) humaUpdateDraftCharacterUpdate(ctx context.Context, in *update
 
 	draft, err := h.ActionSubmissionService.UpdateDraftCharacterUpdate(ctx, in.DraftID, in.Body.FieldValue)
 	if err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to update draft character update", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to update draft character update")
 	}
 
 	return &draftUpdateOutput{Body: draftUpdateResponse(draft)}, nil
@@ -1527,10 +1605,90 @@ func (h *Handler) humaDeleteDraftCharacterUpdate(ctx context.Context, in *draftI
 	}
 
 	if err := h.ActionSubmissionService.DeleteDraftCharacterUpdate(ctx, in.DraftID); err != nil {
-		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to delete draft character update", "error", err)
+		return nil, h.resultWriteErr(ctx, err, "Failed to delete draft character update")
 	}
 
 	return &noContentOutput{}, nil
+}
+
+func (h *Handler) humaListPhaseDraftCharacterUpdates(ctx context.Context, in *phaseScopedInput) (*draftUpdateListOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_list_phase_draft_character_updates")()
+
+	if _, err := h.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	if !isGMFromCtx(ctx) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM can view draft character updates"), "List phase draft updates forbidden")
+	}
+
+	drafts, err := h.ActionSubmissionService.ListPhaseDraftCharacterUpdates(ctx, in.PhaseID)
+	if err != nil {
+		return nil, h.logAndErr(ctx, core.ErrInternalError(err), "Failed to list phase draft character updates", "error", err)
+	}
+
+	response := make([]DraftCharacterUpdateResponse, 0, len(drafts))
+	for _, draft := range drafts {
+		response = append(response, *draftUpdateResponse(&draft))
+	}
+	return &draftUpdateListOutput{Body: response}, nil
+}
+
+func (h *Handler) humaReplaceRewardSheetUpdates(ctx context.Context, in *replaceRewardSheetUpdatesInput) (*draftUpdateListOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_replace_reward_sheet_updates")()
+
+	if _, err := h.requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	if !isGMFromCtx(ctx) {
+		return nil, h.logAndErr(ctx, core.ErrForbidden("only the GM can manage draft character updates"), "Replace reward sheet updates forbidden")
+	}
+
+	// Publishing copies each value into character_data as-is, so every pair
+	// gets the layout check a direct sheet write does.
+	game, ok := ctx.Value("game").(*models.Game)
+	if !ok {
+		return nil, huma.Error500InternalServerError("game context missing")
+	}
+	tabKeys := core.SheetTabKeysForStored(game.CharacterSheet)
+	seen := map[string]bool{}
+	updates := make([]core.RewardSheetUpdate, 0, len(in.Body.Updates))
+	for _, u := range in.Body.Updates {
+		if core.ClassifySheetWrite(u.ModuleType, u.FieldName, tabKeys) != core.SheetWriteGMOnly {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("%s/%s is not a character sheet tab in this game", u.ModuleType, u.FieldName))
+		}
+		if seen[u.ModuleType] {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("The %s tab is listed twice", u.ModuleType))
+		}
+		seen[u.ModuleType] = true
+		var entries []json.RawMessage
+		if err := json.Unmarshal([]byte(u.FieldValue), &entries); err != nil {
+			return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("The new value for %s isn't a list of entries", u.ModuleType))
+		}
+		updates = append(updates, core.RewardSheetUpdate{ModuleType: u.ModuleType, FieldName: u.FieldName, FieldValue: u.FieldValue})
+	}
+
+	written, err := h.ActionSubmissionService.ReplaceRewardSheetUpdates(ctx, core.ReplaceRewardSheetUpdatesRequest{
+		GameID:          game.ID,
+		PhaseID:         in.PhaseID,
+		CharacterID:     in.CharacterID,
+		ResultID:        in.Body.ResultID,
+		Updates:         updates,
+		ReplaceHandMade: in.Body.ReplaceHandMade,
+	})
+	switch {
+	case errors.Is(err, core.ErrHandMadeSheetDrafts):
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrHandMadeSheetDrafts)), "Reward sync would replace hand-made drafts", "error", err)
+	case errors.Is(err, core.ErrInvalidRewardCarrier):
+		return nil, h.logAndErr(ctx, core.ErrConflict(core.UserMessage(err, core.ErrInvalidRewardCarrier)), "Invalid reward carrier", "error", err)
+	case err != nil:
+		return nil, h.resultWriteErr(ctx, err, "Failed to replace reward sheet updates")
+	}
+
+	response := make([]DraftCharacterUpdateResponse, 0, len(written))
+	for _, draft := range written {
+		response = append(response, *draftUpdateResponse(&draft))
+	}
+	return &draftUpdateListOutput{Body: response}, nil
 }
 
 func (h *Handler) humaGetDraftUpdateCount(ctx context.Context, in *resultIDInput) (*draftCountOutput, error) {
@@ -1566,6 +1724,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createPhase",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/phases",
 		Summary:       "Create a phase",
@@ -1583,6 +1742,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getCurrentPhase",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/current-phase",
 		Summary:     "Get the active phase",
@@ -1596,6 +1756,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGamePhases",
+		Extensions:  access.PublicRoute(access.ReasonGameInfo),
 		Method:      http.MethodGet,
 		Path:        "/phases",
 		Summary:     "List game phases",
@@ -1609,6 +1770,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "submitAction",
+		Extensions:    access.MembersOnly(),
 		Method:        http.MethodPost,
 		Path:          "/actions",
 		Summary:       "Submit an action",
@@ -1626,6 +1788,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameActions",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/actions",
 		Summary:     "List all game actions",
@@ -1640,6 +1803,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listMyActions",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/actions/mine",
 		Summary:     "List my action submissions",
@@ -1653,6 +1817,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createActionResult",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results",
 		Summary:       "Create an action result",
@@ -1661,6 +1826,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "phase_id names a phase that isn't the active one"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body, or no active phase"},
 			"401": {Description: "Not authenticated"},
@@ -1670,6 +1836,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createStagedResultChain",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/staged",
 		Summary:       "Create a staged result chain",
@@ -1678,6 +1845,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "phase_id names a phase that isn't the active one"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid chain shape, or no active phase"},
 			"401": {Description: "Not authenticated"},
@@ -1687,6 +1855,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listGameActionResults",
+		Extensions:  access.AudienceOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results",
 		Summary:     "List all game action results",
@@ -1701,6 +1870,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listMyActionResults",
+		Extensions:  access.PublicRoute(access.ReasonOwnRecords),
 		Method:      http.MethodGet,
 		Path:        "/results/mine",
 		Summary:     "List my action results",
@@ -1714,6 +1884,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}",
 		Summary:     "Update an action result",
@@ -1721,15 +1892,19 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can update action results"},
+			"404": {Description: "The result no longer exists"},
+			"409": {Description: "The result is published, or was saved by someone else since expected_updated_at"},
 		},
 	}, h.humaUpdateActionResult)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}",
 		Summary:     "Delete a draft action result",
@@ -1737,6 +1912,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can delete action results"},
@@ -1745,6 +1921,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "cancelPendingStagedPart",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}/pending",
 		Summary:     "Cancel a pending staged part",
@@ -1752,6 +1929,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Already released, or not a staged part"},
 			"401": {Description: "Not authenticated"},
@@ -1762,6 +1940,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "appendStagedPart",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/{resultId}/parts",
 		Summary:       "Append a staged part",
@@ -1770,6 +1949,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid chain shape, such as a delay out of range"},
 			"401": {Description: "Not authenticated"},
@@ -1781,6 +1961,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateStagedPartDelay",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}/delay",
 		Summary:     "Retime a staged part",
@@ -1788,6 +1969,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Delay out of range"},
 			"401": {Description: "Not authenticated"},
@@ -1799,6 +1981,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "publishActionResult",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/results/{resultId}/publish",
 		Summary:     "Publish an action result",
@@ -1806,6 +1989,8 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"409": {Description: "A result being published has no text yet. Nothing was published"},
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can publish action results"},
@@ -1814,6 +1999,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "publishAllPhaseResults",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/phases/{phaseId}/results/publish",
 		Summary:     "Publish all results for a phase",
@@ -1821,6 +2007,8 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Action Results"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"409": {Description: "A result being published has no text yet. Nothing was published"},
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"401": {Description: "Not authenticated"},
 			"403": {Description: "Only the GM can publish action results"},
@@ -1829,6 +2017,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getUnpublishedResultsCount",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/phases/{phaseId}/results/unpublished-count",
 		Summary:     "Count unpublished results",
@@ -1844,6 +2033,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "createDraftCharacterUpdate",
+		Extensions:    access.GMOnly(),
 		Method:        http.MethodPost,
 		Path:          "/results/{resultId}/character-updates",
 		Summary:       "Create a draft character update",
@@ -1852,6 +2042,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Security:      bearer,
 		DefaultStatus: http.StatusCreated,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body, unknown character, or the result belongs to another game"},
 			"401": {Description: "Not authenticated"},
@@ -1862,6 +2053,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listDraftCharacterUpdates",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results/{resultId}/character-updates",
 		Summary:     "List draft character updates",
@@ -1879,6 +2071,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getDraftUpdateCount",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodGet,
 		Path:        "/results/{resultId}/character-updates/count",
 		Summary:     "Count draft character updates",
@@ -1896,6 +2089,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateDraftCharacterUpdate",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/results/{resultId}/character-updates/{draftId}",
 		Summary:     "Update a draft character update",
@@ -1903,6 +2097,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Draft Character Updates"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "Invalid request body, or the result belongs to another game"},
 			"401": {Description: "Not authenticated"},
@@ -1913,6 +2108,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteDraftCharacterUpdate",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/results/{resultId}/character-updates/{draftId}",
 		Summary:     "Delete a draft character update",
@@ -1920,6 +2116,7 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 		Tags:        []string{"Draft Character Updates"},
 		Security:    bearer,
 		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
 			"422": {Description: "Request failed validation"},
 			"400": {Description: "The result belongs to another game"},
 			"401": {Description: "Not authenticated"},
@@ -1927,6 +2124,42 @@ func RegisterHumaGamePhases(api huma.API, h *Handler) {
 			"404": {Description: "Action result not found"},
 		},
 	}, h.humaDeleteDraftCharacterUpdate)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listPhaseDraftCharacterUpdates",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodGet,
+		Path:        "/phases/{phaseId}/draft-character-updates",
+		Summary:     "List a phase's draft character updates",
+		Description: "Every sheet change staged on a result in the phase, for the results board. GM only.",
+		Tags:        []string{"Draft Character Updates"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"422": {Description: "Request failed validation"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can view draft character updates"},
+			"404": {Description: "Phase not found in this game"},
+		},
+	}, h.humaListPhaseDraftCharacterUpdates)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "replaceRewardSheetUpdates",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodPut,
+		Path:        "/phases/{phaseId}/characters/{characterId}/reward-sheet-updates",
+		Summary:     "Replace a character's reward sheet updates",
+		Description: "Sets the sheet changes the results board generated from a character's reward lines. They're cleared from the character's other unpublished results in the phase and written on result_id, in one transaction, so one result carries them. GM only.",
+		Tags:        []string{"Draft Character Updates"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"423": {Description: "The phase has ended, so it's read-only until it's activated again"},
+			"422": {Description: "Request failed validation, or a tab isn't on this game's sheet"},
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can manage draft character updates"},
+			"404": {Description: "Phase or character not found in this game"},
+			"409": {Description: "Hand-made sheet drafts would be replaced, or the result can't carry them (published, not the last part, or not this character's)"},
+		},
+	}, h.humaReplaceRewardSheetUpdates)
 }
 
 // RegisterHumaPhases registers the phase-id operations mounted at /phases.
@@ -1939,6 +2172,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "activatePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPost,
 		Path:        "/{id}/activate",
 		Summary:     "Activate a phase",
@@ -1954,6 +2188,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePhaseDeadline",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{id}/deadline",
 		Summary:     "Update a phase deadline",
@@ -1970,6 +2205,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updatePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodPut,
 		Path:        "/{id}",
 		Summary:     "Update a phase",
@@ -1986,6 +2222,7 @@ func RegisterHumaPhases(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deletePhase",
+		Extensions:  access.GMOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/{id}",
 		Summary:     "Delete a phase",
@@ -2086,6 +2323,10 @@ func stagedPartResponse(result models.ActionResult) ActionResultWithDetailsRespo
 	if result.RevealDelayMinutes.Valid {
 		delay := result.RevealDelayMinutes.Int32
 		resp.RevealDelayMinutes = &delay
+	}
+
+	if result.UpdatedAt.Valid {
+		resp.UpdatedAt = &result.UpdatedAt.Time
 	}
 
 	return resp

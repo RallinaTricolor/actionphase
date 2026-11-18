@@ -508,6 +508,7 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
                 onLeaveGame={handleLeaveGame}
                 onDeleteGame={handleDeleteGame}
                 onCustomizeSheet={() => navigate(`/games/${gameId}/character-sheet`)}
+                onBoardSetup={() => navigate(`/games/${gameId}/board-setup`)}
                 slot="menu-actions"
               />
             }

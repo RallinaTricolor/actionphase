@@ -15,6 +15,14 @@ import {
 import { logger } from '@/services/LoggingService';
 
 /**
+ * The server refused a change because the phase has ended or isn't active
+ * (423). The phase is read-only until the GM activates it again.
+ */
+export function isPhaseLocked(error: unknown): boolean {
+  return error instanceof AxiosError && error.response?.status === 423;
+}
+
+/**
  * Details that say only that something failed, not what. Huma sends
  * "validation failed" alongside the field errors that explain it.
  */

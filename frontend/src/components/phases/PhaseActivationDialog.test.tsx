@@ -135,6 +135,41 @@ describe('PhaseActivationDialog', () => {
       expect(screen.getByRole('button', { name: /Activate Without Publishing/i })).toBeInTheDocument();
     });
 
+    it('won’t publish and activate while a draft has nothing written, but can still activate', () => {
+      renderWithProviders(
+        <PhaseActivationDialog
+          phaseNumber={3}
+          currentPhaseId={1}
+          unpublishedCount={2}
+          isActivating={false}
+          publishAllMutation={makeMutation()}
+          blankDraftRecipients={['Rook']}
+          onActivate={mockOnActivate}
+          onClose={mockOnClose}
+        />
+      );
+
+      expect(screen.getByTestId('activate-blank-drafts')).toHaveTextContent('Nothing written yet for: Rook.');
+      expect(screen.getByRole('button', { name: /Publish & Activate Phase/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Activate Without Publishing/i })).toBeEnabled();
+    });
+
+    it('says unpublished results stay as they are once the phase ends', () => {
+      renderWithProviders(
+        <PhaseActivationDialog
+          phaseNumber={3}
+          currentPhaseId={1}
+          unpublishedCount={1}
+          isActivating={false}
+          publishAllMutation={makeMutation()}
+          onActivate={mockOnActivate}
+          onClose={mockOnClose}
+        />
+      );
+
+      expect(screen.getByText(/stays unpublished, and can’t be changed until you activate this phase again/)).toBeInTheDocument();
+    });
+
     it('shows the unpublished count in the warning', () => {
       renderWithProviders(
         <PhaseActivationDialog

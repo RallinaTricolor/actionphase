@@ -126,6 +126,7 @@ type ActionResultCharacterUpdate struct {
 	Operation      string             `json:"operation"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	FromRewards    bool               `json:"from_rewards"`
 }
 
 type ActionSubmission struct {
@@ -340,6 +341,7 @@ type Game struct {
 	CommunityID             pgtype.Int4        `json:"community_id"`
 	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
 	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
+	ShareGmBoard            bool               `json:"share_gm_board"`
 }
 
 type GameApplication struct {
@@ -436,6 +438,31 @@ type GamePhase struct {
 	// For action phases: indicates whether GM has published results. For common_room and interlude phases: always false.
 	IsPublished bool               `json:"is_published"`
 	ActivatedAt pgtype.Timestamptz `json:"activated_at"`
+}
+
+type GmBoardItem struct {
+	PhaseID   int32              `json:"phase_id"`
+	Kind      string             `json:"kind"`
+	ItemKey   string             `json:"item_key"`
+	GameID    int32              `json:"game_id"`
+	Doc       []byte             `json:"doc"`
+	Version   int32              `json:"version"`
+	Seq       int64              `json:"seq"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	UpdatedBy pgtype.Int4        `json:"updated_by"`
+}
+
+type GmSettingsItem struct {
+	GameID    int32              `json:"game_id"`
+	Kind      string             `json:"kind"`
+	ItemKey   string             `json:"item_key"`
+	Doc       []byte             `json:"doc"`
+	Version   int32              `json:"version"`
+	Seq       int64              `json:"seq"`
+	Deleted   bool               `json:"deleted"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	UpdatedBy pgtype.Int4        `json:"updated_by"`
 }
 
 type Handout struct {

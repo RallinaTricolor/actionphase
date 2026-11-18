@@ -8,6 +8,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5"
 
+	"actionphase/pkg/access"
 	"actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
 	"actionphase/pkg/validation"
@@ -125,6 +126,7 @@ type updateMessageInput struct {
 func RegisterHumaConversations(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID:   "createConversation",
+		Extensions:    access.MembersOnly(),
 		Method:        http.MethodPost,
 		Path:          "/conversations",
 		Summary:       "Create a conversation",
@@ -135,6 +137,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "listConversations",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodGet,
 		Path:        "/conversations",
 		Summary:     "List the caller's conversations",
@@ -143,6 +146,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getConversation",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodGet,
 		Path:        "/conversations/{conversationId}",
 		Summary:     "Get conversation details",
@@ -151,6 +155,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteConversation",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/conversations/{conversationId}",
 		Summary:     "Delete an empty conversation",
@@ -160,6 +165,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getConversationMessages",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodGet,
 		Path:        "/conversations/{conversationId}/messages",
 		Summary:     "Get conversation messages",
@@ -168,6 +174,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "sendConversationMessage",
+		Extensions:    access.MembersOnly(),
 		Method:        http.MethodPost,
 		Path:          "/conversations/{conversationId}/messages",
 		Summary:       "Send a message",
@@ -178,6 +185,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "deleteConversationMessage",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodDelete,
 		Path:        "/conversations/{conversationId}/messages/{messageId}",
 		Summary:     "Delete a message",
@@ -186,6 +194,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "updateConversationMessage",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPatch,
 		Path:        "/conversations/{conversationId}/messages/{messageId}",
 		Summary:     "Edit a message",
@@ -194,6 +203,7 @@ func RegisterHumaConversations(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "markConversationRead",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPost,
 		Path:        "/conversations/{conversationId}/read",
 		Summary:     "Mark a conversation as read",

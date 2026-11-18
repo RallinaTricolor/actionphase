@@ -3,7 +3,7 @@ import { act, renderHook, screen } from '@testing-library/react';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { useOptionalGameContext } from '@/contexts/GameContext';
 import { apiClient } from '@/lib/api';
-import { useLootRoll } from './useLootRoll';
+import { useLootDraw, useLootRoll } from './useLootRoll';
 
 // GameContext itself is not exported, so drive the optional hook directly: null
 // stands in for "rendered outside a GameProvider".
@@ -19,6 +19,7 @@ vi.mock('@/lib/api', () => ({
   apiClient: {
     games: {
       giveRandomLootTableContent: vi.fn(),
+      drawLootTableContent: vi.fn(),
     },
   },
 }));
@@ -132,5 +133,47 @@ describe('useLootRoll', () => {
 
     expect(ok).toBe(false);
     expect(apiClient.games.giveRandomLootTableContent).not.toHaveBeenCalled();
+  });
+});
+
+describe('useLootDraw', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withGame(42);
+  });
+
+  const setupDraw = () => {
+    const onDrawn = vi.fn();
+    const { result } = renderHook(() => useLootDraw(5, onDrawn), {
+      wrapper: ({ children }) => <ToastProvider>{children}</ToastProvider>,
+    });
+    return { result, onDrawn };
+  };
+
+  it('only draws: never gives the item to the character', async () => {
+    vi.mocked(apiClient.games.drawLootTableContent).mockResolvedValue({
+      data: { id: 1, name: 'Gold Ring', data: '{"id":"srv-1","name":"Gold Ring","quantity":"2"}' },
+    } as RollResponse);
+    const { result, onDrawn } = setupDraw();
+
+    let ok: boolean | undefined;
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
+
+    expect(ok).toBe(true);
+    expect(apiClient.games.drawLootTableContent).toHaveBeenCalledWith(42, 7);
+    expect(apiClient.games.giveRandomLootTableContent).not.toHaveBeenCalled();
+    expect(onDrawn).toHaveBeenCalledWith({ name: 'Gold Ring', data: { id: 'srv-1', name: 'Gold Ring', quantity: '2' } }, 'inventory');
+    expect(await screen.findByText('Rolled Gold Ring: added to the staged updates')).toBeInTheDocument();
+  });
+
+  it('reports a failed draw and hands nothing back', async () => {
+    vi.mocked(apiClient.games.drawLootTableContent).mockRejectedValue(new Error('boom'));
+    const { result, onDrawn } = setupDraw();
+
+    let ok: boolean | undefined;
+    await act(async () => { ok = await result.current.roll(7, 'inventory'); });
+
+    expect(ok).toBe(false);
+    expect(onDrawn).not.toHaveBeenCalled();
   });
 });

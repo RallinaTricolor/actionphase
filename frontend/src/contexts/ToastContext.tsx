@@ -1,17 +1,28 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Alert } from '../components/ui';
+import { Alert, Button } from '../components/ui';
 
 type ToastVariant = 'success' | 'danger' | 'warning' | 'info';
+
+/** A button on the toast, such as Undo. Clicking it runs `onClick` and closes the toast. */
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+interface ToastOptions {
+  action?: ToastAction;
+}
 
 interface Toast {
   id: string;
   message: string;
   variant: ToastVariant;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  showToast: (message: string, variant?: ToastVariant) => void;
+  showToast: (message: string, variant?: ToastVariant, options?: ToastOptions) => void;
   showSuccess: (message: string) => void;
   showError: (message: string) => void;
   showWarning: (message: string) => void;
@@ -22,10 +33,11 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(0);
 
-  const showToast = useCallback((message: string, variant: ToastVariant = 'info') => {
-    const id = Date.now().toString();
-    const newToast = { id, message, variant };
+  const showToast = useCallback((message: string, variant: ToastVariant = 'info', options: ToastOptions = {}) => {
+    const id = `${Date.now()}-${nextId.current++}`;
+    const newToast: Toast = { id, message, variant, action: options.action };
 
     setToasts(prev => [...prev, newToast]);
 
@@ -59,7 +71,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               onDismiss={() => dismissToast(toast.id)}
               className="shadow-lg"
             >
-              {toast.message}
+              {toast.action ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span>{toast.message}</span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      toast.action?.onClick();
+                      dismissToast(toast.id);
+                    }}
+                  >
+                    {toast.action.label}
+                  </Button>
+                </div>
+              ) : (
+                toast.message
+              )}
             </Alert>
           ))}
         </div>

@@ -898,3 +898,45 @@ func TestCanSeeHiddenCharacter(t *testing.T) {
 		})
 	}
 }
+
+// TestCanViewCharacterProfile pins the single-character rule: hidden NPCs per
+// CanSeeHiddenCharacterInGame, and other players' unapproved characters
+// concealed only while the game is running.
+func TestCanViewCharacterProfile(t *testing.T) {
+	player := CharacterViewer{Role: "player"}
+	owner := CharacterViewer{Role: "player", IsOwnerOrAssigned: true}
+	gm := CharacterViewer{Role: "gm", IsGM: true}
+	audience := CharacterViewer{Role: "audience"}
+
+	approved := models.Character{Status: "approved"}
+	pending := models.Character{Status: "pending"}
+	rejected := models.Character{Status: "rejected"}
+	hidden := models.Character{Status: "approved", IsHidden: true}
+
+	tests := []struct {
+		name      string
+		state     string
+		character models.Character
+		viewer    CharacterViewer
+		want      bool
+	}{
+		{"player sees an approved character", GameStateInProgress, approved, player, true},
+		{"player does not see another's pending character in a running game", GameStateInProgress, pending, player, false},
+		{"player does not see another's rejected character in a running game", GameStateInProgress, rejected, player, false},
+		{"owner sees their own pending character", GameStateInProgress, pending, owner, true},
+		{"GM sees a pending character", GameStateInProgress, pending, gm, true},
+		{"audience does not get the unapproved exemption", GameStateInProgress, pending, audience, false},
+		{"pending characters are not concealed during recruitment", GameStateRecruitment, pending, player, true},
+		{"player does not see a hidden NPC", GameStateInProgress, hidden, player, false},
+		{"audience sees a hidden NPC", GameStateInProgress, hidden, audience, true},
+		{"public archive discloses a hidden NPC", GameStateCompleted, hidden, player, true},
+		{"epilogue discloses a hidden NPC", GameStateEpilogue, hidden, player, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CanViewCharacterProfile(tt.state, tt.character, tt.viewer); got != tt.want {
+				t.Errorf("CanViewCharacterProfile(%q, %+v, %+v) = %v, want %v", tt.state, tt.character, tt.viewer, got, tt.want)
+			}
+		})
+	}
+}

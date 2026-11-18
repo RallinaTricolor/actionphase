@@ -23,7 +23,7 @@ func (h *Handler) gameLevelPrivateStatsAccess(ctx context.Context, authUser *cor
 	if authUser == nil {
 		return false
 	}
-	isGM := core.IsUserGameMasterCtx(ctx, authUser.ID, authUser.IsAdmin, game, h.App.Pool)
+	isGM := core.IsRequestGameMaster(ctx, h.App.Pool, authUser, game)
 	isAudience := core.IsUserAudience(ctx, h.App.Pool, game.ID, authUser.ID)
 	// Completed AND epilogue: both disclose the archive to every viewer.
 	isArchive := core.IsPublicArchive(game.State)

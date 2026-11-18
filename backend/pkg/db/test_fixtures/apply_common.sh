@@ -38,6 +38,9 @@ run_psql "$SCRIPT_DIR/common/00_reset.sql"
 echo "  Creating test users..."
 run_psql "$SCRIPT_DIR/common/01_users.sql"
 
+echo "  Defining fixture helpers..."
+run_psql "$SCRIPT_DIR/common/02_gm_board_seed.sql"
+
 echo ""
 echo "✅ Common data loaded successfully!"
 echo ""

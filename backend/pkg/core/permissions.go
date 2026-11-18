@@ -75,6 +75,37 @@ func IsUserGameMaster(r *http.Request, userID int32, isAdmin bool, game models.G
 	return IsUserGameMasterCtx(r.Context(), userID, isAdmin, game, db)
 }
 
+// RequestGame returns the game this request's middleware already loaded --
+// GameMiddleware on /games/{gameID}, access.ResourceMiddleware on per-ID
+// mounts such as /characters/{id} -- when it is gameID.
+func RequestGame(ctx context.Context, gameID int32) (*models.Game, bool) {
+	game, ok := ctx.Value("game").(*models.Game)
+	if !ok || game == nil || game.ID != gameID {
+		return nil, false
+	}
+	return game, true
+}
+
+// GameForRequest returns RequestGame when the request carries gameID, and
+// otherwise loads it, so a handler reads the games row once per request.
+func GameForRequest(ctx context.Context, gameID int32, load func(context.Context, int32) (*models.Game, error)) (*models.Game, error) {
+	if game, ok := RequestGame(ctx, gameID); ok {
+		return game, nil
+	}
+	return load(ctx, gameID)
+}
+
+// IsRequestGameMaster is the is_gm rule for game: the flag the middleware
+// resolved when it loaded this same game, or computed when it did not.
+func IsRequestGameMaster(ctx context.Context, db *pgxpool.Pool, user *AuthenticatedUser, game models.Game) bool {
+	if _, ok := RequestGame(ctx, game.ID); ok {
+		if isGM, ok := ctx.Value("is_gm").(bool); ok {
+			return isGM
+		}
+	}
+	return IsUserGameMasterCtx(ctx, user.ID, user.IsAdmin, game, db)
+}
+
 // contextKey is a custom type for context keys to avoid collisions
 type contextKey string
 
@@ -189,11 +220,11 @@ func CanSeeUsernamesInAnonymousGame(ctx context.Context, db *pgxpool.Pool, game 
 // every private conversation and every action submission, so hiding an NPC from
 // them would be the anomaly.
 //
-// Like anonymity, this is a play-time protection rather than a permanent one —
-// callers OR in IsPublicArchive(game.State) at the call site, so a completed or
-// epilogue game discloses hidden NPCs to everyone. That is kept at the call
-// site rather than folded in here so this stays a pure role check, testable
-// without a game.
+// Like anonymity, this is a play-time protection rather than a permanent one:
+// CanSeeHiddenCharacterInGame adds the public-archive exemption, so a
+// completed or epilogue game discloses hidden NPCs to everyone. It is kept
+// out of this function so this stays a pure role check, testable without a
+// game.
 //
 // This is the ONLY definition of the rule. Every gate calls it rather than
 // re-deriving the role comparison: two copies of a visibility check are free to
@@ -205,6 +236,100 @@ func CanSeeHiddenCharacter(userRole string, isOwnerOrAssigned bool) bool {
 	}
 
 	return userRole == "gm" || userRole == "co_gm" || userRole == "audience"
+}
+
+// CanSeeHiddenCharacterInGame is CanSeeHiddenCharacter with the
+// public-archive exemption applied: a completed or epilogue game discloses its
+// hidden cast to everyone. Every gate that decides whether a caller may see a
+// hidden character, one row or a whole roster, calls this.
+func CanSeeHiddenCharacterInGame(gameState, userRole string, isOwnerOrAssigned bool) bool {
+	return IsPublicArchive(gameState) || CanSeeHiddenCharacter(userRole, isOwnerOrAssigned)
+}
+
+// CanSeeUnapprovedCharacter reports whether a caller may learn that a pending
+// or rejected character exists. Once a game is running, another player's
+// unapproved character is concealed: its existence is itself information.
+// The GM, and the character's owner or assigned controller, always see it.
+func CanSeeUnapprovedCharacter(gameState, status string, isGM, isOwnerOrAssigned bool) bool {
+	if gameState != GameStateInProgress || isGM || isOwnerOrAssigned {
+		return true
+	}
+	return status != "pending" && status != "rejected"
+}
+
+// CharacterViewer is a caller's standing toward one character.
+type CharacterViewer struct {
+	// Role is the caller's role in the character's game: "gm" for anyone the
+	// is_gm rule admits, else their participant role, else "player".
+	Role              string
+	IsGM              bool
+	IsOwnerOrAssigned bool
+}
+
+// CanViewCharacterProfile is the rule for looking up one character by ID --
+// its record, sheet, stats or post history: hidden characters per
+// CanSeeHiddenCharacterInGame, unapproved ones per CanSeeUnapprovedCharacter.
+func CanViewCharacterProfile(gameState string, character models.Character, viewer CharacterViewer) bool {
+	if character.IsHidden && !CanSeeHiddenCharacterInGame(gameState, viewer.Role, viewer.IsOwnerOrAssigned) {
+		return false
+	}
+	return CanSeeUnapprovedCharacter(gameState, character.Status, viewer.IsGM, viewer.IsOwnerOrAssigned)
+}
+
+// ResolveGameRole reports the caller's role in a game: "gm" when isGM (the
+// is_gm rule: GM, co-GM, or an admin in admin mode), else their active
+// participant role. A non-participant, or a failed lookup, resolves to
+// "player", the least privileged role.
+func ResolveGameRole(ctx context.Context, db *pgxpool.Pool, gameID, userID int32, isGM bool) string {
+	if isGM {
+		return "gm"
+	}
+	participant, err := models.New(db).GetParticipantByGameAndUser(ctx, models.GetParticipantByGameAndUserParams{
+		GameID: gameID,
+		UserID: userID,
+	})
+	if err != nil {
+		return "player"
+	}
+	return participant.Role
+}
+
+// ResolveCharacterViewer resolves user's standing toward character. isGM is
+// the is_gm flag the request already carries. An NPC assigned to the caller
+// counts as theirs: they control it.
+func ResolveCharacterViewer(ctx context.Context, db *pgxpool.Pool, character models.Character, user *AuthenticatedUser, isGM bool) CharacterViewer {
+	isOwnerOrAssigned := character.UserID.Valid && character.UserID.Int32 == user.ID
+	if !isOwnerOrAssigned && character.CharacterType == "npc" {
+		if assignment, err := models.New(db).GetNPCAssignment(ctx, character.ID); err == nil {
+			isOwnerOrAssigned = assignment.AssignedUserID == user.ID
+		}
+	}
+	return CharacterViewer{
+		Role:              ResolveGameRole(ctx, db, character.GameID, user.ID, isGM),
+		IsGM:              isGM,
+		IsOwnerOrAssigned: isOwnerOrAssigned,
+	}
+}
+
+// CanUserSeeCharacterProfile resolves the caller and applies
+// CanViewCharacterProfile. Shared so every single-character endpoint applies
+// the same gate, whichever package serves it. user may be nil: an
+// unauthenticated caller sees neither hidden nor unapproved characters.
+func CanUserSeeCharacterProfile(ctx context.Context, db *pgxpool.Pool, character models.Character, game models.Game, user *AuthenticatedUser, isGM bool) bool {
+	// Visibility only grows with standing, so if the least-privileged reading
+	// already admits the caller, skip the lookups.
+	isOwner := user != nil && character.UserID.Valid && character.UserID.Int32 == user.ID
+	least := CharacterViewer{Role: "player", IsGM: isGM, IsOwnerOrAssigned: isOwner}
+	if isGM {
+		least.Role = "gm"
+	}
+	if CanViewCharacterProfile(game.State, character, least) {
+		return true
+	}
+	if user == nil {
+		return false
+	}
+	return CanViewCharacterProfile(game.State, character, ResolveCharacterViewer(ctx, db, character, user, isGM))
 }
 
 // CanSeeAllRestrictedPosts reports whether a viewer bypasses Common Room post

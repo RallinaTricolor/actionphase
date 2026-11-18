@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"actionphase/pkg/access"
 	core "actionphase/pkg/core"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -198,6 +199,7 @@ func (h *Handler) HumaDownloadExport(ctx context.Context, in *downloadExportInpu
 func RegisterHumaGameExports(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "requestGameExport",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodPost,
 		Path:        "/exports",
 		Summary:     "Request a game archive export",
@@ -216,6 +218,7 @@ func RegisterHumaGameExports(api huma.API, h *Handler) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getLatestGameExport",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodGet,
 		Path:        "/exports/latest",
 		Summary:     "Get the most recent export for a game",
@@ -236,6 +239,7 @@ func RegisterHumaGameExports(api huma.API, h *Handler) {
 func RegisterHumaExportDownloads(api huma.API, h *Handler) {
 	huma.Register(api, huma.Operation{
 		OperationID: "downloadGameExport",
+		Extensions:  access.MembersOnly(),
 		Method:      http.MethodGet,
 		Path:        "/{exportID}/download",
 		Summary:     "Download a completed game archive",
