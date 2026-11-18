@@ -52,8 +52,10 @@ and the other way round.
   revealed.
 - **+ Another result** starts a second, separate result.
 - **Publish** sends one result (all its parts). **Delete** removes a draft.
-- A published part that hasn't been revealed yet can have its timer changed,
-  or be cancelled with **Cancel part** (which takes the later parts with it).
+- A part that hasn't been revealed yet can have its timer changed, or be
+  cancelled with **Cancel part** (which takes the later parts with it).
+  Cancelling a part of a draft keeps the result's sheet updates: they move to
+  the part that's now last.
 - Published results show when they were sent, and published parts can't be
   edited.
 

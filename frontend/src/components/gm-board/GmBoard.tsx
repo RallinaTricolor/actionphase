@@ -2,10 +2,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
-import { Alert, Badge, Button, Modal, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, Modal, Spinner, Textarea } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { useGameContext } from '@/contexts/GameContext';
-import { BoardReadOnlyContext } from '@/hooks/useBoardReadOnly';
+import { BoardReadOnlyContext, BoardUnsavedTextContext } from '@/hooks/useBoardReadOnly';
 import { useGmBoard, useGmBoardStore, useGmSettings, useGmSettingsStore, type GmSaveStatus } from '@/hooks/useGmBoard';
 import { usePhaseRewards } from '@/hooks/usePhaseRewards';
 import { apiClient } from '@/lib/api';
@@ -34,6 +34,10 @@ interface GmBoardProps {
   phase: GamePhase;
   /** No editing controls, nothing saved: a viewer, or the GM of an archived game. */
   readOnly?: boolean;
+  /** The game is completed or cancelled. */
+  archived?: boolean;
+  /** This phase has run and is over, so its board is read-only until it's activated again. */
+  phaseEnded?: boolean;
   /** Not a GM: someone the GM shares the board with. */
   viewer?: boolean;
   /** Where the header's link goes back to: the GM's results area unless given. */
@@ -53,7 +57,7 @@ const isRefused = (error: unknown) => isAxiosError(error) && error.response?.sta
  * Which result part the GM last picked for each character lives here, so
  * Write keeps it across tabs.
  */
-export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = false, back: backTo }: GmBoardProps) {
+export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = false, archived = false, phaseEnded = false, back: backTo }: GmBoardProps) {
   const back = backTo ?? { to: resultsAreaPath(gameId), label: 'Back to the results' };
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,6 +69,9 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
   // + Codex on text selected in Read: a quick add in a dialog, so the GM stays on the submission.
   const [quickCodex, setQuickCodex] = useState<string | null>(null);
   const { showToast } = useToast();
+  // Text a result editor couldn't save before it closed, because the phase ended.
+  const [unsavedTexts, setUnsavedTexts] = useState<{ label: string; text: string }[]>([]);
+  const keepUnsavedText = useCallback((label: string, text: string) => setUnsavedTexts((list) => [...list, { label, text }]), []);
   const [selectedParts, setSelectedParts] = useState<Record<number, number | null>>({});
   const selectPart = useCallback((characterId: number, partId: number | null) => setSelectedParts((s) => ({ ...s, [characterId]: partId })), []);
   const { allGameCharacters } = useGameContext();
@@ -81,6 +88,14 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
         .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}` })),
     [phases.data],
   );
+
+  const showEndedNotice = phaseEnded && !viewer && !archived;
+  const unpublished = useQuery({
+    queryKey: ['unpublishedResultsCount', gameId, phase.id],
+    queryFn: () => apiClient.phases.getUnpublishedResultsCount(gameId, phase.id).then((res) => res.data),
+    enabled: showEndedNotice,
+  });
+  const unpublishedCount = unpublished.data?.count ?? 0;
 
   const { board, isLoading, error } = useGmBoard(gameId, phase.id);
   const { settings, error: settingsError } = useGmSettings(gameId);
@@ -139,8 +154,19 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
     );
   }
 
+  const readOnlyNote = viewer
+    ? archived
+      ? 'Shared by the GM. This game is over, so the board won’t change.'
+      : phaseEnded
+        ? 'Shared by the GM. This phase has ended.'
+        : 'Shared by the GM. It updates as the GM works.'
+    : showEndedNotice
+      ? null // The notice below the header says it, with what to do.
+      : 'This game is archived, so its boards can no longer be changed.';
+
   return (
     <BoardReadOnlyContext.Provider value={readOnly}>
+    <BoardUnsavedTextContext.Provider value={keepUnsavedText}>
     <BoardRewardsContext.Provider value={rewards}>
       <div className="px-6 py-4 space-y-4" data-testid="gm-board">
         <header className="rounded-lg border border-theme-strong surface-base shadow-sm">
@@ -151,20 +177,20 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
                 <Link to={back.to} className="hover:underline">
                   &larr; {gameTitle}: {back.label.replace(/^Back to the /, '')}
                 </Link>
-                {readOnly && (
+                {readOnly && readOnlyNote && (
                   <>
                     {' · '}
-                    <span>{viewer ? 'Shared by the GM. It updates as the GM works.' : 'This game is archived, so its boards can no longer be changed.'}</span>
+                    <span>{readOnlyNote}</span>
                   </>
                 )}
               </p>
-              <h1 className="order-first flex shrink-0 items-center gap-2 text-base font-semibold text-content-primary xl:order-none">
-                <span className="truncate">
-                  <span className="sr-only font-normal text-content-secondary xl:not-sr-only">Results board · </span>
+              <h1 className="order-first flex min-w-0 shrink-0 items-center gap-2 text-base font-semibold text-content-primary xl:order-none">
+                <span className="min-w-0 truncate">
+                  <span className="sr-only font-normal text-content-secondary xl:not-sr-only xl:whitespace-nowrap">Results board · </span>
                   {phase.title || `Phase ${phase.phase_number}`}
                 </span>
                 {readOnly && (
-                  <Badge variant="neutral" data-testid="gm-board-read-only">
+                  <Badge variant="neutral" className="shrink-0" data-testid="gm-board-read-only">
                     Read-only
                   </Badge>
                 )}
@@ -193,6 +219,33 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
           {/* The open step's toolbar (BoardToolbar) is portalled in here, so it reads as part of the header. */}
           <div ref={setToolbarSlot} className="rounded-b-lg border-t border-theme-default surface-sunken px-4 py-2 empty:hidden" data-testid="gm-board-step-toolbar" />
         </header>
+
+        {showEndedNotice && (
+          <Alert variant="info" title="This phase has ended" data-testid="gm-board-ended">
+            <p>
+              Its board is read-only, and its results stay as they are
+              {unpublishedCount > 0 && (
+                <>
+                  , including {unpublishedCount} unpublished {unpublishedCount === 1 ? 'result' : 'results'}
+                </>
+              )}
+              . To keep working on it, activate it again from{' '}
+              <Link to={`/games/${gameId}?tab=phases`} className="underline">
+                Phases
+              </Link>
+              .
+            </p>
+          </Alert>
+        )}
+
+        {unsavedTexts.length > 0 && (
+          <Alert variant="warning" title="Text that couldn’t be saved" dismissible onDismiss={() => setUnsavedTexts([])} data-testid="gm-board-unsaved-text">
+            <p>This phase stopped being active before this was saved. Copy anything you want to keep; it goes away when you leave the board.</p>
+            {unsavedTexts.map((u, i) => (
+              <Textarea key={i} id={`gm-board-unsaved-${i}`} label={u.label} value={u.text} readOnly rows={4} className="mt-2" />
+            ))}
+          </Alert>
+        )}
 
         {!readOnly && <GmBoardConflicts lost={store.lost} onKeepMine={store.keepMine} onDismiss={store.dismissLost} />}
         {!readOnly && (
@@ -277,6 +330,7 @@ export function GmBoard({ gameId, gameTitle, phase, readOnly = false, viewer = f
 
       </div>
     </BoardRewardsContext.Provider>
+    </BoardUnsavedTextContext.Provider>
     </BoardReadOnlyContext.Provider>
   );
 }

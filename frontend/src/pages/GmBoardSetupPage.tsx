@@ -45,7 +45,7 @@ export function GmBoardSetupPage() {
     () =>
       (phases.data ?? [])
         .filter((p) => p.phase_type === 'action')
-        .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}` })),
+        .map((p) => ({ id: p.id, title: p.title || `Phase ${p.phase_number}`, ended: !!p.has_ended })),
     [phases.data],
   );
   // Where new locations go by default: the action phase that's running, else the latest.

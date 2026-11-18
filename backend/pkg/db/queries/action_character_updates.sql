@@ -123,6 +123,17 @@ UPDATE action_result_character_updates
 SET action_result_id = sqlc.arg('to_result_id'), updated_at = NOW()
 WHERE action_result_id = sqlc.arg('from_result_id');
 
+-- name: DeleteDraftUpdatesReplacedByMove :exec
+-- Clears the target's drafts for fields the source also has, so that moving
+-- the source's onto it can't collide (one draft per field per result).
+DELETE FROM action_result_character_updates target
+USING action_result_character_updates source
+WHERE target.action_result_id = sqlc.arg('to_result_id')
+  AND source.action_result_id = sqlc.arg('from_result_id')
+  AND target.character_id = source.character_id
+  AND target.module_type = source.module_type
+  AND target.field_name = source.field_name;
+
 -- name: IsChainTail :one
 -- Whether no later part follows this result in its chain.
 SELECT NOT EXISTS (

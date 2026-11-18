@@ -234,6 +234,11 @@ export function applyConflicts(state: StoreState, conflicts: GmItem[]): StoreSta
   return { ...state, server, dirty, lost, saving: false, saveError: null };
 }
 
+/** The phase ended under these edits: they can't be saved, so the board goes back to the server's copy. */
+export function discardPending<S extends StoreState>(state: S): S {
+  return { ...state, dirty: {}, saving: false, saveError: null };
+}
+
 /** "Use mine": puts a lost edit back, based on the server's current copy. */
 export function reapplyLost(state: StoreState, edit: DirtyEdit): StoreState {
   const id = itemId(edit.kind, edit.key);

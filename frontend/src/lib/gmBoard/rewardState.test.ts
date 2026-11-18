@@ -3,7 +3,7 @@ import { resolveSheetLayout } from '@/hooks/useSheetLayout';
 import { makeActionResult } from '@/test-utils/factories';
 import type { ResultChain } from './results';
 import { itemSig, type SheetTabs } from './rewards';
-import { carrierFor, defaultGroup, rewardStateFor, withBlock, type RewardInputs } from './rewardState';
+import { carrierFor, defaultGroup, rewardStateFor, withBlock, withoutBlock, type RewardInputs } from './rewardState';
 import type { RewardItem, RewardLine } from './types';
 
 const layout = resolveSheetLayout(null).tabs;
@@ -79,6 +79,58 @@ describe('rewardStateFor: sheet changes', () => {
   });
 });
 
+describe('rewardStateFor: once the sheet changes are out', () => {
+  const ratingAt = (value: number): SheetTabs => ({ skills: [], inventory: [], numbers: [{ id: 'n', name: 'Rating', amount: { value } }] });
+  const out = (over = {}) => chain(makeActionResult({ id: 10, is_published: true, content: 'Story.', ...over }));
+  const rewards = (over = {}) => ({ lines: [rating('a', 2)], texts: {}, carrierHeadId: 10, ...over });
+  const change = (s: ReturnType<typeof rewardStateFor>) => s.diff[0]?.rows[0];
+
+  it('works from the sheet as it was, not from the sheet that already has them', () => {
+    const s = rewardStateFor(inputs({ live: ratingAt(3), chains: [out()], rewards: rewards({ sheetBefore: { numbers: ratingAt(1).numbers } }) }));
+    expect(change(s)).toMatchObject({ fields: [expect.objectContaining({ before: '1', after: '3' })] });
+    expect(s.block.text).toContain('Total 3');
+    expect(s.sheetAlreadyApplied).toBe(false);
+  });
+
+  it('still says what they did after the sheet changes again', () => {
+    const s = rewardStateFor(inputs({ live: ratingAt(10), chains: [out()], rewards: rewards({ sheetBefore: { numbers: ratingAt(1).numbers } }) }));
+    expect(change(s)).toMatchObject({ fields: [expect.objectContaining({ before: '1', after: '3' })] });
+    expect(s.block.text).toContain('Total 3');
+  });
+
+  it('with no record of the sheet before, doesn’t add them again', () => {
+    const s = rewardStateFor(inputs({ live: ratingAt(3), chains: [out()], rewards: rewards() }));
+    expect(s.changes).toBe(0);
+    expect(s.sheetAlreadyApplied).toBe(true);
+    expect(s.block.text).toContain('Total 3');
+  });
+
+  it('says nothing about the sheet when the lines don’t change it', () => {
+    const s = rewardStateFor(inputs({ live: ratingAt(3), chains: [out()], rewards: rewards({ lines: [rating('a', 2, { ops: [] })] }) }));
+    expect(s.sheetAlreadyApplied).toBe(false);
+  });
+
+  it('while a later part is unrevealed they aren’t on the sheet yet, so they still show from it', () => {
+    const waiting = chain(makeActionResult({ id: 10, is_published: true }), makeActionResult({ id: 11, is_published: true, part_number: 2, part_count: 2 }));
+    const s = rewardStateFor(inputs({ live: ratingAt(1), chains: [waiting], rewards: rewards() }));
+    expect(s.carrier.state).toBe('pending');
+    expect(change(s)).toMatchObject({ fields: [expect.objectContaining({ before: '1', after: '3' })] });
+    expect(s.sheetAlreadyApplied).toBe(false);
+  });
+
+  it('shows the block that went out when the result holds it', () => {
+    const held = rewardStateFor(inputs({ live: ratingAt(3), chains: [out({ content: 'Story.\n\nBlock as sent' })], rewards: rewards({ block: 'Block as sent' }) }));
+    expect(held.block.text).toBe('Block as sent');
+    const gone = rewardStateFor(inputs({ live: ratingAt(3), chains: [out()], rewards: rewards({ block: 'Block as sent' }) }));
+    expect(gone.block.text).toContain('Total 3');
+  });
+
+  it('a draft ignores the record and uses the live sheet', () => {
+    const s = rewardStateFor(inputs({ rewards: { lines: [rating('a', 2)], texts: {}, sheetBefore: { numbers: ratingAt(50).numbers } } }));
+    expect(change(s)).toMatchObject({ fields: [expect.objectContaining({ before: '1', after: '3' })] });
+  });
+});
+
 describe('rewardStateFor', () => {
   it('works out the block, the diff and the drafts', () => {
     const s = rewardStateFor(inputs());
@@ -125,12 +177,33 @@ describe('rewardStateFor', () => {
     expect(rewardStateFor(inputs({ tailText: `Typed. ${block}` })).checks).toEqual([]);
   });
 
+  it('a copy of the block left on an earlier part', () => {
+    const block = 'Rating +2\nTotal 3';
+    const parts = (first: string) => chain(draft(10, { content: first }), draft(11, { content: `Later.\n\n${block}`, parent_result_id: 10 }));
+    expect(rewardStateFor(inputs({ chains: [parts(`Story.\n\n${block}`)] })).checks.map((c) => c.kind)).toEqual(['block-elsewhere']);
+    expect(rewardStateFor(inputs({ chains: [parts('Story.\n\nOld block')], rewards: { lines: [rating('a', 2)], texts: {}, block: 'Old block' } })).checks.map((c) => c.kind)).toEqual(['block-elsewhere']);
+    expect(rewardStateFor(inputs({ chains: [parts('Story.')] })).checks).toEqual([]);
+  });
+
   it('no lines: nothing to check', () => {
     expect(rewardStateFor(inputs({ rewards: undefined, chains: [] })).checks).toEqual([]);
   });
 });
 
+describe('withoutBlock', () => {
+  it('takes the block out and closes the gap', () => {
+    expect(withoutBlock('Story.\n\nBlock\n\nMore.', 'Block')).toBe('Story.\n\nMore.');
+    expect(withoutBlock('Story.\n\nBlock', 'Block')).toBe('Story.');
+    expect(withoutBlock('Block', 'Block')).toBe('');
+    expect(withoutBlock('Story.', 'Block')).toBe('Story.');
+  });
+});
+
 describe('withBlock', () => {
+  it('keeps dollar signs in the block as written', () => {
+    for (const block of ['Pay $$5', 'Worth $& more', 'A $` and a $\'']) expect(withBlock('Story.\n\nOld', block, 'Old')).toBe(`Story.\n\n${block}`);
+  });
+
   it('replaces the copy put there last time, else adds it at the end', () => {
     expect(withBlock('Story.\n\nOld', 'New', 'Old')).toBe('Story.\n\nNew');
     expect(withBlock('Story.  \n', 'New', 'Gone')).toBe('Story.\n\nNew');

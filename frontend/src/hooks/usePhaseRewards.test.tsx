@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AxiosError, AxiosHeaders } from 'axios';
 import React from 'react';
 import { makeActionResult, makeAxiosResponse, makeBoard } from '@/test-utils/factories';
-import type { BoardDoc, GameBoardSettings, RewardLine } from '@/lib/gmBoard/types';
+import type { BoardDoc, CharacterRewards, GameBoardSettings, RewardLine } from '@/lib/gmBoard/types';
 import type { ActionResult, DraftCharacterUpdate } from '@/types/phases';
 import { apiClient } from '../lib/api';
 import { REWARD_SYNC_DELAY_MS, usePhaseRewards } from './usePhaseRewards';
@@ -51,6 +51,9 @@ function setup({ results = [draftResult], drafts = [] as DraftCharacterUpdate[],
   return renderHook(() => usePhaseRewards(7, PHASE, board), { wrapper });
 }
 
+/** The character's rewards after every save the hook made. */
+const savedRewards = () => boardUpdate.mock.calls.reduce<CharacterRewards>((doc, [, , fn]) => fn(doc), { lines: [rating], texts: {} });
+
 const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(REWARD_SYNC_DELAY_MS + 10); });
 
 describe('usePhaseRewards sync', () => {
@@ -70,7 +73,7 @@ describe('usePhaseRewards sync', () => {
       replace_hand_made: undefined,
     });
     await waitFor(() => expect(boardUpdate).toHaveBeenCalledWith('rewards', '3', expect.any(Function)));
-    expect(boardUpdate.mock.calls[0][2]({ lines: [rating], texts: {} }).carrierHeadId).toBe(40);
+    await waitFor(() => expect(savedRewards().carrierHeadId).toBe(40));
   });
 
   it('does nothing when the stored drafts already match', async () => {
@@ -107,6 +110,34 @@ describe('usePhaseRewards sync', () => {
     await settle();
     expect(api.replaceRewardSheetUpdates).not.toHaveBeenCalled();
     expect(result.current.stateFor(3).locked).toBe(true);
+  });
+
+  it('keeps the sheet as it stands before the lines, for when the result has gone out', async () => {
+    const { result } = setup({ drafts: [draftRow({})] });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    await settle();
+    expect(savedRewards().sheetBefore).toEqual({ numbers: [expect.objectContaining({ name: 'Rating', amount: { value: 2 } })] });
+  });
+
+  it('doesn’t save that again when it hasn’t changed', async () => {
+    const first = setup({ drafts: [draftRow({})] });
+    await waitFor(() => expect(first.result.current.ready).toBe(true));
+    await settle();
+    const sheetBefore = boardUpdate.mock.calls[0][2]({ lines: [rating], texts: {} }).sheetBefore;
+    first.unmount();
+    boardUpdate.mockClear();
+    const { result } = setup({ drafts: [draftRow({})], board: makeBoard({ rewards: { 3: { lines: [rating], texts: {}, sheetBefore: JSON.parse(JSON.stringify(sheetBefore)) } } }) });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    await settle();
+    expect(boardUpdate).not.toHaveBeenCalled();
+  });
+
+  it('leaves that record alone once the result is published', async () => {
+    const published = { ...draftResult, is_published: true };
+    const { result } = setup({ results: [published], board: makeBoard({ rewards: { 3: { lines: [rating], texts: {}, carrierHeadId: 40 } } }) });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    await settle();
+    expect(boardUpdate).not.toHaveBeenCalled();
   });
 
   it('reports a failed write, with the server’s sentence', async () => {

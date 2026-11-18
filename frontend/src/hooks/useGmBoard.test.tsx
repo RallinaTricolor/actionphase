@@ -227,6 +227,21 @@ describe('useGmBoard and useGmBoardStore', () => {
     expect(result.current.view.board?.notes).toBe('x'); // the edit is kept
   });
 
+  it('a phase that ended drops the edits that can no longer land, without retrying', async () => {
+    const headers = new AxiosHeaders();
+    api.applyBoardChanges.mockRejectedValue(new AxiosError('Locked', '423', { headers }, null, { status: 423, statusText: 'Locked', headers, config: { headers }, data: {} }));
+    const { result } = renderBoard();
+    await waitFor(() => expect(result.current.view.board).toBeDefined());
+
+    act(() => result.current.store.update('notes', 'notes', () => ({ text: 'x' })));
+    expect(result.current.view.board?.notes).toBe('x');
+    await settle();
+    await waitFor(() => expect(result.current.store.status).toBe('saved'));
+    expect(result.current.view.board?.notes).toBe('start');
+    await settle(GM_BOARD_RETRY_MS);
+    expect(api.applyBoardChanges).toHaveBeenCalledTimes(1);
+  });
+
   it('retries a save that failed on the network', async () => {
     api.applyBoardChanges.mockRejectedValueOnce(networkError()).mockResolvedValueOnce(written([notes('x', 2, 10)]));
     const { result } = renderBoard();

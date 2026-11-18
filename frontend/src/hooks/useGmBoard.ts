@@ -3,11 +3,12 @@ import { hashKey, useMutation, useQuery, useQueryClient, type QueryKey } from '@
 import { isAxiosError } from 'axios';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { apiClient } from '@/lib/api';
-import { extractApiErrorMessage } from '@/lib/errors';
+import { extractApiErrorMessage, isPhaseLocked } from '@/lib/errors';
 import {
   applyConflicts,
   assembleBoard,
   assembleSettings,
+  discardPending,
   dismissLost,
   editItem,
   hasPendingChanges,
@@ -33,7 +34,7 @@ import type {
 } from '@/types/gmBoard';
 
 /** How often an open board checks for other editors' changes (while the tab is visible). */
-const GM_BOARD_POLL_MS = 15_000;
+export const GM_BOARD_POLL_MS = 15_000;
 /** Edits are saved this long after the last one. */
 export const GM_BOARD_SAVE_DELAY_MS = 1_000;
 /** A save that failed for a reason that may pass (network, 5xx) is retried after this. */
@@ -48,6 +49,7 @@ export type GmSettingsState = StoreState & { shareGmBoard: boolean };
 export type GmSaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
 
 interface ItemSource<S extends StoreState> {
+  gameId: number;
   queryKey: QueryKey;
   /** A full load (no since) or a poll. */
   load: (since?: number) => Promise<{ items: GmItem[]; cursor: number; extra?: Partial<S> }>;
@@ -127,6 +129,13 @@ function useItemEditor<S extends StoreState>(source: ItemSource<S>, readOnly: bo
       void queryClient.invalidateQueries({ queryKey });
     } catch (error) {
       const conflicts = conflictsOf(error);
+      if (isPhaseLocked(error)) {
+        // The phase ended: these edits can't land. Refreshing the phases turns
+        // the board read-only, and the page says why.
+        set((s) => discardPending(s));
+        void queryClient.invalidateQueries({ queryKey: ['gamePhases', source.gameId] });
+        return;
+      }
       if (conflicts) {
         set((s) => applyConflicts(s, conflicts) as S);
         // The refusal only carries the conflicting items: fetch the other
@@ -210,6 +219,7 @@ function useItemEditor<S extends StoreState>(source: ItemSource<S>, readOnly: bo
 
 function boardSource(gameId: number, phaseId: number): ItemSource<StoreState> {
   return {
+    gameId,
     queryKey: gmBoardQueryKey(gameId, phaseId),
     load: async (since) => (await apiClient.gmBoard.getBoard(gameId, phaseId, since)).data,
     save: async (changes) =>
@@ -255,6 +265,7 @@ export function useGmBoardStore(gameId: number, phaseId: number, options: { read
 
 function settingsSource(gameId: number): ItemSource<GmSettingsState> {
   return {
+    gameId,
     queryKey: gmSettingsQueryKey(gameId),
     load: async (since) => {
       const { data } = await apiClient.gmBoard.getSettings(gameId, since);

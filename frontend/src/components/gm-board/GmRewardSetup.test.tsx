@@ -76,6 +76,23 @@ describe('Game setup: reward lists', () => {
   });
 });
 
+describe('Game setup: an ended phase’s reward list', () => {
+  it('can be read but not changed, and every-phase rewards still can', async () => {
+    server.use(
+      http.get(`/api/v1/games/${GAME_ID}/phases`, () => HttpResponse.json([makeGamePhase({ id: PHASE_ID, game_id: GAME_ID, phase_type: 'action', title: 'Day 2', is_active: false, has_ended: true })])),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByText(/It has ended, so its list can’t be changed/)).toBeInTheDocument();
+    expect(screen.queryByTestId('new-phase-reward')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('new-game-reward'));
+    const editor = await screen.findByTestId('reward-item-editor');
+    expect(within(editor).queryByLabelText('Day 2 only')).not.toBeInTheDocument();
+    expect(within(editor).queryByRole('button', { name: 'Harrison Vale' })).not.toBeInTheDocument();
+  });
+});
+
 describe('Game setup: a reward’s text', () => {
   it('previews as it would read for a player, with tags that find nothing listed', async () => {
     const user = userEvent.setup();

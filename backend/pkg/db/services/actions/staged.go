@@ -232,6 +232,11 @@ func (as *ActionSubmissionService) notifyStagedRelease(ctx context.Context, resu
 // ON DELETE CASCADE takes the rest of the chain behind it. That is intended:
 // a part whose parent is gone has no clock to measure its delay against and
 // would never release, so orphaning is strictly worse than cascading.
+//
+// A chain's sheet drafts live on its last part. In a draft chain they are the
+// GM's work and outlive the part: they move to the part that is now last, the
+// reverse of AppendStagedPart. In a published chain they go with it, since the
+// GM is withdrawing what that part would have applied.
 func (as *ActionSubmissionService) CancelPendingPart(ctx context.Context, resultID int32) error {
 	err := pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
 		queries := models.New(tx)
@@ -256,8 +261,37 @@ func (as *ActionSubmissionService) CancelPendingPart(ctx context.Context, result
 			return fmt.Errorf("%w: result %d is not part of a staged chain", core.ErrCannotCancelPart, resultID)
 		}
 
-		if err := queries.DeletePublishedDrafts(ctx, resultID); err != nil {
-			return fmt.Errorf("failed to delete draft character updates: %w", err)
+		// A draft part is frozen with its phase. One already published is out
+		// with the player, waiting on its timer, so the GM can still pull it.
+		if !result.IsPublished.Bool {
+			if err := core.RefuseEndedPhase(ctx, queries, result.PhaseID); err != nil {
+				return err
+			}
+		}
+
+		if result.IsPublished.Bool {
+			if err := queries.DeletePublishedDrafts(ctx, resultID); err != nil {
+				return fmt.Errorf("failed to delete draft character updates: %w", err)
+			}
+		} else {
+			tail, err := queries.GetChainTailForAppend(ctx, resultID)
+			if err != nil {
+				return fmt.Errorf("failed to get chain tail: %w", err)
+			}
+			// The tail goes last, so its drafts win over any left on this part.
+			sources := []int32{resultID}
+			if tail.ID != resultID {
+				sources = append(sources, tail.ID)
+			}
+			for _, source := range sources {
+				move := models.DeleteDraftUpdatesReplacedByMoveParams{FromResultID: source, ToResultID: result.ParentResultID.Int32}
+				if err := queries.DeleteDraftUpdatesReplacedByMove(ctx, move); err != nil {
+					return fmt.Errorf("failed to clear replaced sheet drafts: %w", err)
+				}
+				if err := queries.MoveDraftCharacterUpdates(ctx, models.MoveDraftCharacterUpdatesParams(move)); err != nil {
+					return fmt.Errorf("failed to move sheet drafts back: %w", err)
+				}
+			}
 		}
 
 		if err := queries.DeleteStagedPart(ctx, resultID); err != nil {
@@ -318,6 +352,9 @@ func (as *ActionSubmissionService) AppendStagedPart(ctx context.Context, anchorI
 		// new part belongs.
 		if tail.AnyPublished {
 			return fmt.Errorf("%w: chain is already published; parts can only be added while it is a draft", core.ErrCannotEditChain)
+		}
+		if err := core.RefuseEndedPhase(ctx, queries, tail.PhaseID); err != nil {
+			return err
 		}
 
 		if tail.PartCount >= core.MaxStagedChainLength {
@@ -384,6 +421,13 @@ func (as *ActionSubmissionService) UpdateStagedPartDelay(ctx context.Context, re
 	}
 
 	queries := models.New(as.DB)
+
+	// As for cancelling: only a draft part is frozen with its phase.
+	if current, err := queries.GetActionResult(ctx, resultID); err == nil && !current.IsPublished.Bool {
+		if err := core.RefuseEndedPhase(ctx, queries, current.PhaseID); err != nil {
+			return nil, err
+		}
+	}
 
 	updated, err := queries.UpdateStagedPartDelay(ctx, models.UpdateStagedPartDelayParams{
 		ID:                 resultID,

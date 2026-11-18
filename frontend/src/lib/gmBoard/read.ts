@@ -5,7 +5,7 @@
  * lives in the components; everything it computes is here.
  */
 
-import { escapeRegExp, plainText } from './text';
+import { escapeRegExp, linkText, plainText } from './text';
 import type { BoardDoc, Card, Chunk, CodexEntry } from './types';
 
 // ------------------------------------------------------------------ paragraphs
@@ -314,12 +314,41 @@ export function flatIndexAt(map: FlatText['map'], part: number, offset: number):
   return last;
 }
 
-/** Lower case, one character for one, so offsets still line up with the original. */
-const lowerSameLength = (s: string) =>
-  Array.from(s, (c) => {
-    const l = c.toLowerCase();
-    return l.length === c.length ? l : c;
-  }).join('');
+const WORD_CHAR = /[\p{L}\p{N}]/u;
+
+/**
+ * Just the words of a text, lower case, one space between them, with where each
+ * kept character came from. Rendered text and a quote's markdown differ in
+ * punctuation marks, emphasis and how inline elements split the text; their
+ * words don't.
+ */
+function wordsOf(text: string): { words: string; at: number[] } {
+  let words = '';
+  const at: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (WORD_CHAR.test(c)) {
+      const lower = c.toLowerCase();
+      words += lower.length === c.length ? lower : c;
+      at.push(i);
+    } else if (words && !words.endsWith(' ')) {
+      words += ' ';
+      at.push(i);
+    }
+  }
+  if (words.endsWith(' ')) {
+    words = words.slice(0, -1);
+    at.pop();
+  }
+  return { words, at };
+}
+
+/** Up to `max` characters of `words`, ending on a whole word when there is one to end on. */
+function wordHead(words: string, max: number): string {
+  if (words.length <= max) return words;
+  const cut = words.lastIndexOf(' ', max);
+  return words.slice(0, cut > 0 ? cut : max);
+}
 
 export interface CardedSpan {
   start: number;
@@ -328,26 +357,36 @@ export interface CardedSpan {
 }
 
 /**
- * Where each of the owner's quote cards sits in the flattened text, in any
- * case. A quote the GM has edited may no longer match in full; its first 60
- * characters still find it. A card whose text isn't there at all is skipped
- * (its paragraph count still shows it).
+ * Where each of the owner's quote cards sits in the flattened text, matching
+ * on words (see `wordsOf`), so markdown in the quote doesn't stop it being
+ * found. A quote the GM has edited may no longer match in full; its opening
+ * words still find it. A card whose text isn't there at all is skipped (its
+ * paragraph count still shows it).
  */
 export function cardedSpans(flat: string, cards: Card[], ownerId: number): CardedSpan[] {
-  const hay = lowerSameLength(flat);
+  const hay = wordsOf(flat);
+  const isMark = (c: string | undefined) => c !== undefined && !/\s/.test(c) && !WORD_CHAR.test(c);
   const out: CardedSpan[] = [];
   for (const c of cards) {
     if (c.characterId !== ownerId || !c.quote) continue;
-    const q = lowerSameLength(plainText(c.quote).replace(/\s+/g, ' ').trim());
+    const raw = linkText(c.quote).trim().replace(/^[*_`~]+|[*_`~]+$/g, '');
+    const q = wordsOf(raw).words;
     if (q.length < 3) continue;
-    let at = hay.indexOf(q);
+    let at = hay.words.indexOf(q);
     let len = q.length;
-    if (at < 0) {
-      const head = q.slice(0, 60);
-      at = hay.indexOf(head);
+    const whole = at >= 0;
+    if (!whole) {
+      const head = wordHead(q, 60);
+      at = hay.words.indexOf(head);
       len = head.length;
     }
-    if (at >= 0) out.push({ start: at, end: at + len, cardId: c.id });
+    if (at < 0) continue;
+    let start = hay.at[at];
+    let end = hay.at[at + len - 1] + 1;
+    // Punctuation at the quote's edges is part of what was carded.
+    if (whole && isMark(raw[0])) while (start > 0 && isMark(flat[start - 1])) start--;
+    if (whole && isMark(raw[raw.length - 1])) while (isMark(flat[end])) end++;
+    out.push({ start, end, cardId: c.id });
   }
   return out;
 }

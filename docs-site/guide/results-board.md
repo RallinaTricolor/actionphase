@@ -14,8 +14,9 @@ drafts, staged parts and sheet updates are shared by both.
 
 - **From the Actions tab:** during an action phase, **Open results board**
   sits above the results.
-- **From History:** each past action phase has **Open results board** beside
-  its title.
+- **From History:** a past action phase whose board was used has **Open
+  results board** beside its title. It opens read-only: see
+  [When a phase ends](#when-a-phase-ends).
 - **Results Board Setup**, in the game's **⋯** menu, opens
   [Game setup](./results-board-setup) without a board: useful before the
   first action phase starts.
@@ -94,6 +95,25 @@ chased her onto the bridge, Sable will have sprung her ambush, and the watch
 will have arrived. Each of them gets a result that tells only what they saw.
 
 Start with [Game setup](./results-board-setup).
+
+## When a phase ends
+
+A phase isn't over until every result you're going to publish is published.
+Once another phase starts, the one before it is read-only:
+
+- Its board can be read but not changed, and that includes its list on Game
+  setup.
+- Its results stay as they are. Unpublished drafts stay unpublished, and can't
+  be edited, published or deleted.
+- Parts already published and waiting on their timer still go out.
+
+To do more work on it, go to the **Phases** tab and **Activate** it again. That
+makes it the current phase, so the phase you left becomes read-only instead,
+and everyone gets the usual notice that a phase has started.
+
+If a phase is about to end with drafts you still want to send, publish them
+first. **Activate** offers **Publish & Activate** when there are any, but a
+phase scheduled to start on its own doesn't ask.
 
 ## Who can see the board
 

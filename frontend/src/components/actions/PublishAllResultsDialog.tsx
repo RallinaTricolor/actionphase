@@ -1,6 +1,8 @@
 import { Modal } from '@/components/common/modals/Modal';
 import { Alert, Button } from '@/components/ui';
+import { useBlankDraftRecipients } from '@/hooks/useActionResults';
 import { usePhaseSheetDraftConflicts } from '@/hooks/useConflictingSheetDrafts';
+import { extractApiErrorMessage } from '@/lib/errors';
 
 interface PublishAllResultsDialogProps {
   isOpen: boolean;
@@ -11,16 +13,20 @@ interface PublishAllResultsDialogProps {
   /** Draft results that will go out (chain heads; a chain counts once). */
   count: number;
   isPublishing?: boolean;
+  /** Why the last try failed. */
+  error?: unknown;
 }
 
 /**
  * The confirmation for Publish all, with the warning when a character's sheet
- * updates are spread over more than one of the drafts.
+ * updates are spread over more than one of the drafts. Drafts with nothing
+ * written in them stop it: the server won't send a player a blank result.
  */
-export function PublishAllResultsDialog({ isOpen, onClose, onConfirm, gameId, phaseId, count, isPublishing = false }: PublishAllResultsDialogProps) {
+export function PublishAllResultsDialog({ isOpen, onClose, onConfirm, gameId, phaseId, count, isPublishing = false, error }: PublishAllResultsDialogProps) {
   // Gated on the dialog being open: ungated, it fans out one draft-count
   // request per unpublished result, for a warning only this dialog shows.
   const { hasConflict, affectedCharacterCount } = usePhaseSheetDraftConflicts(gameId, phaseId, isOpen);
+  const blank = useBlankDraftRecipients(gameId, phaseId, isOpen);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Publish All Results?">
@@ -38,11 +44,21 @@ export function PublishAllResultsDialog({ isOpen, onClose, onConfirm, gameId, ph
           another. Consolidate each character&apos;s sheet updates into a single result first.
         </Alert>
       )}
+      {blank.length > 0 && (
+        <Alert variant="danger" className="mb-4" data-testid="publish-all-blank-drafts">
+          Nothing written yet for: {blank.join(', ')}. Write or delete {blank.length === 1 ? 'that result' : 'those results'} before publishing.
+        </Alert>
+      )}
+      {!!error && (
+        <Alert variant="danger" className="mb-4">
+          {extractApiErrorMessage(error) ?? 'Couldn’t publish the results. Try again.'}
+        </Alert>
+      )}
       <div className="flex justify-end space-x-3">
         <Button variant="ghost" onClick={onClose} disabled={isPublishing}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onConfirm} disabled={isPublishing} className="bg-semantic-success hover:bg-semantic-success-hover">
+        <Button variant="primary" onClick={onConfirm} disabled={isPublishing || blank.length > 0} className="bg-semantic-success hover:bg-semantic-success-hover">
           {isPublishing ? 'Publishing...' : 'Confirm & Publish'}
         </Button>
       </div>

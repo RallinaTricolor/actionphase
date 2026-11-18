@@ -63,6 +63,11 @@ var ErrPostNotFound = errors.New("post not found")
 // same as for a parent the caller can't see.
 var ErrCommentParentNotFound = errors.New("comment parent not found")
 
+// ErrEmptyResult is returned when publishing would send a player a result, or
+// a part of one, with no text. It carries a message for the GM. Handlers answer
+// 409: the draft is fine to keep, it just isn't ready.
+var ErrEmptyResult = errors.New("result has no text")
+
 // ErrInvalidStagedChain is returned when a staged result chain violates its
 // shape rules: too few parts, too many, a delay out of range, or a head
 // carrying a delay. Wrapped so handlers can answer 400 rather than 500 — these

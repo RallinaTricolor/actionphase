@@ -48,6 +48,22 @@ export function chainTail<R extends Pick<ActionResult, 'id' | 'parent_result_id'
 }
 
 /**
+ * The first part of the chain `result` belongs to, following
+ * `parent_result_id` through `results`. Parts of one chain share it. A parent
+ * missing from the list ends the walk there.
+ */
+export function chainHeadId<R extends Pick<ActionResult, 'id' | 'parent_result_id'>>(result: R, results: readonly R[]): number {
+  let head = result;
+  for (let i = 0; i < results.length; i++) {
+    const parent = results.find((r) => r.id === head.parent_result_id);
+    if (!parent) break;
+    head = parent;
+  }
+  // Still has a parent: it isn't listed, but it's what these parts share.
+  return head.parent_result_id ?? head.id;
+}
+
+/**
  * A follow-up can be added only while the whole chain is a draft (the server
  * refuses otherwise), and only from the tail, since a new part always lands
  * at the end.

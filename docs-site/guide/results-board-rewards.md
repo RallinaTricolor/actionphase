@@ -26,7 +26,8 @@ once, for everyone.
   **every phase** list holds rewards that repeat (scenario results, minor
   objectives). Each action phase also has **its own list** for that phase's
   bonus objectives. Edit both on **Game setup**, under Reward lists. You can
-  fill in a phase's list before the phase starts, and move a reward between
+  fill in a phase's list before the phase starts (once it has ended, the list
+  is read-only), and move a reward between
   the lists.
 - **Reward lines.** What one character got this phase. Giving a reward from a
   list copies it onto them, so you can change one person's copy without
@@ -77,8 +78,10 @@ in the results list. Publishing applies them, as it always has.
 
 **Put block in result** writes the block at the end of the result that
 carries the rewards. Press it again after a change and it replaces the copy it
-put there last time. **Checks before publishing** says when the block is
-missing from the result or out of date. **Copy block** copies it instead.
+put there last time. If you've added a part since, the block moves to the new
+last part and the old copy is taken out of the earlier one. **Checks before
+publishing** says when the block is missing from the result, out of date, or
+still sitting in an earlier part. **Copy block** copies it instead.
 
 ## Tags
 

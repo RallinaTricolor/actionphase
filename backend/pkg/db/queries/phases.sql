@@ -124,6 +124,21 @@ ORDER BY gp.phase_number, acts.submitted_at;
 DELETE FROM action_submissions
 WHERE game_id = $1 AND user_id = $2 AND phase_id = $3;
 
+-- name: LockCharacterFirstDraft :exec
+-- Serializes making a character's first draft for the rest of the transaction.
+-- Advisory-lock class 3, keyed by character (classes 1 and 2 are the GM board's).
+SELECT pg_advisory_xact_lock(3, sqlc.arg(character_id)::int);
+
+-- name: GetCharacterOpenDraft :one
+-- The character's oldest unpublished result in the phase (its first part).
+SELECT * FROM action_results
+WHERE phase_id = $1
+  AND character_id = $2
+  AND is_published = false
+  AND parent_result_id IS NULL
+ORDER BY id
+LIMIT 1;
+
 -- name: CreateActionResult :one
 -- released_at tracks sent_at exactly: a result created already-published is
 -- visible immediately, and a draft is visible to nobody until publish sets both.
@@ -508,6 +523,18 @@ ORDER BY c.part_number;
 SELECT COUNT(*) as count
 FROM action_results
 WHERE phase_id = $1 AND is_published = false AND parent_result_id IS NULL;
+
+-- name: ListBlankDraftRecipients :many
+-- Who has an unpublished result (or part) with no text in the phase, for the
+-- message when Publish all refuses.
+SELECT DISTINCT COALESCE(c.name, u.username)::text AS recipient
+FROM action_results r
+JOIN users u ON u.id = r.user_id
+LEFT JOIN characters c ON c.id = r.character_id
+WHERE r.phase_id = $1
+  AND r.is_published = false
+  AND btrim(r.content, E' \t\r\n') = ''
+ORDER BY recipient;
 
 -- name: GetUnpublishedResultIDs :many
 -- Work list for PublishAllPhaseResults. Chain heads only, for the same reason

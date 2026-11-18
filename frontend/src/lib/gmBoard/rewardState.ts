@@ -8,7 +8,7 @@
 import type { SheetTab } from '@/types/characters';
 import type { ActionResult } from '@/types/phases';
 import type { ResultChain } from './results';
-import { diffCount, draftUpdates, driftedItem, lineKind, sheetDiff, sheetFor, type RewardSheetUpdate, type SheetState, type SheetTabs, type TabDiff } from './rewards';
+import { diffCount, draftUpdates, driftedItem, lineKind, linesChangeSheet, sheetDiff, sheetFor, type RewardSheetUpdate, type SheetState, type SheetTabs, type TabDiff } from './rewards';
 import { renderBlock, slotsOf, type Block } from './template';
 import type { CharacterRewards, GameBoardSettings, RewardItem, RewardLine } from './types';
 
@@ -56,7 +56,8 @@ export type RewardCheck =
   | { kind: 'no-result' }
   | { kind: 'empty-result' }
   | { kind: 'block-missing' }
-  | { kind: 'block-stale' };
+  | { kind: 'block-stale' }
+  | { kind: 'block-elsewhere' };
 
 export interface RewardState {
   rewards: CharacterRewards;
@@ -68,6 +69,8 @@ export interface RewardState {
   updates: RewardSheetUpdate[];
   carrier: Carrier;
   locked: boolean;
+  /** The changes are on the sheet, and the board has no record of it before them. */
+  sheetAlreadyApplied: boolean;
   slots: string[];
   checks: RewardCheck[];
 }
@@ -93,15 +96,27 @@ const holds = (content: string, block: string) => {
 export function rewardStateFor(inputs: RewardInputs): RewardState {
   const rewards = inputs.rewards ?? EMPTY_REWARDS;
   const { lines } = rewards;
-  const sheet = sheetFor(inputs.layout, inputs.live, lines);
+  const carrier = carrierFor(inputs.chains, rewards.carrierHeadId);
+  const locked = linesLocked(carrier);
+  // Once the lines have gone out, the live sheet may already hold them, so
+  // they work from the sheet as it was. A result published before that was
+  // recorded has no such sheet: its lines are simply not applied again.
+  const recorded = locked ? rewards.sheetBefore : undefined;
+  const alreadyApplied = carrier.state === 'applied' && !recorded;
+  const base = recorded ? { ...inputs.live, ...recorded } : inputs.live;
+  const work = (appliedLines: readonly RewardLine[]) => {
+    const worked = sheetFor(inputs.layout, base, appliedLines);
+    return alreadyApplied ? { ...worked, after: worked.before } : worked;
+  };
+  const sheet = work(lines);
   const diff = sheetDiff(inputs.layout, sheet);
   // A sheet change (damage, an item used up) is not a reward: it never shows
   // as a line, in {{changes}} or in {{gain}}, which come from the reward
   // lines alone. Tags that state the sheet ({{value}} and the rest) read the
   // real one, so the block never tells a player a wrong total.
   const rewardLines = lines.filter((l) => lineKind(l) === 'reward');
-  const blockSheet = rewardLines.length === lines.length ? sheet : sheetFor(inputs.layout, inputs.live, rewardLines);
-  const block = renderBlock({
+  const blockSheet = rewardLines.length === lines.length ? sheet : work(rewardLines);
+  const rendered = renderBlock({
     template: inputs.settings.rewardTemplate,
     groups: inputs.settings.rewardGroups,
     scales: inputs.settings.scales,
@@ -113,8 +128,9 @@ export function rewardStateFor(inputs: RewardInputs): RewardState {
     rewardSheet: blockSheet,
     diff: blockSheet === sheet ? diff : sheetDiff(inputs.layout, blockSheet),
   });
-  const carrier = carrierFor(inputs.chains, rewards.carrierHeadId);
-  const locked = linesLocked(carrier);
+  // What went out stays what it was, whatever the template or sheet do later.
+  const sent = locked && rewards.block && carrier.chain?.parts.some((p) => holds(p.content, rewards.block as string)) ? rewards.block : undefined;
+  const block = sent ? { ...rendered, text: sent } : rendered;
   const slots = slotsOf(inputs.settings.rewardTemplate);
   const items = [...inputs.settings.rewardItems, ...inputs.phaseItems];
 
@@ -138,10 +154,27 @@ export function rewardStateFor(inputs: RewardInputs): RewardState {
     if (carrier.tail && block.text) {
       const text = inputs.tailText ?? carrier.tail.content;
       if (!holds(text, block.text)) checks.push(rewards.block && holds(text, rewards.block) ? { kind: 'block-stale' } : { kind: 'block-missing' });
+      // The block goes on the last part, so a copy left on an earlier one (a
+      // part was added after it was put in) would show the player two.
+      const copies = [block.text, rewards.block].filter((b): b is string => !!b);
+      if (carrier.chain?.parts.some((p) => p.id !== carrier.tail?.id && copies.some((b) => holds(p.content, b)))) checks.push({ kind: 'block-elsewhere' });
     }
   }
 
-  return { rewards, lines, sheet, diff, changes: diffCount(diff), block, updates: locked ? [] : draftUpdates(diff), carrier, locked, slots, checks };
+  return {
+    rewards,
+    lines,
+    sheet,
+    diff,
+    changes: diffCount(diff),
+    block,
+    updates: locked ? [] : draftUpdates(diff),
+    carrier,
+    locked,
+    sheetAlreadyApplied: alreadyApplied && linesChangeSheet(lines),
+    slots,
+    checks,
+  };
 }
 
 /**
@@ -149,10 +182,23 @@ export function rewardStateFor(inputs: RewardInputs): RewardState {
  * time when it's still there unchanged, else added at the end.
  */
 export function withBlock(content: string, block: string, previous: string | undefined): string {
-  if (previous && content.includes(previous)) return content.replace(previous, block);
+  // A function, so a `$` in the block stays literal.
+  if (previous && content.includes(previous)) return content.replace(previous, () => block);
   const body = content.replace(/\s+$/, '');
   return body ? `${body}\n\n${block}` : block;
 }
+
+/** The part's text with a copy of the block taken out, and the gap it left closed. */
+export function withoutBlock(content: string, block: string): string {
+  const at = block ? content.indexOf(block) : -1;
+  if (at < 0) return content;
+  const before = content.slice(0, at).replace(/\s+$/, '');
+  const after = content.slice(at + block.length).replace(/^\s+/, '');
+  return before && after ? `${before}\n\n${after}` : before || after;
+}
+
+/** Every entry on the character's sheet once their lines apply. */
+export const entryNamesAfter = (state: Pick<RewardState, 'sheet'>): string[] => Object.values(state.sheet.after).flatMap((entries) => entries.map((e) => e.name));
 
 /** A blank line for a new line or a scene's sheet update: the first section, or "other". */
 export const defaultGroup = (groups: GameBoardSettings['rewardGroups']) => groups.find((g) => g.key === 'other')?.key ?? groups[0]?.key ?? 'other';

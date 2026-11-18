@@ -127,6 +127,8 @@ func (h *Handler) writeErr(ctx context.Context, err error, what string, attrs ..
 		return newConflictResponse(conflict, humaconfig.CorrelationInstance(observability.GetCorrelationID(ctx)))
 	case errors.Is(err, core.ErrGameReadOnly):
 		return huma.Error409Conflict("this game is archived, so its results boards can't be changed")
+	case errors.Is(err, core.ErrPhaseEnded):
+		return huma.NewError(http.StatusLocked, core.PhaseEndedMessage)
 	case errors.Is(err, core.ErrGmBoardNotActionPhase), errors.Is(err, pgx.ErrNoRows):
 		return huma.Error404NotFound("only action phases have a results board")
 	case errors.Is(err, core.ErrGmBoardItemTooLarge),
@@ -266,7 +268,10 @@ func RegisterHumaGmBoard(api huma.API, h *Handler) {
 		Description: "Applies a batch of item changes in one transaction. If any change names a stale base_version, nothing is written and the 409 carries the current copy of each conflicting item. GM only.",
 		Tags:        []string{"Results Board"},
 		Security:    bearer,
-		Responses:   writeErrors,
+		Responses: map[string]*huma.Response{
+			"401": writeErrors["401"], "403": writeErrors["403"], "404": writeErrors["404"], "409": writeErrors["409"], "422": writeErrors["422"],
+			"423": {Description: "The phase has ended, so its board is read-only until it's activated again"},
+		},
 	}, h.humaApplyBoardChanges)
 
 	huma.Register(api, huma.Operation{

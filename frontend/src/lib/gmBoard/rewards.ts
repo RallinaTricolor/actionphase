@@ -350,6 +350,25 @@ export function sheetFor(layout: readonly SheetTab[], live: SheetTabs, lines: re
   return { before, after, recs };
 }
 
+/** Whether any line changes the sheet. */
+export const linesChangeSheet = (lines: readonly Pick<RewardLine, 'choose' | 'ops'>[]) => lines.some((l) => effectiveOps(l).length > 0);
+
+/** Room for the record below, well inside the 64 KB a board item may hold. */
+const SHEET_BEFORE_MAX_BYTES = 24 * 1024;
+
+/**
+ * The tabs a character's lines change, as they stand before the lines. Kept
+ * with the lines while the result is a draft, because nothing else remembers
+ * it: publishing puts the changes on the live sheet and deletes the drafts.
+ * Nothing when no line changes the sheet, or the tabs are too big to keep.
+ */
+export function sheetBeforeFor(before: SheetTabs, lines: readonly Pick<RewardLine, 'choose' | 'ops'>[]): SheetTabs | undefined {
+  const keys = new Set(lines.flatMap((l) => effectiveOps(l).map((op) => op.tab)));
+  if (keys.size === 0) return undefined;
+  const tabs: SheetTabs = Object.fromEntries([...keys].map((key) => [key, before[key] ?? []]));
+  return new TextEncoder().encode(JSON.stringify(tabs)).length <= SHEET_BEFORE_MAX_BYTES ? tabs : undefined;
+}
+
 export interface DiffField {
   key: string;
   label: string;

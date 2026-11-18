@@ -1,6 +1,7 @@
-import { useEffect, type MutableRefObject } from 'react';
+import { useContext, useEffect, useRef, type MutableRefObject } from 'react';
 import { Alert, Button } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
+import { BoardUnsavedTextContext } from '@/hooks/useBoardReadOnly';
 import { useResultDraft, type DraftStatus, type DraftTarget } from '@/hooks/useResultDraft';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { wordCount } from '@/lib/gmBoard/scenes';
@@ -32,10 +33,16 @@ const STATUS_TEXT: Partial<Record<DraftStatus, string>> = {
 
 /** The draft for one result part, saved as the GM types (see `useResultDraft`). */
 export function ResultPartEditor({ gameId, target, onCreated, onText, insertTextRef, transformTextRef, flushRef, rewriteRef, placeholder, sheetItems, label }: ResultPartEditorProps) {
-  const draft = useResultDraft(gameId, target, onCreated);
+  const keepUnsaved = useContext(BoardUnsavedTextContext);
+  const draft = useResultDraft(gameId, target, onCreated, (unsaved) => keepUnsaved?.(label, unsaved));
   const { text, flush, setText } = draft;
 
-  useEffect(() => onText(text), [text, onText]);
+  // Told only when the text or the part changes: `onText` is often a new
+  // function each render, and it sets state in the parent.
+  const onTextRef = useRef(onText);
+  onTextRef.current = onText;
+  const partId = target.kind === 'part' ? target.part.id : null;
+  useEffect(() => onTextRef.current(text), [text, partId]);
   useEffect(() => {
     flushRef.current = flush;
     return () => {
@@ -43,7 +50,7 @@ export function ResultPartEditor({ gameId, target, onCreated, onText, insertText
     };
   }, [flush, flushRef]);
 
-  const locked = draft.status === 'published' || draft.status === 'gone';
+  const locked = draft.status === 'published' || draft.status === 'gone' || draft.status === 'locked';
   useEffect(() => {
     if (!rewriteRef || locked) return;
     const rewrite = (fn: (t: string) => string) => setText(fn(text));
@@ -71,6 +78,7 @@ export function ResultPartEditor({ gameId, target, onCreated, onText, insertText
       )}
       {draft.status === 'published' && <Alert variant="info">This part was published meanwhile, so it can’t be changed. Copy anything you need from the box.</Alert>}
       {draft.status === 'gone' && <Alert variant="warning">This part was deleted meanwhile. Copy anything you need from the box.</Alert>}
+      {draft.status === 'locked' && <Alert variant="warning">This phase isn’t active any more, so this can’t be saved. Copy anything you need from the box.</Alert>}
       <CommentEditor
         value={text}
         onChange={draft.setText}

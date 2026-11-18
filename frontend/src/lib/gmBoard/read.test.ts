@@ -219,8 +219,26 @@ describe('carded text', () => {
     );
     expect(spans.map((s) => [s.cardId, flat.slice(s.start, s.end)])).toEqual([
       ['a', 'I sneak into the Old Mill'],
-      ['b', long.slice(0, 60)],
+      ['b', 'Then I wait by the wheel for a very long time indeed, until'],
     ]);
+  });
+
+  it('finds whole-paragraph cards whose markdown renders differently', () => {
+    // As rendered: each inline element is its own text node.
+    const { flat } = flattenText(['Open ', '[[Utility Satchel]]', ' and pause (', 'Spot the Fake', ') for ', '@Mina Kwon', '.']);
+    const quote = 'Open [[Utility Satchel|item:abc]] and pause (*Spot the Fake*) for `@Mina Kwon`.';
+    const [span] = cardedSpans(flat, [makeCard({ id: 'a', characterId: 1, quote })], 1);
+    expect(span).toBeDefined();
+    const shown = flat.slice(span.start, span.end);
+    expect(shown.startsWith('Open')).toBe(true);
+    expect(shown).toContain('Spot the Fake');
+    expect(shown).toContain('Mina Kwon');
+  });
+
+  it('keeps a quote’s own punctuation, and doesn’t add any it lacks', () => {
+    const flat = 'She said "run now." Then left.';
+    const spans = cardedSpans(flat, [makeCard({ id: 'a', characterId: 1, quote: '"run now."' }), makeCard({ id: 'b', characterId: 1, quote: 'then left' })], 1);
+    expect(spans.map((s) => flat.slice(s.start, s.end))).toEqual(['"run now."', 'Then left']);
   });
 
   it('opens the shortest card under the cursor', () => {

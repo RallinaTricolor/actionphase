@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -97,6 +97,65 @@ describe('GmBoardPage', () => {
     expect(screen.getByRole('link', { name: /Starfall: history/ })).toBeInTheDocument();
   });
 
+  describe('a phase that has ended', () => {
+    const serveEnded = (overrides: Partial<GameWithDetails> = {}) => {
+      serveGame(overrides);
+      server.use(
+        http.get(`/api/v1/games/${GAME_ID}/phases`, () =>
+          HttpResponse.json([
+            makeGamePhase({ id: 70, game_id: GAME_ID, phase_type: 'action', title: 'Day 2', is_active: false, has_ended: true }),
+            makeGamePhase({ id: 71, game_id: GAME_ID, phase_type: 'common_room', title: 'Talk', is_active: true }),
+          ]),
+        ),
+        http.get(`/api/v1/games/${GAME_ID}/phases/70/results/unpublished-count`, () => HttpResponse.json({ count: 2 })),
+      );
+    };
+
+    it('is read-only for the GM, who is told how to reopen it', async () => {
+      serveEnded();
+      renderPage();
+      expect(await screen.findByTestId('gm-board-read-only')).toBeInTheDocument();
+      const notice = screen.getByTestId('gm-board-ended');
+      expect(notice).toHaveTextContent('activate it again from Phases');
+      expect(await within(notice).findByText(/including 2 unpublished results/)).toBeInTheDocument();
+      expect(within(notice).getByRole('link', { name: 'Phases' })).toHaveAttribute('href', `/games/${GAME_ID}?tab=phases`);
+      // The notice says it all, so the header doesn't repeat it.
+      expect(screen.queryByText(/its board can’t be changed/)).not.toBeInTheDocument();
+    });
+
+    it('goes back to the phase in History, not the Actions tab', async () => {
+      serveEnded();
+      renderPage();
+      expect(await screen.findByRole('link', { name: /Starfall: history/ })).toHaveAttribute('href', `/games/${GAME_ID}?tab=history&phase=70`);
+    });
+
+    it('tells a viewer it has ended, without the GM’s notice', async () => {
+      joinAudience();
+      serveEnded({ gm_user_id: 99, share_gm_board: true });
+      renderPage();
+      expect(await screen.findByText('Shared by the GM. This phase has ended.')).toBeInTheDocument();
+      expect(screen.queryByTestId('gm-board-ended')).not.toBeInTheDocument();
+    });
+  });
+
+  it('goes back to the results area from the running phase’s board', async () => {
+    serveGame();
+    server.use(
+      http.get(`/api/v1/games/${GAME_ID}/phases`, () =>
+        HttpResponse.json([makeGamePhase({ id: 70, game_id: GAME_ID, phase_type: 'action', title: 'Day 2', is_active: true })]),
+      ),
+    );
+    renderPage();
+    expect(await screen.findByRole('link', { name: /Starfall: results/ })).toHaveAttribute('href', `/games/${GAME_ID}?tab=actions`);
+    expect(screen.queryByTestId('gm-board-read-only')).not.toBeInTheDocument();
+  });
+
+  it('tells a viewer of a finished game that the board won’t change', async () => {
+    serveGame({ gm_user_id: 99, state: 'completed', share_gm_board: true });
+    renderPage();
+    expect(await screen.findByText('Shared by the GM. This game is over, so the board won’t change.')).toBeInTheDocument();
+  });
+
   it('has no board for a phase that isn’t an action phase', async () => {
     serveGame();
     renderPage(71);
@@ -114,5 +173,36 @@ describe('GmBoardPage', () => {
     renderPage();
     expect(await screen.findByText('The results board needs a wider screen')).toBeInTheDocument();
     expect(screen.queryByTestId('gm-board')).not.toBeInTheDocument();
+  });
+
+  it('keeps an open board, and where the GM was on it, while the window is too narrow', async () => {
+    let narrow = false;
+    const listeners = new Set<() => void>();
+    window.matchMedia = ((query: string) => ({
+      get matches() {
+        return query === BOARD_NARROW_QUERY && narrow;
+      },
+      media: query,
+      addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+    })) as unknown as typeof window.matchMedia;
+    const setNarrow = (next: boolean) =>
+      act(() => {
+        narrow = next;
+        listeners.forEach((fn) => fn());
+      });
+    serveGame();
+    renderPage();
+    const board = await screen.findByTestId('gm-board');
+
+    setNarrow(true);
+    expect(screen.getByText('The results board needs a wider screen')).toBeInTheDocument();
+    expect(board).toBeInTheDocument();
+    expect(board).not.toBeVisible();
+
+    setNarrow(false);
+    expect(screen.queryByText('The results board needs a wider screen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('gm-board')).toBe(board);
+    expect(board).toBeVisible();
   });
 });

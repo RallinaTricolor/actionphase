@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { isPhaseLocked } from '@/lib/errors';
+import { addResultToCache, createFirstDraft } from '@/lib/gmBoard/firstDraft';
 import type { ActionResult } from '@/types/phases';
 
 /** How long after the last keystroke a draft saves. */
@@ -17,10 +19,11 @@ export const DRAFT_RETRY_MS = 10_000;
  */
 export type DraftTarget =
   | { kind: 'part'; part: ActionResult }
-  | { kind: 'new-result'; userId: number; characterId: number; submissionId?: number }
+  /** `firstDraft`: use the draft they already have, if one has appeared. */
+  | { kind: 'new-result'; phaseId: number; userId: number; characterId: number; submissionId?: number; firstDraft?: boolean }
   | { kind: 'new-part'; tail: ActionResult; delayMinutes: number };
 
-export type DraftStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'conflict' | 'gone' | 'published' | 'error';
+export type DraftStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'conflict' | 'gone' | 'published' | 'locked' | 'error';
 
 const resultsKey = (gameId: number) => ['actionResults', 'game', gameId] as const;
 
@@ -38,13 +41,21 @@ const isNewer = (a: string | undefined, b: string | undefined) => !!a && (!b || 
  * same component mounted (same React key) when it switches the target to
  * that part, or typing in between is lost.
  *
+ * A first draft can already exist by then: the rewards panel or a co-GM may
+ * have started it. An empty one takes this text; one with other text goes to
+ * the same "Use theirs" / "Keep mine" choice as a stale save.
+ *
  * A save that fails for any other reason is tried again every
  * DRAFT_RETRY_MS while the editor is open (typing tries sooner). Text that
  * differs from the last good save is sent when the component unmounts, and
  * the page warns before closing while any is outstanding, failed saves and
  * unresolved conflicts included: the box may hold the only copy.
+ *
+ * A save refused because the phase is no longer active stops for good
+ * (`locked`) and the text stays in the box. If the editor closes with text it
+ * couldn't save, `onLockedOut` receives it, since nothing else holds it now.
  */
-export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: (result: ActionResult) => void) {
+export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: (result: ActionResult) => void, onLockedOut?: (text: string) => void) {
   const qc = useQueryClient();
   const initial = target.kind === 'part' ? target.part : null;
   const [text, setTextState] = useState(initial?.content ?? '');
@@ -60,6 +71,9 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
   targetRef.current = target;
   const onCreatedRef = useRef(onCreated);
   onCreatedRef.current = onCreated;
+  const onLockedOutRef = useRef(onLockedOut);
+  onLockedOutRef.current = onLockedOut;
+  const lockedRef = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
   const blocked = useRef(false);
@@ -73,18 +87,61 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
   // The latest save, for the retry timer that save itself sets.
   const saveRef = useRef<() => Promise<void>>(async () => {});
 
+  /**
+   * Makes `row` the part this editor writes to, and works out what that means
+   * for the text in the box. `sent` is what this editor just asked to create
+   * it with, if it did. Returns whether the box's text still has to be sent.
+   */
+  const adoptRow = useCallback((row: ActionResult, sent: string | null): 'done' | 'send' | 'conflict' => {
+    idRef.current = row.id;
+    seenRef.current = row.updated_at;
+    const typed = textRef.current;
+    const content = row.content ?? '';
+    // The server trims what it creates; the box keeps what was typed.
+    if (sent !== null && content.trim() === sent.trim()) {
+      savedTextRef.current = sent;
+      return 'done';
+    }
+    if (content.trim() === typed.trim()) {
+      savedTextRef.current = typed;
+      return 'done';
+    }
+    savedTextRef.current = content;
+    if (!typed.trim()) {
+      textRef.current = content;
+      setTextState(content);
+      return 'done';
+    }
+    if (!content.trim()) return 'send';
+    blocked.current = true;
+    setTheirs(row);
+    setStatus('conflict');
+    return 'conflict';
+  }, []);
+
   // A newer copy of this part arrived (someone else saved, or a refetch after
   // another step wrote to it) while nothing is waiting to save: show it.
   const prop = target.kind === 'part' ? target.part : null;
   useEffect(() => {
-    if (!prop || prop.id !== idRef.current) return;
+    if (!prop) return;
+    // The draft this editor was about to start has appeared.
+    if (idRef.current === null) {
+      if (inFlight.current) return;
+      const outcome = adoptRow(prop, null);
+      if (outcome === 'send') {
+        setStatus('unsaved');
+        void saveRef.current();
+      } else if (outcome === 'done') setStatus('saved');
+      return;
+    }
+    if (prop.id !== idRef.current) return;
     if (textRef.current !== savedTextRef.current || inFlight.current) return;
     if (!isNewer(prop.updated_at, seenRef.current)) return;
     seenRef.current = prop.updated_at;
     savedTextRef.current = prop.content;
     textRef.current = prop.content;
     setTextState(prop.content);
-  }, [prop]);
+  }, [prop, adoptRow]);
 
   const patchCache = useCallback(
     (id: number, content: string, updatedAt: string | undefined) =>
@@ -116,21 +173,21 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
           savedTextRef.current = sent;
           patchCache(id, sent, res.data.updated_at);
         } else if (t.kind === 'new-result') {
-          const res = await apiClient.phases.createActionResult(gameId, {
-            user_id: t.userId,
-            character_id: t.characterId,
-            action_submission_id: t.submissionId,
-            content: sent,
-            is_published: false,
-          });
-          idRef.current = res.data.id;
-          seenRef.current = res.data.updated_at;
-          // The server trims what it creates; the box keeps what was typed,
-          // and the next save sends it whole.
-          savedTextRef.current = sent;
-          void qc.invalidateQueries({ queryKey: resultsKey(gameId) });
-          void qc.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
-          onCreatedRef.current?.({ ...(res.data as ActionResult), character_id: t.characterId, action_submission_id: t.submissionId });
+          const request = { phase_id: t.phaseId, user_id: t.userId, character_id: t.characterId, action_submission_id: t.submissionId, content: sent };
+          let row: ActionResult;
+          if (t.firstDraft) row = await createFirstDraft(qc, gameId, request);
+          else {
+            row = { ...(await apiClient.phases.createActionResult(gameId, { ...request, is_published: false })).data, character_id: t.characterId };
+            addResultToCache(qc, gameId, row);
+          }
+          const outcome = adoptRow(row, sent);
+          onCreatedRef.current?.({ ...row, character_id: t.characterId, action_submission_id: row.action_submission_id ?? t.submissionId });
+          if (outcome === 'conflict') return;
+          if (outcome === 'send') {
+            setStatus('unsaved');
+            void saveRef.current();
+            return;
+          }
         } else if (t.kind === 'new-part') {
           const res = await apiClient.phases.appendStagedPart(gameId, t.tail.id, { content: sent.trim(), delay_minutes: t.delayMinutes });
           idRef.current = res.data.id;
@@ -138,12 +195,21 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
           savedTextRef.current = sent;
           void qc.invalidateQueries({ queryKey: resultsKey(gameId) });
           void qc.invalidateQueries({ queryKey: ['unpublishedResultsCount'] });
+          // The chain's sheet updates moved to this new last part.
+          void qc.invalidateQueries({ queryKey: ['draftUpdateCount', gameId] });
+          void qc.invalidateQueries({ queryKey: ['phaseDraftUpdates', gameId] });
           onCreatedRef.current?.(res.data);
         }
         setStatus(textRef.current === savedTextRef.current ? 'saved' : 'unsaved');
       } catch (error) {
         const code = isAxiosError(error) ? error.response?.status : undefined;
-        if (code === 409 && id !== null) {
+        if (isPhaseLocked(error)) {
+          blocked.current = true;
+          lockedRef.current = true;
+          setStatus('locked');
+          void qc.invalidateQueries({ queryKey: ['gamePhases', gameId] });
+          if (!mounted.current) onLockedOutRef.current?.(textRef.current);
+        } else if (code === 409 && id !== null) {
           // Published, or saved by someone else. Find out which from the
           // current list; the GM's text stays in the box either way.
           await qc.invalidateQueries({ queryKey: resultsKey(gameId) });
@@ -178,7 +244,7 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
     } finally {
       inFlight.current = null;
     }
-  }, [gameId, patchCache, qc]);
+  }, [gameId, patchCache, qc, adoptRow]);
   useEffect(() => {
     saveRef.current = save;
   }, [save]);
@@ -237,12 +303,14 @@ export function useResultDraft(gameId: number, target: DraftTarget, onCreated?: 
         clearTimeout(timer.current);
         timer.current = null;
       }
-      if (textRef.current !== savedTextRef.current) void save();
+      if (textRef.current === savedTextRef.current) return;
+      if (lockedRef.current) onLockedOutRef.current?.(textRef.current);
+      else void save();
     },
     [save],
   );
 
-  const pending = status === 'unsaved' || status === 'saving' || status === 'error' || status === 'conflict';
+  const pending = status === 'unsaved' || status === 'saving' || status === 'error' || status === 'conflict' || (status === 'locked' && text !== savedTextRef.current);
   useEffect(() => {
     if (!pending) return;
     const warn = (e: BeforeUnloadEvent) => {

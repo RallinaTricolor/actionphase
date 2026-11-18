@@ -252,7 +252,7 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
       <section className="space-y-2" data-testid="reward-sheet">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-sm font-semibold text-content-primary">
-            On the sheet <span className="font-normal text-content-tertiary">{state.changes ? `${state.changes} in ${state.diff.map((d) => d.tab.label).join(', ')}` : 'no changes'}</span>
+            On the sheet <span className="font-normal text-content-tertiary">{state.changes ? `${state.changes} in ${state.diff.map((d) => d.tab.label).join(', ')}` : state.sheetAlreadyApplied ? 'applied' : 'no changes'}</span>
           </h4>
           {!ro && draftChains.length > 1 ? (
             <Select
@@ -275,7 +275,9 @@ export function WriteRewards({ gameId, characterId, name, fullName, state, chain
           )}
         </div>
         {state.diff.length === 0 ? (
-          <p className="text-sm text-content-secondary">Nothing changes on {name}’s sheet yet.</p>
+          <p className="text-sm text-content-secondary">
+            {state.sheetAlreadyApplied ? `These changes are already on ${name}’s sheet.` : `Nothing changes on ${name}’s sheet yet.`}
+          </p>
         ) : (
           state.diff.map((d) => (
             <div key={d.tab.key} className="text-sm">

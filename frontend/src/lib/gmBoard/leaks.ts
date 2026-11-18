@@ -38,9 +38,11 @@ export interface LeakInputs {
   codex: CodexEntry[];
   /** characterId → their sheet's entries (`useGameCharacterSheetItems`). Leave out to skip the sheet check. */
   sheetItems?: Map<number, { name: string; tabLabel: string }[]>;
+  /** Entries this character's sheet will have once this phase's rewards apply: theirs too. */
+  ownEntries?: readonly string[];
 }
 
-export function leaksFor({ characterId, phaseId, drafts, board, codex, sheetItems }: LeakInputs): Leak[] {
+export function leaksFor({ characterId, phaseId, drafts, board, codex, sheetItems, ownEntries = [] }: LeakInputs): Leak[] {
   const text = drafts.join('\n');
   const out: Leak[] = [];
   if (!text.trim()) return out;
@@ -53,7 +55,7 @@ export function leaksFor({ characterId, phaseId, drafts, board, codex, sheetItem
   };
 
   if (sheetItems) {
-    const mine = new Set((sheetItems.get(characterId) ?? []).map((i) => i.name.toLowerCase()));
+    const mine = new Set([...(sheetItems.get(characterId) ?? []).map((i) => i.name), ...ownEntries].map((name) => name.toLowerCase()));
     for (const [owner, items] of sheetItems) {
       if (owner === characterId) continue;
       for (const item of items) {
@@ -71,13 +73,14 @@ export function leaksFor({ characterId, phaseId, drafts, board, codex, sheetItem
     }
   }
 
-  // Their own reading of a moment is fine; the shared text of a moment they
-  // don't read, and other people's own versions, aren't.
+  // Their own reading of a moment is fine. The shared text of a moment they
+  // don't read isn't, nor is it when their own version replaces it, nor are
+  // other people's own versions.
   const lower = text.toLowerCase();
   for (const scene of board.scenes) {
     for (const m of scene.moments) {
       const sees = reads(m, characterId);
-      const versions: [string, boolean][] = [[m.text, true]];
+      const versions: [string, boolean][] = [[m.text, !m.ownText[characterId]?.trim()]];
       for (const [who, own] of Object.entries(m.ownText)) versions.push([own, Number(who) === characterId]);
       for (const [raw, theirs] of versions) {
         const t = (raw || '').trim();

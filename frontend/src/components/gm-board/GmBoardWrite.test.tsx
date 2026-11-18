@@ -153,7 +153,7 @@ describe('GmBoardWrite', () => {
     const box = await draftBox();
     fireEvent.change(box, { target: { value: 'You wait.' } });
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === RESULTS)).toBe(true), { timeout: 3000 });
-    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ user_id: 11, character_id: 1, action_submission_id: 44, content: 'You wait.', is_published: false });
+    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ user_id: 11, character_id: 1, action_submission_id: 44, content: 'You wait.', first_draft: true });
 
     const createdAt = results[0].updated_at;
     fireEvent.change(await draftBox(), { target: { value: 'You wait by the wheel.' } });

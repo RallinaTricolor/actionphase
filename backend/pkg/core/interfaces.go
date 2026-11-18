@@ -1152,6 +1152,10 @@ type CreateActionResultRequest struct {
 	GMUserID           int32       // The GM creating the result
 	Content            interface{} // Rich text content (JSON)
 	IsPublished        bool
+	// FirstDraft asks for the character's draft in this phase: if they already
+	// have an unpublished result, it is returned unchanged and nothing is made.
+	// Needs CharacterID.
+	FirstDraft bool
 }
 
 // StagedResultPart is one beat of a staged result chain.

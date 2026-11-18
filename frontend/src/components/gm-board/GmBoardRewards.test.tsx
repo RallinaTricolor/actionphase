@@ -140,6 +140,19 @@ describe('Write: rewards', () => {
     await waitFor(() => expect(screen.queryByText(/reward block isn’t in/)).not.toBeInTheDocument());
   });
 
+  it('Put block in result moves the block to a part added since, out of the earlier one', async () => {
+    const oldBlock = '# Rewards\n\nOld';
+    results[0] = { ...results[0], content: `You wait by the wheel.\n\n${oldBlock}` };
+    results.push(makeActionResult({ id: 101, game_id: GAME_ID, phase_id: PHASE_ID, character_id: 1, user_id: results[0].user_id, is_published: false, parent_result_id: results[0].id, part_number: 2, part_count: 2, content: 'Later.', updated_at: stamp(1) }));
+    board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', itemId: 'rw-partial', group: 'result', text: partial.text, ops: partial.ops, choose: false }], texts: {}, block: oldBlock } }));
+    const user = userEvent.setup();
+    render();
+    await user.click(await screen.findByTestId('put-block'));
+    await waitFor(() => expect(resultPuts.find((p) => p.id === results[0].id)?.content).toBe('You wait by the wheel.'), { timeout: 4000 });
+    // The last part is open in the editor, so its text saves as typing does.
+    await waitFor(() => expect(resultPuts.find((p) => p.id === 101)?.content).toMatch(/^Later\.\n\n# Rewards\n\n\*\*Scenario result/), { timeout: 4000 });
+  });
+
   it('asks before replacing sheet updates made by hand, then replaces them', async () => {
     drafts = [draftRow({ from_rewards: false })];
     board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [{ id: 'l1', group: 'result', text: 'Coin', ops: partial.ops, choose: false }], texts: {} } }));
@@ -170,12 +183,27 @@ describe('Write: rewards', () => {
     await user.click(await within(await screen.findByTestId('write-rewards')).findByRole('button', { name: '+ Partial' }));
 
     await waitFor(() => expect(created).toHaveLength(1), { timeout: 3000 });
-    expect(created[0]).toEqual({ user_id: 12, character_id: 2, action_submission_id: 77, content: '' });
+    expect(created[0]).toEqual({ phase_id: PHASE_ID, user_id: 12, character_id: 2, action_submission_id: 77, content: '', first_draft: true });
     // The sheet changes go on the new draft, and the empty draft is a check.
     await waitFor(() => expect(syncs.at(-1)?.body).toMatchObject({ result_id: 201 }), { timeout: 4000 });
     await openResultTab(user, 'Checks');
     expect(await screen.findByText('Mara’s result has no text yet.')).toBeInTheDocument();
     expect(screen.queryByText(/no draft result to carry them/)).not.toBeInTheDocument();
+  });
+
+  it('a reward given while the first draft is being typed shares one draft with the text', async () => {
+    const user = userEvent.setup();
+    render('step=write&who=2');
+    const editor = await screen.findByTestId('result-draft');
+    await user.click(editor);
+    await user.paste('Mara slips away.');
+    await openResultTab(user, 'Rewards');
+    await user.click(await within(await screen.findByTestId('write-rewards')).findByRole('button', { name: '+ Partial' }));
+
+    await waitFor(() => expect(results.find((r) => r.character_id === 2)?.content).toBe('Mara slips away.'), { timeout: 4000 });
+    expect(results.filter((r) => r.character_id === 2)).toHaveLength(1);
+    await openResultTab(user, 'Result');
+    expect(screen.getByTestId('result-draft')).toHaveValue('Mara slips away.');
   });
 
   it('giving to someone who already has a draft makes no other', async () => {
@@ -197,7 +225,7 @@ describe('Write: rewards', () => {
     expect(syncs).toHaveLength(0);
     expect(created).toHaveLength(0);
     await user.click(within(check as HTMLElement).getByRole('button', { name: 'Make a draft result' }));
-    await waitFor(() => expect(created).toEqual([{ user_id: 12, character_id: 2, content: '' }]), { timeout: 3000 });
+    await waitFor(() => expect(created).toEqual([{ phase_id: PHASE_ID, user_id: 12, character_id: 2, content: '', first_draft: true }]), { timeout: 3000 });
   });
 
   it('once published, the rewards are locked', async () => {
@@ -219,6 +247,40 @@ describe('Write: rewards', () => {
     await user.click(within(await screen.findByTestId('reward-line-l1')).getByRole('button', { name: 'View' }));
     expect(await screen.findByTestId('reward-line-view')).toBeInTheDocument();
     expect(screen.queryByTestId('sheet-change-preview')).not.toBeInTheDocument();
+  });
+
+  describe('after the sheet changes are applied', () => {
+    const appliedLine = { id: 'l1', group: 'result', text: 'Coin', ops: partial.ops, choose: false };
+    const coinAt = (value: number) => [{ id: 'n1', name: 'Coin', amount: { value } }];
+    beforeEach(() => {
+      results[0].is_published = true;
+      server.use(
+        http.get(`/api/v1/games/${GAME_ID}/characters/data`, () =>
+          HttpResponse.json({ 1: [{ id: 1, character_id: 1, module_type: 'numbers', field_name: 'numbers', field_value: JSON.stringify(coinAt(3)), field_type: 'json' }], 2: [] }),
+        ),
+      );
+    });
+
+    it('shows what they changed, and the block’s total, without adding them again', async () => {
+      board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [appliedLine], texts: {}, carrierHeadId: 100, sheetBefore: { numbers: coinAt(1) } } }));
+      const user = userEvent.setup();
+      render();
+      await openResultTab(user, 'Rewards');
+      const sheet = await screen.findByTestId('reward-sheet');
+      await waitFor(() => expect(sheet).toHaveTextContent('Amount 1 → 3'));
+      expect(screen.getByTestId('reward-block')).toHaveTextContent('Coin: 3');
+    });
+
+    it('says they are on the sheet when the board has no record of it before', async () => {
+      board.set('rewards/1', makeGmItem({ kind: 'rewards', key: '1', doc: { lines: [appliedLine], texts: {}, carrierHeadId: 100 } }));
+      const user = userEvent.setup();
+      render();
+      await openResultTab(user, 'Rewards');
+      const sheet = await screen.findByTestId('reward-sheet');
+      await waitFor(() => expect(sheet).toHaveTextContent('already on Harrison’s sheet'));
+      expect(sheet).not.toHaveTextContent('→');
+      expect(screen.getByTestId('reward-block')).toHaveTextContent('Coin: 3');
+    });
   });
 
   it('+ Sheet change makes a line that changes the sheet and stays out of the block', async () => {

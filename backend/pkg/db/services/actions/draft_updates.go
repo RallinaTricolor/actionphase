@@ -12,6 +12,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// refuseEndedDraftUpdate returns core.ErrPhaseEnded when the draft update's
+// result is in a phase that has ended. A missing draft passes, so the caller
+// reports it in its own way.
+func refuseEndedDraftUpdate(ctx context.Context, queries *models.Queries, draftID int32) error {
+	draft, err := queries.GetDraftCharacterUpdate(ctx, draftID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get draft character update: %w", err)
+	}
+	return refuseEndedResult(ctx, queries, draft.ActionResultID)
+}
+
 // CreateDraftCharacterUpdate creates or updates a draft character sheet update for an action result.
 // Uses upsert behavior - if draft already exists for this field, it updates the value.
 func (s *ActionSubmissionService) CreateDraftCharacterUpdate(ctx context.Context, req core.CreateDraftCharacterUpdateRequest) (*models.ActionResultCharacterUpdate, error) {
@@ -36,6 +50,10 @@ func (s *ActionSubmissionService) CreateDraftCharacterUpdate(ctx context.Context
 	validOperations := map[string]bool{"upsert": true, "delete": true}
 	if !validOperations[req.Operation] {
 		return nil, fmt.Errorf("invalid operation: %s", req.Operation)
+	}
+
+	if err := refuseEndedResult(ctx, queries, req.ActionResultID); err != nil {
+		return nil, err
 	}
 
 	// Create or update the draft
@@ -71,6 +89,10 @@ func (s *ActionSubmissionService) GetDraftCharacterUpdates(ctx context.Context, 
 func (s *ActionSubmissionService) UpdateDraftCharacterUpdate(ctx context.Context, draftID int32, fieldValue string) (*models.ActionResultCharacterUpdate, error) {
 	queries := models.New(s.DB)
 
+	if err := refuseEndedDraftUpdate(ctx, queries, draftID); err != nil {
+		return nil, err
+	}
+
 	draft, err := queries.UpdateDraftCharacterUpdate(ctx, models.UpdateDraftCharacterUpdateParams{
 		ID:         draftID,
 		FieldValue: pgtype.Text{String: fieldValue, Valid: true},
@@ -85,6 +107,10 @@ func (s *ActionSubmissionService) UpdateDraftCharacterUpdate(ctx context.Context
 // DeleteDraftCharacterUpdate removes a draft character update.
 func (s *ActionSubmissionService) DeleteDraftCharacterUpdate(ctx context.Context, draftID int32) error {
 	queries := models.New(s.DB)
+
+	if err := refuseEndedDraftUpdate(ctx, queries, draftID); err != nil {
+		return err
+	}
 
 	err := queries.DeleteDraftCharacterUpdate(ctx, draftID)
 	if err != nil {
@@ -131,6 +157,10 @@ func (s *ActionSubmissionService) ReplaceRewardSheetUpdates(ctx context.Context,
 	var written []models.ActionResultCharacterUpdate
 	err := pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
 		queries := models.New(tx)
+
+		if err := core.RefuseEndedPhase(ctx, queries, req.PhaseID); err != nil {
+			return err
+		}
 
 		if req.ResultID != nil {
 			result, err := queries.GetActionResult(ctx, *req.ResultID)

@@ -11,7 +11,8 @@ import { isMobileViewport } from '../utils/viewport';
  * here writes.
  *
  * Fixtures: RESULTS_BOARD_GM (#711) for the GM, RESULTS_BOARD_SHARED (#712)
- * for the audience on a phone.
+ * for the audience on a phone, E2E_ACTION_RESULTS (#326) for a phase that has
+ * ended.
  */
 test.describe('GM results board: shell', () => {
   test('the GM opens the board from the results area, on the first submission', async ({ page }) => {
@@ -65,6 +66,26 @@ test.describe('GM results board: shell', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await board.waitForLoaded('read');
     await expect(notice).toHaveCount(0);
+  });
+
+  test('a phase that has ended is read-only for the GM, who is told how to reopen it', async ({ page }) => {
+    test.skip(isMobileViewport(page), 'The board is desktop only');
+    await loginAs(page, 'GM');
+    const gameId = await getFixtureGameId(page, 'E2E_ACTION_RESULTS');
+    const phaseId = await page.evaluate(async (gid) => {
+      const res = await fetch(`/api/v1/games/${gid}/phases`, { credentials: 'include' });
+      const phases: Array<{ id: number; phase_type: string; has_ended?: boolean }> = await res.json();
+      return phases.find((p) => p.phase_type === 'action' && p.has_ended)?.id;
+    }, gameId);
+    expect(phaseId, 'the fixture has an ended action phase').toBeDefined();
+
+    await page.goto(`/games/${gameId}/phases/${phaseId}/board?step=map`);
+    await expect(page.getByTestId('gm-board-read-only')).toBeVisible();
+    const notice = page.getByTestId('gm-board-ended');
+    await expect(notice).toContainText('activate it again from Phases');
+    await expect(notice.getByRole('link', { name: 'Phases' })).toHaveAttribute('href', `/games/${gameId}?tab=phases`);
+    await expect(page.getByRole('button', { name: '+ Location' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /: history$/ })).toHaveAttribute('href', `/games/${gameId}?tab=history&phase=${phaseId}`);
   });
 
   test('@mobile on a phone, History offers no board, and the board’s address says why', async ({ page }) => {

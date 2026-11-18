@@ -58,6 +58,18 @@ describe('leaksFor', () => {
     expect(check(2, ['You feel the bridge give way beneath you.'])).toEqual([]);
   });
 
+  it('flags the shared text for a reader whose own version replaces it', () => {
+    expect(check(2, ['The bridge collapses into the river.'])).toEqual([
+      { term: 'The bridge collapses into the river.', reason: { kind: 'hidden', sceneId: 's1', momentId: 'shared' } },
+    ]);
+  });
+
+  it('doesn’t flag what the reader is being given, even if someone else has one too', () => {
+    const sheetItems = new Map([[1, []], [2, [{ name: 'Spirit Bottle', tabLabel: 'Items' }]]]);
+    expect(check(1, ['You take the Spirit Bottle.'], { sheetItems })).toHaveLength(1);
+    expect(check(1, ['You take the Spirit Bottle.'], { sheetItems, ownEntries: ['Spirit Bottle'] })).toEqual([]);
+  });
+
   it('ignores moment text too short to mean anything', () => {
     expect(check(1, ['He nods.'])).toEqual([]);
   });

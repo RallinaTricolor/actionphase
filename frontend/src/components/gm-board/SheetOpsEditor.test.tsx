@@ -43,6 +43,39 @@ function Harness({ initial, sheet, onOps }: { initial: SheetOp[]; sheet?: SheetT
 }
 
 describe('SheetOpsEditor', () => {
+  describe('the By amount', () => {
+    const start = () => {
+      const onOps = vi.fn();
+      render(<Harness initial={[{ act: 'inc', tab: 'numbers', entry: 'Coin', by: 1 }]} onOps={onOps} />);
+      return { onOps, box: screen.getByLabelText('By') };
+    };
+    const lastBy = (onOps: ReturnType<typeof vi.fn>) => (onOps.mock.lastCall?.[0] as { by: number }[])[0].by;
+
+    it('takes a negative number typed over the old one', async () => {
+      const { onOps, box } = start();
+      await userEvent.clear(box);
+      await userEvent.type(box, '-3');
+      expect(lastBy(onOps)).toBe(-3);
+      expect(box).toHaveValue(-3);
+    });
+
+    it('takes a negative decimal', async () => {
+      const { onOps, box } = start();
+      await userEvent.clear(box);
+      await userEvent.type(box, '-0.5');
+      expect(lastBy(onOps)).toBe(-0.5);
+    });
+
+    it('can be cleared without turning into 0, and goes back if left empty', async () => {
+      const { onOps, box } = start();
+      await userEvent.clear(box);
+      expect(box).toHaveValue(null);
+      expect(onOps).not.toHaveBeenCalled();
+      await userEvent.tab();
+      expect(box).toHaveValue(1);
+    });
+  });
+
   it('starts a new sheet change on the Numbers tab in the default layout', async () => {
     const onChange = vi.fn();
     render(<SheetOpsEditor ops={[]} onChange={onChange} layout={layout} entryNames={() => []} idPrefix="t" />);

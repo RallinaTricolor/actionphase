@@ -21,12 +21,12 @@ vi.mock('../lib/api', () => ({
 
 const api = vi.mocked(apiClient.phases);
 
-function setup(target: DraftTarget, list: ActionResult[] = [], onCreated = vi.fn()) {
+function setup(target: DraftTarget, list: ActionResult[] = [], onCreated = vi.fn(), onLockedOut = vi.fn()) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(['actionResults', 'game', 7], list);
   const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
-  const hook = renderHook(({ t }) => useResultDraft(7, t, onCreated), { wrapper, initialProps: { t: target } });
-  return { ...hook, qc, onCreated };
+  const hook = renderHook(({ t }) => useResultDraft(7, t, onCreated, onLockedOut), { wrapper, initialProps: { t: target } });
+  return { ...hook, qc, onCreated, onLockedOut };
 }
 
 const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(DRAFT_SAVE_DELAY_MS); });
@@ -68,7 +68,7 @@ describe('useResultDraft', () => {
   it('creates the result on the first save of non-blank text, linking the submission, and reports it', async () => {
     api.createActionResult.mockResolvedValue(makeAxiosResponse({ ...part, id: 9, content: 'You', updated_at: '2026-11-03T10:00:01Z' }));
     api.updateActionResult.mockResolvedValue(makeAxiosResponse({ ...part, id: 9, updated_at: '2026-11-03T10:00:02Z' }));
-    const { result, onCreated } = setup({ kind: 'new-result', userId: 100, characterId: 1, submissionId: 44 });
+    const { result, onCreated } = setup({ kind: 'new-result', phaseId: 3, userId: 100, characterId: 1, submissionId: 44 });
 
     act(() => result.current.setText('   '));
     await settle();
@@ -76,7 +76,7 @@ describe('useResultDraft', () => {
 
     act(() => result.current.setText('You'));
     await settle();
-    expect(api.createActionResult).toHaveBeenCalledWith(7, { user_id: 100, character_id: 1, action_submission_id: 44, content: 'You', is_published: false });
+    expect(api.createActionResult).toHaveBeenCalledWith(7, { phase_id: 3, user_id: 100, character_id: 1, action_submission_id: 44, content: 'You', is_published: false });
     expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 9, character_id: 1 }));
 
     // Later typing updates the row it made.
@@ -84,6 +84,92 @@ describe('useResultDraft', () => {
     await settle();
     expect(api.createActionResult).toHaveBeenCalledTimes(1);
     expect(api.updateActionResult).toHaveBeenLastCalledWith(7, 9, { content: 'You enter.', expected_updated_at: '2026-11-03T10:00:01Z' });
+  });
+
+  describe('a first draft that already exists', () => {
+    const target: DraftTarget = { kind: 'new-result', phaseId: 3, userId: 100, characterId: 1, firstDraft: true };
+    const existing = (content: string) => makeActionResult({ id: 9, character_id: 1, content, updated_at: '2026-11-03T10:00:01Z' });
+
+    it('asks for the first draft, and fills an empty one with what was typed', async () => {
+      api.createActionResult.mockResolvedValue(makeAxiosResponse(existing('')));
+      api.updateActionResult.mockResolvedValue(makeAxiosResponse({ ...existing('You run.'), updated_at: '2026-11-03T10:00:02Z' }));
+      const { result, onCreated } = setup(target);
+
+      act(() => result.current.setText('You run.'));
+      await settle();
+      expect(api.createActionResult).toHaveBeenCalledWith(7, { phase_id: 3, user_id: 100, character_id: 1, content: 'You run.', first_draft: true });
+      expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+      await waitFor(() => expect(api.updateActionResult).toHaveBeenCalledWith(7, 9, { content: 'You run.', expected_updated_at: '2026-11-03T10:00:01Z' }));
+      await waitFor(() => expect(result.current.status).toBe('saved'));
+    });
+
+    it('offers the choice when it holds someone else’s text', async () => {
+      api.createActionResult.mockResolvedValue(makeAxiosResponse(existing('The co-GM’s version.')));
+      api.updateActionResult.mockResolvedValue(makeAxiosResponse({ ...existing('Mine.'), updated_at: '2026-11-03T10:00:02Z' }));
+      const { result } = setup(target);
+
+      act(() => result.current.setText('Mine.'));
+      await settle();
+      expect(result.current.status).toBe('conflict');
+      expect(result.current.theirs?.content).toBe('The co-GM’s version.');
+      expect(result.current.text).toBe('Mine.');
+      expect(api.updateActionResult).not.toHaveBeenCalled();
+
+      await act(async () => result.current.keepMine());
+      expect(api.updateActionResult).toHaveBeenCalledWith(7, 9, { content: 'Mine.', expected_updated_at: '2026-11-03T10:00:01Z' });
+    });
+
+    it('takes a draft that arrives under the open editor', async () => {
+      api.updateActionResult.mockResolvedValue(makeAxiosResponse({ ...existing('Typing'), updated_at: '2026-11-03T10:00:02Z' }));
+      const { result, rerender } = setup(target);
+      act(() => result.current.setText('Typing'));
+      rerender({ t: { kind: 'part', part: existing('') } });
+      await waitFor(() => expect(api.updateActionResult).toHaveBeenCalledWith(7, 9, { content: 'Typing', expected_updated_at: '2026-11-03T10:00:01Z' }));
+      expect(api.createActionResult).not.toHaveBeenCalled();
+    });
+
+    it('shows a draft that arrives while the box is empty', () => {
+      const { result, rerender } = setup(target);
+      rerender({ t: { kind: 'part', part: existing('The co-GM’s version.') } });
+      expect(result.current.text).toBe('The co-GM’s version.');
+      expect(result.current.status).toBe('saved');
+    });
+  });
+
+  it('stops for good when the phase is no longer active, keeping the text', async () => {
+    api.createActionResult.mockRejectedValue(httpError(423));
+    const { result, qc } = setup({ kind: 'new-result', phaseId: 3, userId: 100, characterId: 1 });
+    const refresh = vi.spyOn(qc, 'invalidateQueries');
+
+    act(() => result.current.setText('Too late'));
+    await settle();
+    expect(result.current.status).toBe('locked');
+    expect(result.current.text).toBe('Too late');
+    expect(refresh).toHaveBeenCalledWith({ queryKey: ['gamePhases', 7] });
+
+    act(() => result.current.setText('Too late, still typing'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(DRAFT_RETRY_MS * 2); });
+    expect(api.createActionResult).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands over text it could not save when the editor closes', async () => {
+    api.updateActionResult.mockRejectedValue(httpError(423));
+    const { result, unmount, onLockedOut } = setup({ kind: 'part', part }, [part]);
+    act(() => result.current.setText('Mara runs.'));
+    await settle();
+    expect(result.current.status).toBe('locked');
+    expect(onLockedOut).not.toHaveBeenCalled();
+    unmount();
+    expect(onLockedOut).toHaveBeenCalledWith('Mara runs.');
+  });
+
+  it('hands over the text when the save sent on closing is the one refused', async () => {
+    api.updateActionResult.mockRejectedValue(httpError(423));
+    const { result, unmount, onLockedOut } = setup({ kind: 'part', part }, [part]);
+    act(() => result.current.setText('Mara runs.'));
+    unmount();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(onLockedOut).toHaveBeenCalledWith('Mara runs.');
   });
 
   it('a new part appends to the chain with its delay', async () => {

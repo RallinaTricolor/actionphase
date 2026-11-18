@@ -459,19 +459,19 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Publish all in phase 1
-		err = actionService.PublishAllPhaseResults(context.Background(), phase1.ID)
+		// Publish all in phase 2, the active one
+		err = actionService.PublishAllPhaseResults(context.Background(), phase2.ID)
 		require.NoError(t, err)
 
-		// Verify phase 1 has 0 unpublished
-		count1, err := actionService.GetUnpublishedResultsCount(context.Background(), phase1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, int64(0), count1, "Phase 1 should have 0 unpublished results")
-
-		// Verify phase 2 still has 1 unpublished
+		// Verify phase 2 has 0 unpublished
 		count2, err := actionService.GetUnpublishedResultsCount(context.Background(), phase2.ID)
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), count2, "Phase 2 should still have 1 unpublished result")
+		assert.Equal(t, int64(0), count2, "Phase 2 should have 0 unpublished results")
+
+		// Verify phase 1's draft stays a draft
+		count1, err := actionService.GetUnpublishedResultsCount(context.Background(), phase1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count1, "Phase 1 should still have 1 unpublished result")
 	})
 
 	// Regression: a staged chain must be published as ONE result, not N.
@@ -905,10 +905,14 @@ func TestActionSubmissionService_NotificationCreation(t *testing.T) {
 		// This test verifies that if notification creation fails, the publish still succeeds
 		// We can't easily force a notification failure in this test, but we document the behavior
 
+		// The batch test above moved the game on, so use the phase running now.
+		current, err := phaseService.GetActivePhase(context.Background(), game.ID)
+		require.NoError(t, err)
+
 		// Create unpublished result
 		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
 			GameID:      game.ID,
-			PhaseID:     phase.ID,
+			PhaseID:     current.ID,
 			UserID:      int32(player.ID),
 			Content:     "Test error handling",
 			IsPublished: false,

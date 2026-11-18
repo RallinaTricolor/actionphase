@@ -11,6 +11,39 @@ import type { EntryEdit, SheetEntry } from '@/lib/sheetEntries';
 import { lootDataToEdit } from '@/lib/sheetFieldValues';
 import type { CharacterSheetField, SheetTab } from '@/types/characters';
 
+/**
+ * The amount of a number change. It keeps its own text, because a number box
+ * reports nothing while it holds something unfinished like "-": treating that
+ * as 0 would overwrite the box and lose the minus sign. The amount only changes
+ * once the text is a number; left unfinished, the box goes back to the amount.
+ */
+function ByInput({ id, testId, value, onChange }: { id: string; testId: string; value: number; onChange: (by: number) => void }) {
+  const [text, setText] = useState(String(value));
+  const [seen, setSeen] = useState(value);
+  // Changed from outside (Undo, say): show it.
+  if (value !== seen) {
+    setSeen(value);
+    if (Number(text) !== value || text === '') setText(String(value));
+  }
+  return (
+    <Input
+      id={id}
+      label="By"
+      type="number"
+      step="any"
+      value={text}
+      placeholder="+1, -3, 0.5"
+      onChange={(e) => {
+        const next = e.target.value;
+        setText(next);
+        if (next !== '' && Number.isFinite(Number(next))) onChange(Number(next));
+      }}
+      onBlur={() => setText(String(value))}
+      data-testid={testId}
+    />
+  );
+}
+
 interface SheetOpsEditorProps {
   ops: SheetOp[];
   onChange: (ops: SheetOp[]) => void;
@@ -141,16 +174,7 @@ export function SheetOpsEditor({ ops, onChange, layout, entryNames, steps, recs,
                     ))}
                   </Select>
                 )}
-                <Input
-                  id={`${idPrefix}-by-input-${i}`}
-                  label="By"
-                  type="number"
-                  step="any"
-                  value={String(op.by)}
-                  placeholder="+1, -3, 0.5"
-                  onChange={(e) => set(i, { ...op, by: Number(e.target.value) })}
-                  data-testid={`${idPrefix}-by-${i}`}
-                />
+                <ByInput id={`${idPrefix}-by-input-${i}`} testId={`${idPrefix}-by-${i}`} value={op.by} onChange={(by) => set(i, { ...op, by })} />
               </div>
             )}
             {tab && op.act === 'set' && (

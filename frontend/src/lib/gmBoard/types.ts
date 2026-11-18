@@ -9,6 +9,8 @@
  * id, with the rest of the object as the item's doc. See `store.ts`.
  */
 
+import type { SheetEntry } from '@/lib/sheetEntries';
+
 export type Outcome = 'pending' | 'happened' | 'partial' | 'failed' | 'interrupted' | 'moot';
 
 export type StanceValue = 'ally' | 'deal' | 'neutral' | 'wary' | 'target' | 'ally_target';
@@ -181,6 +183,8 @@ export interface CharacterRewards {
   carrierHeadId?: number;
   /** The block text last put in the result, so the next put replaces it. */
   block?: string;
+  /** The tabs the lines change, as they stood before them (`sheetBeforeFor`). */
+  sheetBefore?: Record<string, SheetEntry[]>;
 }
 
 export type CodexType = 'Location' | 'NPC' | 'Item' | 'Faction' | 'Objective' | 'Secret' | 'Other';

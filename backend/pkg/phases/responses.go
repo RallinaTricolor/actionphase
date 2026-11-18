@@ -31,6 +31,9 @@ type PhaseResponse struct {
 	ActivatedAt *time.Time `json:"activated_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 
+	// HasEnded needs the game's other phases, so only the phase list sets it.
+	HasEnded bool `json:"has_ended,omitempty" required:"false" doc:"The phase has run and is over, so it's read-only until it's activated again. Set in the game's phase list."`
+
 	// Calculated fields for UI
 	TimeRemaining *int64 `json:"time_remaining,omitempty"` // seconds until deadline
 	IsExpired     bool   `json:"is_expired"`

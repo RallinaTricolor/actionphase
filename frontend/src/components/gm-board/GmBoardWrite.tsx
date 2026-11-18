@@ -8,7 +8,7 @@ import { useGameActionResults, usePublishAllPhaseResults } from '@/hooks/useActi
 import { useBoardPeople } from '@/hooks/useBoardPeople';
 import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
 import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
-import { useGmBoardStore } from '@/hooks/useGmBoard';
+import { GM_BOARD_POLL_MS, useGmBoardStore } from '@/hooks/useGmBoard';
 import { useRewriteDraft } from '@/hooks/useResultDraft';
 import { apiClient } from '@/lib/api';
 import { publishChecks } from '@/lib/gmBoard/checks';
@@ -18,7 +18,7 @@ import { leaksFor } from '@/lib/gmBoard/leaks';
 import { boardRows, NO_LOCATION } from '@/lib/gmBoard/map';
 import { nextNotDone, setReady } from '@/lib/gmBoard/progress';
 import { lineText } from '@/lib/gmBoard/rewards';
-import { withBlock } from '@/lib/gmBoard/rewardState';
+import { entryNamesAfter, withBlock, withoutBlock } from '@/lib/gmBoard/rewardState';
 import { chainsFor, characterIdsWithResults, draftTexts, resultStatus, writeList } from '@/lib/gmBoard/results';
 import { sceneName } from '@/lib/gmBoard/scenes';
 import { shortName, truncate } from '@/lib/gmBoard/text';
@@ -68,7 +68,8 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   const people = useBoardPeople(gameId, phase.id);
   const { cast, names, nameLists, submissions, submissionIds, settings } = people;
   const sheetItems = useGameCharacterSheetItems(gameId);
-  const results = useGameActionResults(gameId);
+  // Polled like the board, so a co-GM's new draft shows up while this is open.
+  const results = useGameActionResults(gameId, { refetchInterval: readOnly ? false : GM_BOARD_POLL_MS });
   const publishAll = usePublishAllPhaseResults(gameId, phase.id);
   const [publishAllOpen, setPublishAllOpen] = useState(false);
   const unpublished = useQuery({
@@ -133,12 +134,20 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
     [phaseResults, phase.id, live],
   );
 
+  // What each character's sheet will hold after their rewards, so an item the
+  // GM is giving them isn't flagged as someone else's.
+  const stateFor = rewards?.stateFor;
+  const ownEntries = useMemo(
+    () => new Map(order.filter((id) => board.rewards[id]?.lines.length).map((id) => [id, stateFor ? entryNamesAfter(stateFor(id)) : []])),
+    [order, board.rewards, stateFor],
+  );
+
   const players = useMemo<WritePlayer[]>(
     () =>
       order.map((id) => {
         const { chains, drafts } = draftsFor(id);
         const cov = coverageFor(board, id, drafts, reader(id));
-        const leaks = leaksFor({ characterId: id, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems });
+        const leaks = leaksFor({ characterId: id, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems, ownEntries: ownEntries.get(id) });
         return {
           id,
           name: shortName(allNames.get(id) ?? `Character ${id}`),
@@ -149,7 +158,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
           leaks: leaks.length,
         };
       }),
-    [order, draftsFor, board, reader, phase.id, settings?.codex, sheetItems, allNames, castById],
+    [order, draftsFor, board, reader, phase.id, settings?.codex, sheetItems, ownEntries, allNames, castById],
   );
 
   const onLiveText = useCallback(
@@ -174,7 +183,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
       <Card variant="bordered" padding="md" data-testid="gm-board-step-write">
         <CardBody>
           <p className="text-content-primary">Nobody to write a result for yet.</p>
-          <p className="mt-1 text-sm text-content-secondary">Results go to approved characters someone plays, including NPCs assigned to a player.</p>
+          <p className="mt-1 text-sm text-content-secondary">Results go to approved player characters someone plays. NPCs don’t receive results.</p>
         </CardBody>
       </Card>
     );
@@ -185,7 +194,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
   const ticks = board.covered[current];
   const covered = (m: Moment) => isCovered(m, current, drafts, ticks, reader(current));
   const coverage = coverageFor(board, current, drafts, reader(current));
-  const checks = publishChecks({ characterId: current, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems, reader: reader(current), flags });
+  const checks = publishChecks({ characterId: current, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems, ownEntries: ownEntries.get(current), reader: reader(current), flags });
   const ready = !!board.ready[current];
   const rewardBase = rewards?.stateFor(current);
   const tailId = rewardBase?.carrier.tail?.id;
@@ -211,6 +220,14 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
       else {
         await flushRef.current?.();
         await rewriteDraft(tail, (t) => withBlock(t, text, previous));
+      }
+      // The block belongs on the last part: take out copies left on earlier ones.
+      const copies = [previous, text].filter((b): b is string => !!b);
+      const strip = (t: string) => copies.reduce(withoutBlock, t);
+      for (const part of reward.carrier.chain?.parts ?? []) {
+        if (part.id === tail.id || part.is_published || strip(part.content) === part.content) continue;
+        if (live?.partId === part.id && rewriteRef.current) rewriteRef.current(strip);
+        else await rewriteDraft(part, strip);
       }
       rewards.updateRewards(current, (r) => ({ ...r, block: text }));
       showToast('Block put in the result.', 'success');
@@ -399,6 +416,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
               <WriteResults
                 key={current}
                 gameId={gameId}
+                phaseId={phase.id}
                 characterId={current}
                 characterName={allNames.get(current) ?? name}
                 name={name}
@@ -477,6 +495,7 @@ export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart
         phaseId={phase.id}
         count={count}
         isPublishing={publishAll.isPending}
+        error={publishAll.error}
       />
       )}
     </div>

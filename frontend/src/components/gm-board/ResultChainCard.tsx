@@ -4,6 +4,7 @@ import { CollapsibleMarkdown } from '@/components/common/markdown/CollapsibleMar
 import { ConfirmModal } from '@/components/common/modals/ConfirmModal';
 import { PublishResultConfirmationDialog } from '@/components/actions/PublishResultConfirmationDialog';
 import { StagedPartStatus } from '@/components/actions/StagedPartStatus';
+import { extractApiErrorMessage } from '@/lib/errors';
 import { useToast } from '@/contexts/ToastContext';
 import { useDraftUpdateCount } from '@/hooks';
 import {
@@ -83,7 +84,7 @@ export function ResultChainCard({
       setPublishing(false);
     } catch (error) {
       logger.error('Failed to publish result from the board', { error, resultId: head.id, gameId });
-      showError('Couldn’t publish this result. Try again.');
+      showError(extractApiErrorMessage(error) ?? 'Couldn’t publish this result. Try again.');
     }
   };
   const doDelete = async () => {

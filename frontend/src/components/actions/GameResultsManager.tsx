@@ -13,6 +13,7 @@ import { CommentEditor } from '@/components/messages/CommentEditor';
 import { useDraftUpdateCount } from '@/hooks';
 import { useConflictingSheetDrafts } from '@/hooks/useConflictingSheetDrafts';
 import { logger } from '@/services/LoggingService';
+import { extractApiErrorMessage } from '@/lib/errors';
 import { useToast } from '@/contexts/ToastContext';
 
 interface GameResultsManagerProps {
@@ -259,6 +260,7 @@ function ResultCard({ result, gameId, isEditing, onStartEdit, onCancelEdit, phas
       setTimeout(() => setPublishSuccess(false), 5000);
     } catch (error) {
       logger.error('Failed to publish result', { error, resultId: result.id, gameId });
+      showError(extractApiErrorMessage(error) ?? 'Failed to publish this result. Please try again.');
     }
   };
 

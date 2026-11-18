@@ -12,6 +12,8 @@ import { ResultPartEditor } from './ResultPartEditor';
 interface WriteResultsProps {
   gameId: number;
   characterId: number;
+  /** The board's phase, which a new result must still be active in. */
+  phaseId: number;
   /** Full name, for dialogs. */
   characterName: string;
   /** Short name, for prompts. */
@@ -48,13 +50,14 @@ type Pending = { kind: 'new-result'; key: string } | { kind: 'new-part'; key: st
  * first keystroke makes their first result, linked to their submission.
  */
 export function WriteResults(props: WriteResultsProps) {
-  const { gameId, characterId, characterName, name, userId, submissionId, chains, phaseResults, selectedPartId, onSelectPart } = props;
+  const { gameId, phaseId, characterId, characterName, name, userId, submissionId, chains, phaseResults, selectedPartId, onSelectPart } = props;
   const [pending, setPending] = useState<Pending | null>(null);
   // Rows made here that the results list hasn't caught up with yet.
   const [created, setCreated] = useState<ActionResult[]>([]);
   // A made row keeps the React key its placeholder had, so the editor stays
   // mounted (and keeps what's typed) as the target switches to it.
   const keys = useRef(new Map<number, string>());
+  const lastSlotKey = useRef<string | null>(null);
 
   const listed = useMemo(() => new Set(chains.flatMap((c) => c.parts.map((p) => p.id))), [chains]);
   useEffect(() => {
@@ -145,15 +148,20 @@ export function WriteResults(props: WriteResultsProps) {
     slot = {
       key: pending?.key ?? firstKey,
       // Only the first result answers the submission.
-      target: { kind: 'new-result', userId: userId as number, characterId, submissionId: merged.length === 0 ? submissionId : undefined },
+      target: { kind: 'new-result', phaseId, userId: userId as number, characterId, submissionId: merged.length === 0 ? submissionId : undefined, firstDraft: merged.length === 0 },
       id: null,
       label: `Result ${merged.length + 1}`,
     };
   } else if (part) {
+    // A first draft started elsewhere (the rewards panel, a co-GM) arrived
+    // under the open editor: keep the editor, and what's being typed in it.
+    if (lastSlotKey.current === firstKey && !keys.current.has(part.id)) keys.current.set(part.id, firstKey);
     const i = chainOf(part.id);
     const parts = merged[i]?.parts ?? [part];
     slot = { key: keys.current.get(part.id) ?? `part:${part.id}`, target: { kind: 'part', part }, id: part.id, label: parts.length > 1 ? `Result ${i + 1}, part ${parts.indexOf(part) + 1}` : `Result ${i + 1}` };
   }
+
+  lastSlotKey.current = slot?.key ?? null;
 
   return (
     <div className="space-y-3" data-testid="write-results">

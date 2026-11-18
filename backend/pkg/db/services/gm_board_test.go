@@ -337,3 +337,30 @@ func TestGmBoard_ListBoardPhaseIDs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int32{f.phase.ID}, ids, "only live items count: %d is empty, %d has only a tombstone", empty.ID, cleared.ID)
 }
+
+func TestGmBoard_AnEndedPhaseRefusesWritesButStillReads(t *testing.T) {
+	f := newGmBoardFixture(t, "ended")
+	f.apply(t, put("notes", "notes", 0, `{"text":"kept"}`))
+	ctx := context.Background()
+
+	_, err := f.db.Pool.Exec(ctx, `UPDATE game_phases SET activated_at = NOW(), is_active = false WHERE id = $1`, f.phase.ID)
+	require.NoError(t, err)
+	_, err = f.svc.ApplyBoardChanges(ctx, f.phase.ID, int32(f.gm.ID), []core.GmBoardChange{put("notes", "notes", 1, `{}`)})
+	assert.ErrorIs(t, err, core.ErrPhaseEnded)
+	assert.Len(t, f.list(t, nil).Items, 1, "an ended board still reads")
+
+	_, err = f.svc.ApplySettingsChanges(ctx, f.game.ID, int32(f.gm.ID), []core.GmBoardChange{put("codex", "x", 0, `{}`)})
+	assert.NoError(t, err, "game settings aren't tied to a phase")
+
+	_, err = f.db.Pool.Exec(ctx, `UPDATE game_phases SET is_active = true WHERE id = $1`, f.phase.ID)
+	require.NoError(t, err)
+	f.apply(t, put("notes", "notes", 1, `{"text":"back at it"}`))
+}
+
+// Game setup prepares a phase's reward list before the phase starts.
+func TestGmBoard_APhaseThatHasNotStartedStaysWritable(t *testing.T) {
+	f := newGmBoardFixture(t, "unstarted")
+	assert.False(t, f.phase.IsActive.Bool)
+	assert.False(t, f.phase.ActivatedAt.Valid)
+	f.apply(t, put("notes", "notes", 0, `{"text":"ready"}`))
+}

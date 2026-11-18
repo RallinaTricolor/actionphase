@@ -17,12 +17,16 @@ export function termIn(text: string, term: string): boolean {
   return new RegExp(`(^|[^\\w])${escapeRegExp(t)}(?=$|[^\\w])`, single ? '' : 'i').test(text);
 }
 
-/** Markdown reduced to its words: `[[name|…]]` and `[text](url)` links keep their text, emphasis marks go. */
-export function plainText(markdown: string): string {
+/** Markdown with `[[name|…]]` and `[text](url)` links reduced to their text. */
+export function linkText(markdown: string): string {
   return String(markdown || '')
     .replace(/\[\[([^\]|]+)(\|[^\]]*)?\]\]/g, '$1')
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1')
-    .replace(/\*\*|__|~~/g, '');
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '$1');
+}
+
+/** Markdown reduced to its words: links keep their text, emphasis marks go. */
+export function plainText(markdown: string): string {
+  return linkText(markdown).replace(/\*\*|__|~~/g, '');
 }
 
 /** Plain text on one line, cut to `max` characters with an ellipsis. */

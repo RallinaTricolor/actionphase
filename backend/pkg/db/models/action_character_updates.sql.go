@@ -149,6 +149,28 @@ func (q *Queries) DeleteDraftCharacterUpdate(ctx context.Context, id int32) erro
 	return err
 }
 
+const deleteDraftUpdatesReplacedByMove = `-- name: DeleteDraftUpdatesReplacedByMove :exec
+DELETE FROM action_result_character_updates target
+USING action_result_character_updates source
+WHERE target.action_result_id = $1
+  AND source.action_result_id = $2
+  AND target.character_id = source.character_id
+  AND target.module_type = source.module_type
+  AND target.field_name = source.field_name
+`
+
+type DeleteDraftUpdatesReplacedByMoveParams struct {
+	ToResultID   int32 `json:"to_result_id"`
+	FromResultID int32 `json:"from_result_id"`
+}
+
+// Clears the target's drafts for fields the source also has, so that moving
+// the source's onto it can't collide (one draft per field per result).
+func (q *Queries) DeleteDraftUpdatesReplacedByMove(ctx context.Context, arg DeleteDraftUpdatesReplacedByMoveParams) error {
+	_, err := q.db.Exec(ctx, deleteDraftUpdatesReplacedByMove, arg.ToResultID, arg.FromResultID)
+	return err
+}
+
 const deletePublishedDrafts = `-- name: DeletePublishedDrafts :exec
 DELETE FROM action_result_character_updates
 WHERE action_result_id = $1

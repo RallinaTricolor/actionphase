@@ -149,7 +149,8 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
         </Modal>
 
         {/* Publish All Results Button */}
-        {displayPhaseId && unpublishedCount > 0 && (
+        {/* Only the running phase: an ended phase's drafts stay as they are until it's activated again. */}
+        {displayPhaseId && displayPhaseId === currentPhase?.id && unpublishedCount > 0 && (
           <div className="mb-6 p-4 bg-semantic-warning-subtle border border-semantic-warning rounded-lg">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center">
@@ -182,6 +183,7 @@ export function ActionsList({ gameId, currentPhase, className = '' }: ActionsLis
           phaseId={displayPhaseId ?? undefined}
           count={unpublishedCount}
           isPublishing={publishAllMutation.isPending}
+          error={publishAllMutation.error}
         />
 
         {/* Phase Filter - Only show action phases */}

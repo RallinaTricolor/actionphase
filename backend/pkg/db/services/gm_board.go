@@ -137,6 +137,10 @@ func (s *GmBoardService) ApplyBoardChanges(ctx context.Context, phaseID, userID 
 	if err := s.writableGame(ctx, phase.GameID); err != nil {
 		return nil, err
 	}
+	// An ended phase's board is read-only until the GM activates it again.
+	if err := core.RefuseEndedPhase(ctx, models.New(s.DB), phase.ID); err != nil {
+		return nil, err
+	}
 	return s.applyChanges(ctx, s.boardStore(phase), userID, changes)
 }
 

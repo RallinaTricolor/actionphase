@@ -36,6 +36,7 @@ const REWARD_BADGE: Record<RewardCheck['kind'], { label: string; variant: 'dange
   'block-missing': { label: 'Block', variant: 'warning' },
   'empty-result': { label: 'Result', variant: 'warning' },
   'block-stale': { label: 'Block', variant: 'warning' },
+  'block-elsewhere': { label: 'Block', variant: 'warning' },
 };
 
 /**
@@ -93,6 +94,8 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
         return `The reward block isn’t in ${name}’s result.`;
       case 'block-stale':
         return `The reward block in ${name}’s result is out of date.`;
+      case 'block-elsewhere':
+        return `An earlier part of ${name}’s result still has a copy of the reward block.`;
     }
   };
 
@@ -132,7 +135,7 @@ export function WriteChecks({ model, characterId, checks, rows, onOpenScene, onD
                 {REWARD_BADGE[c.kind].label}
               </Badge>
               <span className="flex-1 text-content-primary">{rewardSentence(c)}</span>
-              {(c.kind === 'block-missing' || c.kind === 'block-stale') && onPutBlock && (
+              {(c.kind === 'block-missing' || c.kind === 'block-stale' || c.kind === 'block-elsewhere') && onPutBlock && (
                 <Button type="button" variant="ghost" size="sm" onClick={onPutBlock}>
                   Put block in result
                 </Button>

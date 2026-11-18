@@ -9,6 +9,13 @@ import { createContext, useContext } from 'react';
  */
 export const BoardReadOnlyContext = createContext(false);
 
+/**
+ * Receives text from a result editor that closed without being able to save
+ * it, because the phase stopped being active. The board shows it so it can be
+ * copied.
+ */
+export const BoardUnsavedTextContext = createContext<((label: string, text: string) => void) | null>(null);
+
 export function useBoardReadOnly(): boolean {
   return useContext(BoardReadOnlyContext);
 }

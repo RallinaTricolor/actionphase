@@ -1803,8 +1803,15 @@ components:
                 content:
                     description: Result content. May be empty for a draft (is_published false).
                     type: string
+                first_draft:
+                    description: 'Start this character''s draft: if they already have an unpublished result in the phase, it is returned unchanged and nothing new is made. Needs character_id, and can''t be combined with is_published.'
+                    type: boolean
                 is_published:
                     type: boolean
+                phase_id:
+                    description: The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+                    format: int32
+                    type: integer
                 user_id:
                     description: Recipient user ID
                     format: int32
@@ -2262,6 +2269,10 @@ components:
                     type:
                         - array
                         - "null"
+                phase_id:
+                    description: The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+                    format: int32
+                    type: integer
                 user_id:
                     description: Recipient user ID
                     format: int32
@@ -4392,6 +4403,9 @@ components:
                 game_id:
                     format: int32
                     type: integer
+                has_ended:
+                    description: The phase has run and is over, so it's read-only until it's activated again. Set in the game's phase list.
+                    type: boolean
                 id:
                     format: int32
                     type: integer
@@ -12159,6 +12173,8 @@ paths:
                     description: Hand-made sheet drafts would be replaced, or the result can't carry them (published, not the last part, or not this character's)
                 "422":
                     description: Request failed validation, or a tab isn't on this game's sheet
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Replace a character's reward sheet updates
@@ -12314,6 +12330,8 @@ paths:
                     description: Another editor changed an item in the batch (conflicts holds their copies), or the game is archived (no conflicts). Nothing was written
                 "422":
                     description: Request failed validation, an item is too large, or the board is full
+                "423":
+                    description: The phase has ended, so its board is read-only until it's activated again
             security:
                 - bearerAuth: []
             summary: Save changes to a phase's results board
@@ -12429,8 +12447,12 @@ paths:
                     description: Not authenticated
                 "403":
                     description: Only the GM can publish action results
+                "409":
+                    description: A result being published has no text yet. Nothing was published
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Publish all results for a phase
@@ -13395,6 +13417,8 @@ paths:
                     description: Only the GM can create action results
                 "422":
                     description: Request failed validation
+                "423":
+                    description: phase_id names a phase that isn't the active one
             security:
                 - BearerAuth: []
             summary: Create an action result
@@ -13431,6 +13455,8 @@ paths:
                     description: Only the GM can delete action results
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Delete a draft action result
@@ -13481,6 +13507,8 @@ paths:
                     description: The result is published, or was saved by someone else since expected_updated_at
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Update an action result
@@ -13577,6 +13605,8 @@ paths:
                     description: Action result not found
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Create a draft character update
@@ -13625,6 +13655,8 @@ paths:
                     description: Action result not found
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Delete a draft character update
@@ -13681,6 +13713,8 @@ paths:
                     description: Action result not found
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Update a draft character update
@@ -13776,6 +13810,8 @@ paths:
                     description: The part has already released
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Retime a staged part
@@ -13827,6 +13863,8 @@ paths:
                     description: The chain is already published and cannot be extended
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Append a staged part
@@ -13867,6 +13905,8 @@ paths:
                     description: Result not found, or it belongs to another game
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Cancel a pending staged part
@@ -13905,8 +13945,12 @@ paths:
                     description: Not authenticated
                 "403":
                     description: Only the GM can publish action results
+                "409":
+                    description: A result being published has no text yet. Nothing was published
                 "422":
                     description: Request failed validation
+                "423":
+                    description: The phase has ended, so it's read-only until it's activated again
             security:
                 - BearerAuth: []
             summary: Publish an action result
@@ -13983,6 +14027,8 @@ paths:
                     description: Only the GM can create action results
                 "422":
                     description: Request failed validation
+                "423":
+                    description: phase_id names a phase that isn't the active one
             security:
                 - BearerAuth: []
             summary: Create a staged result chain

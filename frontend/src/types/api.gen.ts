@@ -4663,7 +4663,14 @@ export interface components {
             character_id?: number;
             /** @description Result content. May be empty for a draft (is_published false). */
             content?: string;
+            /** @description Start this character's draft: if they already have an unpublished result in the phase, it is returned unchanged and nothing new is made. Needs character_id, and can't be combined with is_published. */
+            first_draft?: boolean;
             is_published?: boolean;
+            /**
+             * Format: int32
+             * @description The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+             */
+            phase_id?: number;
             /**
              * Format: int32
              * @description Recipient user ID
@@ -4914,6 +4921,11 @@ export interface components {
             is_published?: boolean;
             /** @description Chain parts, in reveal order */
             parts: components["schemas"]["StagedPartBody"][] | null;
+            /**
+             * Format: int32
+             * @description The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+             */
+            phase_id?: number;
             /**
              * Format: int32
              * @description Recipient user ID
@@ -5972,6 +5984,8 @@ export interface components {
             end_time?: string;
             /** Format: int32 */
             game_id: number;
+            /** @description The phase has run and is over, so it's read-only until it's activated again. Set in the game's phase list. */
+            has_ended?: boolean;
             /** Format: int32 */
             id: number;
             is_active: boolean;
@@ -14305,6 +14319,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     listPhaseDraftCharacterUpdates: {
@@ -14480,6 +14501,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so its board is read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     markAllCommentsRead: {
@@ -14590,8 +14618,22 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A result being published has no text yet. Nothing was published */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15635,6 +15677,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description phase_id names a phase that isn't the active one */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateActionResult: {
@@ -15706,6 +15755,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     deleteActionResult: {
@@ -15745,6 +15801,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15874,6 +15937,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateDraftCharacterUpdate: {
@@ -15940,6 +16010,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     deleteDraftCharacterUpdate: {
@@ -15995,6 +16072,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16131,6 +16215,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     appendStagedPart: {
@@ -16202,6 +16293,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     cancelPendingStagedPart: {
@@ -16260,6 +16358,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     publishActionResult: {
@@ -16299,8 +16404,22 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A result being published has no text yet. Nothing was published */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16386,6 +16505,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description phase_id names a phase that isn't the active one */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };

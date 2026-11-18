@@ -17,6 +17,7 @@ import {
   lineText,
   sameUpdates,
   sheetDiff,
+  sheetBeforeFor,
   sheetFor,
   sheetTabsFrom,
   stable,
@@ -551,5 +552,24 @@ describe('descriptionOnly', () => {
   });
   it('else strips markup', () => {
     expect(descriptionOnly('**Bold** [[Rope|item:i1]] and [color:gold]gold[/color]')).toBe('Bold Rope and gold');
+  });
+});
+
+describe('sheetBeforeFor', () => {
+  const coin = { id: 'n', name: 'Coin', amount: { value: 4 } };
+  const before = { numbers: [coin], skills: [{ id: 's', name: 'Consort' }], inventory: [] };
+  const line = (over = {}) => ({ choose: false, ops: [{ act: 'inc' as const, tab: 'numbers', entry: 'Coin', by: 2 }], ...over });
+
+  it('keeps only the tabs the lines change', () => {
+    expect(sheetBeforeFor(before, [line()])).toEqual({ numbers: [coin] });
+  });
+
+  it('is nothing when no line changes the sheet', () => {
+    expect(sheetBeforeFor(before, [line({ ops: [] }), line({ choose: true })])).toBeUndefined();
+  });
+
+  it('is nothing when the tab is too big to keep on the board', () => {
+    const huge = { numbers: [{ ...coin, description: 'é'.repeat(20_000) }] };
+    expect(sheetBeforeFor(huge, [line()])).toBeUndefined();
   });
 });

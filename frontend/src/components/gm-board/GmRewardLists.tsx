@@ -16,7 +16,8 @@ import { RewardItemEditor } from './RewardEditors';
 
 interface GmRewardListsProps {
   gameId: number;
-  phases: { id: number; title: string }[];
+  /** `ended`: the phase is over, so its list can only be read. */
+  phases: { id: number; title: string; ended?: boolean }[];
   /** Who can be given rewards, for the given-to chips. */
   players: { id: number; name: string }[];
 }
@@ -35,7 +36,8 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
   const [phaseId, setPhaseId] = useState<number | null>(phases[phases.length - 1]?.id ?? null);
   const activePhase = phaseId ?? phases[phases.length - 1]?.id ?? 0;
   const { board } = useGmBoard(gameId, activePhase, { enabled: activePhase > 0 });
-  const boardStore = useGmBoardStore(gameId, activePhase);
+  const phaseEnded = !!phases.find((p) => p.id === activePhase)?.ended;
+  const boardStore = useGmBoardStore(gameId, activePhase, { readOnly: phaseEnded });
   const [editing, setEditing] = useState<{ id: string; scope: RewardItem['scope'] } | null>(null);
   const sheets = useQuery({
     queryKey: ['gameCharacterData', gameId],
@@ -98,7 +100,7 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
 
   const editingItem = editing ? (editing.scope === 'game' ? gameItems : phaseItems).find((i) => i.id === editing.id) ?? null : null;
 
-  const list = (items: RewardItem[]) => {
+  const list = (items: RewardItem[], locked = readOnly) => {
     if (!items.length) return <p className="text-sm text-content-secondary">Nothing yet.</p>;
     const sections = [...groups.map((g) => g.key), ...new Set(items.map((i) => i.group).filter((k) => !groups.some((g) => g.key === k)))];
     return sections.map((key) => {
@@ -119,11 +121,11 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
                     </Badge>
                   )}
                 </p>
-                <p className={readOnly ? 'whitespace-pre-wrap text-content-secondary' : 'text-content-secondary'}>{readOnly ? i.text : truncate(i.text, 90)}</p>
+                <p className={locked ? 'whitespace-pre-wrap text-content-secondary' : 'text-content-secondary'}>{locked ? i.text : truncate(i.text, 90)}</p>
                 {!i.choose && i.ops.length > 0 && <p className="text-xs text-content-tertiary">{lineEffect(layout, i)}</p>}
               </div>
               {board && <span className="text-xs text-content-tertiary">{given(i.id).length} given</span>}
-              {!readOnly && (
+              {!locked && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing({ id: i.id, scope: i.scope })}>
                   Edit
                 </Button>
@@ -175,9 +177,12 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
           <p className="text-sm text-content-secondary">This game has no action phases yet. Each one gets its own list once it’s created.</p>
         ) : (
           <>
-            <p className="text-sm text-content-secondary">This phase’s own bonus objectives and one-offs. “Given” counts are for this phase.</p>
-            {list(phaseItems)}
-            {!readOnly && (
+            <p className="text-sm text-content-secondary">
+              This phase’s own bonus objectives and one-offs. “Given” counts are for this phase.
+              {phaseEnded && !readOnly && ' It has ended, so its list can’t be changed unless it’s activated again.'}
+            </p>
+            {list(phaseItems, readOnly || phaseEnded)}
+            {!readOnly && !phaseEnded && (
               <Button type="button" size="sm" variant="secondary" onClick={() => create('phase')} disabled={!board} data-testid="new-phase-reward">
                 + Reward for {phaseTitle}
               </Button>
@@ -189,7 +194,7 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
       <RewardItemEditor
         item={readOnly ? null : editingItem}
         onClose={() => setEditing(null)}
-        phaseTitle={activePhase ? phaseTitle : undefined}
+        phaseTitle={activePhase && !phaseEnded ? phaseTitle : undefined}
         groups={groups}
         layout={layout}
         entryNames={entryNames}
@@ -199,7 +204,7 @@ export function GmRewardLists({ gameId, phases, players }: GmRewardListsProps) {
           if (editingItem) remove(editingItem);
           setEditing(null);
         }}
-        givenTo={board && editingItem ? players.map((p) => ({ ...p, given: given(editingItem.id).includes(p.id) })) : undefined}
+        givenTo={board && editingItem && !phaseEnded ? players.map((p) => ({ ...p, given: given(editingItem.id).includes(p.id) })) : undefined}
         onToggleGiven={editingItem ? (id) => toggleGiven(editingItem, id) : undefined}
         previewFor={previewFor}
       />
