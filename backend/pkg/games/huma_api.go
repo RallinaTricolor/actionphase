@@ -175,6 +175,8 @@ func gameResponseFrom(game *models.Game) *GameResponse {
 		AllowGroupConversations: game.AllowGroupConversations,
 		PortraitAvatars:         game.PortraitAvatars,
 		ShareGmBoard:            game.ShareGmBoard,
+		ScoreboardEnabled:       game.ScoreboardEnabled,
+		ScoreboardVisibility:    scoreboardVisibilityResponse(game.ScoreboardEnabled, game.Scoreboard),
 		CharacterSheet:          characterSheetResponse(game.CharacterSheet),
 		CreatedAt:               game.CreatedAt.Time,
 		UpdatedAt:               game.UpdatedAt.Time,
@@ -283,6 +285,7 @@ type createGameBody struct {
 	AutoAcceptAudience      bool                `json:"auto_accept_audience,omitempty" required:"false"`
 	AllowGroupConversations bool                `json:"allow_group_conversations,omitempty" required:"false"`
 	PortraitAvatars         bool                `json:"portrait_avatars,omitempty" required:"false"`
+	ScoreboardEnabled       bool                `json:"scoreboard_enabled,omitempty" required:"false"`
 	BannerURL               *string             `json:"banner_url,omitempty" required:"false"`
 	CommonRoomOpenDay       *int16              `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
 	CommonRoomOpenTime      *string             `json:"common_room_open_time,omitempty" required:"false"`
@@ -322,6 +325,7 @@ type updateGameBody struct {
 	AutoAcceptAudience      bool    `json:"auto_accept_audience,omitempty" required:"false"`
 	AllowGroupConversations bool    `json:"allow_group_conversations,omitempty" required:"false"`
 	PortraitAvatars         bool    `json:"portrait_avatars,omitempty" required:"false"`
+	ScoreboardEnabled       bool    `json:"scoreboard_enabled,omitempty" required:"false"`
 	BannerURL               *string `json:"banner_url,omitempty" required:"false"`
 	CommonRoomOpenDay       *int16  `json:"common_room_open_day,omitempty" required:"false" minimum:"0" maximum:"6"`
 	CommonRoomOpenTime      *string `json:"common_room_open_time,omitempty" required:"false"`
@@ -730,6 +734,7 @@ func (h *Handler) humaCreateGame(ctx context.Context, in *createGameInput) (*gam
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
 		PortraitAvatars:         in.Body.PortraitAvatars,
+		ScoreboardEnabled:       in.Body.ScoreboardEnabled,
 		BannerURL:               in.Body.BannerURL,
 		CommonRoomOpenDay:       in.Body.CommonRoomOpenDay,
 		CommonRoomOpenTime:      in.Body.CommonRoomOpenTime,
@@ -812,6 +817,8 @@ func (h *Handler) gameWithDetailsFor(ctx context.Context) (*gameWithDetailsOutpu
 			AllowGroupConversations: game.AllowGroupConversations,
 			PortraitAvatars:         game.PortraitAvatars,
 			ShareGmBoard:            game.ShareGmBoard,
+			ScoreboardEnabled:       game.ScoreboardEnabled,
+			ScoreboardVisibility:    scoreboardVisibilityResponse(game.ScoreboardEnabled, game.Scoreboard),
 			CharacterSheet:          characterSheetResponse(game.CharacterSheet),
 			CreatedAt:               game.CreatedAt.Time,
 			UpdatedAt:               game.UpdatedAt.Time,
@@ -906,6 +913,7 @@ func (h *Handler) humaUpdateGame(ctx context.Context, in *updateGameInput) (*gam
 		AutoAcceptAudience:      in.Body.AutoAcceptAudience,
 		AllowGroupConversations: in.Body.AllowGroupConversations,
 		PortraitAvatars:         in.Body.PortraitAvatars,
+		ScoreboardEnabled:       in.Body.ScoreboardEnabled,
 		BannerURL:               in.Body.BannerURL,
 		CommonRoomOpenDay:       in.Body.CommonRoomOpenDay,
 		CommonRoomOpenTime:      in.Body.CommonRoomOpenTime,

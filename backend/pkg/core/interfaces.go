@@ -569,6 +569,7 @@ type CreateGameRequest struct {
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool
 	PortraitAvatars         bool
+	ScoreboardEnabled       bool
 	BannerURL               *string
 	CommonRoomOpenDay       *int16
 	CommonRoomOpenTime      *string // "HH:MM"
@@ -596,12 +597,27 @@ type UpdateGameRequest struct {
 	AutoAcceptAudience      bool
 	AllowGroupConversations bool
 	PortraitAvatars         bool
+	ScoreboardEnabled       bool
 	BannerURL               *string
 	CommonRoomOpenDay       *int16
 	CommonRoomOpenTime      *string // "HH:MM"
 	CommonRoomCloseDay      *int16
 	CommonRoomCloseTime     *string // "HH:MM"
 	ScheduleTimezone        *string // IANA timezone name, e.g. "America/New_York"
+}
+
+// ScoreboardServiceInterface computes a game's scoreboard and stores its setup.
+// Who may see what is decided by ScoreboardViewFor, before these are called.
+type ScoreboardServiceInterface interface {
+	// GetScoreboard computes the board for a viewer with the given view.
+	GetScoreboard(ctx context.Context, game *models.Game, view ScoreboardView) (*ScoreboardResult, error)
+	// GetScoreboardEntryNames lists the entry names in use on each tab that can
+	// feed a column, for the editor's picker.
+	GetScoreboardEntryNames(ctx context.Context, game *models.Game) ([]ScoreboardTabEntryNames, error)
+	// UpdateScoreboardConfig validates and stores the whole config, returning
+	// what was stored. Refused with ErrGameReadOnly on an archived game, and
+	// with ErrInvalidScoreboardConfig when it doesn't fit the game's sheet.
+	UpdateScoreboardConfig(ctx context.Context, game *models.Game, config ScoreboardConfig) (ScoreboardConfig, error)
 }
 
 // PhaseServiceInterface defines the contract for game phase management operations.

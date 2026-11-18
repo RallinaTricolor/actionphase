@@ -342,6 +342,10 @@ type Game struct {
 	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
 	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
 	ShareGmBoard            bool               `json:"share_gm_board"`
+	// Whether the game has a Scoreboard tab. Turning it off keeps the scoreboard config.
+	ScoreboardEnabled bool `json:"scoreboard_enabled"`
+	// Scoreboard setup (core.ScoreboardConfig): visibility, columns and sort. Sparse; validated by the application.
+	Scoreboard []byte `json:"scoreboard"`
 }
 
 type GameApplication struct {

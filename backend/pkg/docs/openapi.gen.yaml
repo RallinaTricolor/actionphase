@@ -2084,6 +2084,8 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                scoreboard_enabled:
+                    type: boolean
                 start_date:
                     type: string
                 title:
@@ -2815,6 +2817,19 @@ components:
                 - deadline_urgency
                 - has_recent_activity
             type: object
+        EntryNamesResponse:
+            additionalProperties: false
+            properties:
+                tabs:
+                    description: Tabs that can feed a column, in sheet order
+                    items:
+                        $ref: '#/components/schemas/ScoreboardTabEntryNames'
+                    type:
+                        - array
+                        - "null"
+            required:
+                - tabs
+            type: object
         ErrorDetail:
             additionalProperties: false
             properties:
@@ -3341,6 +3356,14 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                scoreboard_enabled:
+                    type: boolean
+                scoreboard_visibility:
+                    description: Who sees the scoreboard while the game runs. Sent only when it is enabled.
+                    enum:
+                        - staff
+                        - public
+                    type: string
                 share_gm_board:
                     type: boolean
                 start_date:
@@ -3374,6 +3397,7 @@ components:
                 - allow_group_conversations
                 - portrait_avatars
                 - share_gm_board
+                - scoreboard_enabled
                 - created_at
                 - updated_at
             type: object
@@ -3478,6 +3502,14 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                scoreboard_enabled:
+                    type: boolean
+                scoreboard_visibility:
+                    description: Who sees the scoreboard while the game runs. Sent only when it is enabled.
+                    enum:
+                        - staff
+                        - public
+                    type: string
                 share_gm_board:
                     type: boolean
                 start_date:
@@ -3512,6 +3544,7 @@ components:
                 - allow_group_conversations
                 - portrait_avatars
                 - share_gm_board
+                - scoreboard_enabled
                 - created_at
                 - updated_at
             type: object
@@ -5270,6 +5303,255 @@ components:
                 - field_name
                 - field_value
             type: object
+        ScoreboardBand:
+            additionalProperties: false
+            properties:
+                label:
+                    description: Text shown for values in this range
+                    type: string
+                max:
+                    description: Upper bound
+                    format: double
+                    type: number
+                max_strict:
+                    description: The value must be below max, not equal to it
+                    type: boolean
+                min:
+                    description: Lower bound
+                    format: double
+                    type: number
+                min_strict:
+                    description: The value must be above min, not equal to it
+                    type: boolean
+            required:
+                - label
+            type: object
+        ScoreboardCell:
+            additionalProperties: false
+            properties:
+                label:
+                    description: The matching range's label
+                    type: string
+                max:
+                    description: The track's maximum, when the column shows one
+                    format: double
+                    type: number
+                value:
+                    description: The number. Absent when the viewer sees only a range label.
+                    format: double
+                    type: number
+            type: object
+        ScoreboardColumn:
+            additionalProperties: false
+            properties:
+                band_basis:
+                    description: What band bounds measure. Absent means the value itself; percent means percent of the character's own max.
+                    enum:
+                        - value
+                        - percent
+                    type: string
+                bands:
+                    description: Labelled ranges, checked in order. Only with display=bands.
+                    items:
+                        $ref: '#/components/schemas/ScoreboardBand'
+                    type:
+                        - array
+                        - "null"
+                display:
+                    description: How a cell reads. Absent means value.
+                    enum:
+                        - value
+                        - value_max
+                        - bands
+                    type: string
+                entry:
+                    description: Entry name on that tab, matched ignoring case and surrounding spaces
+                    type: string
+                fallback_label:
+                    description: Shown when no band matches
+                    type: string
+                field_key:
+                    description: Number or track field of the entry
+                    type: string
+                hidden:
+                    description: Hidden from players while the game runs
+                    type: boolean
+                id:
+                    description: 'Stable identifier: c_ plus six lower-case letters or digits'
+                    type: string
+                label:
+                    description: Column heading
+                    type: string
+                tab_key:
+                    description: Character sheet tab the value comes from
+                    type: string
+            required:
+                - id
+                - label
+                - tab_key
+                - entry
+                - field_key
+            type: object
+        ScoreboardConfig:
+            additionalProperties: false
+            properties:
+                columns:
+                    description: Columns in display order
+                    items:
+                        $ref: '#/components/schemas/ScoreboardColumn'
+                    type:
+                        - array
+                        - "null"
+                sort:
+                    description: Up to two sort keys. Absent means by name.
+                    items:
+                        $ref: '#/components/schemas/ScoreboardSort'
+                    type:
+                        - array
+                        - "null"
+                visibility:
+                    description: 'Who sees the board while the game runs. Absent means staff: the GM, co-GMs and audience.'
+                    enum:
+                        - staff
+                        - public
+                    type: string
+            type: object
+        ScoreboardResult:
+            additionalProperties: false
+            properties:
+                broken_column_ids:
+                    description: Columns whose sheet tab or field no longer exists. Full view only.
+                    items:
+                        type: string
+                    type:
+                        - array
+                        - "null"
+                columns:
+                    description: Columns this viewer may see, in display order
+                    items:
+                        $ref: '#/components/schemas/ScoreboardResultColumn'
+                    type:
+                        - array
+                        - "null"
+                full_view:
+                    description: The viewer sees every column
+                    type: boolean
+                rows:
+                    description: Characters in board order
+                    items:
+                        $ref: '#/components/schemas/ScoreboardRow'
+                    type:
+                        - array
+                        - "null"
+                sort_description:
+                    description: The sort, as far as this viewer may know it. Empty means the GM's order uses a hidden column.
+                    items:
+                        $ref: '#/components/schemas/ScoreboardSortDescription'
+                    type:
+                        - array
+                        - "null"
+            required:
+                - columns
+                - sort_description
+                - full_view
+                - rows
+            type: object
+        ScoreboardResultColumn:
+            additionalProperties: false
+            properties:
+                display:
+                    description: How the column's cells read
+                    enum:
+                        - value
+                        - value_max
+                        - bands
+                    type: string
+                hidden:
+                    description: Hidden from players. Sent only in full view while the game runs.
+                    type: boolean
+                id:
+                    description: Column ID, the key into each row's values
+                    type: string
+                label:
+                    description: Column heading
+                    type: string
+            required:
+                - id
+                - label
+                - display
+            type: object
+        ScoreboardRow:
+            additionalProperties: false
+            properties:
+                avatar_url:
+                    description: Character avatar
+                    type: string
+                character_id:
+                    description: Character ID
+                    format: int32
+                    type: integer
+                character_name:
+                    description: Character name
+                    type: string
+                values:
+                    additionalProperties:
+                        $ref: '#/components/schemas/ScoreboardCell'
+                    description: Cells by column ID. A blank cell has no key.
+                    type: object
+            required:
+                - character_id
+                - character_name
+                - values
+            type: object
+        ScoreboardSort:
+            additionalProperties: false
+            properties:
+                direction:
+                    description: Sort direction
+                    enum:
+                        - asc
+                        - desc
+                    type: string
+                key:
+                    description: A column ID, or name
+                    type: string
+            required:
+                - key
+                - direction
+            type: object
+        ScoreboardSortDescription:
+            additionalProperties: false
+            properties:
+                direction:
+                    description: Sort direction
+                    enum:
+                        - asc
+                        - desc
+                    type: string
+                label:
+                    description: Column heading, or Name
+                    type: string
+            required:
+                - label
+                - direction
+            type: object
+        ScoreboardTabEntryNames:
+            additionalProperties: false
+            properties:
+                entry_names:
+                    description: Entry names used by the game's player characters, sorted, one spelling each
+                    items:
+                        type: string
+                    type:
+                        - array
+                        - "null"
+                tab_key:
+                    description: Character sheet tab
+                    type: string
+            required:
+                - tab_key
+                - entry_names
+            type: object
         SearchUsersResponse:
             additionalProperties: false
             properties:
@@ -5748,6 +6030,8 @@ components:
                     type: string
                 schedule_timezone:
                     type: string
+                scoreboard_enabled:
+                    type: boolean
                 start_date:
                     format: date-time
                     type: string
@@ -14035,6 +14319,136 @@ paths:
             tags:
                 - Action Results
             x-access: gm
+    /games/{gameID}/scoreboard:
+        get:
+            description: Returns the board as the caller may see it. Players never receive hidden columns or the values behind range labels.
+            operationId: getGameScoreboard
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ScoreboardResult'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "404":
+                    description: The game has no scoreboard this caller may see
+            security:
+                - BearerAuth: []
+            summary: Get the scoreboard
+            tags:
+                - Scoreboard
+            x-access: handler
+            x-access-reason: depends on the board's own visibility setting; decided by core.ScoreboardViewFor
+    /games/{gameID}/scoreboard/config:
+        get:
+            description: Returns the stored visibility, columns and sort for the editor.
+            operationId: getGameScoreboardConfig
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ScoreboardConfig'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can read the scoreboard setup
+            security:
+                - BearerAuth: []
+            summary: Get the scoreboard setup
+            tags:
+                - Scoreboard
+            x-access: gm
+        put:
+            description: Validates the whole config against the game's character sheet and stores it.
+            operationId: updateGameScoreboardConfig
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ScoreboardConfig'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ScoreboardConfig'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can change the scoreboard
+                "409":
+                    description: The game is archived
+                "422":
+                    description: The config is invalid or doesn't fit the character sheet
+            security:
+                - BearerAuth: []
+            summary: Replace the scoreboard setup
+            tags:
+                - Scoreboard
+            x-access: gm
+    /games/{gameID}/scoreboard/entry-names:
+        get:
+            description: Lists the entry names player characters use on each tab with a number or track field.
+            operationId: getGameScoreboardEntryNames
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EntryNamesResponse'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can read this list
+            security:
+                - BearerAuth: []
+            summary: List entry names for scoreboard columns
+            tags:
+                - Scoreboard
+            x-access: gm
     /games/{gameID}/settings/auto-accept-audience:
         put:
             description: Controls whether audience applications are accepted without review. Primary GM only.
@@ -15060,6 +15474,8 @@ tags:
       name: Handouts
     - description: In-game polls and voting
       name: Polls
+    - description: A per-game table of values from character sheets, set up by the GM
+      name: Scoreboard
     - description: Phase deadlines and upcoming-deadline listings
       name: Deadlines
     - description: GM-authored item tables and random loot rolls

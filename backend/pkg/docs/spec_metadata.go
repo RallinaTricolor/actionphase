@@ -139,6 +139,7 @@ func specTags() []any {
 		{"Conversations", "Private in-character messaging between players"},
 		{"Handouts", "Game reference documents and lore provided by Game Masters"},
 		{"Polls", "In-game polls and voting"},
+		{"Scoreboard", "A per-game table of values from character sheets, set up by the GM"},
 		{"Deadlines", "Phase deadlines and upcoming-deadline listings"},
 		{"Loot Tables", "GM-authored item tables and random loot rolls"},
 		{"Exports", "Game archive generation and download"},
