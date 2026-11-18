@@ -62,11 +62,11 @@ To write a result for a submission, click **Send Result to [player]** on the sub
 
 The **Results** section (below the submissions list) shows all draft and published results. Click **Publish Result** on a draft result to send it to the player. A confirmation dialog appears, noting how many character sheet updates will also be applied when you publish.
 
-Once published, the result is immediately visible to the player and cannot be undone.
+Once published, the result is immediately visible to the player and cannot be undone. A result with nothing written in it can't be published: write it or delete it.
 
-You can also publish all unpublished results at once using the **Publish All Results** button that appears when draft results are ready.
+You can also publish all unpublished results for the current phase at once using the **Publish All Results** button that appears when draft results are ready. It publishes nothing while any draft is empty, and names who those drafts are for.
 
-If you attempt to activate a new phase while draft results exist, a prompt will appear asking whether you want to publish them before proceeding or activate without publishing.
+If you attempt to activate a new phase while draft results exist, a prompt will appear asking whether you want to publish them before proceeding or activate without publishing. Drafts you don't publish stay unpublished, and can't be edited, published or deleted unless you activate their phase again.
 
 ## GM: Character Sheet Updates
 

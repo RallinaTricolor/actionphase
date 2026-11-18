@@ -59,8 +59,9 @@ out of the block. See [Damage alongside rewards](#damage-alongside-rewards).
 
 ## Sheet updates
 
-The board applies each person's lines, in order, to their sheet as it is now,
-and shows the sheet before and after. It saves the result as **draft sheet
+While the result is a draft, the board applies each person's lines, in order,
+to their sheet as it is now, and shows the sheet before and after. It saves the
+result as **draft sheet
 updates** on one of their draft results, the same updates you can make by hand
 in the results list. Publishing applies them, as it always has.
 
@@ -68,11 +69,21 @@ in the results list. Publishing applies them, as it always has.
   changes for a phase go on **one result**. With several results, pick which
   one on the Rewards & Sheet tab. On a staged result they go on the last part, and
   apply when that part is revealed.
+- If a character has no draft result yet, giving them a line makes an empty one
+  to carry it. Write something in it before publishing: a result with nothing
+  written in it can't be published.
 - If a character already has sheet updates you made by hand in the results
   list, the board asks before replacing them.
 - A reward marked **Player chooses** ("Choose 1") puts its text in the block
   and nothing on the sheet. Update their sheet yourself once they've picked.
-- Once the result that carries the rewards is published, they're locked.
+- Once the result that carries the rewards is published, they're locked. The
+  tab keeps showing the sheet as it was before them, so the numbers stay right
+  when the sheet changes later, and a block you put in the result stays as it
+  went out.
+- The board keeps that earlier copy of the sheet while the result is a draft.
+  If it has none, because the result went out before the board did this or the
+  tabs involved are very large, it says the changes are already on the
+  character's sheet instead of showing the numbers.
 
 ## The block in the result
 

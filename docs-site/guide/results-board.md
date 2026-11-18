@@ -22,7 +22,9 @@ drafts, staged parts and sheet updates are shared by both.
   first action phase starts.
 
 The board needs a screen at least 1024 pixels wide. On a smaller screen it
-says so; you can still write results from the Actions tab.
+says so; you can still write results from the Actions tab. If your window gets
+narrower while you're working, widening it again brings the board back as you
+left it.
 
 ## The tabs
 
@@ -107,13 +109,19 @@ Once another phase starts, the one before it is read-only:
   be edited, published or deleted.
 - Parts already published and waiting on their timer still go out.
 
+The board says when a phase has ended, and how many of its results are still
+unpublished. If that happens while you have the board open, it turns read-only
+on its own. Result text that hadn't saved yet stays on screen for you to copy
+until you leave the board.
+
 To do more work on it, go to the **Phases** tab and **Activate** it again. That
 makes it the current phase, so the phase you left becomes read-only instead,
 and everyone gets the usual notice that a phase has started.
 
 If a phase is about to end with drafts you still want to send, publish them
-first. **Activate** offers **Publish & Activate** when there are any, but a
-phase scheduled to start on its own doesn't ask.
+first. **Activate** offers **Publish & Activate Phase** when there are any, but
+a phase scheduled to start on its own doesn't ask. That button is unavailable
+while a draft has nothing written in it: write or delete those drafts first.
 
 ## Who can see the board
 

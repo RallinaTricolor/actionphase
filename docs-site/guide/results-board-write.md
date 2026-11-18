@@ -45,13 +45,18 @@ and the other way round.
 
 - Start typing and the first result is made for you. If the character
   submitted, it's linked to their submission. Drafts save as you type.
+- A character gets one first draft, however it starts. A reward given while
+  you type lands on the same draft. If a co-GM starts writing to them at the
+  same moment, you share it, and if your text differs the board shows theirs
+  with **Use theirs** and **Keep mine**.
 - **Insert** in the brief puts a moment's text at your cursor.
 - **+ Part** adds another part, revealed on a timer after the one before it:
   5, 15 or 30 minutes. A result can have up to 10 parts. The first is
   revealed when you publish, and each timer starts when the part before it is
   revealed.
 - **+ Another result** starts a second, separate result.
-- **Publish** sends one result (all its parts). **Delete** removes a draft.
+- **Publish** sends one result (all its parts). A result with nothing written
+  in it, or with an empty part, can't be published. **Delete** removes a draft.
 - A part that hasn't been revealed yet can have its timer changed, or be
   cancelled with **Cancel part** (which takes the later parts with it).
   Cancelling a part of a draft keeps the result's sheet updates: they move to
@@ -74,13 +79,16 @@ The **Checks** tab lists what to look at before this result goes out:
 
 - **Possible leak:** the result mentions something this character shouldn't
   know. That might be a [secret](./results-board-setup#codex) they aren't
-  allowed to know, a moment they don't read, someone else's own version, or
-  an item on another character's sheet that isn't on theirs.
+  allowed to know, a moment they don't read, the shared wording of a moment
+  they have their own version of, someone else's own version, or an item on
+  another character's sheet that isn't on theirs. Anything this phase's rewards
+  put on their sheet counts as theirs.
 - **Out of play** and **Two places**, from the Map's checks, for this
   character.
 - **Not covered:** moments this character reads that no result mentions yet.
-- **Rewards:** the reward block is missing from the result or out of date,
-  there's no draft to carry the rewards, or a sheet change can't apply. See
+- **Rewards:** the reward block is missing from the result, out of date or
+  still in an earlier part, the result has no text yet, there's no draft to
+  carry the rewards, or a sheet change can't apply. See
   [Rewards](./results-board-rewards#the-block-in-the-result).
 
 When there's nothing to say, it reads "No leaks, every moment covered,
@@ -101,6 +109,9 @@ Being ready doesn't publish anything: publish each result with **Publish**,
 or everyone's at once with **Publish all**. Both ask you to confirm, and say
 how many sheet updates will apply. They use the same publishing as the
 Actions tab, and sheet updates apply as they always do.
+
+**Publish all** sends nothing while any draft has nothing written in it. It
+names who those drafts are for, so you can write or delete them first.
 
 ## The example
 

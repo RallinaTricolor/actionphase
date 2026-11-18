@@ -771,7 +771,9 @@ cards) → Map (cards by place and time slot) → Scenes (moments, each with its
 readers) → Write (results), plus a per-game Game setup page (codex, names,
 reward lists, reward block). Route `/games/:gameId/phases/:phaseId/board`
 (`pages/GmBoardPage.tsx`) and `/games/:gameId/board-setup`. Desktop only (1024px
-and up; `BOARD_NARROW_QUERY` shows a notice below that).
+and up; `BOARD_NARROW_QUERY` shows a notice below that). A board that has been
+shown stays mounted, hidden behind the notice, so narrowing the window doesn't
+lose the open tab or dialogs.
 
 **Layout (2026-11-12): chrome is sunken, content is base.** `GmBoard` draws one
 header block (title, step tabs, Codex/Notes/Game setup); each step puts its own
@@ -797,7 +799,8 @@ item means two editors only collide on the same item.
   `POST …/gm-settings/changes`) take `[{kind, key, base_version, doc | deleted}]`
   and apply in one transaction. A stale `base_version` writes nothing: the 409
   carries the current copy of each conflicting item. A 409 with no conflicts
-  means the game is archived. Byte and item-count caps answer 422.
+  means the game is archived. A phase that has ended answers 423
+  (`core.ErrPhaseEnded`). Byte and item-count caps answer 422.
 - **Reads** take `?since=<seq>`; the client polls every 15 seconds while
   visible, on focus and after each save.
 - **Client**: `lib/gmBoard/store.ts` (`assembleBoard`, `assembleSettings`)
@@ -817,7 +820,20 @@ item means two editors only collide on the same item.
   browser and written by `PUT …/phases/{pid}/characters/{cid}/reward-sheet-updates`
   (`action_result_character_updates.from_rewards` marks them). Publishing uses
   the existing results endpoints and dialogs, so the old results area and the
-  board can be used on the same phase.
+  board can be used on the same phase. The board's creates send `phase_id`
+  (423 unless it's the active phase) and, for a character's first draft,
+  `first_draft`: the server serializes these per character and returns an
+  existing unpublished result, and `lib/gmBoard/firstDraft.ts` shares one
+  in-flight create between the editor and the reward sync. Publishing a blank
+  result or part answers 409 (`core.ErrEmptyResult`); publish all then sends
+  nothing.
+- **Locked rewards** (2026-11-18): publishing deletes a result's draft sheet
+  updates, and the live sheet may already hold the lines, so the "before" values
+  can't be worked out afterwards. While the carrier is a draft,
+  `usePhaseRewards` records the tabs the lines change as `sheetBefore` on the
+  `rewards` item (`sheetBeforeFor`, 24 KB cap). Once locked, `rewardStateFor`
+  works from it. With no record, an applied carrier's lines aren't applied again
+  and `sheetAlreadyApplied` is set.
 - **Rewards and sheet changes** (2026-11-13): a line's `kind` is `reward`
   (in the reward block) or `sheet` (damage taken, an item used up: changes
   the sheet only). Lines saved before `kind` existed are read by `lineKind`.
@@ -859,9 +875,13 @@ GM notes and codex secrets included: the audience already reads every
 submission and result.
 
 **Read-only mode** (`hooks/useBoardReadOnly.ts`, `BoardReadOnlyContext`) is
-for viewers and for the GM of an archived game. The stores drop edits while it
-is set, it still polls, and viewers read submissions from the audience listing
-(`useBoardSubmissions`), never the GM-only `GET …/actions`.
+for viewers, for the GM of an archived game, and for the GM of a phase that has
+ended (`has_ended` on the phase list, from `core.PhaseHasEnded`). The stores
+drop edits while it is set, it still polls, and viewers read submissions from
+the audience listing (`useBoardSubmissions`), never the GM-only
+`GET …/actions`. An open board refreshes the phase list, so it locks itself when
+the phase changes; a result editor that gets a 423 keeps its text, and
+`BoardUnsavedTextContext` shows any it couldn't save once it closes.
 `GmBoardReadOnly.test.tsx` walks every step as a viewer and fails on any
 enabled edit control, write request or GM-only read: add a new view-only
 control to its allow-lists when you add one.

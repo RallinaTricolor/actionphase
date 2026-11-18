@@ -181,7 +181,9 @@ stances, the codex) is invisible to the old view.
   way, and the parity rule holds: anything the results area can do, the board
   can.
 - **Who edits**: the GM flag (GM, co-GMs, admin mode). In an archived game
-  (completed or cancelled) nobody can, and the GM gets the read-only view.
+  (completed or cancelled) nobody can, and the GM gets the read-only view. The
+  same goes for a phase that has ended, until the GM activates it again: see
+  `resources/phase-system.md` ("Ended Phases").
 - **Who views**: `games.share_gm_board`, off by default. When on, the audience
   can view every phase's board while the game runs, and anyone who can see the
   game once it's a public archive (epilogue or completed). Viewers see
@@ -405,16 +407,16 @@ GET   /api/v1/games/{gameID}/comments/recent
 ```
 POST/GET  /api/v1/games/{gameID}/actions
 GET       /api/v1/games/{gameID}/actions/mine
-POST/GET  /api/v1/games/{gameID}/results
+POST/GET  /api/v1/games/{gameID}/results                            -- POST: optional phase_id, first_draft
 GET       /api/v1/games/{gameID}/results/mine
-POST      /api/v1/games/{gameID}/results/{resultId}/publish
-POST      /api/v1/games/{gameID}/phases/{phaseId}/results/publish   -- bulk
+POST      /api/v1/games/{gameID}/results/{resultId}/publish          -- 409 if blank; 423 if the phase has ended
+POST      /api/v1/games/{gameID}/phases/{phaseId}/results/publish    -- bulk; same refusals, nothing is published
 ```
 
 ### Results board
 ```
 GET   /api/v1/games/{gameID}/phases/{phaseId}/gm-board          -- ?since=<seq>; audience floor + share_gm_board
-POST  /api/v1/games/{gameID}/phases/{phaseId}/gm-board/changes  -- GM only; 409 on a stale item
+POST  /api/v1/games/{gameID}/phases/{phaseId}/gm-board/changes  -- GM only; 409 on a stale item, 423 if the phase has ended
 GET   /api/v1/games/{gameID}/gm-settings                        -- game setup items; same rule as the board
 POST  /api/v1/games/{gameID}/gm-settings/changes                -- GM only
 PUT   /api/v1/games/{gameID}/gm-settings/sharing                -- GM only; turns share_gm_board on/off

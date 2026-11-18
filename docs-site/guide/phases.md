@@ -23,6 +23,8 @@ New phases are created in **Draft** status and are not visible to players until 
 
 Click **Activate** on a draft phase to make it the current active phase. Only one phase can be active at a time. If there are unpublished action results from the previous phase, you will be prompted to publish them before activating.
 
+Once another phase has started, an earlier action phase is read-only: its results and its [results board](./results-board#when-a-phase-ends) can't be changed, and its unpublished drafts stay unpublished. To do more work on it, click **Activate** on it again. It becomes the current phase, the phase you left becomes read-only, and everyone gets the usual notice that a phase has started.
+
 ## Editing a Phase
 
 Click **Edit** on any phase to update its title, description, auto-activate time, or deadline.
