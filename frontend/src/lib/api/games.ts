@@ -318,6 +318,11 @@ export class GamesApi extends BaseApiClient {
   async giveRandomLootTableContent(gameId: number, tableId: number, characterId: number) {
     return this.client.post<LootTableContent>(`/api/v1/games/${gameId}/loot-tables/${tableId}/random/${characterId}`, { });
   }
+
+  /** Rolls on a loot table without giving the item to anyone: for a draft sheet update. */
+  async drawLootTableContent(gameId: number, tableId: number) {
+    return this.client.post<LootTableContent>(`/api/v1/games/${gameId}/loot-tables/${tableId}/draw`, { });
+  }
   
   // Post-game statistics. Returns 409 unless the game is completed, so only
   // call this for completed games.

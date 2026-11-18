@@ -11,7 +11,8 @@ import type {
   StagedResultPart,
   DraftCharacterUpdate,
   CreateDraftCharacterUpdateRequest,
-  UpdateDraftCharacterUpdateRequest
+  UpdateDraftCharacterUpdateRequest,
+  ReplaceRewardSheetUpdatesRequest
 } from '../../types/phases';
 
 /**
@@ -69,7 +70,7 @@ export class PhasesApi extends BaseApiClient {
     return this.client.get<ActionResult[]>(`/api/v1/games/${gameId}/results`);
   }
 
-  async createActionResult(gameId: number, data: { user_id: number; character_id?: number; action_submission_id?: number; content: string; is_published?: boolean }) {
+  async createActionResult(gameId: number, data: { phase_id?: number; user_id: number; character_id?: number; action_submission_id?: number; content: string; is_published?: boolean; first_draft?: boolean }) {
     return this.client.post<ActionResult>(`/api/v1/games/${gameId}/results`, data);
   }
 
@@ -127,7 +128,9 @@ export class PhasesApi extends BaseApiClient {
     return this.client.get<{ count: number }>(`/api/v1/games/${gameId}/phases/${phaseId}/results/unpublished-count`);
   }
 
-  async updateActionResult(gameId: number, resultId: number, data: { content: string }) {
+  // expected_updated_at (optional): the updated_at last seen. If someone has
+  // saved since, the server refuses with 409 instead of overwriting them.
+  async updateActionResult(gameId: number, resultId: number, data: { content: string; expected_updated_at?: string }) {
     return this.client.put<ActionResult>(`/api/v1/games/${gameId}/results/${resultId}`, data);
   }
 
@@ -150,6 +153,19 @@ export class PhasesApi extends BaseApiClient {
   async getDraftCharacterUpdates(gameId: number, resultId: number) {
     return this.client.get<DraftCharacterUpdate[]>(
       `/api/v1/games/${gameId}/results/${resultId}/character-updates`
+    );
+  }
+
+  /** Every draft sheet update on a result in the phase (the results board). */
+  async listPhaseDraftCharacterUpdates(gameId: number, phaseId: number) {
+    return this.client.get<DraftCharacterUpdate[]>(`/api/v1/games/${gameId}/phases/${phaseId}/draft-character-updates`);
+  }
+
+  /** Replaces a character's generated sheet drafts for the phase, on one result. */
+  async replaceRewardSheetUpdates(gameId: number, phaseId: number, characterId: number, data: ReplaceRewardSheetUpdatesRequest) {
+    return this.client.put<DraftCharacterUpdate[]>(
+      `/api/v1/games/${gameId}/phases/${phaseId}/characters/${characterId}/reward-sheet-updates`,
+      data
     );
   }
 

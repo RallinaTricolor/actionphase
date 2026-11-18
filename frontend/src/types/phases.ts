@@ -95,6 +95,9 @@ export type CreateDraftCharacterUpdateRequest = components['schemas']['CreateDra
 /** PUT /games/{gameID}/results/{resultId}/character-updates/{draftId} */
 export type UpdateDraftCharacterUpdateRequest = components['schemas']['UpdateDraftUpdateBody'];
 
+/** PUT /games/{gameID}/phases/{phaseId}/characters/{characterId}/reward-sheet-updates */
+export type ReplaceRewardSheetUpdatesRequest = components['schemas']['ReplaceRewardSheetUpdatesBody'];
+
 // Phase display helpers
 export const PHASE_TYPE_LABELS: Record<GamePhase['phase_type'], string> = {
   common_room: 'Common Room',

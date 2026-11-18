@@ -1,0 +1,503 @@
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Badge, Button, Card, CardBody, Spinner } from '@/components/ui';
+import { PublishAllResultsDialog } from '@/components/actions/PublishAllResultsDialog';
+import { useToast } from '@/contexts/ToastContext';
+import { useGameActionResults, usePublishAllPhaseResults } from '@/hooks/useActionResults';
+import { useBoardPeople } from '@/hooks/useBoardPeople';
+import { useBoardReadOnly } from '@/hooks/useBoardReadOnly';
+import { useGameCharacterSheetItems } from '@/hooks/useCharacterSheetItems';
+import { GM_BOARD_POLL_MS, useGmBoardStore } from '@/hooks/useGmBoard';
+import { useRewriteDraft } from '@/hooks/useResultDraft';
+import { apiClient } from '@/lib/api';
+import { publishChecks } from '@/lib/gmBoard/checks';
+import { coverageFor, isCovered, setCovered } from '@/lib/gmBoard/coverage';
+import { computeFlags } from '@/lib/gmBoard/flags';
+import { leaksFor } from '@/lib/gmBoard/leaks';
+import { boardRows, NO_LOCATION } from '@/lib/gmBoard/map';
+import { nextNotDone, setReady } from '@/lib/gmBoard/progress';
+import { lineText } from '@/lib/gmBoard/rewards';
+import { entryNamesAfter, withBlock, withoutBlock } from '@/lib/gmBoard/rewardState';
+import { chainsFor, characterIdsWithResults, draftTexts, resultStatus, writeList } from '@/lib/gmBoard/results';
+import { sceneName } from '@/lib/gmBoard/scenes';
+import { shortName, truncate } from '@/lib/gmBoard/text';
+import type { BoardDoc, CharacterProgress, Moment } from '@/lib/gmBoard/types';
+import { youifyExcept } from '@/lib/gmBoard/youify';
+import type { GamePhase } from '@/types/phases';
+import { useOptionalBoardRewards } from './boardRewards';
+import { BoardPane } from './BoardPane';
+import { BoardToolbar } from './BoardToolbar';
+import { RewardsTable } from './RewardsTable';
+import { WriteBrief } from './WriteBrief';
+import { WriteChecks } from './WriteChecks';
+import { WritePlayerList, type WritePlayer } from './WritePlayerList';
+import { WriteResults } from './WriteResults';
+import { WriteRewards } from './WriteRewards';
+import type { WriteModel } from './writeTypes';
+
+const RESULT_TABS = [
+  { id: 'result', label: 'Result' },
+  { id: 'rewards', label: 'Rewards & Sheet' },
+  { id: 'checks', label: 'Checks' },
+] as const;
+
+interface GmBoardWriteProps {
+  gameId: number;
+  phase: GamePhase;
+  board: BoardDoc;
+  /** characterId → the result part last picked, kept by the board across steps. */
+  selectedParts: Record<number, number | null>;
+  onSelectPart: (characterId: number, partId: number | null) => void;
+  onOpenScene: (sceneId: string) => void;
+}
+
+/**
+ * The Write step: one character at a time (`?who=`). On the left, everyone
+ * who gets a result; in the middle, the character's brief; on the right,
+ * their results with the draft, and the checks before publishing.
+ */
+export function GmBoardWrite({ gameId, phase, board, selectedParts, onSelectPart, onOpenScene }: GmBoardWriteProps) {
+  const [params, setParams] = useSearchParams();
+  const { showToast, showError } = useToast();
+  const rewards = useOptionalBoardRewards();
+  const readOnly = useBoardReadOnly();
+  const rewriteDraft = useRewriteDraft(gameId);
+  const [putting, setPutting] = useState(false);
+  const store = useGmBoardStore(gameId, phase.id);
+  const people = useBoardPeople(gameId, phase.id);
+  const { cast, names, nameLists, submissions, submissionIds, settings } = people;
+  const sheetItems = useGameCharacterSheetItems(gameId);
+  // Polled like the board, so a co-GM's new draft shows up while this is open.
+  const results = useGameActionResults(gameId, { refetchInterval: readOnly ? false : GM_BOARD_POLL_MS });
+  const publishAll = usePublishAllPhaseResults(gameId, phase.id);
+  const [publishAllOpen, setPublishAllOpen] = useState(false);
+  const unpublished = useQuery({
+    queryKey: ['unpublishedResultsCount', gameId, phase.id],
+    queryFn: () => apiClient.phases.getUnpublishedResultsCount(gameId, phase.id).then((res) => res.data),
+    // GM only, like publishing.
+    enabled: !readOnly && gameId > 0,
+  });
+
+  const insertTextRef = useRef<((text: string) => void) | null>(null);
+  const transformTextRef = useRef<((fn: (text: string) => string) => void) | null>(null);
+  const flushRef = useRef<(() => Promise<void>) | null>(null);
+  const rewriteRef = useRef<((fn: (text: string) => string) => void) | null>(null);
+  const [live, setLive] = useState<{ characterId: number; partId: number | null; text: string } | null>(null);
+  const [editable, setEditable] = useState(false);
+  // The result column's tab. Every tab stays mounted (only hidden), so Insert
+  // can always reach the editor and a draft keeps its state.
+  const [tab, setTab] = useState<'result' | 'rewards' | 'checks'>('result');
+
+  const secondPerson = settings?.secondPerson ?? true;
+  const phaseResults = useMemo(() => (results.data ?? []).filter((r) => r.phase_id === phase.id), [results.data, phase.id]);
+  const castById = useMemo(() => new Map(cast.map((c) => [c.id, c])), [cast]);
+  const order = useMemo(
+    () => writeList(cast.filter((c) => c.reads).map((c) => c.id), characterIdsWithResults(phaseResults, phase.id)),
+    [cast, phaseResults, phase.id],
+  );
+  const wanted = Number(params.get('who'));
+  const current = order.includes(wanted) ? wanted : (order[0] ?? null);
+
+  const rows = useMemo(() => boardRows(settings?.codex ?? [], phase.id, board.cards), [settings?.codex, phase.id, board.cards]);
+  const allNames = useMemo(() => {
+    const m = new Map(names);
+    for (const id of order) if (!m.has(id)) m.set(id, phaseResults.find((r) => r.character_id === id)?.character_name || `Character ${id}`);
+    return m;
+  }, [names, order, phaseResults]);
+  const model = useMemo<WriteModel>(
+    () => ({
+      board,
+      names: allNames,
+      nameLists,
+      cast: castById,
+      secondPerson,
+      placeName: (id) => rows.find((r) => r.id === id && r.id !== NO_LOCATION)?.name ?? 'No location',
+      slotName: (id) => (id === null ? 'Contingencies' : (board.chunks.find((c) => c.id === id)?.name ?? 'a deleted time slot')),
+      sceneName: (scene) => sceneName(scene, allNames),
+    }),
+    [board, allNames, nameLists, castById, secondPerson, rows],
+  );
+
+  const flags = useMemo(() => computeFlags(board), [board]);
+  const reader = useCallback((id: number) => ({ names: nameLists.get(id) ?? [], secondPerson }), [nameLists, secondPerson]);
+
+  // Each character's drafts, with the text being typed in place of its saved copy.
+  const draftsFor = useCallback(
+    (id: number) => {
+      const chains = chainsFor(phaseResults, phase.id, id);
+      if (!live || live.characterId !== id) return { chains, drafts: draftTexts(chains) };
+      const known = live.partId !== null && chains.some((c) => c.parts.some((p) => p.id === live.partId));
+      const drafts = draftTexts(chains, known ? new Map([[live.partId as number, live.text]]) : undefined);
+      return { chains, drafts: known ? drafts : [...drafts, live.text] };
+    },
+    [phaseResults, phase.id, live],
+  );
+
+  // What each character's sheet will hold after their rewards, so an item the
+  // GM is giving them isn't flagged as someone else's.
+  const stateFor = rewards?.stateFor;
+  const ownEntries = useMemo(
+    () => new Map(order.filter((id) => board.rewards[id]?.lines.length).map((id) => [id, stateFor ? entryNamesAfter(stateFor(id)) : []])),
+    [order, board.rewards, stateFor],
+  );
+
+  const players = useMemo<WritePlayer[]>(
+    () =>
+      order.map((id) => {
+        const { chains, drafts } = draftsFor(id);
+        const cov = coverageFor(board, id, drafts, reader(id));
+        const leaks = leaksFor({ characterId: id, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems, ownEntries: ownEntries.get(id) });
+        return {
+          id,
+          name: shortName(allNames.get(id) ?? `Character ${id}`),
+          avatarUrl: castById.get(id)?.avatarUrl,
+          status: resultStatus(chains, !!board.ready[id]),
+          covered: cov.done,
+          moments: cov.total,
+          leaks: leaks.length,
+        };
+      }),
+    [order, draftsFor, board, reader, phase.id, settings?.codex, sheetItems, ownEntries, allNames, castById],
+  );
+
+  const onLiveText = useCallback(
+    (partId: number | null, text: string) => {
+      if (current === null) return;
+      setLive((prev) => (prev && prev.characterId === current && prev.partId === partId && prev.text === text ? prev : { characterId: current, partId, text }));
+    },
+    [current],
+  );
+  const selectPart = useCallback((partId: number | null) => current !== null && onSelectPart(current, partId), [current, onSelectPart]);
+
+  if (people.isLoading || results.isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (current === null) {
+    return (
+      <Card variant="bordered" padding="md" data-testid="gm-board-step-write">
+        <CardBody>
+          <p className="text-content-primary">Nobody to write a result for yet.</p>
+          <p className="mt-1 text-sm text-content-secondary">Results go to approved player characters someone plays. NPCs don’t receive results.</p>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const name = shortName(allNames.get(current) ?? `Character ${current}`);
+  const { chains, drafts } = draftsFor(current);
+  const ticks = board.covered[current];
+  const covered = (m: Moment) => isCovered(m, current, drafts, ticks, reader(current));
+  const coverage = coverageFor(board, current, drafts, reader(current));
+  const checks = publishChecks({ characterId: current, phaseId: phase.id, drafts, board, codex: settings?.codex ?? [], sheetItems, ownEntries: ownEntries.get(current), reader: reader(current), flags });
+  const ready = !!board.ready[current];
+  const rewardBase = rewards?.stateFor(current);
+  const tailId = rewardBase?.carrier.tail?.id;
+  const editorOnTail = live?.characterId === current && tailId !== undefined && live.partId === tailId;
+  const reward = rewards && editorOnTail ? rewards.stateFor(current, live.text) : rewardBase;
+  const view = params.get('view') === 'table' ? 'table' : 'results';
+  const setView = (next: 'table' | 'results', who?: number) => {
+    const p = new URLSearchParams(params);
+    if (next === 'table') p.set('view', 'table');
+    else p.delete('view');
+    if (who !== undefined) p.set('who', String(who));
+    setParams(p);
+  };
+
+  const putBlock = async () => {
+    const tail = reward?.carrier.tail;
+    if (!rewards || !reward || !tail || !reward.block.text) return;
+    const text = reward.block.text;
+    const previous = reward.rewards.block;
+    setPutting(true);
+    try {
+      if (editorOnTail && rewriteRef.current) rewriteRef.current((t) => withBlock(t, text, previous));
+      else {
+        await flushRef.current?.();
+        await rewriteDraft(tail, (t) => withBlock(t, text, previous));
+      }
+      // The block belongs on the last part: take out copies left on earlier ones.
+      const copies = [previous, text].filter((b): b is string => !!b);
+      const strip = (t: string) => copies.reduce(withoutBlock, t);
+      for (const part of reward.carrier.chain?.parts ?? []) {
+        if (part.id === tail.id || part.is_published || strip(part.content) === part.content) continue;
+        if (live?.partId === part.id && rewriteRef.current) rewriteRef.current(strip);
+        else await rewriteDraft(part, strip);
+      }
+      rewards.updateRewards(current, (r) => ({ ...r, block: text }));
+      showToast('Block put in the result.', 'success');
+    } catch {
+      showError('Couldn’t put the block in the result. Try again.');
+    } finally {
+      setPutting(false);
+    }
+  };
+  const beforePublish = async () => {
+    try {
+      await rewards?.ensureSynced(current);
+    } catch {
+      showError('Couldn’t save the reward sheet updates before publishing. Try again.');
+      throw new Error('reward sync failed');
+    }
+  };
+
+  const tick = (momentId: string, on: boolean) => store.update<CharacterProgress>('progress', String(current), (p) => setCovered(p, momentId, on));
+
+  const choose = async (id: number) => {
+    await flushRef.current?.();
+    const next = new URLSearchParams(params);
+    next.set('who', String(id));
+    setParams(next);
+  };
+
+  const readyNext = async () => {
+    await flushRef.current?.();
+    store.update<CharacterProgress>('progress', String(current), (p) => setReady(p, true));
+    const next = nextNotDone(order, { ...board.ready, [current]: true }, current);
+    if (next === null) showToast('Everyone is ready. Publish when you’re happy.', 'success');
+    else void choose(next);
+  };
+
+  const copy = (text: string) => {
+    const done = () => showToast('Copied.', 'success');
+    const blocked = () => showToast('Copying was blocked by the browser. Select the text and copy it instead.', 'warning');
+    try {
+      void navigator.clipboard.writeText(text).then(done, blocked);
+    } catch {
+      blocked();
+    }
+  };
+
+  const makeYou = () => {
+    const own = board.scenes.flatMap((s) => s.moments.map((m) => m.ownText[current] ?? '')).filter((t) => t.trim());
+    transformTextRef.current?.((t) => youifyExcept(t, nameLists.get(current) ?? [], own));
+  };
+
+  const count = unpublished.data?.count ?? 0;
+  const rewardCount = reward?.lines.length ?? 0;
+  // The Rewards tab asks before replacing hand-made sheet updates; flag the tab so the question isn't missed behind it.
+  const rewardsAsk = !readOnly && !!rewards && (reward?.changes ?? 0) > 0 && rewards.syncFor(current).state === 'hand-made';
+  const checkDanger = checks.leaks.length + checks.flags.length > 0;
+  const checkCount = checks.leaks.length + checks.flags.length + (reward?.checks.length ?? 0) + (checks.notCovered.length ? 1 : 0);
+
+  return (
+    <div className="space-y-4" data-testid="gm-board-step-write">
+      <BoardToolbar aria-label="Results">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <WritePlayerList players={players} selectedId={current} onSelect={(id) => void choose(id)} />
+          <span className="flex-1" />
+          {!readOnly && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-content-secondary">
+              {count} draft {count === 1 ? 'result' : 'results'} in this phase
+            </span>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={count === 0 || publishAll.isPending}
+              onClick={async () => {
+                await flushRef.current?.();
+                try {
+                  await Promise.all(order.map((id) => rewards?.ensureSynced(id)));
+                } catch {
+                  showError('Couldn’t save the reward sheet updates before publishing. Try again.');
+                  return;
+                }
+                setPublishAllOpen(true);
+              }}
+            >
+              Publish all
+            </Button>
+          </div>
+          )}
+        </div>
+      </BoardToolbar>
+
+      {view === 'table' && rewards ? (
+        <RewardsTable
+          characterIds={order}
+          name={(id) => shortName(allNames.get(id) ?? `Character ${id}`)}
+          stateFor={(id) => rewards.stateFor(id)}
+          onOpen={(id) => setView('results', id)}
+          onBack={() => setView('results')}
+        />
+      ) : (
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-4">
+          <BoardPane title={`${name}’s phase, in order`}>
+            <WriteBrief
+              key={current}
+              model={model}
+              characterId={current}
+              others={order}
+              submission={submissions.get(current)}
+              isCovered={covered}
+              coverage={coverage}
+              onCovered={readOnly ? undefined : tick}
+              onInsert={
+                editable
+                  ? (m, text) => {
+                      setTab('result');
+                      insertTextRef.current?.(text);
+                      tick(m.id, true);
+                    }
+                  : undefined
+              }
+              onCopy={copy}
+              onOpenScene={onOpenScene}
+            />
+          </BoardPane>
+
+          <BoardPane
+            sticky
+            title={<h3 className="text-base font-semibold text-content-primary">Results for {allNames.get(current)}</h3>}
+            actions={
+              readOnly ? (
+                ready && <Badge variant="success">Ready</Badge>
+              ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!editable}
+                  onClick={makeYou}
+                  title={`Swap ${name}’s names for “you” in the selected text, or the whole draft when nothing is selected. Own versions stay as written.`}
+                >
+                  Make “you”
+                </Button>
+                {ready ? (
+                  <>
+                    <Badge variant="success">Ready</Badge>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => store.update<CharacterProgress>('progress', String(current), (p) => setReady(p, false))}
+                    >
+                      Reopen
+                    </Button>
+                  </>
+                ) : (
+                  <Button type="button" size="sm" variant="primary" onClick={() => void readyNext()} title={`Mark ${name} ready and open the next person`}>
+                    Ready → next
+                  </Button>
+                )}
+              </div>
+              )
+            }
+            bodyClassName="space-y-3"
+          >
+            <div className="flex gap-1" role="group" aria-label="Result pane">
+              {RESULT_TABS.map((t) => {
+                const badge = t.id === 'rewards' ? rewardCount : t.id === 'checks' ? checkCount : 0;
+                return (
+                  <Button key={t.id} type="button" size="sm" variant={tab === t.id ? 'primary' : 'secondary'} aria-pressed={tab === t.id} onClick={() => setTab(t.id)}>
+                    {t.label}
+                    {(badge > 0 || (t.id === 'rewards' && rewardsAsk)) && (
+                      <Badge
+                        variant={t.id === 'checks' ? (checkDanger ? 'danger' : 'warning') : t.id === 'rewards' && rewardsAsk ? 'warning' : 'neutral'}
+                        size="sm"
+                        title={t.id === 'rewards' && rewardsAsk ? 'Sheet updates made by hand: the board asks before replacing them' : undefined}
+                      >
+                        {badge}
+                        {t.id === 'rewards' && rewardsAsk && ' !'}
+                      </Badge>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+            <div hidden={tab !== 'result'}>
+              <WriteResults
+                key={current}
+                gameId={gameId}
+                phaseId={phase.id}
+                characterId={current}
+                characterName={allNames.get(current) ?? name}
+                name={name}
+                userId={castById.get(current)?.userId}
+                submissionId={submissionIds.get(current)}
+                chains={chains}
+                phaseResults={phaseResults}
+                selectedPartId={selectedParts[current] ?? null}
+                onSelectPart={selectPart}
+                onLiveText={onLiveText}
+                onEditable={setEditable}
+                insertTextRef={insertTextRef}
+                transformTextRef={transformTextRef}
+                flushRef={flushRef}
+                rewriteRef={rewriteRef}
+                beforePublish={beforePublish}
+                sheetItems={sheetItems.get(current)}
+                readOnly={readOnly}
+              />
+            </div>
+            {rewards && reward && (
+            <div hidden={tab !== 'rewards'}>
+              <WriteRewards
+                key={current}
+                gameId={gameId}
+                characterId={current}
+                name={name}
+                fullName={allNames.get(current) ?? name}
+                state={reward}
+                chains={chains}
+                sceneName={(id) => {
+                  const scene = board.scenes.find((sc) => sc.id === id);
+                  return scene ? model.sceneName(scene) : undefined;
+                }}
+                onPutBlock={() => void putBlock()}
+                putting={putting}
+                onCopy={copy}
+                onShowTable={() => setView('table')}
+              />
+            </div>
+            )}
+            <div hidden={tab !== 'checks'}>
+              <WriteChecks
+                model={model}
+                characterId={current}
+                checks={checks}
+                rows={rows}
+                onOpenScene={onOpenScene}
+                onDismissFlag={
+                  readOnly
+                    ? undefined
+                    : (key) => {
+                        store.update('flag', key, () => ({}));
+                        showToast('Check dismissed.', 'info', { action: { label: 'Undo', onClick: () => store.remove('flag', key) } });
+                      }
+                }
+                rewardChecks={reward?.checks}
+                lineLabel={(lineId) => {
+                  const line = reward?.lines.find((l) => l.id === lineId);
+                  return line ? truncate(lineText(line, reward?.sheet.recs[lineId], rewards?.layout) || 'A sheet-only line', 50) : 'A line';
+                }}
+                onPutBlock={readOnly ? undefined : () => void putBlock()}
+                onMakeDraft={readOnly || !rewards ? undefined : () => rewards.ensureDraft(current)}
+              />
+            </div>
+          </BoardPane>
+        </div>
+      )}
+
+      {!readOnly && (
+      <PublishAllResultsDialog
+        isOpen={publishAllOpen}
+        onClose={() => setPublishAllOpen(false)}
+        onConfirm={() => publishAll.mutate(undefined, { onSuccess: () => setPublishAllOpen(false) })}
+        gameId={gameId}
+        phaseId={phase.id}
+        count={count}
+        isPublishing={publishAll.isPending}
+        error={publishAll.error}
+      />
+      )}
+    </div>
+  );
+}

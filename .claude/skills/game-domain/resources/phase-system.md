@@ -58,6 +58,24 @@ A phase becomes active either when:
 
 Transitions are recorded in the `phase_transitions` table.
 
+## Ended Phases
+
+A phase has ended when it isn't active and either it has been activated or a
+later phase has (`core.PhaseHasEnded`). The later-phase check is needed because
+`activated_at` has no backfill. A phase that hasn't started hasn't ended. The
+game's phase list exposes this as `has_ended`.
+
+An ended phase is **read-only, with no exceptions**:
+
+- Its results board can't be changed.
+- Its results and their sheet updates can't be written, edited, deleted or
+  published. Unpublished drafts stay unpublished.
+- Refusals answer **423** (`core.ErrPhaseEnded`).
+- Parts already published and waiting on a timer still go out.
+
+To do more work, the GM activates the phase again. It becomes the current phase,
+the one that was current becomes ended, and the usual notification goes out.
+
 ## Endpoints
 
 ```
@@ -79,7 +97,8 @@ POST  /api/v1/games/{gameID}/phases/{phaseId}/results/publish   -- bulk publish
 
 `action_results.is_published` gates player visibility. The GM can publish a
 single result or all results for a phase at once. Unpublished results are
-invisible to the player they belong to.
+invisible to the player they belong to. A result or part with no text can't be
+published (409, `core.ErrEmptyResult`), and publish all then sends nothing.
 
 ---
 

@@ -2044,6 +2044,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/gm-board-phases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the phases that have a results board
+         * @description The game's action phases whose board has at least one item, so a viewer can be offered only boards with something on them. Same viewers as the board.
+         */
+        get: operations["listGmBoardPhases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/gm-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load the game's results board settings
+         * @description The codex, character names, reward template and similar game-level setup, plus whether the boards are shared. Same viewers as the board.
+         */
+        get: operations["getGmSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/gm-settings/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save changes to the game's results board settings
+         * @description Same rules as saving board changes. Works before the game has any phase. GM only.
+         */
+        post: operations["applyGmSettingsChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/gm-settings/sharing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Share the results boards, or stop sharing them
+         * @description Read-only sharing: with the audience while the game runs, and with everyone once it is a public archive. Allowed in any game state, so a finished game's boards can be shared. GM only.
+         */
+        put: operations["setGmBoardSharing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/handouts": {
         parameters: {
             query?: never;
@@ -2296,6 +2376,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/loot-tables/{tableId}/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Roll loot without giving it
+         * @description Picks a random item from the table and returns it as a sheet entry (with a fresh id), without adding it to any character or the game log. For draft sheet updates, which add the item when the result is published. GM only.
+         */
+        post: operations["drawLoot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/loot-tables/{tableId}/random/{characterId}": {
         parameters: {
             query?: never;
@@ -2514,6 +2614,86 @@ export interface paths {
          * @description Creates a phase in the game. Phase number is assigned sequentially and the phase starts inactive. GM only.
          */
         post: operations["createPhase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/phases/{phaseId}/characters/{characterId}/reward-sheet-updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a character's reward sheet updates
+         * @description Sets the sheet changes the results board generated from a character's reward lines. They're cleared from the character's other unpublished results in the phase and written on result_id, in one transaction, so one result carries them. GM only.
+         */
+        put: operations["replaceRewardSheetUpdates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/phases/{phaseId}/draft-character-updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a phase's draft character updates
+         * @description Every sheet change staged on a result in the phase, for the results board. GM only.
+         */
+        get: operations["listPhaseDraftCharacterUpdates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/phases/{phaseId}/gm-board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load a phase's results board
+         * @description Returns the board's live items and a cursor, or with since, every item changed after that cursor (tombstones included). GM, or a viewer the board is shared with.
+         */
+        get: operations["getGmBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/phases/{phaseId}/gm-board/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save changes to a phase's results board
+         * @description Applies a batch of item changes in one transaction. If any change names a stale base_version, nothing is written and the 409 carries the current copy of each conflicting item. GM only.
+         */
+        post: operations["applyGmBoardChanges"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3646,6 +3826,8 @@ export interface components {
             phase_id: number;
             /** Format: date-time */
             sent_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
             /** Format: int32 */
             user_id: number;
         };
@@ -3683,6 +3865,8 @@ export interface components {
             sent_at?: string;
             /** Format: date-time */
             unlocks_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
             /** Format: int32 */
             user_id: number;
             username?: string;
@@ -3781,6 +3965,14 @@ export interface components {
             user_id: number;
             username: string;
         };
+        ApplyBoardChangesRequest: {
+            /** @description The changes, applied all or nothing */
+            changes: components["schemas"]["BoardItemChange"][] | null;
+        };
+        ApplySettingsChangesRequest: {
+            /** @description The changes, applied all or nothing */
+            changes: components["schemas"]["SettingsItemChange"][] | null;
+        };
         ApplyToGameBody: {
             message?: string;
             /** @enum {string} */
@@ -3873,6 +4065,28 @@ export interface components {
         };
         BannerOutputBody: {
             banner_url: string;
+        };
+        BoardItemChange: {
+            /**
+             * Format: int32
+             * @description The version this change is based on; 0 when the item is new (or was deleted)
+             */
+            base_version: number;
+            /** @description Delete the item */
+            deleted?: boolean;
+            /** @description The item's new content. Required unless deleted is true */
+            doc?: unknown;
+            /** @description Item key, unique within its kind */
+            key: string;
+            /**
+             * @description Item kind
+             * @enum {string}
+             */
+            kind: "card" | "scene" | "chunk" | "cluster" | "stance" | "progress" | "flag" | "notes" | "reward" | "rewards";
+        };
+        BoardPhasesResponse: {
+            /** @description The game's action phases whose board has at least one item, in phase order */
+            phase_ids: number[];
         };
         ChangeEmailRequest: {
             current_password: string;
@@ -4447,9 +4661,16 @@ export interface components {
             action_submission_id?: number;
             /** Format: int32 */
             character_id?: number;
-            /** @description Result content */
-            content: string;
+            /** @description Result content. May be empty for a draft (is_published false). */
+            content?: string;
+            /** @description Start this character's draft: if they already have an unpublished result in the phase, it is returned unchanged and nothing new is made. Needs character_id, and can't be combined with is_published. */
+            first_draft?: boolean;
             is_published?: boolean;
+            /**
+             * Format: int32
+             * @description The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+             */
+            phase_id?: number;
             /**
              * Format: int32
              * @description Recipient user ID
@@ -4702,6 +4923,11 @@ export interface components {
             parts: components["schemas"]["StagedPartBody"][] | null;
             /**
              * Format: int32
+             * @description The phase this result is written for. It must be the active phase; the request is refused if it no longer is. Leave out to use the active phase.
+             */
+            phase_id?: number;
+            /**
+             * Format: int32
              * @description Recipient user ID
              */
             user_id: number;
@@ -4880,6 +5106,8 @@ export interface components {
             /** @enum {string} */
             field_type: "text" | "number" | "boolean" | "json";
             field_value: string;
+            /** @description Generated by the results board from reward lines */
+            from_rewards: boolean;
             /** Format: int32 */
             id: number;
             /** @description Tab key: skills, inventory, numbers, or a custom t_ key */
@@ -5190,6 +5418,7 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
             /**
@@ -5253,6 +5482,7 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
             /**
@@ -5263,6 +5493,75 @@ export interface components {
             title: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        GmBoardConflictResponse: {
+            /** @description The current copy of each conflicting item; absent when the game is archived */
+            conflicts?: components["schemas"]["GmItemResponse"][];
+            /** @description What happened */
+            detail: string;
+            /** @description Correlation ID for support */
+            instance?: string;
+            /**
+             * Format: int64
+             * @description HTTP status code
+             */
+            status: number;
+            /** @description Short summary */
+            title: string;
+        };
+        GmItemResponse: {
+            /** @description A tombstone: the item was deleted */
+            deleted: boolean;
+            /** @description The item's content; absent on a tombstone */
+            doc?: unknown;
+            /** @description Item key */
+            key: string;
+            /** @description Item kind */
+            kind: string;
+            /**
+             * Format: int64
+             * @description When the item last changed, on the board's poll cursor
+             */
+            seq: number;
+            /**
+             * Format: date-time
+             * @description Absent for an item that does not exist
+             */
+            updated_at?: string;
+            /**
+             * Format: int32
+             * @description User who last changed it; absent if unknown
+             */
+            updated_by?: number;
+            /**
+             * Format: int32
+             * @description Send this as base_version on the next change. 0 for an item that does not exist
+             */
+            version: number;
+        };
+        GmItemsResponse: {
+            /**
+             * Format: int64
+             * @description Poll with since=cursor to get what changes next
+             */
+            cursor: number;
+            /** @description A full load has live items only; a poll (since) includes tombstones */
+            items: components["schemas"]["GmItemResponse"][];
+        };
+        GmItemsWrittenResponse: {
+            /** @description Each change as written, with its new version. Don't advance a poll cursor from these: that could skip another editor's write */
+            items: components["schemas"]["GmItemResponse"][];
+        };
+        GmSettingsResponse: {
+            /**
+             * Format: int64
+             * @description Poll with since=cursor to get what changes next
+             */
+            cursor: number;
+            /** @description A full load has live items only; a poll (since) includes tombstones */
+            items: components["schemas"]["GmItemResponse"][];
+            /** @description Whether the GM shares the results boards read-only */
+            share_gm_board: boolean;
         };
         HandoutCommentResponse: {
             /** @description Comment text */
@@ -5685,6 +5984,8 @@ export interface components {
             end_time?: string;
             /** Format: int32 */
             game_id: number;
+            /** @description The phase has run and is over, so it's read-only until it's activated again. Set in the game's phase list. */
+            has_ended?: boolean;
             /** Format: int32 */
             id: number;
             is_active: boolean;
@@ -6052,6 +6353,17 @@ export interface components {
             /** @description New character name, unique within the game */
             name: string;
         };
+        ReplaceRewardSheetUpdatesBody: {
+            /** @description Also replace sheet drafts made by hand in the results list. Without it, those make the request fail with 409. */
+            replace_hand_made?: boolean;
+            /**
+             * Format: int32
+             * @description The result that carries the sheet changes: an unpublished last part of one of this character's results in this phase. Leave out to clear them.
+             */
+            result_id?: number;
+            /** @description One whole-tab value per changed tab. Empty clears the generated drafts. */
+            updates: components["schemas"]["RewardSheetUpdateBody"][] | null;
+        };
         RequestPasswordResetRequest: {
             email: string;
         };
@@ -6066,6 +6378,14 @@ export interface components {
              * @enum {string}
              */
             action: "approve" | "reject";
+        };
+        RewardSheetUpdateBody: {
+            /** @description The tab's storage field: items for inventory, else the tab key */
+            field_name: string;
+            /** @description The tab's whole new value, as a JSON array of entries */
+            field_value: string;
+            /** @description Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout */
+            module_type: string;
         };
         SearchUsersResponse: {
             users: components["schemas"]["UserSearchResult"][] | null;
@@ -6097,6 +6417,32 @@ export interface components {
             restricted: boolean;
             /** @description Players who may see the post. Required and non-empty when restricted is true; must be empty or omitted when it is false. */
             user_ids?: number[] | null;
+        };
+        SetSharingRequest: {
+            /** @description Share the results boards read-only: with the audience while the game runs, and with everyone once it is a public archive */
+            share: boolean;
+        };
+        SettingsItemChange: {
+            /**
+             * Format: int32
+             * @description The version this change is based on; 0 when the item is new (or was deleted)
+             */
+            base_version: number;
+            /** @description Delete the item */
+            deleted?: boolean;
+            /** @description The item's new content. Required unless deleted is true */
+            doc?: unknown;
+            /** @description Item key, unique within its kind */
+            key: string;
+            /**
+             * @description Item kind
+             * @enum {string}
+             */
+            kind: "codex" | "names" | "template" | "groups" | "scales" | "prefs" | "reward" | "notes";
+        };
+        SharingResponse: {
+            /** @description Whether the GM shares the results boards read-only */
+            share_gm_board: boolean;
         };
         StagedPartBody: {
             /** @description Part content */
@@ -6218,6 +6564,11 @@ export interface components {
         };
         UpdateActionResultBody: {
             content?: string;
+            /**
+             * Format: date-time
+             * @description The updated_at last seen; a mismatch is refused with 409
+             */
+            expected_updated_at?: string;
         };
         UpdateCommentRequest: {
             /**
@@ -12193,6 +12544,202 @@ export interface operations {
             };
         };
     };
+    listGmBoardPhases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoardPhasesResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, and the game doesn't share its boards with this viewer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getGmSettings: {
+        parameters: {
+            query?: {
+                /** @description Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load */
+                since?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmSettingsResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, and the game doesn't share its boards with this viewer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    applyGmSettingsChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplySettingsChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmItemsWrittenResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can change the results board */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another editor changed an item in the batch (conflicts holds their copies), or the game is archived (no conflicts). Nothing was written */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["GmBoardConflictResponse"];
+                };
+            };
+            /** @description Request failed validation, an item is too large, or the board is full */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setGmBoardSharing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetSharingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharingResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can change sharing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listHandouts: {
         parameters: {
             query?: never;
@@ -13087,6 +13634,59 @@ export interface operations {
             };
         };
     };
+    drawLoot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Loot table ID */
+                tableId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameLootTableContentResponse"];
+                };
+            };
+            /** @description The loot table is empty */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, or the table belongs to another game */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation, or the rolled item's data is not a JSON object */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     rollLootForCharacter: {
         parameters: {
             query?: never;
@@ -13655,6 +14255,261 @@ export interface operations {
             };
         };
     };
+    replaceRewardSheetUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Phase ID */
+                phaseId: number;
+                /** @description Character ID */
+                characterId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReplaceRewardSheetUpdatesBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftCharacterUpdateResponse"][] | null;
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can manage draft character updates */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Phase or character not found in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Hand-made sheet drafts would be replaced, or the result can't carry them (published, not the last part, or not this character's) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation, or a tab isn't on this game's sheet */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPhaseDraftCharacterUpdates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Phase ID */
+                phaseId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftCharacterUpdateResponse"][] | null;
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can view draft character updates */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Phase not found in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getGmBoard: {
+        parameters: {
+            query?: {
+                /** @description Return only items changed after this cursor, tombstones included. Omit (or 0) for a full load */
+                since?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Action phase ID */
+                phaseId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmItemsResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the GM, and the game doesn't share its boards with this viewer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such action phase in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    applyGmBoardChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+                /** @description Action phase ID */
+                phaseId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyBoardChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GmItemsWrittenResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can change the results board */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such action phase in this game */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another editor changed an item in the batch (conflicts holds their copies), or the game is archived (no conflicts). Nothing was written */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["GmBoardConflictResponse"];
+                };
+            };
+            /** @description Request failed validation, an item is too large, or the board is full */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so its board is read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     markAllCommentsRead: {
         parameters: {
             query?: never;
@@ -13763,8 +14618,22 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A result being published has no text yet. Nothing was published */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14808,6 +15677,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description phase_id names a phase that isn't the active one */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateActionResult: {
@@ -14858,8 +15734,29 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The result no longer exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The result is published, or was saved by someone else since expected_updated_at */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14904,6 +15801,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15033,6 +15937,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     updateDraftCharacterUpdate: {
@@ -15099,6 +16010,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     deleteDraftCharacterUpdate: {
@@ -15154,6 +16072,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15290,6 +16215,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     appendStagedPart: {
@@ -15361,6 +16293,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     cancelPendingStagedPart: {
@@ -15419,6 +16358,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     publishActionResult: {
@@ -15458,8 +16404,22 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A result being published has no text yet. Nothing was published */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The phase has ended, so it's read-only until it's activated again */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15545,6 +16505,13 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description phase_id names a phase that isn't the active one */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };

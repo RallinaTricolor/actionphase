@@ -494,6 +494,7 @@ func TestLootTableEndpointsRejectNonGM(t *testing.T) {
 		{"delete loot table", http.MethodDelete, fmt.Sprintf("%s/%d", base, created.ID), ""},
 		{"get loot table contents", http.MethodGet, fmt.Sprintf("%s/%d/contents", base, created.ID), ""},
 		{"replace loot table contents", http.MethodPost, fmt.Sprintf("%s/%d/contents", base, created.ID), itemsBody},
+		{"draw from a loot table", http.MethodPost, fmt.Sprintf("%s/%d/draw", base, created.ID), ""},
 	}
 
 	for _, tc := range testCases {
@@ -587,6 +588,7 @@ func TestLootTableEndpointsRejectCrossGameAccess(t *testing.T) {
 		{"delete", http.MethodDelete, attackerBase, ""},
 		{"read contents", http.MethodGet, attackerBase + "/contents", ""},
 		{"replace contents", http.MethodPost, attackerBase + "/contents", itemsBody},
+		{"draw from", http.MethodPost, attackerBase + "/draw", ""},
 	}
 
 	for _, tc := range testCases {
@@ -979,5 +981,94 @@ func TestSetRandomLootForCharacterGivesEachRollAnID(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, data[0].FieldValue.String, "Rope")
 		assert.NotContains(t, data[0].FieldValue.String, "just a string")
+	})
+}
+
+// Draw rolls for a draft sheet update: it returns the item as an entry and
+// writes nothing, so the item reaches the sheet only when the result carrying
+// the draft is published.
+func TestDrawLoot(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	testDB.CleanupTables(t, "character_data", "characters", "game_logs", "game_loot_table_contents", "game_loot_tables", "games", "sessions", "users")
+	defer testDB.CleanupTables(t, "character_data", "characters", "game_logs", "game_loot_table_contents", "game_loot_tables", "games", "sessions", "users")
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+
+	gmToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "GM token creation should succeed")
+
+	characterService := &db.CharacterService{DB: testDB.Pool, Logger: app.ObsLogger}
+	npc, err := characterService.CreateCharacter(context.Background(), core.CreateCharacterRequest{
+		GameID:        int32(fixtures.TestGame.ID),
+		CharacterType: "npc",
+		Name:          "Draft Recipient",
+	})
+	core.AssertNoError(t, err, "Should create NPC character")
+
+	createTable := func(t *testing.T, items []map[string]any) lootTableResponse {
+		t.Helper()
+		body, err := json.Marshal(map[string]any{"name": "Cache", "items": items})
+		core.AssertNoError(t, err, "Should marshal loot table request")
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/games/%d/loot-tables", fixtures.TestGame.ID), bytes.NewBuffer(body))
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		core.AssertEqual(t, http.StatusOK, w.Code, "Should create loot table, got "+w.Body.String())
+		var created lootTableResponse
+		core.AssertNoError(t, json.NewDecoder(w.Body).Decode(&created), "Should decode created loot table")
+		return created
+	}
+	draw := func(tableID int32) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/v1/games/%d/loot-tables/%d/draw", fixtures.TestGame.ID, tableID), nil)
+		req.Header.Set("Authorization", "Bearer "+gmToken)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+	logCount := func(t *testing.T) int {
+		t.Helper()
+		var n int
+		core.AssertNoError(t, testDB.Pool.QueryRow(context.Background(), "SELECT count(*) FROM game_logs WHERE game_id = $1", fixtures.TestGame.ID).Scan(&n), "Should count game logs")
+		return n
+	}
+
+	t.Run("returns the item as an entry with a fresh id and writes nothing", func(t *testing.T) {
+		table := createTable(t, []map[string]any{{"name": "Emerald", "data": `{"name":"Emerald","value":200,"id":"authored"}`}})
+		logsBefore := logCount(t)
+
+		w := draw(int32(table.ID))
+		core.AssertEqual(t, http.StatusOK, w.Code, "GM draw should succeed, got "+w.Body.String())
+
+		var drawn lootTableContentResponse
+		core.AssertNoError(t, json.NewDecoder(w.Body).Decode(&drawn), "Should decode drawn item")
+		core.AssertEqual(t, "Emerald", drawn.Name, "Should draw the table's only item")
+		var entry map[string]any
+		core.AssertNoError(t, json.Unmarshal([]byte(drawn.Data), &entry), "Drawn data should be a JSON object")
+		core.AssertEqual[any](t, float64(200), entry["value"], "The item's data should be kept")
+		id, _ := entry["id"].(string)
+		core.AssertTrue(t, id != "" && id != "authored", "The entry should get a fresh id, got "+id)
+
+		data, err := characterService.GetCharacterData(context.Background(), npc.ID)
+		core.AssertNoError(t, err, "Should fetch character data")
+		core.AssertEqual(t, 0, len(data), "A draw must not write to any sheet")
+		core.AssertEqual(t, logsBefore, logCount(t), "A draw must not write to the game log")
+	})
+
+	t.Run("an empty table is a 400 that says so", func(t *testing.T) {
+		table := createTable(t, []map[string]any{})
+		w := draw(int32(table.ID))
+		core.AssertEqual(t, http.StatusBadRequest, w.Code, "Drawing from an empty table should 400, got "+w.Body.String())
+		core.AssertTrue(t, strings.Contains(strings.ToLower(w.Body.String()), "empty"), "Error should say the table is empty, got "+w.Body.String())
+	})
+
+	t.Run("an item whose data is not an object is a 422", func(t *testing.T) {
+		table := createTable(t, []map[string]any{{"name": "Junk", "data": `[1,2]`}})
+		w := draw(int32(table.ID))
+		core.AssertEqual(t, http.StatusUnprocessableEntity, w.Code, "Non-object item data should 422, got "+w.Body.String())
 	})
 }

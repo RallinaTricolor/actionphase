@@ -37,6 +37,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // The dev container sees the host's files through a Colima bind mount,
+    // which drops file-change events now and then: Vite kept serving a module
+    // from before an edit (a missing export, until the file was touched).
+    // Polling doesn't depend on those events. docker-compose.dev.yml turns it
+    // on; elsewhere (builds, the E2E preview) the native watcher stays.
+    watch: process.env.VITE_USE_POLLING === 'true' ? { usePolling: true, interval: 300 } : undefined,
     // Allow the compose service hostname so the Playwright container (and any
     // other in-network client) can reach the dev server. Vite 7 rejects
     // unknown Host headers with 403 by default. `vite preview` inherits this

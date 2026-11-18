@@ -92,6 +92,9 @@ services:
       # Proxy /api, /ping, /docs to the backend *service* (not localhost, which
       # inside this container would be the frontend itself).
       VITE_PROXY_TARGET: "http://backend:3000"
+      # Colima's bind mount drops file-change events now and then, so Vite
+      # served stale modules; poll instead (frontend/vite.config.ts).
+      VITE_USE_POLLING: "true"
     volumes:
       # Live source, but keep the container's Linux node_modules (named volume)
       # so the host's macOS-native install can't clobber it.

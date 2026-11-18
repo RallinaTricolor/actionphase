@@ -23,6 +23,7 @@ describe('GameDetailsPage', () => {
     auto_accept_audience: false,
     allow_group_conversations: false,
     portrait_avatars: false,
+    share_gm_board: false,
     recruitment_deadline: '2025-12-31T23:59:59Z',
     start_date: '2026-01-01T00:00:00Z',
     end_date: '2026-06-01T00:00:00Z',

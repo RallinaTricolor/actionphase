@@ -49,6 +49,8 @@ Rows are grouped by area. Within a group, order does not matter.
 | Phase logic | `.claude/skills/game-domain/resources/phase-system.md`, `.claude/skills/game-domain/SKILL.md` | `is_published` means "GM published action results", **not** phase visibility |
 | Messaging / conversations | `.claude/skills/game-domain/resources/messaging-system.md` | Conversation types; audience visibility rules |
 | Notifications | `.claude/skills/game-domain/SKILL.md` | `context_*` = container (bulk clear); `related_*` = the item (preview) |
+| `frontend/src/components/gm-board/**`, `frontend/src/lib/gmBoard/**`, `frontend/src/hooks/usePhaseRewards.ts`, `frontend/src/pages/GmBoard*`, `backend/pkg/gmboard/**` | `docs-site/guide/results-board*.md`, `.claude/context/ARCHITECTURE.md` ("GM Results Board"), `.claude/skills/game-domain/SKILL.md`, `.claude/planning/gm-board-implementation.md` | Button labels quoted in bold; the check list in `results-board-write.md`; the `rewards` item's doc shape. Run `just docs-embed` after guide changes |
+| `backend/pkg/core/phase_state.go`, result publish and create rules (`backend/pkg/db/services/actions/**`) | `docs-site/guide/phases.md`, `docs-site/guide/action-phases.md`, `docs-site/guide/history.md`, `docs-site/guide/results-board.md` ("When a phase ends"), `.claude/skills/game-domain/resources/phase-system.md` | What an ended phase refuses (423), and blank results (409) |
 
 ## Frontend
 

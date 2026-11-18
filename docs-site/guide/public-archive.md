@@ -6,7 +6,7 @@ Completed games are publicly viewable — anyone can read their content without 
 
 When viewing a completed game, you have access to these tabs:
 
-- **History** — All past phases with their posts, comments, and polls
+- **History** — All past phases with their posts, comments, and polls. If the GM shares their results boards, an action phase that has one offers **View results board** (read-only)
 - **People** — All characters and participants
 - **Handouts** — All published handouts
 - **Audience** — The audience view of action submissions and private messages

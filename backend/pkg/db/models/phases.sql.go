@@ -706,6 +706,45 @@ func (q *Queries) GetChainTailForAppend(ctx context.Context, id int32) (GetChain
 	return i, err
 }
 
+const getCharacterOpenDraft = `-- name: GetCharacterOpenDraft :one
+SELECT id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at FROM action_results
+WHERE phase_id = $1
+  AND character_id = $2
+  AND is_published = false
+  AND parent_result_id IS NULL
+ORDER BY id
+LIMIT 1
+`
+
+type GetCharacterOpenDraftParams struct {
+	PhaseID     int32       `json:"phase_id"`
+	CharacterID pgtype.Int4 `json:"character_id"`
+}
+
+// The character's oldest unpublished result in the phase (its first part).
+func (q *Queries) GetCharacterOpenDraft(ctx context.Context, arg GetCharacterOpenDraftParams) (ActionResult, error) {
+	row := q.db.QueryRow(ctx, getCharacterOpenDraft, arg.PhaseID, arg.CharacterID)
+	var i ActionResult
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.PhaseID,
+		&i.UserID,
+		&i.ActionSubmissionID,
+		&i.Content,
+		&i.IsPublished,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GmUserID,
+		&i.CharacterID,
+		&i.ParentResultID,
+		&i.RevealDelayMinutes,
+		&i.ReleasedAt,
+	)
+	return i, err
+}
+
 const getDueStagedParts = `-- name: GetDueStagedParts :many
 
 SELECT r.id, r.game_id, r.user_id, r.phase_id, r.character_id, r.gm_user_id,
@@ -1957,6 +1996,50 @@ func (q *Queries) ListAllActionSubmissions(ctx context.Context, arg ListAllActio
 	return items, nil
 }
 
+const listBlankDraftRecipients = `-- name: ListBlankDraftRecipients :many
+SELECT DISTINCT COALESCE(c.name, u.username)::text AS recipient
+FROM action_results r
+JOIN users u ON u.id = r.user_id
+LEFT JOIN characters c ON c.id = r.character_id
+WHERE r.phase_id = $1
+  AND r.is_published = false
+  AND btrim(r.content, E' \t\r\n') = ''
+ORDER BY recipient
+`
+
+// Who has an unpublished result (or part) with no text in the phase, for the
+// message when Publish all refuses.
+func (q *Queries) ListBlankDraftRecipients(ctx context.Context, phaseID int32) ([]string, error) {
+	rows, err := q.db.Query(ctx, listBlankDraftRecipients, phaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var recipient string
+		if err := rows.Scan(&recipient); err != nil {
+			return nil, err
+		}
+		items = append(items, recipient)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockCharacterFirstDraft = `-- name: LockCharacterFirstDraft :exec
+SELECT pg_advisory_xact_lock(3, $1::int)
+`
+
+// Serializes making a character's first draft for the rest of the transaction.
+// Advisory-lock class 3, keyed by character (classes 1 and 2 are the GM board's).
+func (q *Queries) LockCharacterFirstDraft(ctx context.Context, characterID int32) error {
+	_, err := q.db.Exec(ctx, lockCharacterFirstDraft, characterID)
+	return err
+}
+
 const publishActionResult = `-- name: PublishActionResult :many
 WITH RECURSIVE anchor AS (
     -- Climb to the head, so publishing from any member publishes the chain.
@@ -2137,16 +2220,21 @@ const updateActionResult = `-- name: UpdateActionResult :one
 UPDATE action_results
 SET content = $2
 WHERE id = $1 AND is_published = false
+  AND ($3::timestamptz IS NULL OR updated_at = $3)
 RETURNING id, game_id, phase_id, user_id, action_submission_id, content, is_published, sent_at, created_at, updated_at, gm_user_id, character_id, parent_result_id, reveal_delay_minutes, released_at
 `
 
 type UpdateActionResultParams struct {
-	ID      int32  `json:"id"`
-	Content string `json:"content"`
+	ID                int32              `json:"id"`
+	Content           string             `json:"content"`
+	ExpectedUpdatedAt pgtype.Timestamptz `json:"expected_updated_at"`
 }
 
+// expected_updated_at is optional: when given, the save only lands if nobody
+// has saved since (the results board sends it; the results list doesn't).
+// updated_at is set by the update_action_results_updated_at trigger.
 func (q *Queries) UpdateActionResult(ctx context.Context, arg UpdateActionResultParams) (ActionResult, error) {
-	row := q.db.QueryRow(ctx, updateActionResult, arg.ID, arg.Content)
+	row := q.db.QueryRow(ctx, updateActionResult, arg.ID, arg.Content, arg.ExpectedUpdatedAt)
 	var i ActionResult
 	err := row.Scan(
 		&i.ID,
