@@ -20,6 +20,11 @@
 --   deliberately: a result answering no submission is a supported case, and this
 --   fixture is the coverage for it. Do NOT "fix" these to point at a submission.
 --
+-- One result per character per phase: in real games each character gets exactly
+-- one result, sometimes split into staged parts. Characters whose result is a
+-- staged chain get it from 06b_staged_results.sql and have no row here. Never
+-- seed a second, separate result for a character in the same phase.
+--
 -- released_at: MUST mirror sent_at. Since staged reveals shipped, the recipient
 -- read path (GetUserResults) blanks the content of any row with released_at
 -- NULL, so a published fixture row without it arrives at the player as an empty
@@ -68,19 +73,7 @@ BEGIN
   -- GAME #3: Starfall Station Results
   -- ============================================
 
-  -- Result for Player 1
-  INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
-  VALUES (
-    game3_id,
-    p1_id,
-    phase3_id,
-    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p1_id),
-    gm_id,
-    E'Commander Vasquez:\n\nAs you systematically search Deck C, your security scanner picks up an unusual energy signature behind the maintenance panel in Section C-7. When you pry it open, you find a makeshift laboratory filled with bizarre biological samples.\n\nThe samples are... moving. Pulsating with an otherworldly rhythm.\n\nYou notice a personal datapad partially dissolved by some kind of acid. Through the damage, you can make out the name "Dr. Morrison" - one of the scientists who went missing three weeks ago.\n\nYour radio crackles: "Commander, we''re picking up movement in the air ducts above your location."\n\nWhat do you do?',
-    true,
-    NOW() - INTERVAL '5 hours',
-    NOW() - INTERVAL '5 hours'
-  );
+  -- Commander Vasquez's result is a staged chain: see 06b_staged_results.sql.
 
   -- Result for Player 2
   INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
@@ -96,33 +89,7 @@ BEGIN
     NOW() - INTERVAL '5 hours'
   );
 
-  -- Result for Player 3
-  INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
-  VALUES (
-    game3_id,
-    p3_id,
-    phase3_id,
-    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p3_id),
-    gm_id,
-    E'Dr. Kim:\n\nYour medical examination of the crew members who reported "strange dreams" reveals elevated levels of an unknown compound in their bloodstream. The compound doesn''t match anything in the medical database.\n\nMore concerning: brain scans show unusual activity in the areas associated with memory and perception. It''s as if something is... writing new neural pathways.\n\nPatient Zero appears to be Dr. Morrison from the Biology Department. According to records, he was the first to report symptoms, two weeks before he vanished.\n\nYou''re interrupted by an emergency medical alert: three crew members in MedBay simultaneously began seizing. Their eyes are moving in perfect synchronization, tracking something invisible in the room.\n\nThey''re all whispering the same word: "Starfall."',
-    true,
-    NOW() - INTERVAL '5 hours',
-    NOW() - INTERVAL '5 hours'
-  );
-
-  -- Unpublished draft result (GM hasn't published yet)
-  INSERT INTO action_results (game_id, user_id, phase_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
-  VALUES (
-    game3_id,
-    p1_id,
-    phase3_id,
-    (SELECT id FROM characters WHERE game_id = game3_id AND user_id = p1_id),
-    gm_id,
-    E'[DRAFT - Additional information about the entity''s origin - publish this later for dramatic effect]',
-    false,
-    NULL,
-    NULL
-  );
+  -- Dr. Kim's result is a staged chain: see 06b_staged_results.sql.
 
   -- ============================================
   -- GAME #9: COMPLETED - Tales of the Arcane Results
@@ -252,21 +219,7 @@ BEGIN
     NOW() - INTERVAL '59 days'
   );
 
-  INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
-  VALUES (
-    game9_id,
-    p2_id,
-    game9_phase7_id,
-    (SELECT id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
-    (SELECT character_id FROM action_submissions
-      WHERE game_id = game9_id AND user_id = p2_id AND phase_id = game9_phase7_id),
-    gm_id,
-    E'Theron:\n\nDawnbreaker has never burned brighter. Every swing cuts through Valdane''s defenses, and with his ritual broken and his bound servants freed, he has nothing left.\n\n"This is for everyone you''ve hurt!" you shout, driving him back step by step.\n\nValdane makes one final attempt - a death curse, designed to take you with him. But Lyra and the shadow dragon intercept it, absorbing the dark magic harmlessly.\n\nYour blade finds its mark.\n\nArchmagus Valdane, master of the Shadow Council, architect of a hundred dark plots, falls. His last words are a whisper: "The Council... is more than... one mage..."\n\nThen he''s gone. The fortress begins to crumble around you - without Valdane''s magic sustaining it, the ancient structure can''t hold.\n\n"Time to go!" you shout, and the three of you race for the exit as the fortress of shadows collapses into dust.',
-    true,
-    NOW() - INTERVAL '59 days',
-    NOW() - INTERVAL '59 days'
-  );
+  -- Theron's result is a staged chain: see 06b_staged_results.sql.
 
   INSERT INTO action_results (game_id, user_id, phase_id, action_submission_id, character_id, gm_user_id, content, is_published, sent_at, released_at)
   VALUES (

@@ -226,4 +226,14 @@ export const API = {
   toggleCommentRead: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/posts\/\d+\/comments\/\d+\/toggle-read$/ },
   favoriteComment: { method: 'PUT', path: /^\/api\/v1\/comments\/\d+\/favorite$/ },
   markAllNotificationsRead: { method: 'PUT', path: /^\/api\/v1\/notifications\/mark-all-read$/ },
+  // GM results board. Board and setup edits are saved in debounced batches
+  // (about a second after the last change), so wait on the batch.
+  saveBoard: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/phases\/\d+\/gm-board\/changes$/ },
+  saveBoardSettings: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/gm-settings\/changes$/ },
+  setBoardSharing: { method: 'PUT', path: /^\/api\/v1\/games\/\d+\/gm-settings\/sharing$/ },
+  saveRewardSheetUpdates: { method: 'PUT', path: /^\/api\/v1\/games\/\d+\/phases\/\d+\/characters\/\d+\/reward-sheet-updates$/ },
+  createResult: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/results$/ },
+  updateResult: { method: 'PUT', path: /^\/api\/v1\/games\/\d+\/results\/\d+$/ },
+  appendResultPart: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/results\/\d+\/parts$/ },
+  publishResult: { method: 'POST', path: /^\/api\/v1\/games\/\d+\/results\/\d+\/publish$/ },
 } satisfies Record<string, MutationMatch>;

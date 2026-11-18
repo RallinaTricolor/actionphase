@@ -31,6 +31,8 @@ import type { useAuth } from '../contexts/AuthContext';
 import type { useAuth as useAuthHook } from '../hooks/useAuth';
 import type { User } from '../types/auth';
 import type { Character } from '../types/characters';
+import type { GmItem } from '../types/gmBoard';
+import type { BoardDoc, Card, CodexEntry, Moment, Scene } from '../lib/gmBoard/types';
 import type {
   DashboardDeadline,
   DashboardGameCard,
@@ -46,7 +48,7 @@ import type {
   GameWithDetails,
 } from '../types/games';
 import type { CommentWithDepth, Message } from '../types/messages';
-import type { GamePhase } from '../types/phases';
+import type { ActionResult, ActionWithDetails, GamePhase } from '../types/phases';
 
 /**
  * One participant row. `src/types/conversations.ts` deliberately stopped
@@ -282,6 +284,7 @@ export function makeConversation(overrides: Partial<Conversation> = {}): Convers
  * `auto_accept_audience`, `portrait_avatars` and `current_players`: all plain
  * non-omitempty fields, so the key is always present. The first three are
  * settings that default false; `current_players` is a computed count.
+ * `share_gm_board` (results board sharing) also defaults false.
  *
  * Note `state` includes 'setup' -- the lifecycle is
  * setup -> recruitment -> character_creation -> in_progress -> paused ->
@@ -301,6 +304,7 @@ export function makeGameWithDetails(
     allow_group_conversations: false,
     auto_accept_audience: false,
     portrait_avatars: false,
+    share_gm_board: false,
     current_players: 1,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
@@ -591,4 +595,119 @@ export function makeGamePhase(overrides: Partial<GamePhase> = {}): GamePhase {
     created_at: '2025-01-01T00:00:00Z',
     ...overrides,
   };
+}
+
+/** A submitted action, as the GM's list of a game's actions returns it. */
+export function makeActionWithDetails(overrides: Partial<ActionWithDetails> = {}): ActionWithDetails {
+  return {
+    id: 1,
+    game_id: 1,
+    phase_id: 1,
+    user_id: 100,
+    username: 'testuser',
+    content: '',
+    submitted_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/**
+ * A result as the GM's results list returns it: an unpublished, unstaged
+ * draft by default. Pass `part_number`, `part_count` and `parent_result_id`
+ * for a staged part.
+ */
+export function makeActionResult(overrides: Partial<ActionResult> = {}): ActionResult {
+  return {
+    id: 1,
+    game_id: 1,
+    phase_id: 1,
+    user_id: 100,
+    gm_user_id: 1,
+    content: '',
+    is_published: false,
+    updated_at: '2025-01-01T00:00:00.000000Z',
+    ...overrides,
+  };
+}
+
+/**
+ * One stored GM board or settings item. A live item at version 1 by default;
+ * pass `deleted: true` (and no `doc`) for a tombstone.
+ */
+export function makeGmItem(overrides: Partial<GmItem> & Pick<GmItem, 'kind' | 'key'>): GmItem {
+  return {
+    version: 1,
+    seq: 1,
+    deleted: false,
+    doc: {},
+    updated_at: '2026-11-02T00:00:00Z',
+    updated_by: 1,
+    ...overrides,
+  };
+}
+
+// ── GM results board documents (hand-written test data, never player content) ──
+
+export function makeCard(overrides: Partial<Card> & Pick<Card, 'id' | 'characterId'>): Card {
+  return {
+    quote: '',
+    summary: '',
+    note: '',
+    locationId: 'loc-hall',
+    chunkId: 'k1',
+    outcome: 'pending',
+    causedBy: [],
+    isIF: false,
+    cond: '',
+    branchOf: null,
+    src: [],
+    gm: false,
+    ...overrides,
+  };
+}
+
+export function makeMoment(overrides: Partial<Moment> & Pick<Moment, 'id'>): Moment {
+  return { text: '', readers: [], ownText: {}, ...overrides };
+}
+
+export function makeScene(overrides: Partial<Scene> & Pick<Scene, 'id'>): Scene {
+  return {
+    title: '',
+    locationId: 'loc-hall',
+    chunkId: 'k1',
+    conflict: false,
+    done: false,
+    participants: [],
+    moments: [],
+    effects: [],
+    ...overrides,
+  };
+}
+
+/** A board with three time slots (k1, k2, k3) unless `chunks` is given. */
+export function makeBoard(overrides: Partial<BoardDoc> = {}): BoardDoc {
+  return {
+    chunks: [
+      { id: 'k1', name: 'Pre-Scenario', position: 1 },
+      { id: 'k2', name: 'Slot 1', position: 2 },
+      { id: 'k3', name: 'Slot 2', position: 3 },
+    ],
+    cards: [],
+    scenes: [],
+    clusters: [],
+    stances: {},
+    readDone: {},
+    ready: {},
+    covered: {},
+    dismissedFlags: {},
+    rewardItems: [],
+    rewards: {},
+    notes: '',
+    ...overrides,
+  };
+}
+
+export function makeCodexEntry(overrides: Partial<CodexEntry> & Pick<CodexEntry, 'id' | 'name'>): CodexEntry {
+  return { type: 'Other', aliases: [], notes: '', secret: false, knownBy: [], phases: [], ...overrides };
 }

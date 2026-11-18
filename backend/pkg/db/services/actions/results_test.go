@@ -118,9 +118,37 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update it
-		updated, err := actionService.UpdateActionResult(context.Background(), result.ID, "Updated content")
+		updated, err := actionService.UpdateActionResult(context.Background(), result.ID, "Updated content", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "Updated content", updated.Content)
+	})
+
+	t.Run("expected_updated_at: a matching save lands, a stale one is refused", func(t *testing.T) {
+		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
+			GameID: game.ID, PhaseID: phase.ID, UserID: int32(player.ID), Content: "First", IsPublished: false,
+		})
+		require.NoError(t, err)
+		seen := result.UpdatedAt.Time
+
+		// Another tab saves first, moving updated_at on.
+		other, err := actionService.UpdateActionResult(context.Background(), result.ID, "Theirs", &seen)
+		require.NoError(t, err)
+		require.True(t, other.UpdatedAt.Time.After(seen), "the trigger should move updated_at on")
+
+		// This tab still holds the old updated_at, so its save is refused...
+		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Mine", &seen)
+		require.ErrorIs(t, err, core.ErrResultNotEditable)
+		assert.Contains(t, err.Error(), "someone else saved")
+
+		var content string
+		require.NoError(t, testDB.Pool.QueryRow(context.Background(), "SELECT content FROM action_results WHERE id = $1", result.ID).Scan(&content))
+		assert.Equal(t, "Theirs", content, "a refused save must not write")
+
+		// ...and lands once it sends the current one.
+		fresh := other.UpdatedAt.Time
+		mine, err := actionService.UpdateActionResult(context.Background(), result.ID, "Mine", &fresh)
+		require.NoError(t, err)
+		assert.Equal(t, "Mine", mine.Content)
 	})
 
 	t.Run("gets unpublished results count", func(t *testing.T) {
@@ -159,16 +187,15 @@ func TestActionSubmissionService_ActionResultOperations(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to update published result
-		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Trying to update published result")
-		require.Error(t, err, "Should not be able to update published result")
-		assert.Contains(t, err.Error(), "result not found or already published")
+		_, err = actionService.UpdateActionResult(context.Background(), result.ID, "Trying to update published result", nil)
+		require.ErrorIs(t, err, core.ErrResultNotEditable, "Should not be able to update published result")
+		assert.Contains(t, err.Error(), "already published")
 	})
 
 	t.Run("returns error when updating non-existent result", func(t *testing.T) {
 		nonExistentID := int32(999999)
-		_, err := actionService.UpdateActionResult(context.Background(), nonExistentID, "Update non-existent")
-		require.Error(t, err, "Should error when result doesn't exist")
-		assert.Contains(t, err.Error(), "result not found or already published")
+		_, err := actionService.UpdateActionResult(context.Background(), nonExistentID, "Update non-existent", nil)
+		require.ErrorIs(t, err, core.ErrActionResultNotFound, "Should error when result doesn't exist")
 	})
 
 	t.Run("returns error when getting non-existent result", func(t *testing.T) {
@@ -432,19 +459,19 @@ func TestActionSubmissionService_PublishAllPhaseResults(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Publish all in phase 1
-		err = actionService.PublishAllPhaseResults(context.Background(), phase1.ID)
+		// Publish all in phase 2, the active one
+		err = actionService.PublishAllPhaseResults(context.Background(), phase2.ID)
 		require.NoError(t, err)
 
-		// Verify phase 1 has 0 unpublished
-		count1, err := actionService.GetUnpublishedResultsCount(context.Background(), phase1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, int64(0), count1, "Phase 1 should have 0 unpublished results")
-
-		// Verify phase 2 still has 1 unpublished
+		// Verify phase 2 has 0 unpublished
 		count2, err := actionService.GetUnpublishedResultsCount(context.Background(), phase2.ID)
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), count2, "Phase 2 should still have 1 unpublished result")
+		assert.Equal(t, int64(0), count2, "Phase 2 should have 0 unpublished results")
+
+		// Verify phase 1's draft stays a draft
+		count1, err := actionService.GetUnpublishedResultsCount(context.Background(), phase1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), count1, "Phase 1 should still have 1 unpublished result")
 	})
 
 	// Regression: a staged chain must be published as ONE result, not N.
@@ -878,10 +905,14 @@ func TestActionSubmissionService_NotificationCreation(t *testing.T) {
 		// This test verifies that if notification creation fails, the publish still succeeds
 		// We can't easily force a notification failure in this test, but we document the behavior
 
+		// The batch test above moved the game on, so use the phase running now.
+		current, err := phaseService.GetActivePhase(context.Background(), game.ID)
+		require.NoError(t, err)
+
 		// Create unpublished result
 		result, err := actionService.CreateActionResult(context.Background(), core.CreateActionResultRequest{
 			GameID:      game.ID,
-			PhaseID:     phase.ID,
+			PhaseID:     current.ID,
 			UserID:      int32(player.ID),
 			Content:     "Test error handling",
 			IsPublished: false,

@@ -64,7 +64,7 @@ export function PhaseCard({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Use the activation hook for unpublished results logic
-  const { unpublishedCount, publishAllMutation } = usePhaseActivation(
+  const { unpublishedCount, publishAllMutation, blankDraftRecipients } = usePhaseActivation(
     gameId,
     currentPhaseId,
     showActivateConfirm
@@ -347,6 +347,7 @@ export function PhaseCard({
           isActivating={isActivating}
           publishAllMutation={publishAllMutation}
           hasSheetDraftConflict={hasSheetDraftConflict}
+          blankDraftRecipients={blankDraftRecipients}
           onActivate={onActivate}
           onClose={() => setShowActivateConfirm(false)}
         />

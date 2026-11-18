@@ -50,6 +50,10 @@ run_psql "$SCRIPT_DIR/common/01_users.sql"
 echo "👥 Creating E2E worker users..."
 run_psql "$SCRIPT_DIR/common/01_users_e2e_workers.sql"
 
+# Helpers the demo and E2E fixtures call (fixtures.seed_heist_board).
+echo "🧰 Defining fixture helpers..."
+run_psql "$SCRIPT_DIR/common/02_gm_board_seed.sql"
+
 # 2. Load demo fixtures
 echo ""
 echo "📖 Loading demo fixtures..."

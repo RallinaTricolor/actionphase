@@ -1418,8 +1418,14 @@ docs-preview:
 # Build and embed documentation in backend
 docs-embed: docs-build
   @echo "📦 Embedding documentation in backend..."
-  rm -rf backend/pkg/docs/dist
-  cp -r docs-site/.vitepress/dist backend/pkg/docs/dist
-  @echo "✅ Documentation embedded at backend/pkg/docs/dist"
-  @echo "🔧 Restart the backend to include updated docs: just restart backend"
+  # Clear the old build but keep the committed README: it's what lets the
+  # go:embed compile on a fresh clone (see backend/pkg/docs/dist/README.md).
+  mkdir -p backend/pkg/docs/dist
+  find backend/pkg/docs/dist -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf {} +
+  cp -R docs-site/.vitepress/dist/. backend/pkg/docs/dist/
+  # The docs are compiled into the binary (go:embed in static.go), and Air only
+  # rebuilds on .go changes, so new HTML alone never reaches the running
+  # backend. Touching the embedding file makes Air rebuild with it.
+  touch backend/pkg/docs/static.go
+  @echo "✅ Documentation embedded at backend/pkg/docs/dist (the dev backend is rebuilding with it)"
 

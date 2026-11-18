@@ -1901,4 +1901,50 @@ describe('GameResultsManager', () => {
       });
     });
   });
+
+  describe('Publishing a staged chain', () => {
+    // The chain's sheet drafts live on its last part, but Publish sits on part 1.
+    // Regression: Publish checked part 1's own drafts (a chain head has none), so
+    // it missed a conflict on the tail and said no sheet updates would apply.
+    const head: ActionResult = { ...mockUnpublishedResult, id: 20, character_id: 500, part_number: 1, part_count: 2, content: 'The vault door opens' };
+    const tail: ActionResult = { ...mockUnpublishedResult, id: 21, character_id: 500, part_number: 2, part_count: 2, parent_result_id: 20, content: 'The alarm sounds' };
+    const sibling: ActionResult = { ...mockUnpublishedResult, id: 10, character_id: 500, content: 'You find Item A' };
+    const draft = (id: number) => ({ id, action_result_id: 21, character_id: 500, module_type: 'inventory', field_name: 'items', field_value: '[]', field_type: 'json', operation: 'upsert', from_rewards: false, created_at: '', updated_at: '' });
+
+    const setup = (counts: Record<number, number>) => {
+      setupDefaultHandlers([head, tail, sibling]);
+      server.use(
+        http.get('/api/v1/games/:gameId/results/:resultId/character-updates/count', ({ params }) =>
+          HttpResponse.json({ count: counts[Number(params.resultId)] ?? 0 })
+        ),
+        http.get('/api/v1/games/:gameId/results/:resultId/character-updates', ({ params }) =>
+          HttpResponse.json(Array.from({ length: counts[Number(params.resultId)] ?? 0 }, (_, i) => draft(i + 1)))
+        )
+      );
+    };
+
+    it("warns in part 1's Publish dialog when the tail's drafts conflict", async () => {
+      setup({ 21: 2, 10: 1 });
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      // The card warning shows once, on the tail where the drafts are.
+      await waitFor(() => expect(screen.getByTestId('sheet-conflict-warning-21')).toBeInTheDocument());
+      expect(screen.queryByTestId('sheet-conflict-warning-20')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByTestId('publish-result-20'));
+      expect(await screen.findByTestId('publish-sheet-conflict-warning')).toBeInTheDocument();
+      expect(await screen.findByText(/2 character sheet updates will apply to the player's character when the last part is revealed/)).toBeInTheDocument();
+      expect(screen.getByText(/Part 1 will be visible immediately, and part 2 on its timer\./)).toBeInTheDocument();
+    });
+
+    it('does not warn when only the tail has drafts', async () => {
+      setup({ 21: 2 });
+      renderWithProviders(<GameResultsManager gameId={mockGameId} />);
+
+      await waitFor(() => expect(screen.getByTestId('draft-update-count-21')).toHaveTextContent('2'));
+      await userEvent.click(screen.getByTestId('publish-result-20'));
+      expect(await screen.findByText(/2 character sheet updates will apply/)).toBeInTheDocument();
+      expect(screen.queryByTestId('publish-sheet-conflict-warning')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -47,6 +47,11 @@ interface TabNavigationProps {
    * explanation; a disabled control that does not say why just reads as broken.
    */
   disabled?: boolean;
+  /**
+   * Drawn inside a bar that already has its own background, border and
+   * rounding (the results board's header), so the tabs bring none of their own.
+   */
+  embedded?: boolean;
 }
 
 /**
@@ -63,6 +68,7 @@ export function TabNavigation({
   collapseOverflow = false,
   sticky = false,
   disabled = false,
+  embedded = false,
 }: TabNavigationProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -165,7 +171,7 @@ export function TabNavigation({
   );
 
   const tabClassName = (isActive: boolean) => `
-    whitespace-nowrap px-4 border-b-2 font-medium text-sm flex items-center gap-2
+    whitespace-nowrap ${embedded ? 'px-3' : 'px-4'} border-b-2 font-medium text-sm flex items-center gap-2
     ${condensed ? 'py-1.5' : 'py-3'}
     transition-[padding,color,border-color] duration-200
     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
@@ -227,7 +233,7 @@ export function TabNavigation({
       <div
         ref={barRef}
         className={`
-          border-b border-theme-default surface-base md:rounded-t-lg
+          ${embedded ? '' : 'border-b border-theme-default surface-base md:rounded-t-lg'}
           ${sticky ? 'sticky top-16 z-30 shadow-sm' : ''}
           ${condensed ? 'md:rounded-t-none' : ''}
         `}

@@ -605,3 +605,48 @@ func TestUpdateGame_CommonRoomSchedule(t *testing.T) {
 		}
 	})
 }
+
+// share_gm_board is set by its own endpoint (pkg/gmboard). The game read
+// reports it so a viewer's client knows when to offer the results board, and
+// saving the game's other settings must leave it alone.
+func TestGame_ReportsResultsBoardSharing(t *testing.T) {
+	testDB := core.NewTestDatabase(t)
+	defer testDB.Close()
+
+	app := core.NewTestApp(testDB.Pool)
+	router := setupGameTestRouter(app, testDB)
+	fixtures := testDB.SetupFixtures(t)
+	accessToken, err := core.CreateTestJWTTokenForUser(app, fixtures.TestUser)
+	core.AssertNoError(t, err, "Test token creation should succeed")
+
+	gameService := &db.GameService{DB: testDB.Pool, Logger: app.ObsLogger}
+	game, err := gameService.CreateGame(context.Background(), core.CreateGameRequest{
+		Title: "Shared Board Game", Description: "Testing share_gm_board",
+		GMUserID: int32(fixtures.TestUser.ID), CommunityID: int32(fixtures.TestCommunity.ID),
+	})
+	core.AssertNoError(t, err, "Game creation should succeed")
+	_, err = testDB.Pool.Exec(context.Background(), "UPDATE games SET share_gm_board = true WHERE id = $1", game.ID)
+	core.AssertNoError(t, err, "Setting share_gm_board should succeed")
+
+	call := func(method string, body any) map[string]any {
+		t.Helper()
+		var buf bytes.Buffer
+		if body != nil {
+			_ = json.NewEncoder(&buf).Encode(body)
+		}
+		req := httptest.NewRequest(method, "/api/v1/games/"+strconv.Itoa(int(game.ID)), &buf)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		core.AssertEqual(t, http.StatusOK, w.Code, method+" should return 200: "+w.Body.String())
+		var out map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		return out
+	}
+
+	core.AssertEqual(t, true, call(http.MethodGet, nil)["share_gm_board"], "the read reports sharing")
+	updated := call(http.MethodPut, UpdateGameRequest{Title: "Renamed", Description: game.Description})
+	core.AssertEqual(t, true, updated["share_gm_board"], "the update answers with the stored value")
+	core.AssertEqual(t, true, call(http.MethodGet, nil)["share_gm_board"], "an update leaves sharing alone")
+}

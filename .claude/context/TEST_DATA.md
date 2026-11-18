@@ -17,7 +17,8 @@ The fixture system is split into four categories:
 test_fixtures/
 ├── common/               # Shared base data (users, reset)
 │   ├── 00_reset.sql      # Cleans all test data
-│   └── 01_users.sql      # Creates test users (TestGM, TestPlayer1-5, TestAudience)
+│   ├── 01_users.sql      # Creates test users (TestGM, TestPlayer1-5, TestAudience)
+│   └── 02_gm_board_seed.sql # Defines fixtures.seed_heist_board() (no data of its own)
 ├── demo/                 # Demo/dev data (games, characters, actions, messages)
 │   ├── 02_games_recruiting.sql
 │   ├── 03_games_running.sql
@@ -26,7 +27,8 @@ test_fixtures/
 │   ├── 06_results.sql
 │   ├── 08_private_messages.sql
 │   ├── 09_demo_content.sql
-│   └── 10_deeply_nested_comments.sql
+│   ├── 10_deeply_nested_comments.sql
+│   └── 11_gm_board_heist.sql  # The Heist's results board (calls the seed above)
 ├── e2e/                  # Isolated fixtures per E2E test file (see below)
 │   ├── 07_common_room.sql        # Games #164-169 (common room tests)
 │   ├── 08_e2e_dedicated_games.sql # State-modifying test games
@@ -209,23 +211,102 @@ Numbers entries may carry `max` (turning a count into a track, "Stress 4/9") and
 ## Test Actions and Results
 
 ### Action Submissions (Game #2)
-- **3 submitted actions** (finalized)
-- **1 draft action** (work in progress)
+- **4 submitted actions**, one edited after submitting (Silk's)
 - Various submission times and content lengths
+- The results board seed quotes them, so changing a Heist submission means
+  changing the card quotes in `common/02_gm_board_seed.sql`, and the copies
+  in `e2e/34_gm_board.sql`, too
+
+### Results Board (Game #2, phase 2 "Execute the Plan") — added 2026-11-03
+A partly resolved GM results board, so every built step has data. Open it as
+TestGM from the Heist's results area (`/games/<id>/phases/<phase id>/board`).
+- **Sharing**: the Heist shares its boards (`games.share_gm_board`, set in
+  `demo/11_gm_board_heist.sql`, not in the seed function). Log in as
+  TestAudience to view the board read-only: History tab → phase 2 → "View
+  results board". Turn sharing off on the board's Game setup page.
+- **Setup**: 5 Locations (lobby, vault scoped to this phase, rooftop, alley,
+  ducts), an NPC, an Item, a Secret known only to Silk; names for Inspector
+  Dalton.
+- **Read**: Shade, Rook and Vex marked done; Silk not. Cards quote each
+  submission (Read highlights them).
+- **Map**: 4 time slots (Pre-Scenario, Approach, Inside, Getaway), 17 cards with
+  every outcome, causes, waiting and triggered IF cards, 2 GM cards for
+  Dalton, clusters Inside/Outside crew, stances including an ambush (Silk
+  means to leave Rook behind), a busy cell with no scene (the rear alley in
+  Getaway), no-outcome checks and one dismissed check.
+- **Scenes**: a conflict in the vault (own version, GM note, Silk reading from
+  elsewhere, a moment from a card and one from a passage, Vex injured) and a
+  short lobby scene with Dalton.
+- **Write** (draft `action_results`, all unpublished): Shade has a two-part
+  staged result (part 2 after 15 minutes) covering all her moments, one
+  ticked by hand, and is marked ready. Vex has one result answering his
+  submission that names the Silk-only secret (a leak check). Rook has an
+  empty draft linked to his submission: the board makes one when a
+  character's first reward or sheet change is given. Silk has none. Everyone
+  gets one result (staged or not), as in real play, so don't seed a second
+  for anyone. The seed deletes the phase's
+  results before writing these.
+- **Rewards**: a block template (sections Job result / Bonus objectives /
+  Other, a Coin scale Broke/Flush/Rich, a "Crew note" text box), an
+  every-phase list (Clean job, Messy job, Shaken, New gear as Choose 1) and
+  the phase's own list (Bound the vault ghost, Lifted the key). Shade has two
+  lines, one from the vault scene; her chain's part 2 carries the sheet
+  changes. Vex has a one-off and a Choose 1, plus a sheet update made by hand
+  in the results list (`from_rewards = false`), so the board asks before
+  replacing it. Rook has two rewards (his Shaken copy differs from the list)
+  and a sheet change: 2 Tranquilizer Darts used, which stays out of his
+  block. Every line carries `kind` (`reward` or `sheet`). Silk has none. Generated sheet drafts aren't seeded: the
+  board writes them the first time it opens the phase.
+
+The content lives in `fixtures.seed_heist_board(game_id, phase_id)`
+(`common/02_gm_board_seed.sql`), loaded by both `apply_common.sh` and
+`apply_all.sh`, so an E2E fixture can seed the same board on its own fixed-ID
+game (it needs the Heist's character names and submissions).
+`e2e/34_gm_board.sql` makes one such game per spec in `frontend/e2e/gm-board/`
+(IDs offset per worker), each run by TestGM with players 1-4 as the crew
+(each with a sheet: Coin, Stress, a skill, an item), Inspector Dalton as an
+NPC, TestAudience in the audience, and copies of the Heist's submissions in
+phase 2, "Execute the Plan":
+
+| Game | Title ("E2E Test: Results Board - …") | Board | Used by |
+|---|---|---|---|
+| #711 | GM | seeded, not shared | `map` (writes own items); `shell`, `sharing` (read) |
+| #712 | Shared | seeded, shared | `sharing`, `shell` @mobile (read-only) |
+| #713 | Read | seeded | `read` (own cards, codex entries) |
+| #714 | Scenes | seeded | `scenes` (own scenes) |
+| #715 | Write | seeded | `write` (own results) |
+| #716 | Rewards | seeded | `rewards` (lines, blocks, sheet drafts) |
+| #717 | Publish | seeded | `publish` (publishes what it wrote; irreversible) |
+| #718 | Co-GM | seeded; TestPlayer5 is co-GM | `collaboration` |
+| #719 | Sharing | seeded, shared | `sharing` (turns sharing off; turns it back on first) |
+| #720 | Archive | seeded, shared, game completed | `sharing` (TestPlayer5, a non-member, reads it) |
+| #721 | Empty | none, and no codex | `setup` (first-run guide; empties itself first) |
+
+**When the board's data model changes, change the seed in the same piece of
+work**, and write every field the client writes (see
+`frontend/src/lib/gmBoard/types.ts`).
 
 ### Action Results (Game #3)
-- **3 published results** (visible to players)
-- **1 draft result** (GM hasn't published yet)
+- **3 published results**, one per character (visible to players). Two are
+  staged chains from `06b_staged_results.sql`.
 - Demonstrates storytelling and cliffhangers
+
+**One result per character per phase.** In real games everyone gets exactly
+one result, sometimes split into staged parts; a second, separate result is a
+very rare exception. Every demo character follows this, so don't seed a second
+result for anyone. A character whose result is a staged chain has no row in
+`06_results.sql`.
 
 ### Staged Result Chains (`demo/06b_staged_results.sql`)
 
 A staged chain is one result split into parts revealed on a timer.
 
-- **Game #3** — a *pending* chain (part 1 released, part 2 due minutes after
-  load, part 3 with no knowable unlock time) and a *fully released* chain
-- **Game #9** (completed) — an archive chain: released head and tail, plus one
-  part still pending, which is what the export gate is verified against
+- **Game #3** — Commander Vasquez: a *pending* chain (part 1 released, part 2
+  due minutes after load, part 3 with no knowable unlock time). Dr. Kim: a
+  *fully released* chain
+- **Game #9** (completed) — Theron, final phase: an archive chain: released
+  head and tail, plus one part still pending, which is what the export gate
+  is verified against
 
 #### 🔴 Two rules when writing `action_results` fixtures
 

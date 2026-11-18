@@ -19,6 +19,7 @@ import (
 	"actionphase/pkg/docs"
 	"actionphase/pkg/exports"
 	"actionphase/pkg/games"
+	"actionphase/pkg/gmboard"
 	"actionphase/pkg/handouts"
 	httpmiddleware "actionphase/pkg/http/middleware"
 	"actionphase/pkg/messages"
@@ -400,6 +401,13 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				// huma / type-first -- shares gameScopedAPI with the other
 				// packages registering on this same /{gameID} subrouter.
 				polls.RegisterHumaGamePolls(gameScopedAPI, pollHandler)
+
+				// GM results board: per-phase board items and per-game board
+				// settings. ChildScope (above) keeps {phaseId} in {gameID}.
+				gmboard.RegisterHumaGmBoard(gameScopedAPI, &gmboard.Handler{
+					App:          h.App,
+					BoardService: &db.GmBoardService{DB: h.App.Pool},
+				})
 			})
 		})
 	})

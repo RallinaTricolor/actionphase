@@ -10,7 +10,7 @@ import type { EntryEdit } from '@/lib/sheetEntries';
 import type { LootMode } from '@/hooks/useLootRoll';
 import { EntryForm } from './EntryForm';
 import { LootTableSelector } from './LootTableSelector';
-import { lootDataToEdit } from './fieldTypes';
+import { lootDataToEdit } from '@/lib/sheetFieldValues';
 
 interface LootModeFormProps {
   fields: readonly CharacterSheetField[];
@@ -22,6 +22,8 @@ interface LootModeFormProps {
   /** Called with the chosen table in 'loot_table_random' mode; the server picks the entry. */
   onAddRandom?: (lootTableId: number) => void;
   onCancel: () => void;
+  /** Reports whether the manual form holds edits that Add has not yet committed. */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /**
@@ -32,7 +34,7 @@ interface LootModeFormProps {
  * never comes from a loot table. It also keeps the loot table queries (GM-only
  * endpoints, which need React Query) out of every plain add.
  */
-export function LootModeForm({ fields, targetTab, lootModes, onAdd, onAddRandom, onCancel }: LootModeFormProps) {
+export function LootModeForm({ fields, targetTab, lootModes, onAdd, onAddRandom, onCancel, onDirtyChange }: LootModeFormProps) {
   const id = useId();
   const gameContext = useOptionalGameContext();
 
@@ -129,7 +131,7 @@ export function LootModeForm({ fields, targetTab, lootModes, onAdd, onAddRandom,
       {/* Hidden rather than unmounted, so a half-typed manual entry survives a
           look at the loot tables. */}
       <div hidden={effectiveMode !== 'manual'}>
-        <EntryForm fields={fields} onSubmit={onAdd} onCancel={onCancel} submitLabel="Add" variant="modal" />
+        <EntryForm fields={fields} onSubmit={onAdd} onCancel={onCancel} submitLabel="Add" variant="modal" onDirtyChange={onDirtyChange} />
       </div>
 
       {effectiveMode !== 'manual' && (

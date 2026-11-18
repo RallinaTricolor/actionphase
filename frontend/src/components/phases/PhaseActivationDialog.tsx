@@ -1,3 +1,4 @@
+import { extractApiErrorMessage } from '@/lib/errors';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { Button, Alert } from '@/components/ui';
 import type { GamePhase } from '@/types/phases';
@@ -15,6 +16,8 @@ interface PhaseActivationDialogProps {
    * unpublished results. Publishing them together overwrites one set with another.
    */
   hasSheetDraftConflict?: boolean;
+  /** Who has an unpublished result with nothing written in it: it can't be published. */
+  blankDraftRecipients?: string[];
   onActivate: () => void;
   onClose: () => void;
 }
@@ -27,6 +30,7 @@ export function PhaseActivationDialog({
   isActivating,
   publishAllMutation,
   hasSheetDraftConflict = false,
+  blankDraftRecipients = [],
   onActivate,
   onClose
 }: PhaseActivationDialogProps) {
@@ -84,6 +88,9 @@ export function PhaseActivationDialog({
                   <p className="text-sm text-semantic-warning mt-1">
                     Do you want to publish {unpublishedCount === 1 ? 'it' : 'them'} before activating the next phase?
                   </p>
+                  <p className="text-sm text-content-secondary mt-1">
+                    Anything you don’t publish stays unpublished, and can’t be changed until you activate this phase again.
+                  </p>
                 </div>
               </div>
             </div>
@@ -94,19 +101,36 @@ export function PhaseActivationDialog({
                 A character has staged sheet updates on more than one of these results.
                 Each result stores a complete snapshot of the character sheet, so
                 publishing them together will overwrite one set of changes with another.
-                Consider activating without publishing, then consolidating the sheet
-                updates into a single result.
+                Cancel and consolidate the sheet updates into a single result first:
+                once this phase ends, its results can’t be changed unless it’s activated
+                again.
+              </Alert>
+            )}
+            {blankDraftRecipients.length > 0 && (
+              <Alert variant="danger" className="mb-4" data-testid="activate-blank-drafts">
+                Nothing written yet for: {blankDraftRecipients.join(', ')}. Write or delete{' '}
+                {blankDraftRecipients.length === 1 ? 'that result' : 'those results'} to publish this phase’s results.
+              </Alert>
+            )}
+            {publishAllMutation.isError && (
+              <Alert variant="danger" className="mb-4">
+                {extractApiErrorMessage(publishAllMutation.error) ?? 'Couldn’t publish the results. Try again.'}
               </Alert>
             )}
             <div className="flex flex-col space-y-2">
               <Button
                 variant="success"
                 onClick={async () => {
-                  await publishAllMutation.mutateAsync();
+                  try {
+                    await publishAllMutation.mutateAsync();
+                  } catch {
+                    // Shown above, and the phase stays as it is.
+                    return;
+                  }
                   onActivate();
                   onClose();
                 }}
-                disabled={isActivating || publishAllMutation.isPending}
+                disabled={isActivating || publishAllMutation.isPending || blankDraftRecipients.length > 0}
                 className="w-full"
                 data-faro-user-action-name="activate-phase"
               >

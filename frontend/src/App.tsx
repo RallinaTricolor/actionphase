@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, useParams, useRouteError, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/common/errors/ErrorBoundary';
@@ -40,6 +40,8 @@ const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => (
 const CommunityPage = lazy(() => import('./pages/CommunityPage').then(m => ({ default: m.CommunityPage })));
 const CommunityManagePage = lazy(() => import('./pages/CommunityManagePage').then(m => ({ default: m.CommunityManagePage })));
 const CharacterSheetEditorPage = lazy(() => import('./pages/CharacterSheetEditorPage').then(m => ({ default: m.CharacterSheetEditorPage })));
+const GmBoardPage = lazy(() => import('./pages/GmBoardPage').then(m => ({ default: m.GmBoardPage })));
+const GmBoardSetupPage = lazy(() => import('./pages/GmBoardSetupPage').then(m => ({ default: m.GmBoardSetupPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +235,16 @@ function CharacterSheetEditorPageWrapper() {
   );
 }
 
+// The results board and its setup page read the game (and the caller's GM
+// flag) from GameContext, like the character sheet editor.
+function GameScopedPage({ children }: { children: ReactNode }) {
+  const { gameId } = useParams<{ gameId: string }>();
+  if (!gameId) {
+    return <Navigate to="/games" replace />;
+  }
+  return <GameProvider gameId={parseInt(gameId, 10)}>{children}</GameProvider>;
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -322,6 +334,14 @@ const router = createBrowserRouter([
       {
         path: '/games/:gameId/character-sheet',
         element: <ProtectedRoute><CharacterSheetEditorPageWrapper /></ProtectedRoute>,
+      },
+      {
+        path: '/games/:gameId/phases/:phaseId/board',
+        element: <ProtectedRoute><GameScopedPage><GmBoardPage /></GameScopedPage></ProtectedRoute>,
+      },
+      {
+        path: '/games/:gameId/board-setup',
+        element: <ProtectedRoute><GameScopedPage><GmBoardSetupPage /></GameScopedPage></ProtectedRoute>,
       },
       {
         path: '/users/:username',

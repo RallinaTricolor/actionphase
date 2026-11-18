@@ -1,0 +1,102 @@
+import { useContext, useEffect, useRef, type MutableRefObject } from 'react';
+import { Alert, Button } from '@/components/ui';
+import { CommentEditor } from '@/components/messages/CommentEditor';
+import { BoardUnsavedTextContext } from '@/hooks/useBoardReadOnly';
+import { useResultDraft, type DraftStatus, type DraftTarget } from '@/hooks/useResultDraft';
+import type { SheetItem } from '@/hooks/useCharacterSheetItems';
+import { wordCount } from '@/lib/gmBoard/scenes';
+import type { ActionResult } from '@/types/phases';
+
+interface ResultPartEditorProps {
+  gameId: number;
+  target: DraftTarget;
+  onCreated: (result: ActionResult) => void;
+  /** The text as typed, saved or not, for the coverage and leak checks. */
+  onText: (text: string) => void;
+  insertTextRef: MutableRefObject<((text: string) => void) | null>;
+  transformTextRef: MutableRefObject<((fn: (text: string) => string) => void) | null>;
+  /** Set to this editor's flush, so Publish can send waiting text first. */
+  flushRef: MutableRefObject<(() => Promise<void>) | null>;
+  /** Set to rewrite this part's whole text (Put block in result), saved as typing is. */
+  rewriteRef?: MutableRefObject<((fn: (text: string) => string) => void) | null>;
+  placeholder: string;
+  sheetItems?: SheetItem[];
+  label: string;
+}
+
+const STATUS_TEXT: Partial<Record<DraftStatus, string>> = {
+  unsaved: 'Not saved yet',
+  saving: 'Saving…',
+  saved: 'Saved',
+  error: 'Couldn’t save. It’ll keep trying.',
+};
+
+/** The draft for one result part, saved as the GM types (see `useResultDraft`). */
+export function ResultPartEditor({ gameId, target, onCreated, onText, insertTextRef, transformTextRef, flushRef, rewriteRef, placeholder, sheetItems, label }: ResultPartEditorProps) {
+  const keepUnsaved = useContext(BoardUnsavedTextContext);
+  const draft = useResultDraft(gameId, target, onCreated, (unsaved) => keepUnsaved?.(label, unsaved));
+  const { text, flush, setText } = draft;
+
+  // Told only when the text or the part changes: `onText` is often a new
+  // function each render, and it sets state in the parent.
+  const onTextRef = useRef(onText);
+  onTextRef.current = onText;
+  const partId = target.kind === 'part' ? target.part.id : null;
+  useEffect(() => onTextRef.current(text), [text, partId]);
+  useEffect(() => {
+    flushRef.current = flush;
+    return () => {
+      if (flushRef.current === flush) flushRef.current = null;
+    };
+  }, [flush, flushRef]);
+
+  const locked = draft.status === 'published' || draft.status === 'gone' || draft.status === 'locked';
+  useEffect(() => {
+    if (!rewriteRef || locked) return;
+    const rewrite = (fn: (t: string) => string) => setText(fn(text));
+    rewriteRef.current = rewrite;
+    return () => {
+      if (rewriteRef.current === rewrite) rewriteRef.current = null;
+    };
+  }, [rewriteRef, locked, setText, text]);
+
+  return (
+    <div className="space-y-2" data-testid="result-part-editor">
+      {draft.status === 'conflict' && draft.theirs && (
+        <Alert variant="warning" title="Someone else saved this part">
+          <p className="text-sm">Your text is still here and hasn’t been saved. Their version:</p>
+          <p className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap rounded surface-sunken p-2 text-sm">{draft.theirs.content || '(empty)'}</p>
+          <div className="mt-2 flex gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={draft.takeTheirs}>
+              Use theirs
+            </Button>
+            <Button type="button" size="sm" variant="primary" onClick={draft.keepMine}>
+              Keep mine
+            </Button>
+          </div>
+        </Alert>
+      )}
+      {draft.status === 'published' && <Alert variant="info">This part was published meanwhile, so it can’t be changed. Copy anything you need from the box.</Alert>}
+      {draft.status === 'gone' && <Alert variant="warning">This part was deleted meanwhile. Copy anything you need from the box.</Alert>}
+      {draft.status === 'locked' && <Alert variant="warning">This phase isn’t active any more, so this can’t be saved. Copy anything you need from the box.</Alert>}
+      <CommentEditor
+        value={text}
+        onChange={draft.setText}
+        rows={14}
+        placeholder={placeholder}
+        maxLength={100000}
+        sheetItems={sheetItems}
+        insertTextRef={locked ? undefined : insertTextRef}
+        transformTextRef={locked ? undefined : transformTextRef}
+        textareaTestId="result-draft"
+        id="result-draft"
+      />
+      <div className="flex items-center justify-between text-xs text-content-tertiary">
+        <span aria-live="polite" data-testid="result-draft-status">
+          {label} · {draft.status === 'idle' ? (target.kind === 'part' ? 'Saved' : 'Saved as you type') : (STATUS_TEXT[draft.status] ?? '')}
+        </span>
+        <span>{wordCount(text)} words</span>
+      </div>
+    </div>
+  );
+}

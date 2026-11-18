@@ -63,6 +63,11 @@ var ErrPostNotFound = errors.New("post not found")
 // same as for a parent the caller can't see.
 var ErrCommentParentNotFound = errors.New("comment parent not found")
 
+// ErrEmptyResult is returned when publishing would send a player a result, or
+// a part of one, with no text. It carries a message for the GM. Handlers answer
+// 409: the draft is fine to keep, it just isn't ready.
+var ErrEmptyResult = errors.New("result has no text")
+
 // ErrInvalidStagedChain is returned when a staged result chain violates its
 // shape rules: too few parts, too many, a delay out of range, or a head
 // carrying a delay. Wrapped so handlers can answer 400 rather than 500 — these
@@ -82,6 +87,28 @@ var ErrCannotCancelPart = errors.New("cannot cancel staged part")
 // rather than by sending a malformed request, so handlers answer 409 rather
 // than 400 — the request was well formed, the world moved.
 var ErrCannotEditChain = errors.New("cannot edit staged chain")
+
+// ErrResultNotEditable is returned when a draft result can't be saved: it was
+// published, or someone saved it after the updated_at the caller sent. Both
+// are the world moving under a well-formed request, so handlers answer 409
+// with UserMessage.
+var ErrResultNotEditable = errors.New("cannot update action result")
+
+// ErrActionResultNotFound is returned when a result doesn't exist (or was
+// deleted, which takes a chain's later parts with it). Its text matches the
+// unwrapped "action result not found" errors elsewhere in the results service.
+var ErrActionResultNotFound = errors.New("action result not found")
+
+// ErrHandMadeSheetDrafts is returned when a reward sync would replace sheet
+// drafts a GM made by hand in the results list. The board asks first, then
+// resends with ReplaceHandMade. Handlers answer 409 with UserMessage.
+var ErrHandMadeSheetDrafts = errors.New("hand-made sheet drafts")
+
+// ErrInvalidRewardCarrier is returned when the result named to carry a
+// character's reward sheet drafts can't: another character's or phase's, a
+// part with a later part after it, or published. Handlers answer 409 with
+// UserMessage, since the usual cause is the chain changing meanwhile.
+var ErrInvalidRewardCarrier = errors.New("invalid reward carrier")
 
 // ErrInvalidStateTransition is returned when a game state change is rejected by
 // the state machine (allowedTransitions, pkg/db/services/games.go) — for

@@ -46,13 +46,19 @@ test.describe('Draft Character Updates - Core Workflow', () => {
     const skillName = `Persist Test ${Date.now()}`;
     await page.getByRole('textbox', { name: 'Name *' }).fill(skillName);
     await page.getByRole('textbox', { name: 'Description' }).fill('You can see in darkness within 60 feet');
+    // Listening from before the edit: the save fires on the debounce or on Done,
+    // whichever comes first, and can finish before the modal has gone.
+    const saved = page.waitForResponse(
+      resp => resp.request().method() === 'POST' && new URL(resp.url()).pathname.endsWith('/character-updates') && resp.ok(),
+      { timeout: 10000 },
+    );
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('heading', { name: skillName })).toBeVisible({ timeout: 5000 });
 
-    // Close and wait for debounced save to complete, then reopen
+    // Close, wait for the save, then reopen
     await page.getByRole('button', { name: 'Done' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).not.toBeVisible();
-    await page.waitForResponse(resp => resp.url().includes('/character-updates') && resp.status() === 200, { timeout: 5000 });
+    await saved;
 
     await page.getByRole('button', { name: 'Update Character Sheet' }).click();
     await expect(page.getByRole('heading', { name: 'Update Character Sheet' })).toBeVisible({ timeout: 5000 });

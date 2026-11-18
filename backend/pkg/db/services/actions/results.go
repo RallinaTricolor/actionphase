@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	core "actionphase/pkg/core"
 	models "actionphase/pkg/db/models"
@@ -12,6 +14,19 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// refuseEndedResult returns core.ErrPhaseEnded when the result's phase has
+// ended. A missing result passes, so the caller reports it in its own way.
+func refuseEndedResult(ctx context.Context, queries *models.Queries, resultID int32) error {
+	result, err := queries.GetActionResult(ctx, resultID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get action result: %w", err)
+	}
+	return core.RefuseEndedPhase(ctx, queries, result.PhaseID)
+}
 
 // CreateActionResult creates a new action result (GM response to player action)
 func (as *ActionSubmissionService) CreateActionResult(ctx context.Context, req core.CreateActionResultRequest) (*models.ActionResult, error) {
@@ -54,7 +69,31 @@ func (as *ActionSubmissionService) CreateActionResult(ctx context.Context, req c
 		IsPublished:        pgtype.Bool{Bool: req.IsPublished, Valid: true},
 	}
 
-	result, err := queries.CreateActionResult(ctx, params)
+	var result models.ActionResult
+	if req.FirstDraft && req.CharacterID != nil {
+		// Two editors, or one editor and the rewards panel, can both start a
+		// character's first draft at once. The lock makes the second one find
+		// the first's. A unique constraint wouldn't do: a character may have
+		// several results in a phase, made on purpose.
+		err = pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
+			txQueries := models.New(tx)
+			if err := txQueries.LockCharacterFirstDraft(ctx, *req.CharacterID); err != nil {
+				return fmt.Errorf("failed to lock first draft: %w", err)
+			}
+			existing, err := txQueries.GetCharacterOpenDraft(ctx, models.GetCharacterOpenDraftParams{PhaseID: req.PhaseID, CharacterID: characterID})
+			if err == nil {
+				result = existing
+				return nil
+			}
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("failed to look for a draft: %w", err)
+			}
+			result, err = txQueries.CreateActionResult(ctx, params)
+			return err
+		})
+	} else {
+		result, err = queries.CreateActionResult(ctx, params)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create action result: %w", err)
 	}
@@ -214,6 +253,18 @@ func (as *ActionSubmissionService) publishSingleResultWithDrafts(ctx context.Con
 func (as *ActionSubmissionService) PublishActionResult(ctx context.Context, resultID, userID int32) error {
 	err := pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
 		queries := models.New(tx)
+		if err := refuseEndedResult(ctx, queries, resultID); err != nil {
+			return err
+		}
+		chain, err := queries.GetResultChain(ctx, resultID)
+		if err != nil {
+			return fmt.Errorf("failed to get result chain: %w", err)
+		}
+		for _, part := range chain {
+			if !part.IsPublished.Bool && strings.TrimSpace(part.Content) == "" {
+				return fmt.Errorf("%w: this result has nothing written in it yet. Write it or delete it before publishing", core.ErrEmptyResult)
+			}
+		}
 		return as.publishSingleResultWithDrafts(ctx, queries, resultID)
 	})
 	if err != nil {
@@ -235,6 +286,20 @@ func (as *ActionSubmissionService) PublishAllPhaseResults(ctx context.Context, p
 	var count int
 	err := pgx.BeginFunc(ctx, as.DB, func(tx pgx.Tx) error {
 		queries := models.New(tx)
+
+		if err := core.RefuseEndedPhase(ctx, queries, phaseID); err != nil {
+			return err
+		}
+
+		// All or nothing: a blank draft stops the whole publish, so the GM
+		// isn't left with half the phase sent.
+		blank, err := queries.ListBlankDraftRecipients(ctx, phaseID)
+		if err != nil {
+			return fmt.Errorf("failed to check for blank drafts: %w", err)
+		}
+		if len(blank) > 0 {
+			return fmt.Errorf("%w: nothing was published, because these results have nothing written in them yet: %s. Write or delete them first", core.ErrEmptyResult, strings.Join(blank, ", "))
+		}
 
 		// Get all unpublished result IDs for this phase
 		resultIDs, err := queries.GetUnpublishedResultIDs(ctx, phaseID)
@@ -293,6 +358,9 @@ func (as *ActionSubmissionService) DeleteActionResult(ctx context.Context, resul
 		if result.IsPublished.Bool {
 			return fmt.Errorf("cannot delete a published action result")
 		}
+		if err := core.RefuseEndedPhase(ctx, queries, result.PhaseID); err != nil {
+			return err
+		}
 
 		// Delete associated draft character updates first
 		if err := queries.DeletePublishedDrafts(ctx, resultID); err != nil {
@@ -315,19 +383,36 @@ func (as *ActionSubmissionService) DeleteActionResult(ctx context.Context, resul
 }
 
 // UpdateActionResult updates the content of an unpublished action result
-func (as *ActionSubmissionService) UpdateActionResult(ctx context.Context, resultID int32, content string) (*models.ActionResult, error) {
+func (as *ActionSubmissionService) UpdateActionResult(ctx context.Context, resultID int32, content string, expectedUpdatedAt *time.Time) (*models.ActionResult, error) {
 	queries := models.New(as.DB)
 
-	result, err := queries.UpdateActionResult(ctx, models.UpdateActionResultParams{
-		ID:      resultID,
-		Content: content,
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("result not found or already published")
-		}
+	if err := refuseEndedResult(ctx, queries, resultID); err != nil {
+		return nil, err
+	}
+
+	params := models.UpdateActionResultParams{ID: resultID, Content: content}
+	if expectedUpdatedAt != nil {
+		params.ExpectedUpdatedAt = pgtype.Timestamptz{Time: *expectedUpdatedAt, Valid: true}
+	}
+	result, err := queries.UpdateActionResult(ctx, params)
+	if err == nil {
+		return &result, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("failed to update action result: %w", err)
 	}
 
-	return &result, nil
+	// No row matched: say which guard refused it, so the caller can tell a
+	// stale save from a published or deleted result.
+	current, getErr := queries.GetActionResult(ctx, resultID)
+	switch {
+	case errors.Is(getErr, pgx.ErrNoRows):
+		return nil, core.ErrActionResultNotFound
+	case getErr != nil:
+		return nil, fmt.Errorf("failed to update action result: %w", getErr)
+	case current.IsPublished.Bool:
+		return nil, fmt.Errorf("%w: this result is already published", core.ErrResultNotEditable)
+	default:
+		return nil, fmt.Errorf("%w: someone else saved this result after you opened it", core.ErrResultNotEditable)
+	}
 }

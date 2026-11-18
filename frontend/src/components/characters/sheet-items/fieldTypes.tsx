@@ -3,7 +3,18 @@ import { Badge, Checkbox, Input, Select } from '@/components/ui';
 import { CommentEditor } from '@/components/messages/CommentEditor';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import type { CharacterSheetField } from '@/types/characters';
-import { TRACK_DISPLAY_MODES, type EntryEdit, type TrackDisplayMode, type TrackValue } from '@/lib/sheetEntries';
+import type { TrackDisplayMode } from '@/lib/sheetEntries';
+import {
+  FIELD_CODECS,
+  numberDraft,
+  parseNumber,
+  stringDraft,
+  trackFromDraft,
+  trackToDraft,
+  trimmedOrUndefined,
+  type FieldCodec,
+  type TrackDraft,
+} from '@/lib/sheetFieldValues';
 import { TrackDisplay } from './TrackDisplay';
 
 /**
@@ -26,14 +37,11 @@ interface FieldInputProps<D> {
  * A form holds a *draft* per field (what the inputs hold, e.g. a number as the
  * string typed so far) and converts it to a stored value only on submit. The
  * card renders through the same conversion, so what a card shows is exactly
- * what saving the entry unchanged would keep.
+ * what saving the entry unchanged would keep. The conversion is the type's
+ * codec (`lib/sheetFieldValues.ts`), shared with every other sheet writer.
  */
-export interface FieldTypeSpec<D> {
+export interface FieldTypeSpec<D> extends FieldCodec<D> {
   group: FieldGroup;
-  /** A stored value, of any shape, into the input's draft. Tolerates junk. */
-  toDraft: (stored: unknown) => D;
-  /** A draft into the value to store. `undefined` means "leave the key out". */
-  fromDraft: (draft: D) => unknown;
   Input: (props: FieldInputProps<D>) => ReactNode;
   /**
    * Renders a stored value for the card, or null when there is nothing to
@@ -44,24 +52,9 @@ export interface FieldTypeSpec<D> {
   render: (stored: unknown, field: CharacterSheetField, entryName: string) => ReactNode;
 }
 
-const trimmedOrUndefined = (draft: string) => draft.trim() || undefined;
-
-const stringDraft = (stored: unknown): string =>
-  typeof stored === 'string' ? stored : typeof stored === 'number' ? String(stored) : '';
-
-const numberDraft = (stored: unknown): string =>
-  typeof stored === 'number' && Number.isFinite(stored) ? String(stored) : typeof stored === 'string' ? stored : '';
-
-const parseNumber = (draft: string): number | undefined => {
-  if (draft.trim() === '') return undefined;
-  const parsed = Number(draft);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
 const text: FieldTypeSpec<string> = {
+  ...FIELD_CODECS.text,
   group: 'meta',
-  toDraft: stringDraft,
-  fromDraft: trimmedOrUndefined,
   Input: ({ id, field, value, onChange }) => (
     <Input id={id} label={field.label} type="text" value={value} onChange={(e) => onChange(e.target.value)} />
   ),
@@ -69,9 +62,8 @@ const text: FieldTypeSpec<string> = {
 };
 
 const number: FieldTypeSpec<string> = {
+  ...FIELD_CODECS.number,
   group: 'meta',
-  toDraft: numberDraft,
-  fromDraft: parseNumber,
   Input: ({ id, field, value, onChange }) => (
     <Input
       id={id}
@@ -86,9 +78,8 @@ const number: FieldTypeSpec<string> = {
 };
 
 const markdown: FieldTypeSpec<string> = {
+  ...FIELD_CODECS.markdown,
   group: 'section',
-  toDraft: stringDraft,
-  fromDraft: trimmedOrUndefined,
   Input: ({ id, field, value, onChange }) => (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-content-primary mb-2">
@@ -104,9 +95,8 @@ const markdown: FieldTypeSpec<string> = {
 };
 
 const select: FieldTypeSpec<string> = {
+  ...FIELD_CODECS.select,
   group: 'badge',
-  toDraft: stringDraft,
-  fromDraft: trimmedOrUndefined,
   Input: ({ id, field, value, onChange }) => {
     const options = field.options ?? [];
     // A value the GM has since removed from the options stays selectable, so
@@ -129,48 +119,17 @@ const select: FieldTypeSpec<string> = {
 };
 
 const checkbox: FieldTypeSpec<boolean> = {
+  ...FIELD_CODECS.checkbox,
   group: 'badge',
-  toDraft: (stored) => stored === true,
-  // Unchecked is stored as absent: "not set" and "false" read the same.
-  fromDraft: (draft) => (draft ? true : undefined),
   Input: ({ id, field, value, onChange }) => (
     <Checkbox id={id} label={field.label} checked={value} onChange={(e) => onChange(e.target.checked)} />
   ),
   render: (stored, field) => (stored === true ? <Badge variant="neutral" size="sm">{field.label}</Badge> : null),
 };
 
-interface TrackDraft {
-  value: string;
-  max: string;
-  display: TrackDisplayMode;
-}
-
-const trackToDraft = (stored: unknown): TrackDraft => {
-  const track = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<Record<keyof TrackValue, unknown>>;
-  const display = TRACK_DISPLAY_MODES.find((d) => d === track.display) ?? 'number';
-  return { value: numberDraft(track.value), max: numberDraft(track.max), display };
-};
-
-const trackFromDraft = (draft: TrackDraft): TrackValue | undefined => {
-  const value = parseNumber(draft.value);
-  const max = parseNumber(draft.max);
-  // A maximum is what makes a track possible; without a positive one there is
-  // nothing to draw against.
-  const bounded = max !== undefined && max > 0;
-  if (value === undefined && !bounded) return undefined;
-
-  const track: TrackValue = { value: value ?? 0 };
-  if (bounded) track.max = max;
-  // Never persist a display mode without the max it renders against, and
-  // never persist the default: 'number' is what an absent key already means.
-  if (bounded && draft.display !== 'number') track.display = draft.display;
-  return track;
-};
-
 const track: FieldTypeSpec<TrackDraft> = {
+  ...FIELD_CODECS.track,
   group: 'track',
-  toDraft: trackToDraft,
-  fromDraft: trackFromDraft,
   Input: ({ id, field, value, onChange }) => {
     const max = parseNumber(value.max);
     return (
@@ -238,32 +197,4 @@ const FIELD_TYPES: Record<string, FieldTypeSpec<unknown>> = {
  */
 export function fieldTypeOf(field: CharacterSheetField): FieldTypeSpec<unknown> | undefined {
   return Object.hasOwn(FIELD_TYPES, field.type) ? FIELD_TYPES[field.type] : undefined;
-}
-
-/**
- * Reads a loot table entry into an edit against a tab's schema.
- *
- * Loot data is GM-authored JSON, typed in the loot editor or imported from a
- * CSV, where every value arrives as a string. Known fields go through their
- * type's own draft conversion, so "3" in a number column is stored as 3, the
- * same as if the GM had typed it into the form. Keys the schema does not know
- * are carried over as they are, matching a server-side roll, which writes the
- * data verbatim.
- */
-export function lootDataToEdit(
-  fields: readonly CharacterSheetField[],
-  name: string,
-  data: Record<string, unknown>,
-): EntryEdit {
-  const values: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (key !== 'id' && key !== 'name') values[key] = value;
-  }
-  for (const field of fields) {
-    const spec = fieldTypeOf(field);
-    if (spec && Object.hasOwn(values, field.key)) {
-      values[field.key] = spec.fromDraft(spec.toDraft(values[field.key]));
-    }
-  }
-  return { name, values };
 }

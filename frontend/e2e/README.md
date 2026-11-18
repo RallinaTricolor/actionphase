@@ -75,6 +75,9 @@ e2e/
 ├── smoke/             # Quick health checks (<5 min)
 │   └── health-check.spec.ts
 │
+├── gm-board/          # GM results board: one spec per area, one fixture game each
+│                      #   (34_gm_board.sql; rules in .claude/context/TESTING.md)
+│
 ├── communities/       # Communities: creation, roster, moderation, ban enforcement
 │   ├── community-admin.spec.ts          # Site admin creates communities
 │   ├── community-moderators.spec.ts     # Owner adds/removes moderators
