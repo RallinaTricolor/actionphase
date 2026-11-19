@@ -275,6 +275,52 @@ func TestBuildScoreboard_PlayerViewOfHiddenColumn(t *testing.T) {
 	}
 }
 
+func TestBuildScoreboard_TopCount(t *testing.T) {
+	// Board B in score order: Bea 9, Ash 5, Cy 5, Dee blank.
+	withTop := func(view ScoreboardView, count int) *ScoreboardResult {
+		in := boardB(view)
+		in.Config.TopCount = count
+		return BuildScoreboard(in)
+	}
+
+	t.Run("players get exactly the top rows, even when the cut splits a tie", func(t *testing.T) {
+		player := withTop(ScoreboardPlayer, 2)
+		// Ash and Cy tie on the hidden Score; name puts Ash above the cut.
+		// Widening the cut to keep Cy would tell players they were tied.
+		assert.Equal(t, []string{"Bea", "Ash"}, rowNames(player))
+		assert.Equal(t, 2, player.TopCount)
+
+		data, err := json.Marshal(player)
+		require.NoError(t, err)
+		for _, cut := range []string{"Cy", "Dee"} {
+			assert.NotContains(t, string(data), cut, "rows below the cut never leave the server")
+		}
+	})
+
+	t.Run("the GM, co-GMs and audience see every row", func(t *testing.T) {
+		full := withTop(ScoreboardFull, 2)
+		assert.Equal(t, []string{"Bea", "Ash", "Cy", "Dee"}, rowNames(full))
+		assert.Zero(t, full.TopCount)
+	})
+
+	t.Run("a cut that removes nothing isn't reported", func(t *testing.T) {
+		for _, count := range []int{4, 10} {
+			player := withTop(ScoreboardPlayer, count)
+			assert.Len(t, player.Rows, 4)
+			assert.Zero(t, player.TopCount, "a whole board shouldn't say it's the top %d", count)
+		}
+	})
+
+	t.Run("an archive shows every row", func(t *testing.T) {
+		in := boardB(ScoreboardViewFor(GameStateEpilogue, true, ScoreboardVisibilityPublic, "player", false, false))
+		in.GameState = GameStateEpilogue
+		in.Config.TopCount = 1
+		archived := BuildScoreboard(in)
+		assert.Len(t, archived.Rows, 4)
+		assert.Zero(t, archived.TopCount)
+	})
+}
+
 func TestBuildScoreboard_SortDescription(t *testing.T) {
 	hidden := scoreColumn()
 	hidden.ID, hidden.Label, hidden.Hidden = "c_hide01", "Secret", true

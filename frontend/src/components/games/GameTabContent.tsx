@@ -1,4 +1,5 @@
 import { isPublicArchive, isGameWritable } from '@/lib/gamePermissions';
+import { canViewScoreboard } from '@/lib/scoreboardVisibility';
 import { lazy, Suspense } from 'react';
 import { formatScheduleDay } from '@/lib/scheduleFormat';
 import type { Character } from '@/types/characters';
@@ -23,6 +24,7 @@ import type { GamePhase } from '@/types/phases';
 import { GameLogsView } from './GameLogsView';
 import { LootTablesView } from '@/components/characters/sheet-items/LootTablesView';
 import { GameStatsView } from './GameStatsView';
+import { ScoreboardView } from '@/components/scoreboard/ScoreboardView';
 
 // Lazy load PollsTab to match CommonRoom's lazy loading and prevent duplicate chunks
 const PollsTab = lazy(() => import('@/components/polls/PollsTab').then(m => ({ default: m.PollsTab })));
@@ -343,6 +345,16 @@ export function GameTabContent({
   // Audience Tab (In Progress & Completed)
   if (activeTab === 'audience' && (game.state === 'in_progress' || game.state === 'epilogue' || game.state === 'completed')) {
     return <AudienceView gameId={gameId} />;
+  }
+
+  if (activeTab === 'scoreboard' && canViewScoreboard({
+    gameState: game.state,
+    enabled: game.scoreboard_enabled,
+    visibility: game.scoreboard_visibility,
+    isGM,
+    isAudience,
+  })) {
+    return <ScoreboardView gameId={gameId} isGM={isGM} game={game} />;
   }
 
   if (activeTab === 'loot_tables') {

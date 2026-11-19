@@ -16,6 +16,7 @@ import CharacterAvatar from './CharacterAvatar';
 import { logger } from '@/services/LoggingService';
 import { useCharacterOwnership } from '@/hooks/useCharacterOwnership';
 import { useCharacterSheetPermissions } from '@/hooks/useCharacterSheetPermissions';
+import { invalidateScoreboards } from '@/hooks/useScoreboard';
 import { isGameWritable } from '@/lib/gamePermissions';
 import { extractApiErrorMessage } from '@/lib/errors';
 
@@ -95,6 +96,7 @@ export function CharactersList({
     onSuccess: () => {
       refetchAllGameCharacters();
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
+      invalidateScoreboards(queryClient, gameId);
     }
   });
 
@@ -104,6 +106,7 @@ export function CharactersList({
       deletionSubmittedRef.current = false;
       refetchAllGameCharacters();
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', gameId] });
+      invalidateScoreboards(queryClient, gameId);
       setCharacterToDelete(null);
     },
     onError: (error: unknown) => {

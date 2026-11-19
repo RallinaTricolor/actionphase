@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Scoreboard limits. Like the character sheet's, they keep the board usable (a
@@ -16,7 +17,13 @@ const (
 	MaxScoreboardBands       = 10
 	MaxScoreboardSortKeys    = 2
 	MaxScoreboardLabelLength = 24
-	MaxScoreboardEntryLength = 40
+	// MaxScoreboardBandLabelSourceLength bounds a range label as written,
+	// formatting included. Its visible text still has MaxScoreboardLabelLength.
+	MaxScoreboardBandLabelSourceLength = 120
+	MaxScoreboardEntryLength           = 40
+	// MaxScoreboardTopCount bounds the "players see only the top N" cut. Beyond
+	// it a cut hides nothing in a game of any realistic size.
+	MaxScoreboardTopCount = 50
 )
 
 const (
@@ -70,6 +77,11 @@ type ScoreboardConfig struct {
 	Visibility string             `json:"visibility,omitempty" required:"false" enum:"staff,public" doc:"Who sees the board while the game runs. Absent means staff: the GM, co-GMs and audience."`
 	Columns    []ScoreboardColumn `json:"columns,omitzero" required:"false" doc:"Columns in display order"`
 	Sort       []ScoreboardSort   `json:"sort,omitzero" required:"false" doc:"Up to two sort keys. Absent means by name."`
+	// TopCount cuts the player view to the first rows of the board's order, so a
+	// GM can put a target on the leaders without showing where everyone else
+	// stands. The GM, co-GMs and audience always get every row, as does everyone
+	// once the game is a public archive.
+	TopCount int `json:"top_count,omitempty" required:"false" doc:"Players see only this many rows, from the top of the board's order. Absent means every row. The GM, co-GMs and audience always see every row, as does everyone once the game reaches its epilogue."`
 }
 
 // ScoreboardColumn is one value read from every character's sheet. Entry IDs
@@ -85,13 +97,13 @@ type ScoreboardColumn struct {
 	Display       string           `json:"display,omitempty" required:"false" enum:"value,value_max,bands" doc:"How a cell reads. Absent means value."`
 	Bands         []ScoreboardBand `json:"bands,omitzero" required:"false" doc:"Labelled ranges, checked in order. Only with display=bands."`
 	BandBasis     string           `json:"band_basis,omitempty" required:"false" enum:"value,percent" doc:"What band bounds measure. Absent means the value itself; percent means percent of the character's own max."`
-	FallbackLabel string           `json:"fallback_label,omitempty" required:"false" doc:"Shown when no band matches"`
+	FallbackLabel string           `json:"fallback_label,omitempty" required:"false" doc:"Shown when no band matches. Formatted like a band label."`
 }
 
 // ScoreboardBand turns a range of values into a label, e.g. 5 < HP < 10 reads
 // "Bloodied". At least one bound is required.
 type ScoreboardBand struct {
-	Label     string   `json:"label" doc:"Text shown for values in this range"`
+	Label     string   `json:"label" doc:"Text shown for values in this range. May use inline formatting: bold, italic, strikethrough, code and [color:name]...[/color]. Up to 24 visible characters; formatting doesn't count."`
 	Min       *float64 `json:"min,omitempty" required:"false" doc:"Lower bound"`
 	MinStrict bool     `json:"min_strict,omitempty" required:"false" doc:"The value must be above min, not equal to it"`
 	Max       *float64 `json:"max,omitempty" required:"false" doc:"Upper bound"`
@@ -166,6 +178,11 @@ func ValidateScoreboardConfig(config ScoreboardConfig) (ScoreboardConfig, error)
 		out.Sort = append(out.Sort, sort)
 	}
 
+	if config.TopCount < 0 || config.TopCount > MaxScoreboardTopCount {
+		return config, invalidScoreboard("the number of rows players see must be between 1 and %d", MaxScoreboardTopCount)
+	}
+	out.TopCount = config.TopCount
+
 	return out, nil
 }
 
@@ -229,9 +246,12 @@ func normalizeScoreboardColumn(index int, column ScoreboardColumn) (ScoreboardCo
 		return column, invalidScoreboard("column %q has an unknown range basis", label)
 	}
 
-	fallback, err := normalizeSheetLabel(column.FallbackLabel, MaxScoreboardLabelLength)
+	fallback, err := normalizeScoreboardBandLabel(column.FallbackLabel)
 	if err != nil {
-		return column, invalidScoreboard("column %q fallback label %s", label, err)
+		return column, invalidScoreboard("column %q label for no match %s", label, err)
+	}
+	if fallback != "" && strings.TrimSpace(ScoreboardLabelText(fallback)) == "" {
+		return column, invalidScoreboard("column %q label for no match has no text", label)
 	}
 	out.FallbackLabel = fallback
 
@@ -251,13 +271,39 @@ func normalizeScoreboardColumn(index int, column ScoreboardColumn) (ScoreboardCo
 	return out, nil
 }
 
+// scoreboardLabelMarkup is the formatting a range label may carry: colour tags
+// and the characters of inline markdown. Mirrored by scoreboardLabelText in
+// frontend/src/lib/scoreboardEditing.ts; the two must agree, or the editor
+// accepts a label the server refuses.
+var scoreboardLabelMarkup = regexp.MustCompile("\\[color:[a-z]+\\]|\\[/color\\]|[*_~`]")
+
+// ScoreboardLabelText is a range label without its formatting: roughly what a
+// viewer reads. It is what the length limit counts, so markup is free while the
+// cell stays narrow enough for a phone.
+func ScoreboardLabelText(label string) string {
+	return scoreboardLabelMarkup.ReplaceAllString(label, "")
+}
+
+// normalizeScoreboardBandLabel trims a range label and checks both of its
+// limits: the source as written, and the text a viewer sees.
+func normalizeScoreboardBandLabel(value string) (string, error) {
+	label, err := normalizeSheetLabel(value, MaxScoreboardBandLabelSourceLength)
+	if err != nil {
+		return "", err
+	}
+	if utf8.RuneCountInString(ScoreboardLabelText(label)) > MaxScoreboardLabelLength {
+		return "", fmt.Errorf("must be %d characters or fewer, not counting formatting", MaxScoreboardLabelLength)
+	}
+	return label, nil
+}
+
 func normalizeScoreboardBand(columnLabel string, index int, band ScoreboardBand) (ScoreboardBand, error) {
 	position := index + 1
-	label, err := normalizeSheetLabel(band.Label, MaxScoreboardLabelLength)
+	label, err := normalizeScoreboardBandLabel(band.Label)
 	if err != nil {
 		return band, invalidScoreboard("column %q range %d label %s", columnLabel, position, err)
 	}
-	if label == "" {
+	if strings.TrimSpace(ScoreboardLabelText(label)) == "" {
 		return band, invalidScoreboard("column %q range %d needs a label", columnLabel, position)
 	}
 	if band.Min == nil && band.Max == nil {

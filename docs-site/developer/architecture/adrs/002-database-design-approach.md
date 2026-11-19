@@ -172,7 +172,8 @@ CREATE TABLE user_preferences (
 );
 CREATE INDEX idx_user_preferences_jsonb ON user_preferences USING GIN (preferences);
 
--- Games: typed columns, plus ONE JSONB column for sheet configuration.
+-- Games: typed columns, plus JSONB for documents that are edited and read
+-- whole: the character sheet layout and the scoreboard setup.
 -- There is no `game_config`.
 CREATE TABLE games (
     id SERIAL PRIMARY KEY,
@@ -183,6 +184,8 @@ CREATE TABLE games (
     max_players INTEGER DEFAULT 6,
     is_public BOOLEAN DEFAULT TRUE,
     character_sheet JSONB NOT NULL DEFAULT '{}'::jsonb,
+    scoreboard_enabled BOOLEAN NOT NULL DEFAULT false,
+    scoreboard JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -239,14 +242,14 @@ CREATE INDEX idx_user_preferences_jsonb
   ON user_preferences USING GIN (preferences);
 ```
 
-Note there is **no JSONB index on `games.character_sheet`** — it is read whole
-by primary key, so it never needs one.
+Note there is **no JSONB index on `games.character_sheet` or `games.scoreboard`**:
+each is read whole by primary key, so neither needs one.
 
 ### Data Validation Strategy
 - **Application Layer**: Validate structure before insert — this is where sheet
   validation actually happens, for both the EAV rows and JSONB documents
 - **Go types**: `core.CharacterSheetConfig` is the schema for
-  `games.character_sheet`
+  `games.character_sheet`, and `core.ScoreboardConfig` for `games.scoreboard`
 - **Database Constraints**: typed columns and CHECK constraints carry most of
   the invariants, since the schema is largely relational
 - **Migration Scripts**: Transform JSONB data when document schemas evolve
@@ -254,7 +257,8 @@ by primary key, so it never needs one.
 ## Implementation Divergence (verified 2026-08-26)
 
 The shipped schema is **substantially more relational** than this ADR describes.
-`backend/pkg/db/migrations/` defines exactly **two** JSONB columns, not four.
+`backend/pkg/db/migrations/` defines none of the JSONB columns it proposes
+except `user_preferences.preferences`.
 
 | ADR claims | Reality |
 |---|---|
@@ -263,8 +267,11 @@ The shipped schema is **substantially more relational** than this ADR describes.
 | `action_data` JSONB column | **Does not exist.** `action_submissions.content` is `TEXT` |
 | `preferences` JSONB column | ✅ Correct — `user_preferences.preferences`, GIN-indexed |
 
-The other real JSONB column is `games.character_sheet` (per-game character-sheet
-config), which this ADR does not mention.
+The other real JSONB columns, which this ADR does not mention, are documents a
+feature edits whole: `games.character_sheet` (the sheet layout), `games.scoreboard`
+(the scoreboard setup), and the `doc` of each `gm_board_items` and
+`gm_settings_items` row (one results board item each). List them with
+`SELECT table_name, column_name FROM information_schema.columns WHERE data_type = 'jsonb';`
 
 ### Why this matters
 

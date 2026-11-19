@@ -22,13 +22,28 @@ type ScoreboardService struct {
 
 // GetScoreboard computes the board for a viewer with the given view.
 func (s *ScoreboardService) GetScoreboard(ctx context.Context, game *models.Game, view core.ScoreboardView) (*core.ScoreboardResult, error) {
+	return s.buildBoard(ctx, game, core.ScoreboardConfigForStored(game.Scoreboard), view)
+}
+
+// PreviewScoreboard computes the board players would get from an unsaved config,
+// whether or not the board is open to them yet. Players of an archived game see
+// every column, so that is what its preview shows.
+func (s *ScoreboardService) PreviewScoreboard(ctx context.Context, game *models.Game, config core.ScoreboardConfig) (*core.ScoreboardResult, error) {
+	view := core.ScoreboardPlayer
+	if core.IsPublicArchive(game.State) {
+		view = core.ScoreboardFull
+	}
+	return s.buildBoard(ctx, game, config, view)
+}
+
+func (s *ScoreboardService) buildBoard(ctx context.Context, game *models.Game, config core.ScoreboardConfig, view core.ScoreboardView) (*core.ScoreboardResult, error) {
 	characters, tabData, err := s.loadCast(ctx, game.ID)
 	if err != nil {
 		return nil, err
 	}
 	return core.BuildScoreboard(core.ScoreboardInput{
 		GameState:  game.State,
-		Config:     core.ScoreboardConfigForStored(game.Scoreboard),
+		Config:     config,
 		Sheet:      scoreboardSheet(game),
 		Characters: characters,
 		TabData:    tabData,

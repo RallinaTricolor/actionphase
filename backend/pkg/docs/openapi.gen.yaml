@@ -5307,7 +5307,7 @@ components:
             additionalProperties: false
             properties:
                 label:
-                    description: Text shown for values in this range
+                    description: 'Text shown for values in this range. May use inline formatting: bold, italic, strikethrough, code and [color:name]...[/color]. Up to 24 visible characters; formatting doesn''t count.'
                     type: string
                 max:
                     description: Upper bound
@@ -5368,7 +5368,7 @@ components:
                     description: Entry name on that tab, matched ignoring case and surrounding spaces
                     type: string
                 fallback_label:
-                    description: Shown when no band matches
+                    description: Shown when no band matches. Formatted like a band label.
                     type: string
                 field_key:
                     description: Number or track field of the entry
@@ -5409,6 +5409,10 @@ components:
                     type:
                         - array
                         - "null"
+                top_count:
+                    description: Players see only this many rows, from the top of the board's order. Absent means every row. The GM, co-GMs and audience always see every row, as does everyone once the game reaches its epilogue.
+                    format: int64
+                    type: integer
                 visibility:
                     description: 'Who sees the board while the game runs. Absent means staff: the GM, co-GMs and audience.'
                     enum:
@@ -5450,6 +5454,10 @@ components:
                     type:
                         - array
                         - "null"
+                top_count:
+                    description: This viewer gets only the top rows of the board, and this is how many. Absent means every row.
+                    format: int64
+                    type: integer
             required:
                 - columns
                 - sort_description
@@ -14446,6 +14454,44 @@ paths:
             security:
                 - BearerAuth: []
             summary: List entry names for scoreboard columns
+            tags:
+                - Scoreboard
+            x-access: gm
+    /games/{gameID}/scoreboard/preview:
+        post:
+            description: Computes the board players would get from the given setup. Nothing is stored.
+            operationId: previewGameScoreboard
+            parameters:
+                - description: Game ID
+                  in: path
+                  name: gameID
+                  required: true
+                  schema:
+                    description: Game ID
+                    format: int32
+                    type: integer
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ScoreboardConfig'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ScoreboardResult'
+                    description: OK
+                "401":
+                    description: Not authenticated
+                "403":
+                    description: Only the GM can preview the scoreboard
+                "422":
+                    description: The config is invalid
+            security:
+                - BearerAuth: []
+            summary: Preview the scoreboard as a player
             tags:
                 - Scoreboard
             x-access: gm

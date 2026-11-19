@@ -129,11 +129,12 @@ const KEY_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
 /**
  * A fresh key: the prefix plus six random lower-case letters or digits, the
- * shape the backend requires of custom tab (`t_`) and field (`f_`) keys.
+ * shape the backend requires of custom tab (`t_`) and field (`f_`) keys and of
+ * scoreboard column (`c_`) IDs.
  *
  * Keys never change once made, so a later rename can't orphan stored data.
  */
-export function generateKey(prefix: 't_' | 'f_', taken: ReadonlySet<string>): string {
+export function generateKey(prefix: 't_' | 'f_' | 'c_', taken: ReadonlySet<string>): string {
   for (;;) {
     let suffix = '';
     for (let i = 0; i < 6; i++) {

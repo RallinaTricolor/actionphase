@@ -40,6 +40,9 @@ type ScoreboardResult struct {
 	FullView        bool                        `json:"full_view" doc:"The viewer sees every column"`
 	Rows            []ScoreboardRow             `json:"rows" doc:"Characters in board order"`
 	BrokenColumnIDs []string                    `json:"broken_column_ids,omitempty" required:"false" doc:"Columns whose sheet tab or field no longer exists. Full view only."`
+	// Set only when rows were actually left out, so a board shorter than the
+	// cut doesn't claim to be one.
+	TopCount int `json:"top_count,omitempty" required:"false" doc:"This viewer gets only the top rows of the board, and this is how many. Absent means every row."`
 }
 
 // ScoreboardResultColumn describes one column of the result.
@@ -92,8 +95,9 @@ type scoreboardEntry struct {
 }
 
 // BuildScoreboard computes the board for one viewer. It is the only place
-// hidden values are removed, and it sorts first, so a player gets the real
-// order and none of the values behind it. Returns nil for ScoreboardNone.
+// hidden values and rows below a top-N cut are removed, and it sorts first, so
+// a player gets the real order and none of the values behind it. Returns nil
+// for ScoreboardNone.
 func BuildScoreboard(in ScoreboardInput) *ScoreboardResult {
 	if in.View == ScoreboardNone {
 		return nil
@@ -140,6 +144,13 @@ func BuildScoreboard(in ScoreboardInput) *ScoreboardResult {
 	}
 
 	sortScoreboardCharacters(characters, readings, in.Config)
+
+	// The cut comes after sorting, so it keeps the real leaders, and is exactly
+	// TopCount rows: widening it for a tie at the cut would reveal the tie.
+	if !fullView && in.Config.TopCount > 0 && len(characters) > in.Config.TopCount {
+		characters = characters[:in.Config.TopCount]
+		result.TopCount = in.Config.TopCount
+	}
 
 	for _, character := range characters {
 		row := ScoreboardRow{

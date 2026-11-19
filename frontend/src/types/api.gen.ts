@@ -3370,6 +3370,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/scoreboard/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview the scoreboard as a player
+         * @description Computes the board players would get from the given setup. Nothing is stored.
+         */
+        post: operations["previewGameScoreboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/settings/auto-accept-audience": {
         parameters: {
             query?: never;
@@ -6469,7 +6489,7 @@ export interface components {
             module_type: string;
         };
         ScoreboardBand: {
-            /** @description Text shown for values in this range */
+            /** @description Text shown for values in this range. May use inline formatting: bold, italic, strikethrough, code and [color:name]...[/color]. Up to 24 visible characters; formatting doesn't count. */
             label: string;
             /**
              * Format: double
@@ -6515,7 +6535,7 @@ export interface components {
             display?: "value" | "value_max" | "bands";
             /** @description Entry name on that tab, matched ignoring case and surrounding spaces */
             entry: string;
-            /** @description Shown when no band matches */
+            /** @description Shown when no band matches. Formatted like a band label. */
             fallback_label?: string;
             /** @description Number or track field of the entry */
             field_key: string;
@@ -6534,6 +6554,11 @@ export interface components {
             /** @description Up to two sort keys. Absent means by name. */
             sort?: components["schemas"]["ScoreboardSort"][] | null;
             /**
+             * Format: int64
+             * @description Players see only this many rows, from the top of the board's order. Absent means every row. The GM, co-GMs and audience always see every row, as does everyone once the game reaches its epilogue.
+             */
+            top_count?: number;
+            /**
              * @description Who sees the board while the game runs. Absent means staff: the GM, co-GMs and audience.
              * @enum {string}
              */
@@ -6550,6 +6575,11 @@ export interface components {
             rows: components["schemas"]["ScoreboardRow"][] | null;
             /** @description The sort, as far as this viewer may know it. Empty means the GM's order uses a hidden column. */
             sort_description: components["schemas"]["ScoreboardSortDescription"][] | null;
+            /**
+             * Format: int64
+             * @description This viewer gets only the top rows of the board, and this is how many. Absent means every row.
+             */
+            top_count?: number;
         };
         ScoreboardResultColumn: {
             /**
@@ -16895,6 +16925,54 @@ export interface operations {
             };
             /** @description Only the GM can read this list */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    previewGameScoreboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScoreboardConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreboardResult"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can preview the scoreboard */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The config is invalid */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

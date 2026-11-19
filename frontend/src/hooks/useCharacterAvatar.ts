@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { invalidateScoreboards } from './useScoreboard';
 
 /**
  * Hook for uploading a character avatar
@@ -38,6 +39,7 @@ export function useUploadCharacterAvatar() {
       // Invalidate character queries to refetch with new avatar
       queryClient.invalidateQueries({ queryKey: ['character', variables.characterId] });
       queryClient.invalidateQueries({ queryKey: ['characters'] });
+      invalidateScoreboards(queryClient);
     },
   });
 }
@@ -75,6 +77,7 @@ export function useDeleteCharacterAvatar() {
       // Invalidate character queries to refetch without avatar
       queryClient.invalidateQueries({ queryKey: ['character', characterId] });
       queryClient.invalidateQueries({ queryKey: ['characters'] });
+      invalidateScoreboards(queryClient);
     },
   });
 }

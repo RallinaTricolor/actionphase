@@ -24,6 +24,7 @@ export interface GameFormData {
   auto_accept_audience?: boolean;
   allow_group_conversations?: boolean;
   portrait_avatars?: boolean;
+  scoreboard_enabled?: boolean;
   common_room_open_day: number | '';
   common_room_open_time: string;
   common_room_close_day: number | '';
@@ -313,6 +314,14 @@ export const GameFormFields = ({ formData, onChange, bannerUpload, activeTab, on
           helpText="Players can create private message threads with 3 or more participants. When disabled, private messages are limited to two people only."
           checked={formData.allow_group_conversations ?? true}
           onChange={(e) => onChange('allow_group_conversations', e.target.checked)}
+        />
+
+        <Checkbox
+          id="scoreboard_enabled"
+          label="Enable Scoreboard"
+          helpText="Adds a Scoreboard tab that ranks characters by values from their sheets. You set it up on that tab, and it starts visible to the GM and audience only."
+          checked={formData.scoreboard_enabled ?? false}
+          onChange={(e) => onChange('scoreboard_enabled', e.target.checked)}
         />
       </TabPanel>
 

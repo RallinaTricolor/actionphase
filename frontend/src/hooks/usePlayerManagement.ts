@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { Character, InactiveCharacter } from '../types/characters';
 import type { GameParticipant } from '../types/games';
+import { invalidateScoreboards } from './useScoreboard';
 
 /**
  * Hook to remove a player from a game (GM only)
@@ -30,6 +31,8 @@ export function useRemovePlayer(gameId: number) {
       queryClient.invalidateQueries({ queryKey: ['inactive-characters', gameId] });
       // Invalidate game characters list
       queryClient.invalidateQueries({ queryKey: ['gameCharacters', gameId] });
+      // Their characters leave the board.
+      invalidateScoreboards(queryClient, gameId);
     },
   });
 }
@@ -142,6 +145,7 @@ export function useReassignCharacter() {
         queryKey: ['inactive-characters', data.game_id],
       });
       queryClient.invalidateQueries({ queryKey: ['userControllableCharacters', data.game_id] });
+      invalidateScoreboards(queryClient, data.game_id);
     },
   });
 }

@@ -296,6 +296,110 @@ file storage is not configured.
 returns no community and is never blocked by a community ban. Clients must
 render that as *no community section*, not as an error or a "None" placeholder.
 
+### Scoreboard (added 2026-11-19)
+
+A per-game table of player characters with GM-chosen values from their
+character sheets. Turned on by the game setting `scoreboard_enabled` (create and
+update game bodies). The game response also carries `scoreboard_visibility`
+(`staff` or `public`, only while enabled) so a client can decide whether to show
+the tab without another request. The setup itself is never on the game
+response, because hidden column labels would reach players.
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/v1/games/{gameID}/scoreboard` | decided in the handler | The board as this caller may see it |
+| GET | `/api/v1/games/{gameID}/scoreboard/config` | GM | The stored setup, for the editor |
+| PUT | `/api/v1/games/{gameID}/scoreboard/config` | GM | Replace the whole setup |
+| POST | `/api/v1/games/{gameID}/scoreboard/preview` | GM | The board players would get from an unsaved setup. Stores nothing |
+| GET | `/api/v1/games/{gameID}/scoreboard/entry-names` | GM | Entry names per tab across the cast, for the column picker |
+
+"GM" is the GM flag: the GM, co-GMs, and an admin in admin mode.
+
+#### Who gets the board
+
+`core.ScoreboardViewFor` is the one rule:
+
+| Caller | Setting off | On, `staff` (default) | On, `public` |
+|---|---|---|---|
+| GM, co-GM, admin mode, audience | 404 | every column | every column |
+| Player, any other logged-in user | 404 | 404 | non-hidden columns |
+| Anyone, game in `epilogue` or `completed` | 404 | every column | every column |
+
+A board that is off and a board closed to this caller both answer **404**, so a
+404 doesn't confirm that a GM-only board exists.
+
+#### Reading the board
+```bash
+curl -X GET http://localhost:3000/api/v1/games/456/scoreboard \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+```jsonc
+{
+  "columns": [
+    { "id": "c_score1", "label": "Score", "display": "value", "hidden": true },
+    { "id": "c_hpband", "label": "HP", "display": "bands" }
+  ],
+  "sort_description": [{ "label": "Score", "direction": "desc" }, { "label": "Name", "direction": "asc" }],
+  "full_view": true,
+  "rows": [
+    { "character_id": 12, "character_name": "Ash", "avatar_url": "…",
+      "values": { "c_score1": { "value": 12 }, "c_hpband": { "value": 11, "max": 12, "label": "Healthy" } } }
+  ],
+  "broken_column_ids": []
+}
+```
+
+- Rows are approved, active player characters, in board order. The API sends no
+  rank or position; clients number rows 1..N.
+- A blank cell has **no key** in `values`. `display` says how to read a cell:
+  `value`, `value_max` (`value` of `max`), or `bands` (a range `label`).
+- What a player does **not** get: hidden columns (left out of `columns` and
+  `values`, not sent as null), the numbers behind a range label (`label` only),
+  any sort key from a hidden column onward, and rows below a `top_count` cut.
+  When rows were cut, `top_count` says how many were kept; it is absent when the
+  board is whole, including in the full view. An empty `sort_description` means
+  the GM's order uses a hidden column; clients show "Ranked by the GM".
+- `hidden` is sent only in the full view while the game runs. `broken_column_ids`
+  (columns whose sheet tab or field no longer exists) is full view only.
+
+#### Changing the setup
+```bash
+curl -X PUT http://localhost:3000/api/v1/games/456/scoreboard/config \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "visibility": "public",
+    "columns": [{ "id": "c_score1", "label": "Score", "tab_key": "numbers", "entry": "Score", "field_key": "amount", "hidden": true }],
+    "sort": [{ "key": "c_score1", "direction": "desc" }, { "key": "name", "direction": "asc" }]
+  }'
+```
+
+- The body replaces the whole setup. Column IDs are `c_` plus six lower-case
+  letters or digits, chosen by the client and never changed, so a sort survives a
+  rename. A sort key is a column ID or `name`.
+- `top_count` (1-50, absent for every row) cuts the player view to the first
+  rows of the board's order. The cut is exactly that many rows, ties broken by
+  name, so it never reveals a tie. It doesn't apply in the full view or once the
+  game is in `epilogue` or `completed`.
+- Limits: 10 columns, 2 sort keys, 10 ranges per column, labels 24 characters,
+  entry names 40, `top_count` 50.
+- Range labels and `fallback_label` may carry inline formatting (`**bold**`,
+  `*italic*`, `~~strike~~`, `` `code` ``, `[color:X]...[/color]`), stored as
+  written. Their 24 characters count only the text (`core.ScoreboardLabelText`,
+  mirrored by `scoreboardLabelText` in `lib/scoreboardEditing.ts`); the source may
+  be 120. A label that is only formatting is refused. Column headings are plain.
+- Each column must point at a `number` or `track` field of a tab in the game's
+  **current** character sheet. A column whose tab was removed blocks saving until
+  it is fixed or removed (the board still renders it blank).
+- **422** with a readable message for an invalid setup. **409** in a completed or
+  cancelled game. An epilogue game can still be changed.
+- The preview takes the same body and the same 422 for a setup that breaks its
+  own rules, but doesn't check sources against the sheet: a missing source just
+  renders blank. It returns the board players would get, which is the player view,
+  or the full view once the game is in `epilogue` or `completed`. Use it rather
+  than computing a preview in the browser: a draft column's values, and the order
+  they produce, may be ones the browser has never received.
+
 ## Frontend Integration
 
 ### JavaScript/TypeScript Usage

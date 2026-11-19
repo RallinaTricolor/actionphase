@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { Badge, Button } from '@/components/ui';
 import type { SheetItem } from '@/hooks/useCharacterSheetItems';
-import { ALLOWED_COLORS } from './textColors';
+import { applyColorMarkup, splitByCodeBlocks } from './colorMarkup';
 
 
 const IMAGE_URL_PATTERN = /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?.*)?$/i;
@@ -206,31 +206,6 @@ interface MarkdownPreviewProps {
   fullWidth?: boolean;
 }
 
-function splitByCodeBlocks(text: string): Array<{ text: string; isCode: boolean }> {
-  const codeBlockRegex = /(```[\s\S]*?```|`[^`\n]+?`)/g;
-  const segments: Array<{ text: string; isCode: boolean }> = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ text: text.substring(lastIndex, match.index), isCode: false });
-    }
-    segments.push({ text: match[0], isCode: true });
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    segments.push({ text: text.substring(lastIndex), isCode: false });
-  }
-
-  if (segments.length === 0) {
-    segments.push({ text, isCode: false });
-  }
-
-  return segments;
-}
-
 /**
  * A sheet entry reference: `[[Display|kind:id]]`. The kind is `skill`, `item`,
  * `numbers` or a custom tab key (see sheetRefKind); only the id resolves the
@@ -281,23 +256,7 @@ function processContent(content: string, mentionedCharacters: MentionedCharacter
   }
 
   // Step 2: Process [color:X]...[/color] syntax, skipping code blocks
-  const colorRegex = /\[color:([a-z]+)\]([\s\S]*?)\[\/color\]/g;
-  const hasColorSyntax = colorRegex.test(mentionsResult);
-  if (!hasColorSyntax) return mentionsResult;
-
-  const colorSegments = splitByCodeBlocks(mentionsResult);
-  return colorSegments.map((segment) => {
-    if (segment.isCode) return segment.text;
-    return segment.text.replace(
-      /\[color:([a-z]+)\]([\s\S]*?)\[\/color\]/g,
-      (_match, colorName: string, innerText: string) => {
-        if (ALLOWED_COLORS.has(colorName)) {
-          return `<span data-color="${colorName}">${innerText}</span>`;
-        }
-        return _match;
-      }
-    );
-  }).join('');
+  return applyColorMarkup(mentionsResult);
 }
 
 export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({

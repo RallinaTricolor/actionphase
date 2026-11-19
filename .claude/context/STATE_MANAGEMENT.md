@@ -160,6 +160,13 @@ character sheet's editors are the motivating case.
 - `useReportDirty` reports `false` on unmount, so an ancestor mirroring the flag
   (e.g. `GamesPage` → `dismissOnBackdrop`) never gets stuck dirty.
 
+**Leaving the page** (a link, a route change, or closing the tab) is a separate
+trigger: render `<UnsavedChangesGuard when={isDirty} noun=… message=… />`
+(`components/common/UnsavedChangesGuard.tsx`). It blocks in-app navigation with
+`useBlocker` and asks in the same `ConfirmDiscardDraft` dialog a Cancel button
+uses, and sets the browser's `beforeunload` prompt. `CommentEditor` and
+`ScoreboardEditor` use it.
+
 ---
 
 ## Anti-Patterns (NEVER DO)
@@ -269,6 +276,16 @@ import { useQueryClient } from '@tanstack/react-query';
 const queryClient = useQueryClient();
 await queryClient.invalidateQueries({ queryKey: ['gameDetails', gameId] });
 ```
+
+Some views are built from data that many mutations change, and have a helper
+that every one of those mutations calls. **A new mutation that changes a
+character sheet value, or which characters are approved and active, must call
+`invalidateScoreboards(queryClient, gameId?)`** (`hooks/useScoreboard.ts`), or
+an open Scoreboard keeps the old values. Leave out the game id only when the
+caller doesn't know it; every game's board is then refreshed.
+`hooks/scoreboardInvalidation.test.tsx` tests the hook callers, and the
+`CharacterSheet` and `CharactersList` tests cover the ones in components; add a
+case for a new caller.
 
 ---
 

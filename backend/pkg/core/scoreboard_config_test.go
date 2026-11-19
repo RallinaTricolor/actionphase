@@ -68,6 +68,24 @@ func TestValidateScoreboardConfig_Rejections(t *testing.T) {
 		{"too many bands", ScoreboardConfig{Columns: []ScoreboardColumn{bandedColumn(manyBands...)}}, "at most 10 ranges"},
 		{"band without label", withBand(ScoreboardBand{Min: floatPtr(1)}), "needs a label"},
 		{"band without bounds", withBand(ScoreboardBand{Label: "Any"}), "lower or upper bound"},
+		{"band label with only formatting", withBand(ScoreboardBand{Label: "[color:red]**[/color]", Min: floatPtr(1)}), "needs a label"},
+		{"band label with only formatting and a space", withBand(ScoreboardBand{Label: "** **", Min: floatPtr(1)}), "needs a label"},
+		{"band label text too long", withBand(ScoreboardBand{
+			Label: "[color:red]" + strings.Repeat("x", 25) + "[/color]", Min: floatPtr(1),
+		}), "24 characters or fewer, not counting formatting"},
+		{"band label source too long", withBand(ScoreboardBand{
+			Label: strings.Repeat("**x**", 25), Min: floatPtr(1),
+		}), "120 characters"},
+		{"fallback with only formatting", ScoreboardConfig{Columns: []ScoreboardColumn{func() ScoreboardColumn {
+			c := bandedColumn(ScoreboardBand{Label: "Low", Max: floatPtr(1)})
+			c.FallbackLabel = "[color:gray][/color]"
+			return c
+		}()}}, "no text"},
+		{"fallback text too long", ScoreboardConfig{Columns: []ScoreboardColumn{func() ScoreboardColumn {
+			c := bandedColumn(ScoreboardBand{Label: "Low", Max: floatPtr(1)})
+			c.FallbackLabel = "*" + strings.Repeat("x", 25) + "*"
+			return c
+		}()}}, "24 characters or fewer, not counting formatting"},
 		{"band min above max", withBand(ScoreboardBand{Label: "X", Min: floatPtr(5), Max: floatPtr(1)}), "never match"},
 		{"band empty strict point", withBand(ScoreboardBand{Label: "X", Min: floatPtr(5), Max: floatPtr(5), MaxStrict: true}), "never match"},
 		{"too many sort keys", ScoreboardConfig{
@@ -77,6 +95,8 @@ func TestValidateScoreboardConfig_Rejections(t *testing.T) {
 		{"sort key for a removed column", ScoreboardConfig{Sort: []ScoreboardSort{{"c_gone00", "asc"}}}, "not one of the columns"},
 		{"duplicate sort key", ScoreboardConfig{Sort: []ScoreboardSort{{"name", "asc"}, {"name", "desc"}}}, "used twice"},
 		{"bad direction", ScoreboardConfig{Sort: []ScoreboardSort{{"name", "up"}}}, "asc or desc"},
+		{"negative top count", ScoreboardConfig{TopCount: -1}, "between 1 and 50"},
+		{"top count over the limit", ScoreboardConfig{TopCount: MaxScoreboardTopCount + 1}, "between 1 and 50"},
 	}
 
 	for _, tt := range tests {
@@ -122,6 +142,67 @@ func TestValidateScoreboardConfig_Normalizes(t *testing.T) {
 	assert.Equal(t, "Low", got.Columns[0].Bands[0].Label)
 	assert.False(t, got.Columns[0].Bands[0].MinStrict, "a strict flag without its bound is dropped")
 	assert.True(t, got.Columns[0].Bands[0].MaxStrict)
+}
+
+func TestValidateScoreboardConfig_TopCount(t *testing.T) {
+	for _, count := range []int{1, 3, MaxScoreboardTopCount} {
+		got, err := ValidateScoreboardConfig(ScoreboardConfig{TopCount: count})
+		require.NoError(t, err)
+		assert.Equal(t, count, got.TopCount)
+	}
+
+	// Zero is "every row", stored as an absent key.
+	got, err := ValidateScoreboardConfig(ScoreboardConfig{})
+	require.NoError(t, err)
+	data, err := MarshalScoreboardConfig(got)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "top_count")
+
+	stored, err := UnmarshalScoreboardConfig([]byte(`{"top_count": 3}`))
+	require.NoError(t, err)
+	assert.Equal(t, 3, stored.TopCount)
+}
+
+func TestValidateScoreboardConfig_FormattedBandLabels(t *testing.T) {
+	// 24 visible characters in each, well past 24 once the markup is counted.
+	full := strings.Repeat("x", MaxScoreboardLabelLength)
+	labels := []string{
+		"[color:orange]**" + full + "**[/color]",
+		"~~" + full + "~~",
+		"_" + full + "_",
+		"`" + full + "`",
+	}
+	for _, label := range labels {
+		column := bandedColumn(ScoreboardBand{Label: label, Min: floatPtr(1)})
+		column.FallbackLabel = "[color:gray]" + full + "[/color]"
+		got, err := ValidateScoreboardConfig(ScoreboardConfig{Columns: []ScoreboardColumn{column}})
+		require.NoError(t, err, label)
+		assert.Equal(t, label, got.Columns[0].Bands[0].Label, "the markup is stored as written")
+		assert.Equal(t, column.FallbackLabel, got.Columns[0].FallbackLabel)
+	}
+
+	// A column heading is plain text, so its markup counts.
+	heading := scoreColumn()
+	heading.Label = "**" + strings.Repeat("x", MaxScoreboardLabelLength-1) + "**"
+	_, err := ValidateScoreboardConfig(ScoreboardConfig{Columns: []ScoreboardColumn{heading}})
+	assert.ErrorContains(t, err, "24 characters")
+}
+
+func TestScoreboardLabelText(t *testing.T) {
+	tests := map[string]string{
+		"Healthy":                   "Healthy",
+		"[color:red]Bloody[/color]": "Bloody",
+		"**Down** _soon_":           "Down soon",
+		"~~Gone~~ `x`":              "Gone x",
+		"[color:red]A[/color] [color:blue]B[/color]": "A B",
+		// An unclosed tag is still markup, and an unknown colour is still a tag.
+		"[color:red]Bloody[/color": "Bloody[/color",
+		"[color:mauve]Odd[/color]": "Odd",
+		"[colour:red]Typo":         "[colour:red]Typo",
+	}
+	for label, want := range tests {
+		assert.Equal(t, want, ScoreboardLabelText(label), label)
+	}
 }
 
 func TestValidateScoreboardConfig_AllowsTwoColumnsFromOneSource(t *testing.T) {

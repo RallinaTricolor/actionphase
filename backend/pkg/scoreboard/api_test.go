@@ -183,6 +183,29 @@ func TestScoreboard_SemiPublicBoardSendsNoHiddenValues(t *testing.T) {
 	}
 }
 
+func TestScoreboard_TopCount(t *testing.T) {
+	f := newScoreboardFixture(t)
+	f.setBoard(true, `{"visibility":"public","columns":[`+scoreColumnJSON+`,"hidden":true}],
+		"sort":[{"key":"c_score1","direction":"desc"}],"top_count":1}`)
+
+	for _, viewer := range []string{"ash", "outsider"} {
+		rec := f.request(http.MethodGet, "/scoreboard", viewer, "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.NotContains(t, rec.Body.String(), "Ash", "%s gets no row below the cut", viewer)
+		board := f.board(viewer)
+		assert.Equal(t, []string{"Bea"}, names(board), viewer)
+		assert.Equal(t, 1, board.TopCount, viewer)
+	}
+	for _, viewer := range []string{"gm", "cogm", "audience"} {
+		board := f.board(viewer)
+		assert.Equal(t, []string{"Bea", "Ash"}, names(board), viewer)
+		assert.Zero(t, board.TopCount, viewer)
+	}
+
+	f.testDB.SetGameStateDirectly(t, f.game.ID, core.GameStateEpilogue)
+	assert.Equal(t, []string{"Bea", "Ash"}, names(f.board("ash")), "an epilogue shows everyone")
+}
+
 func TestScoreboard_PrivateBoard(t *testing.T) {
 	f := newScoreboardFixture(t)
 	f.setBoard(true, `{"columns":[`+scoreColumnJSON+`}]}`)
@@ -293,6 +316,7 @@ func TestScoreboardConfig_Update(t *testing.T) {
 			`doesn't have`},
 		{"sort key without a column", `{"sort":[{"key":"c_gone00","direction":"asc"}]}`, `Sort key \"c_gone00\" is not one of the columns`},
 		{"unknown key", `{"nope":1}`, ``},
+		{"too many rows for players", `{"top_count":51}`, `between 1 and 50`},
 	}
 	for _, tt := range rejected {
 		t.Run("rejects "+tt.name, func(t *testing.T) {
@@ -304,6 +328,16 @@ func TestScoreboardConfig_Update(t *testing.T) {
 		})
 	}
 
+	t.Run("stores a top count", func(t *testing.T) {
+		rec := f.request(http.MethodPut, "/scoreboard/config", "gm", `{"visibility":"public","top_count":3}`)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.JSONEq(t, `{"visibility":"public","top_count":3}`, stored())
+
+		rec = f.request(http.MethodGet, "/scoreboard/config", "gm", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"visibility":"public","top_count":3}`, rec.Body.String())
+	})
+
 	t.Run("an epilogue game can still change it", func(t *testing.T) {
 		f.testDB.SetGameStateDirectly(t, f.game.ID, core.GameStateEpilogue)
 		assert.Equal(t, http.StatusOK, f.request(http.MethodPut, "/scoreboard/config", "gm", `{}`).Code)
@@ -313,6 +347,82 @@ func TestScoreboardConfig_Update(t *testing.T) {
 		f.testDB.SetGameStateDirectly(t, f.game.ID, core.GameStateCompleted)
 		assert.Equal(t, http.StatusConflict, f.request(http.MethodPut, "/scoreboard/config", "gm", `{"visibility":"public"}`).Code)
 		assert.JSONEq(t, `{}`, stored())
+	})
+}
+
+func TestScoreboardPreview(t *testing.T) {
+	f := newScoreboardFixture(t)
+	saved := `{"columns":[` + scoreColumnJSON + `}]}`
+	f.setBoard(true, saved)
+	stored := func() string {
+		var value string
+		require.NoError(t, f.testDB.Pool.QueryRow(context.Background(),
+			`SELECT scoreboard::text FROM games WHERE id = $1`, f.game.ID).Scan(&value))
+		return value
+	}
+	before := stored()
+	// The score is hidden and decides the order, and the band hides its number.
+	draft := `{"columns":[` + scoreColumnJSON + `,"hidden":true},
+		{"id":"c_state1","label":"State","tab_key":"numbers","entry":"Score","field_key":"amount","display":"bands",
+		 "bands":[{"label":"Winning","min":8},{"label":"Trailing","max":8,"max_strict":true}]}],
+		"sort":[{"key":"c_score1","direction":"desc"}]}`
+	preview := func(t *testing.T, viewer string) *httptest.ResponseRecorder {
+		t.Helper()
+		return f.request(http.MethodPost, "/scoreboard/preview", viewer, draft)
+	}
+
+	t.Run("gives the GM the player's board for the unsaved setup, on a board players can't open yet", func(t *testing.T) {
+		rec := preview(t, "gm")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+		var board core.ScoreboardResult
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &board))
+		assert.False(t, board.FullView)
+		assert.Equal(t, []string{"Bea", "Ash"}, names(&board))
+		assert.Empty(t, board.SortDescription)
+		require.Len(t, board.Columns, 1)
+		assert.Equal(t, "State", board.Columns[0].Label)
+		assert.Equal(t, "Winning", board.Rows[0].Values["c_state1"].Label)
+		assert.NotContains(t, rec.Body.String(), `"value"`)
+		assert.NotContains(t, rec.Body.String(), "c_score1")
+	})
+
+	t.Run("stores nothing", func(t *testing.T) {
+		assert.Equal(t, before, stored())
+	})
+
+	t.Run("applies a top count, as players would get it", func(t *testing.T) {
+		rec := f.request(http.MethodPost, "/scoreboard/preview", "gm",
+			`{"columns":[`+scoreColumnJSON+`}],"sort":[{"key":"c_score1","direction":"desc"}],"top_count":1}`)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var board core.ScoreboardResult
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &board))
+		assert.Equal(t, []string{"Bea"}, names(&board))
+		assert.Equal(t, 1, board.TopCount)
+	})
+
+	t.Run("names what is wrong with a bad setup", func(t *testing.T) {
+		rec := f.request(http.MethodPost, "/scoreboard/preview", "gm", `{"sort":[{"key":"c_gone00","direction":"asc"}]}`)
+		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+		assert.Contains(t, rec.Body.String(), `Sort key \"c_gone00\" is not one of the columns`)
+	})
+
+	t.Run("is for the GM alone", func(t *testing.T) {
+		for _, viewer := range []string{"ash", "audience", "outsider"} {
+			assert.Equal(t, http.StatusForbidden, preview(t, viewer).Code, viewer)
+		}
+		assert.Equal(t, http.StatusOK, preview(t, "cogm").Code)
+	})
+
+	t.Run("shows every column in an epilogue, as players then see them", func(t *testing.T) {
+		f.testDB.SetGameStateDirectly(t, f.game.ID, core.GameStateEpilogue)
+		rec := preview(t, "gm")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+		var board core.ScoreboardResult
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &board))
+		assert.Len(t, board.Columns, 2)
+		assert.False(t, board.Columns[0].Hidden)
 	})
 }
 

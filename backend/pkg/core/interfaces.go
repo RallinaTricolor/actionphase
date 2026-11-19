@@ -611,6 +611,9 @@ type UpdateGameRequest struct {
 type ScoreboardServiceInterface interface {
 	// GetScoreboard computes the board for a viewer with the given view.
 	GetScoreboard(ctx context.Context, game *models.Game, view ScoreboardView) (*ScoreboardResult, error)
+	// PreviewScoreboard computes the board players would get from an unsaved
+	// config. Nothing is stored.
+	PreviewScoreboard(ctx context.Context, game *models.Game, config ScoreboardConfig) (*ScoreboardResult, error)
 	// GetScoreboardEntryNames lists the entry names in use on each tab that can
 	// feed a column, for the editor's picker.
 	GetScoreboardEntryNames(ctx context.Context, game *models.Game) ([]ScoreboardTabEntryNames, error)

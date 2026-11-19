@@ -571,6 +571,7 @@ describe('EditGameModal', () => {
           auto_accept_audience: true,
           allow_group_conversations: expect.any(Boolean),
           portrait_avatars: expect.any(Boolean),
+          scoreboard_enabled: false,
         });
         // The five schedule keys are now ABSENT rather than null. They are `*T`
         // with omitempty on the Go side, and the service clears a schedule on

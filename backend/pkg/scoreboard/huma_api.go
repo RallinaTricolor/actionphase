@@ -133,6 +133,20 @@ func (h *Handler) humaUpdateConfig(ctx context.Context, in *updateConfigInput) (
 	}
 }
 
+func (h *Handler) humaPreview(ctx context.Context, in *updateConfigInput) (*scoreboardOutput, error) {
+	defer h.App.ObsLogger.LogOperation(ctx, "api_preview_scoreboard")()
+
+	game, err := gameFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	board, err := h.ScoreboardService.PreviewScoreboard(ctx, game, in.Body)
+	if err != nil {
+		return nil, h.internalError(ctx, "Failed to preview scoreboard", err, game.ID)
+	}
+	return &scoreboardOutput{Body: board}, nil
+}
+
 func (h *Handler) humaGetEntryNames(ctx context.Context, _ *gameInput) (*entryNamesOutput, error) {
 	defer h.App.ObsLogger.LogOperation(ctx, "api_get_scoreboard_entry_names")()
 
@@ -198,6 +212,22 @@ func RegisterHumaGameScoreboard(api huma.API, h *Handler) {
 			"422": {Description: "The config is invalid or doesn't fit the character sheet"},
 		},
 	}, h.humaUpdateConfig)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "previewGameScoreboard",
+		Extensions:  access.GMOnly(),
+		Method:      http.MethodPost,
+		Path:        "/scoreboard/preview",
+		Summary:     "Preview the scoreboard as a player",
+		Description: "Computes the board players would get from the given setup. Nothing is stored.",
+		Tags:        []string{"Scoreboard"},
+		Security:    bearer,
+		Responses: map[string]*huma.Response{
+			"401": {Description: "Not authenticated"},
+			"403": {Description: "Only the GM can preview the scoreboard"},
+			"422": {Description: "The config is invalid"},
+		},
+	}, h.humaPreview)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getGameScoreboardEntryNames",
