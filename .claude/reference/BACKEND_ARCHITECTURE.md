@@ -91,10 +91,10 @@ backend/
 │   ├── http/                       # HTTP routing & middleware
 │   │   └── root.go                 # Router setup — the routing source of truth
 │   │
-│   │   # Handler packages (each exposes api.go):
-│   ├── admin/  auth/  avatars/  characters/  conversations/  dashboard/
-│   ├── deadlines/  exports/  games/  handouts/  notifications/  phases/
-│   ├── polls/  users/
+│   │   # Handler packages (each registers its operations in huma_api.go):
+│   ├── admin/  auth/  avatars/  characters/  communities/  conversations/
+│   ├── dashboard/  deadlines/  exports/  games/  gmboard/  handouts/
+│   ├── messages/  notifications/  phases/  polls/  scoreboard/  users/
 │   │
 │   │   # Supporting packages:
 │   ├── observability/              # Logging, tracing, metrics middleware
@@ -105,7 +105,6 @@ backend/
 │   ├── email/                      # Transactional email
 │   ├── discord/                    # Discord integration
 │   ├── storage/                    # File/blob storage
-│   ├── messages/                   # Message domain (service-backed, no api.go)
 │   └── docs/                       # Embedded VitePress docs handler
 └── go.mod
 ```

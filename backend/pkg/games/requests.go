@@ -35,6 +35,7 @@ type CreateGameRequest struct {
 	AutoAcceptAudience      bool    `json:"auto_accept_audience"`
 	AllowGroupConversations bool    `json:"allow_group_conversations"`
 	PortraitAvatars         bool    `json:"portrait_avatars"`
+	ScoreboardEnabled       bool    `json:"scoreboard_enabled"`
 	BannerURL               *string `json:"banner_url,omitempty"`
 	CommonRoomOpenDay       *int16  `json:"common_room_open_day,omitempty"`
 	CommonRoomOpenTime      *string `json:"common_room_open_time,omitempty"`
@@ -56,6 +57,7 @@ type UpdateGameRequest struct {
 	AutoAcceptAudience      bool       `json:"auto_accept_audience"`
 	AllowGroupConversations bool       `json:"allow_group_conversations"`
 	PortraitAvatars         bool       `json:"portrait_avatars"`
+	ScoreboardEnabled       bool       `json:"scoreboard_enabled"`
 	BannerURL               *string    `json:"banner_url,omitempty"`
 	CommonRoomOpenDay       *int16     `json:"common_room_open_day,omitempty"`
 	CommonRoomOpenTime      *string    `json:"common_room_open_time,omitempty"`

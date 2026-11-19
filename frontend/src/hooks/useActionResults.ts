@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { ActionResult, StagedResultPart } from '../types/phases';
+import { invalidateScoreboards } from './useScoreboard';
 
 export function useUserActionResults(gameId: number) {
   return useQuery({
@@ -220,6 +221,7 @@ export function usePublishActionResult(gameId: number) {
       // sheet at a time, and the whole game's (the results board reads that).
       queryClient.invalidateQueries({ queryKey: ['characterData'] });
       queryClient.invalidateQueries({ queryKey: ['gameCharacterData', gameId] });
+      invalidateScoreboards(queryClient, gameId);
     },
   });
 }
@@ -246,6 +248,7 @@ export function usePublishAllPhaseResults(gameId: number, phaseId: number | unde
       // Published sheet updates change character data.
       queryClient.invalidateQueries({ queryKey: ['characterData'] });
       queryClient.invalidateQueries({ queryKey: ['gameCharacterData', gameId] });
+      invalidateScoreboards(queryClient, gameId);
     },
   });
 }

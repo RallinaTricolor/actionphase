@@ -893,6 +893,88 @@ The demo Heist calls it (and shares its board). The E2E games 711-720 in
 empty for the first-run guide); see TEST_DATA.md and TESTING.md. When the
 board's model changes, change the seed with it.
 
+### Scoreboard (added 2026-11-19)
+
+A per-game table of approved, active player characters, with GM-chosen values
+read from their character sheets and sorted the way the GM chooses. Current state
+only. The plan, with the owner's decisions, is `.claude/planning/scoreboard-plan.md`.
+
+**Storage**: two columns on `games`. `scoreboard_enabled` is an ordinary game
+setting (create/update bodies, the Rules tab of the game form). `scoreboard` is
+the setup as JSONB, following the `character_sheet` pattern: sparse, strict
+unmarshal, validated by `core.ValidateScoreboardConfig` and round-tripped through
+the struct before storage. Read a stored setup through
+`core.ScoreboardConfigForStored`. Turning the setting off keeps the setup.
+
+**A column is `(tab_key, entry, field_key)`**: any layout tab, an entry name, and
+one of its `number` or `track` fields. Entry IDs are per character, so the
+**name** (trimmed, case-insensitive, first match) is the only cross-character
+key. `ValidateScoreboardSources` checks a setup against the game's current sheet
+on save. Built-in tabs' numeric fields are known server-side through
+`defaultSheetNumericFields`, a copy of part of `DEFAULT_SHEET_LAYOUT`: change
+both together. A sheet edit that removes a column's tab or field is **not**
+blocked. The column renders blank, the GM's view lists it in
+`broken_column_ids`, and the setup can't be saved again until it's fixed.
+
+**One pure function decides what anyone gets.** `core.BuildScoreboard` (no DB)
+reads each cell the way the sheet editor does (legacy flat Numbers rows,
+numeric strings), sorts, and then strips what the view may not see.
+`core.ScoreboardViewFor` (`permissions.go`) picks the view: none, player or full,
+from state, enabled, visibility, role, GM flag and admin mode. Its frontend
+mirror `canViewScoreboard` (`lib/scoreboardVisibility.ts`) only decides whether
+to show the tab; the server still decides the board.
+
+🔴 **Hiding happens on the server, before the response is built.** In the player
+view, hidden columns are left out of `columns` and every row's `values` (not sent
+as null), a banded cell carries its `label` only, and `sort_description` stops at
+the first hidden key, since dropping just that key would misstate the order. The
+order is computed **before** stripping, so players get the real order. A
+`top_count` setup then cuts the player view to its first rows (exactly that
+many, ties broken by name, so a split tie isn't revealed), and the result's
+`top_count` is set only when rows were actually cut. Rows carry
+no rank: the frontend numbers them 1..N, and ties are not marked. Never send a
+hidden value to the browser and hide it in the UI. The E2E spec reads the network
+response to catch that.
+
+**Preview is a server call** (`POST …/scoreboard/preview`). A draft can add columns
+whose values the browser has never received, and the order depends on them, so
+only `BuildScoreboard` can answer honestly. `lib/scoreboardBands.ts` mirrors band
+matching only for the editor's "test a value" box and its overlap and gap
+warnings.
+
+**Frontend**: `components/scoreboard/`. `ScoreboardView` (the tab) renders
+`ScoreboardTable`, which `ScoreboardPreview` reuses. The name column is sticky,
+and the values scroll inside the card on a phone. `ScoreboardEditor` keeps the
+whole setup as a draft until Save and guards leaving with
+`common/UnsavedChangesGuard`. Hooks are in `hooks/useScoreboard.ts`;
+`useScoreboard` returns `null` on a 404, because the tab is decided from game
+data that can be out of date.
+
+**Every sheet writer refreshes the board.** Call
+`invalidateScoreboards(queryClient, gameId?)` (`hooks/useScoreboard.ts`) after
+anything that changes a sheet value or who is on the board: sheet saves, loot
+rolls, publishing results (drafted sheet updates apply then), approve, delete,
+remove, reassign, rename, avatars, layout saves and `refetchGameData`. Without a
+game id it refreshes every board. That keeps a board **on screen** current.
+Correctness doesn't rest on it: the board and entry-name queries have
+`staleTime: 0`, so every mount refetches, and a writer that misses the call
+leaves only an open board stale. It reaches only the browser that made the
+change: other viewers keep their copy until they open the tab again (there's no
+refetch on window focus), and a staged chain's sheet updates applied by the
+release worker send no client event.
+
+The service reads only the tabs it needs (the config's columns, or the tabs
+with numeric fields for entry names) through `GetCharacterSheetRowsByGame`,
+alongside the cast query. Range labels are measured by
+`core.ScoreboardLabelText`, which strips only the markup the renderer would
+render: an unknown colour (`core.IsTextColor`) counts as text.
+
+**Tests and fixtures**: core table tests (`scoreboard_test.go`, which also
+covers `ScoreboardViewFor`, and `scoreboard_config_test.go`), the service and handler
+tests, component tests in `components/scoreboard/`, `hooks/scoreboardInvalidation.test.tsx`
+for the refresh sites, and `e2e/games/scoreboard.spec.ts` on
+`e2e/35_scoreboard.sql` (games 722-727, read-only).
+
 ### Character Sheet Storage
 
 *(Rewritten 2026-09-30 for GM-composed sheets. The decision and its
@@ -922,7 +1004,9 @@ fixed `id` and `name`, plus fields the GM defines. There are no tab kinds.
   except Inventory (`items`). Mirrored by `core.SheetStorageFieldName`.
 - **Removing a tab or field only edits the layout.** Stored values stay in the
   blobs, hidden; restoring a built-in tab or default field shows them again.
-  Edits merge onto the stored entry, so unknown keys survive a save.
+  Edits merge onto the stored entry, so unknown keys survive a save. It is not
+  blocked by a scoreboard column reading that tab: the column goes blank and is
+  flagged to the GM (see "Scoreboard").
 - **Writes**: `core.ClassifySheetWrite` allowlists `bio/background` and
   `notes/private_notes` for any editor; every layout tab is GM/co-GM only, and
   any other pair is 422. Draft updates on action results get the same check;

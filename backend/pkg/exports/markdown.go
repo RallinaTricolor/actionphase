@@ -4,6 +4,8 @@ package exports
 import (
 	"regexp"
 	"strings"
+
+	"actionphase/pkg/core"
 )
 
 // ActionPhase stores message bodies as GitHub-flavored Markdown plus three
@@ -22,15 +24,6 @@ import (
 // Both transforms skip fenced and inline code spans, matching the frontend's
 // splitByCodeBlocks behavior — a post *discussing* the syntax must survive
 // with its examples intact.
-
-// allowedColors mirrors ALLOWED_COLORS in MarkdownPreview.tsx. An unrecognized
-// color is left untouched there, so it is left untouched here too; stripping it
-// would silently discard text the app displays literally.
-var allowedColors = map[string]bool{
-	"red": true, "green": true, "blue": true, "purple": true, "orange": true,
-	"gold": true, "gray": true, "teal": true, "pink": true, "brown": true,
-	"olive": true, "silver": true,
-}
 
 var (
 	// [color:name]...[/color] — non-greedy, spans newlines.
@@ -82,13 +75,14 @@ func mapOutsideCode(content string, fn func(string) string) string {
 }
 
 // stripColors unwraps [color:x]...[/color] to its inner text. Unknown colors
-// are preserved verbatim, matching frontend behavior. Runs repeatedly so that
-// nested wrappers collapse fully.
+// (core.IsTextColor) are preserved verbatim, matching frontend behavior:
+// stripping one would silently discard text the app displays literally. Runs
+// repeatedly so that nested wrappers collapse fully.
 func stripColors(text string) string {
 	for {
 		replaced := colorPattern.ReplaceAllStringFunc(text, func(match string) string {
 			parts := colorPattern.FindStringSubmatch(match)
-			if parts == nil || !allowedColors[parts[1]] {
+			if parts == nil || !core.IsTextColor(parts[1]) {
 				return match
 			}
 			return parts[2]

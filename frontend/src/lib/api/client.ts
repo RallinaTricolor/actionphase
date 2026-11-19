@@ -96,9 +96,12 @@ export class BaseApiClient {
         // - /auth/me 401: expected when unauthenticated (probe endpoint)
         // - exports/latest 404: expected when a completed game has never been
         //   exported; "no export yet" is a normal state, not a failure.
+        // - scoreboard 404: the game has no board this viewer may see, which
+        //   useScoreboard reports as "no board".
         const isExpectedNonError =
           (error.response?.status === 401 && error.config?.url?.includes('/auth/me')) ||
-          (error.response?.status === 404 && error.config?.url?.includes('/exports/latest'));
+          (error.response?.status === 404 && error.config?.url?.includes('/exports/latest')) ||
+          (error.response?.status === 404 && error.config?.url?.endsWith('/scoreboard'));
         const logFn = isExpectedNonError ? logger.debug : logger.error;
         logFn('API Request Failed', {
           method: error.config?.method?.toUpperCase(),

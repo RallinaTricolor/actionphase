@@ -1269,4 +1269,47 @@ describe('useGameTabs', () => {
       expect(ids[ids.length - 1]).toBe('info');
     });
   });
+
+  describe('Scoreboard tab', () => {
+    const tabIds = (options: Partial<Parameters<typeof useGameTabs>[0]>) => {
+      const { result } = renderHook(
+        () => useGameTabs({ gameState: 'in_progress', isGM: false, playerCount: 3, ...options }),
+        { wrapper },
+      );
+      return result.current.tabs.map(t => t.id);
+    };
+
+    it('is absent when the game has not enabled it, even for the GM', () => {
+      expect(tabIds({ isGM: true, scoreboardEnabled: false })).not.toContain('scoreboard');
+    });
+
+    it('is offered to the GM and audience on a GM-and-audience board', () => {
+      const staffBoard = { scoreboardEnabled: true, scoreboardVisibility: 'staff' } as const;
+      expect(tabIds({ ...staffBoard, isGM: true })).toContain('scoreboard');
+      expect(tabIds({ ...staffBoard, isAudience: true })).toContain('scoreboard');
+    });
+
+    it('is withheld from players until the board is opened to everyone', () => {
+      expect(tabIds({ isParticipant: true, scoreboardEnabled: true, scoreboardVisibility: 'staff' })).not.toContain('scoreboard');
+      expect(tabIds({ isParticipant: true, scoreboardEnabled: true, scoreboardVisibility: 'public' })).toContain('scoreboard');
+    });
+
+    it.each(['paused', 'epilogue', 'completed'] as const)('is offered in a %s game', (gameState) => {
+      expect(tabIds({ gameState, scoreboardEnabled: true, scoreboardVisibility: 'public' })).toContain('scoreboard');
+    });
+
+    it('opens to every viewer once the game is a public archive', () => {
+      expect(tabIds({ gameState: 'completed', scoreboardEnabled: true, scoreboardVisibility: 'staff' })).toContain('scoreboard');
+    });
+
+    it('is absent before play starts', () => {
+      expect(tabIds({ gameState: 'recruitment', isGM: true, scoreboardEnabled: true })).not.toContain('scoreboard');
+    });
+
+    it('sits ahead of the tabs that collapse first on a narrow screen', () => {
+      const ids = tabIds({ isGM: true, scoreboardEnabled: true });
+      expect(ids.indexOf('scoreboard')).toBeLessThan(ids.indexOf('loot_tables'));
+      expect(ids.indexOf('scoreboard')).toBeLessThan(ids.indexOf('info'));
+    });
+  });
 });

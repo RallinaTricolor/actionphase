@@ -49,9 +49,10 @@ test_fixtures/
 │   ├── 23_private_message_editing_w{0-5}.sql
 │   ├── 24_unread_tracking.sql
 │   ├── 25_notification_*.sql
-│   └── 32_custom_character_sheet.sql # Game 343: default layout for the GM's
-│                                     # Character Sheet editor to reshape, plus an
-│                                     # unpublished result to stage a sheet update on
+│   ├── 32_custom_character_sheet.sql # Game 343: default layout for the GM's
+│   │                                 # Character Sheet editor to reshape, plus an
+│   │                                 # unpublished result to stage a sheet update on
+│   └── 35_scoreboard.sql             # Games 722-727: one per scoreboard case (read-only)
 ├── perf/                 # Performance test fixtures
 ├── apply_all.sh          # Apply common + demo fixtures
 ├── apply_e2e.sh          # Apply common + e2e fixtures
@@ -187,6 +188,35 @@ against real data. Do not "fix" it.
 Numbers entries may carry `max` (turning a count into a track, "Stress 4/9") and
 `display` (`number` | `track` | `boxes`). `display` is only meaningful with
 `max` set.
+
+### Scoreboard games (`e2e/35_scoreboard.sql`, added 2026-11-19)
+
+Six games, all with `scoreboard_enabled` and a stored setup, owned by
+`e2e/games/scoreboard.spec.ts`. No spec writes to them.
+
+| Game | `FIXTURE_GAMES` key | Setup |
+|---|---|---|
+| 722 | `SCOREBOARD_PUBLIC` | Everyone; Score shown; Score high to low |
+| 723 | `SCOREBOARD_RANKED` | Everyone; Score **hidden**; Score high to low, then name |
+| 724 | `SCOREBOARD_PRIVATE` | GM and audience only; Score and HP (value of max). TestAudience is the audience |
+| 725 | `SCOREBOARD_EPILOGUE` | 724's setup with Score hidden, seeded in `epilogue` so a retry finds the same state |
+| 726 | `SCOREBOARD_RANGES` | Everyone; HP as ranges: Healthy, Bloodied, Critical, fallback Down |
+| 727 | `SCOREBOARD_TOP` | 722's setup, but players see only the top 2. The cut falls inside the Briar/Corin tie, so players get Ash and Briar |
+
+Every game has the same cast, so a score board always lists Ash, Briar, Corin,
+Dell in that order:
+
+| Character | Player | Score | HP | Why |
+|---|---|---|---|---|
+| Ash | TestPlayer1 | 12 | 11/12 | |
+| Briar | TestPlayer2 | 7 | 6/12 | **Legacy flat Numbers shape**, entry named `score` in lower case. Deliberate, like `skill-8` above: keeps that read path tested. Don't "fix" it |
+| Corin | TestPlayer3 | 7 | 3/10 | Ties Briar; the name breaks the tie |
+| Dell | TestPlayer4 | none | 0/12 | A blank Score, sorted last; HP 0 gets the fallback range |
+| Ember | TestPlayer5 | 99 | | Pending, so never on the board |
+| Banker | NPC | 50 | | An NPC, so never on the board |
+
+Setups are stored the way the API writes them: no `display` for a plain value,
+no `"hidden": false`, and no `visibility` for GM and audience only.
 
 ### Character Types
 - `player_character` - Player-controlled characters

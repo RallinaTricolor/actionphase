@@ -25,6 +25,7 @@ const BLANK_FORM_DATA: GameFormData = {
   auto_accept_audience: false,
   allow_group_conversations: true,
   portrait_avatars: true,
+  scoreboard_enabled: false,
   common_room_open_day: '',
   common_room_open_time: '',
   common_room_close_day: '',
@@ -47,6 +48,7 @@ export function gameToFormData(game: GameWithDetails): GameFormData {
     auto_accept_audience: game.auto_accept_audience || false,
     allow_group_conversations: game.allow_group_conversations ?? true,
     portrait_avatars: game.portrait_avatars ?? false,
+    scoreboard_enabled: game.scoreboard_enabled ?? false,
     common_room_open_day: game.common_room_open_day ?? '',
     common_room_open_time: game.common_room_open_time ? game.common_room_open_time.slice(0, 5) : '',
     common_room_close_day: game.common_room_close_day ?? '',
@@ -207,6 +209,7 @@ export function useGameForm(initialData?: GameWithDetails) {
       auto_accept_audience: formData.auto_accept_audience,
       allow_group_conversations: formData.allow_group_conversations ?? true,
       portrait_avatars: formData.portrait_avatars ?? false,
+      scoreboard_enabled: formData.scoreboard_enabled ?? false,
       // undefined, not null, when there is no schedule. These are `*T` with
       // omitempty on the Go side, so the wire contract is an ABSENT key; JSON
       // null happens to unmarshal to the same nil pointer, but the generated

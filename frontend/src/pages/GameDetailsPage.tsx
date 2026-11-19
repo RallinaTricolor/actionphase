@@ -167,6 +167,8 @@ export const GameDetailsPage = ({ gameId }: GameDetailsPageProps) => {
     unvotedPollsCount,
     hasSubmittedAction,
     isRoleLoading: isLoadingParticipants,
+    scoreboardEnabled: game?.scoreboard_enabled,
+    scoreboardVisibility: game?.scoreboard_visibility,
   });
 
   // The Utility Drawer lives at the app root and is reachable from every page,

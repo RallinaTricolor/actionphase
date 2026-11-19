@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { useBlankDraftRecipients } from './useActionResults';
+import { invalidateScoreboards } from './useScoreboard';
 
 /**
  * Custom hook for managing phase activation logic
@@ -35,6 +36,7 @@ export function usePhaseActivation(gameId: number, currentPhaseId: number | unde
       // Invalidate character data to show published character updates
       queryClient.invalidateQueries({ queryKey: ['characterData'] });
       queryClient.invalidateQueries({ queryKey: ['gameCharacterData', gameId] });
+      invalidateScoreboards(queryClient, gameId);
     }
   });
 

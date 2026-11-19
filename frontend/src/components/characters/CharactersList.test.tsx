@@ -5,6 +5,7 @@ import { CharactersList } from './CharactersList'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import { makeCharacter } from '@/test-utils/factories';
+import { useScoreboard } from '@/hooks/useScoreboard'
 import type { Character } from '@/types/characters'
 
 describe('CharactersList', () => {
@@ -716,6 +717,56 @@ describe('CharactersList', () => {
       await waitFor(() => {
         expect(deletedCharacterId).toBe('2')
       })
+    })
+  })
+
+  describe('Keeping the scoreboard current', () => {
+    let boardRequests: number
+
+    function ListWithOpenBoard() {
+      useScoreboard(123)
+      return <CharactersList gameId={123} userRole="gm" currentUserId={1} />
+    }
+
+    beforeEach(() => {
+      boardRequests = 0
+      server.use(
+        http.get('http://localhost:3000/api/v1/games/123/scoreboard', () => {
+          boardRequests += 1
+          return HttpResponse.json({ columns: [], sort_description: [], full_view: false, rows: [] })
+        })
+      )
+    })
+
+    it('refreshes the board when a character is approved', async () => {
+      server.use(
+        http.post('http://localhost:3000/api/v1/characters/:id/approve', () =>
+          HttpResponse.json({ ...mockCharacters[1], status: 'approved' })
+        )
+      )
+
+      renderWithProviders(<ListWithOpenBoard />, { gameId: 123 })
+      const [approveButton] = await screen.findAllByTestId('approve-character-button')
+      await waitFor(() => expect(boardRequests).toBe(1))
+
+      fireEvent.click(approveButton)
+
+      await waitFor(() => expect(boardRequests).toBe(2))
+    })
+
+    it('refreshes the board when a character is deleted', async () => {
+      server.use(
+        http.delete('http://localhost:3000/api/v1/characters/:id', () => new HttpResponse(null, { status: 204 }))
+      )
+
+      renderWithProviders(<ListWithOpenBoard />, { gameId: 123 })
+      const deleteButtons = await screen.findAllByTestId('delete-character-button')
+      await waitFor(() => expect(boardRequests).toBe(1))
+
+      fireEvent.click(deleteButtons[0])
+      fireEvent.click(await screen.findByTestId('confirm-delete-character-button'))
+
+      await waitFor(() => expect(boardRequests).toBe(2))
     })
   })
 

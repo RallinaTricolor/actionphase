@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import type { ReactNode, MutableRefObject, ChangeEvent, KeyboardEvent } from 'react';
-import { useBlocker } from 'react-router-dom';
 import { Pencil, Eye, HelpCircle } from 'lucide-react';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { TEXT_COLORS } from '@/components/common/markdown/textColors';
@@ -16,6 +15,7 @@ import type { SheetItem } from '@/hooks/useCharacterSheetItems';
 import { postCachingService } from '@/services/PostCachingService';
 import { insertAt } from '@/lib/insertText';
 import { ConfirmDiscardDraft } from '@/components/common/modals/ConfirmDiscardDraft';
+import { UnsavedChangesGuard } from '@/components/common/UnsavedChangesGuard';
 import { HELP_KEY, SHORTCUT_GROUPS, isSubmitCombo } from '@/lib/keyboardShortcuts';
 import { ShortcutKeys } from '@/components/common/keyboard/ShortcutKeys';
 
@@ -23,38 +23,6 @@ import { ShortcutKeys } from '@/components/common/keyboard/ShortcutKeys';
 const EDITOR_SHORTCUTS = SHORTCUT_GROUPS.filter((g) => g.id === 'editor' || g.id === 'suggestions').flatMap(
   (g) => g.shortcuts
 );
-
-/**
- * Inner component that calls useBlocker and renders the confirmation modal.
- * Extracted so useBlocker is only called when warnOnUnsavedChanges is true,
- * keeping it isolated from the main editor (hooks must not be called conditionally).
- */
-function UnsavedChangesGuard({ hasContent }: { hasContent: boolean }) {
-  const blocker = useBlocker(hasContent);
-
-  useEffect(() => {
-    if (!hasContent) return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasContent]);
-
-  // Same question the Cancel guards ask, reached by navigating away instead of
-  // by pressing Cancel -- so it shares their dialog. The trigger differs
-  // (useBlocker's reset/proceed rather than a plain callback), the prompt does not.
-  return (
-    <ConfirmDiscardDraft
-      isOpen={blocker.state === 'blocked'}
-      onKeepEditing={() => blocker.reset?.()}
-      onDiscard={() => blocker.proceed?.()}
-      noun="draft"
-      message="You have unsaved text in this editor. If you leave, your changes will be lost."
-      testId="discard-navigation-modal"
-    />
-  );
-}
 
 interface CommentEditorProps {
   value: string;
@@ -819,7 +787,11 @@ export const CommentEditor = memo(function CommentEditor({
 
       {/* Unsaved changes navigation warning */}
       {warnOnUnsavedChanges && (
-        <UnsavedChangesGuard hasContent={value.trim().length > 0} />
+        <UnsavedChangesGuard
+          when={value.trim().length > 0}
+          noun="draft"
+          message="You have unsaved text in this editor. If you leave, your changes will be lost."
+        />
       )}
     </div>
   );

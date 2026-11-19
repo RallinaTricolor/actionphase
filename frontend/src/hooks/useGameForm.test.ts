@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGameForm } from './useGameForm';
+import { gameToFormData, useGameForm } from './useGameForm';
+import { makeGameWithDetails } from '@/test-utils/factories';
 
 vi.mock('./useGameBanner', () => ({
   useUploadGameBanner: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
@@ -127,5 +128,31 @@ describe('useGameForm — buildApiPayload', () => {
     expect(payload!.common_room_close_day).toBeUndefined();
     expect(payload!.common_room_close_time).toBeUndefined();
     expect(payload!.schedule_timezone).toBeUndefined();
+  });
+});
+
+describe('useGameForm — scoreboard setting', () => {
+  const named = (result: { current: ReturnType<typeof useGameForm> }) => act(() => {
+    result.current.handleChange('title', 'My Game');
+    result.current.handleChange('description', 'A description');
+  });
+
+  it('is off for a new game', () => {
+    const { result } = renderHook(() => useGameForm());
+    named(result);
+    expect(result.current.buildApiPayload().payload?.scoreboard_enabled).toBe(false);
+  });
+
+  it('sends the change when the GM turns it on', () => {
+    const { result } = renderHook(() => useGameForm());
+    named(result);
+    act(() => result.current.handleChange('scoreboard_enabled', true));
+    expect(result.current.buildApiPayload().payload?.scoreboard_enabled).toBe(true);
+  });
+
+  // The update replaces every setting, so a form that dropped this would turn
+  // the board off whenever anything else about the game was edited.
+  it.each([true, false])('carries a saved value of %s through an edit form', (saved) => {
+    expect(gameToFormData(makeGameWithDetails({ scoreboard_enabled: saved })).scoreboard_enabled).toBe(saved);
   });
 });

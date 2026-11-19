@@ -31,6 +31,7 @@ Rows are grouped by area. Within a group, order does not matter.
 | `backend/pkg/auth/**` | `docs-site/developer/architecture/adrs/003-authentication-strategy.md` | Single JWT in an HTTP-only cookie — there is no separate refresh token |
 | Error handling patterns | `.claude/reference/ERROR_HANDLING.md` | Sentinel vs. wrapped error guidance |
 | Logging calls | `.claude/reference/LOGGING_STANDARDS.md` | Correlation-ID conventions; field naming |
+| A new `backend/pkg/<domain>/huma_api.go` package | `.claude/reference/BACKEND_ARCHITECTURE.md` (Project Structure tree) | The handler-package list falls behind: it had missed `communities/` and `gmboard/` before `scoreboard/` was added |
 
 ## Backend — data
 
@@ -39,6 +40,7 @@ Rows are grouped by area. Within a group, order does not matter.
 | `backend/pkg/db/migrations/**` | `docs-site/developer/architecture/adrs/002-database-design-approach.md`, `.claude/context/TEST_DATA.md` | Schema quoted inline; column renames; new nullable columns absent from fixtures |
 | `backend/pkg/db/queries/**` | `.claude/reference/BACKEND_ARCHITECTURE.md` | The `just sqlgen` step in the documented workflow |
 | `backend/pkg/db/test_fixtures/**` | `docs-site/developer/testing/TEST_DATA.md`, `docs-site/developer/testing/E2E_FIXTURES.md`, `.claude/context/TEST_DATA.md` | Fixture game IDs/titles; worker offsets; the `common/`+`demo/`+`e2e/`+`perf/` layout |
+| A migration adding a JSONB column | `docs-site/developer/architecture/adrs/002-database-design-approach.md` ("Implementation Divergence") | The ADR lists the real JSONB columns; it once counted them ("exactly two") and went stale |
 | Test DB setup / template cloning | `.claude/context/TESTING.md`, `docs-site/developer/architecture/adrs/007-testing-strategy.md` | Per-package DB cloning — older docs describe one shared test DB |
 
 ## Game domain
@@ -50,6 +52,7 @@ Rows are grouped by area. Within a group, order does not matter.
 | Messaging / conversations | `.claude/skills/game-domain/resources/messaging-system.md` | Conversation types; audience visibility rules |
 | Notifications | `.claude/skills/game-domain/SKILL.md` | `context_*` = container (bulk clear); `related_*` = the item (preview) |
 | `frontend/src/components/gm-board/**`, `frontend/src/lib/gmBoard/**`, `frontend/src/hooks/usePhaseRewards.ts`, `frontend/src/pages/GmBoard*`, `backend/pkg/gmboard/**` | `docs-site/guide/results-board*.md`, `.claude/context/ARCHITECTURE.md` ("GM Results Board"), `.claude/skills/game-domain/SKILL.md`, `.claude/planning/gm-board-implementation.md` | Button labels quoted in bold; the check list in `results-board-write.md`; the `rewards` item's doc shape. Run `just docs-embed` after guide changes |
+| `backend/pkg/scoreboard/**`, `backend/pkg/core/scoreboard*.go`, `ScoreboardViewFor` in `backend/pkg/core/permissions.go`, `frontend/src/components/scoreboard/**`, `frontend/src/lib/scoreboard*.ts`, `frontend/src/hooks/useScoreboard.ts` | `docs-site/guide/scoreboard.md`, `.claude/context/ARCHITECTURE.md` ("Scoreboard"), `.claude/skills/game-domain/SKILL.md` ("Scoreboard"), `.claude/reference/API_DOCUMENTATION.md` ("Scoreboard"), `.claude/context/STATE_MANAGEMENT.md` (`invalidateScoreboards`) | Editor labels quoted in bold in the guide; the who-sees table against `ScoreboardViewFor`; limits (columns, ranges, label lengths); the list of mutations that must refresh the board. Run `just docs-embed` after guide changes |
 | `backend/pkg/core/phase_state.go`, result publish and create rules (`backend/pkg/db/services/actions/**`) | `docs-site/guide/phases.md`, `docs-site/guide/action-phases.md`, `docs-site/guide/history.md`, `docs-site/guide/results-board.md` ("When a phase ends"), `.claude/skills/game-domain/resources/phase-system.md` | What an ended phase refuses (423), and blank results (409) |
 
 ## Frontend
@@ -61,6 +64,7 @@ Rows are grouped by area. Within a group, order does not matter.
 | `frontend/src/lib/api/**` | `.claude/reference/API_DOCUMENTATION.md`, `.claude/context/STATE_MANAGEMENT.md` | Stale `lib/api.ts` path — it is split per domain |
 | Styling, Tailwind tokens | `.claude/context/FRONTEND_STYLING.md`, `frontend/src/components/ui/README.md` | Retired `bg-bg-*` / `border-border-*` tokens — they emit no CSS |
 | `frontend/src/lib/faro.ts`, instrumentation | `docs-site/developer/architecture/adrs/006-observability-approach.md` | Faro postdates the original ADR text |
+| `frontend/src/components/games/GameFormFields.tsx`, `frontend/src/components/games/gameFormTabs.ts` | `docs-site/guide/game-settings.md` | A new game setting missing from the guide; which form tab a setting is on |
 | `package.json` deps | `frontend/README.md`, `README.md` | Pinned version numbers quoted in prose |
 
 ## Testing

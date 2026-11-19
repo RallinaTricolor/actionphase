@@ -197,6 +197,40 @@ stances, the codex) is invisible to the old view.
 **See**: `.claude/context/ARCHITECTURE.md` ("GM Results Board") for storage,
 the item store and the access rule
 
+### Scoreboard (added 2026-11-19)
+
+An optional per-game table of player characters with GM-chosen values from
+their character sheets, e.g. "Score" and "HP" from the Numbers tab. Current
+state only, no history. The game setting `scoreboard_enabled` adds a Scoreboard
+tab; the GM sets the board up on that tab.
+
+- **Rows**: approved, active player characters. Never NPCs, pending or inactive
+  characters.
+- **Columns**: a tab, an entry **name** and a `number` or `track` field. Entry
+  IDs are per character, so the name (trimmed, any case) is the only way to
+  find "the Score entry" across the cast. A cell reads as the value, the value of
+  its max, or a range label ("Bloodied" for 5 < HP < 10).
+- **Who sees it**: one rule, `core.ScoreboardViewFor`. GM, co-GMs, admin mode and
+  the audience see every column. Players see nothing while the board is GM and
+  audience only (the default), and the non-hidden columns once it's set to
+  Everyone, which means any logged-in user, like the Common Room. Lifted by
+  `IsPublicArchive`: in `epilogue` or `completed` everyone sees every column.
+  Setting off means no board for anyone, archive included.
+- **Sorting** happens on the server before hidden columns are removed, so players
+  get the real order without the values. The GM can also show players only the
+  **top N** (`top_count`): the cut is made on the server, is exactly N rows, and
+  never applies to the GM, co-GMs, audience or a public archive. Rows are numbered by position; ties are
+  not marked, since that would reveal equal hidden scores. A player whose board
+  sorts by a hidden column sees "Ranked by the GM".
+- A missing board answers **404**, whether it's off or just closed to the caller.
+- ❌ NOT TRUE: "a hidden column's values reach the player and are hidden by CSS".
+  Hidden columns, the numbers behind a range label, and rows below a top-N cut
+  are removed on the server (`core.BuildScoreboard`). The browser never receives
+  them.
+
+**See**: `.claude/context/ARCHITECTURE.md` ("Scoreboard") and
+`.claude/reference/API_DOCUMENTATION.md` ("Scoreboard")
+
 
 
 ---
@@ -295,6 +329,8 @@ also lifts two play-time restrictions:
   (`isPrivileged`) ever see those polls.
 - **Anonymous games** — usernames are disclosed to everyone once completed
   (`CanSeeUsernamesInAnonymousGame`, `backend/pkg/core/permissions.go`).
+- **Scoreboard** — a GM-only board, and every hidden column, open to everyone
+  (`core.ScoreboardViewFor`). A board the GM never turned on stays off.
 
 What *does* stay hidden: drafts (`is_draft`) and soft-deleted content
 (`is_deleted` / `deleted_at`). Cancelled games are **not** public and follow
@@ -422,6 +458,15 @@ POST  /api/v1/games/{gameID}/gm-settings/changes                -- GM only
 PUT   /api/v1/games/{gameID}/gm-settings/sharing                -- GM only; turns share_gm_board on/off
 GET   /api/v1/games/{gameID}/gm-board-phases                    -- action phases with a board
 PUT   /api/v1/games/{gameID}/phases/{phaseId}/characters/{characterId}/reward-sheet-updates  -- GM only
+```
+
+### Scoreboard
+```
+GET   /api/v1/games/{gameID}/scoreboard               -- core.ScoreboardViewFor; 404 when off or closed to the caller
+GET   /api/v1/games/{gameID}/scoreboard/config        -- GM only
+PUT   /api/v1/games/{gameID}/scoreboard/config        -- GM only; 422 invalid, 409 completed/cancelled
+POST  /api/v1/games/{gameID}/scoreboard/preview       -- GM only; the board players would get, stores nothing
+GET   /api/v1/games/{gameID}/scoreboard/entry-names   -- GM only
 ```
 
 ### Audience / Archive Access

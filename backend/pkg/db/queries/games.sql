@@ -3,6 +3,7 @@ INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
     recruitment_deadline, max_players, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url,
     common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone,
+    scoreboard_enabled,
     -- Required by the application on every new game (req 5), though the column
     -- stays nullable so pre-community games remain valid. See the migration.
     -- character_sheet is left to its column DEFAULT ('{}', the default
@@ -10,7 +11,7 @@ INSERT INTO games (
     community_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18, $19
+    $14, $15, $16, $17, $18, $19, $20
 ) RETURNING *;
 
 -- name: GetGame :one
@@ -51,8 +52,10 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     common_room_open_day = $14, common_room_open_time = $15,
     common_room_close_day = $16, common_room_close_time = $17,
     schedule_timezone = $18,
+    scoreboard_enabled = $19,
     -- character_sheet is deliberately not here: the layout is written only by
-    -- UpdateGameCharacterSheet, so a settings save can never reset it.
+    -- UpdateGameCharacterSheet, so a settings save can never reset it. The
+    -- same goes for scoreboard and UpdateGameScoreboard.
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -203,6 +206,14 @@ SELECT auto_accept_audience FROM games WHERE id = $1 AND deleted_at IS NULL;
 -- validates it first, and the editor always sends the complete layout.
 UPDATE games
 SET character_sheet = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateGameScoreboard :one
+-- The Scoreboard tab's write. Replaces the whole config: the service validates
+-- it first, and the editor always sends all of it.
+UPDATE games
+SET scoreboard = $2, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

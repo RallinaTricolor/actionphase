@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
 import { renderWithProviders } from '@/test-utils';
 import { CharacterSheet } from './CharacterSheet';
+import { useScoreboard } from '@/hooks/useScoreboard';
 import type { CharacterData, CharacterSheetConfig } from '@/types/characters';
 
 /**
@@ -54,6 +55,23 @@ function mockCharacter(name = 'Test Character') {
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };
+}
+
+/** A scoreboard open elsewhere on the page, as the game's tab would hold it. */
+function OpenBoard() {
+  useScoreboard(1);
+  return null;
+}
+
+function countBoardRequests() {
+  const board = { requests: 0 };
+  server.use(
+    http.get('/api/v1/games/1/scoreboard', () => {
+      board.requests += 1;
+      return HttpResponse.json({ columns: [], sort_description: [], full_view: false, rows: [] });
+    })
+  );
+  return board;
 }
 
 /** Installs the two queries the sheet issues on mount. */
@@ -278,6 +296,36 @@ describe('CharacterSheet', () => {
       ]);
     });
 
+    it("refreshes the game's open scoreboard after a loot roll, which the server writes", async () => {
+      setupSheet([characterDataRow(), contactsRow([])]);
+      const board = countBoardRequests();
+      server.use(
+        http.get('/api/v1/games/1/loot-tables', () =>
+          HttpResponse.json([{ id: 11, game_id: 1, name: 'Contacts Table', target_tab: 't_abc123' }])
+        ),
+        http.post(`/api/v1/games/1/loot-tables/11/random/${CHARACTER_ID}`, () =>
+          HttpResponse.json({ id: 1, name: 'Mira', data: JSON.stringify({ name: 'Mira' }) })
+        )
+      );
+      renderWithProviders(
+        <>
+          <OpenBoard />
+          <CharacterSheet characterId={CHARACTER_ID} canEdit canEditStats sheetConfig={CONTACTS_CONFIG} />
+        </>,
+        { gameId: 1 }
+      );
+
+      const user = userEvent.setup({ delay: null });
+      await user.click(await screen.findByRole('tab', { name: 'Contacts' }));
+      await waitFor(() => expect(board.requests).toBe(1));
+      await user.click(await screen.findByTestId('add-t_abc123'));
+      await user.selectOptions(await screen.findByRole('combobox', { name: 'Mode' }), 'loot_table_random');
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Loot Table' }), '11');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+
+      await waitFor(() => expect(board.requests).toBe(2));
+    });
+
     it('shows a malformed tab blob as an empty tab', async () => {
       setupSheet([characterDataRow(), { ...contactsRow([]), field_value: '{"not":"a list"}' }]);
       renderWithProviders(
@@ -363,6 +411,58 @@ describe('CharacterSheet', () => {
       field_value: 'A rewritten background.',
     });
     expect(updateDepthError).toBeNull();
+  });
+
+  it("refreshes the game's open scoreboard when a sheet is saved", async () => {
+    const user = userEvent.setup({ delay: null });
+    setupSheet();
+
+    const board = countBoardRequests();
+    server.use(http.post(`/api/v1/characters/${CHARACTER_ID}/data`, () => HttpResponse.json({ success: true })));
+
+    renderWithProviders(
+      <>
+        <OpenBoard />
+        <CharacterSheet characterId={CHARACTER_ID} canEdit />
+      </>,
+      { gameId: 1 }
+    );
+
+    expect(await screen.findByText('A saved background.')).toBeInTheDocument();
+    await waitFor(() => expect(board.requests).toBe(1));
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    const editor = await screen.findByDisplayValue('A saved background.');
+    await user.type(editor, ' More.');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(board.requests).toBe(2));
+  });
+
+  it("refreshes the game's open scoreboard when the avatar is removed", async () => {
+    const user = userEvent.setup({ delay: null });
+    setupSheet();
+    const board = countBoardRequests();
+    server.use(
+      http.get(`/api/v1/characters/${CHARACTER_ID}`, () =>
+        HttpResponse.json({ ...mockCharacter(), avatar_url: '/avatar.png' })
+      ),
+      http.delete(`/api/v1/characters/${CHARACTER_ID}/avatar`, () => new HttpResponse(null, { status: 204 }))
+    );
+
+    renderWithProviders(
+      <>
+        <OpenBoard />
+        <CharacterSheet characterId={CHARACTER_ID} canEdit />
+      </>,
+      { gameId: 1 }
+    );
+
+    await user.click(await screen.findByTitle('Delete Avatar'));
+    await waitFor(() => expect(board.requests).toBe(1));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete Avatar' }));
+
+    await waitFor(() => expect(board.requests).toBe(2));
   });
 });
 

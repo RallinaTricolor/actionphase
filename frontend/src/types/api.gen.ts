@@ -3306,6 +3306,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/games/{gameID}/scoreboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the scoreboard
+         * @description Returns the board as the caller may see it. Players never receive hidden columns or the values behind range labels.
+         */
+        get: operations["getGameScoreboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/scoreboard/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the scoreboard setup
+         * @description Returns the stored visibility, columns and sort for the editor.
+         */
+        get: operations["getGameScoreboardConfig"];
+        /**
+         * Replace the scoreboard setup
+         * @description Validates the whole config against the game's character sheet and stores it.
+         */
+        put: operations["updateGameScoreboardConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/scoreboard/entry-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List entry names for scoreboard columns
+         * @description Lists the entry names player characters use on each tab with a number or track field.
+         */
+        get: operations["getGameScoreboardEntryNames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{gameID}/scoreboard/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview the scoreboard as a player
+         * @description Computes the board players would get from the given setup. Nothing is stored.
+         */
+        post: operations["previewGameScoreboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/games/{gameID}/settings/auto-accept-audience": {
         parameters: {
             query?: never;
@@ -4818,6 +4902,7 @@ export interface components {
             portrait_avatars?: boolean;
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            scoreboard_enabled?: boolean;
             start_date?: string;
             title: string;
         };
@@ -5164,6 +5249,10 @@ export interface components {
             /** @enum {string} */
             user_relationship?: "gm" | "co_gm" | "participant" | "audience" | "applied";
         };
+        EntryNamesResponse: {
+            /** @description Tabs that can feed a column, in sheet order */
+            tabs: components["schemas"]["ScoreboardTabEntryNames"][] | null;
+        };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
             location?: string;
@@ -5418,6 +5507,12 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            scoreboard_enabled: boolean;
+            /**
+             * @description Who sees the scoreboard while the game runs. Sent only when it is enabled.
+             * @enum {string}
+             */
+            scoreboard_visibility?: "staff" | "public";
             share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
@@ -5482,6 +5577,12 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            scoreboard_enabled: boolean;
+            /**
+             * @description Who sees the scoreboard while the game runs. Sent only when it is enabled.
+             * @enum {string}
+             */
+            scoreboard_visibility?: "staff" | "public";
             share_gm_board: boolean;
             /** Format: date-time */
             start_date?: string;
@@ -6387,6 +6488,153 @@ export interface components {
             /** @description Tab key: skills, inventory, numbers, or a custom t_ key in this game's layout */
             module_type: string;
         };
+        ScoreboardBand: {
+            /** @description Text shown for values in this range. May use inline formatting: bold, italic, strikethrough, code and [color:name]...[/color]. Up to 24 visible characters; formatting doesn't count. */
+            label: string;
+            /**
+             * Format: double
+             * @description Upper bound
+             */
+            max?: number;
+            /** @description The value must be below max, not equal to it */
+            max_strict?: boolean;
+            /**
+             * Format: double
+             * @description Lower bound
+             */
+            min?: number;
+            /** @description The value must be above min, not equal to it */
+            min_strict?: boolean;
+        };
+        ScoreboardCell: {
+            /** @description The matching range's label */
+            label?: string;
+            /**
+             * Format: double
+             * @description The track's maximum, when the column shows one
+             */
+            max?: number;
+            /**
+             * Format: double
+             * @description The number. Absent when the viewer sees only a range label.
+             */
+            value?: number;
+        };
+        ScoreboardColumn: {
+            /**
+             * @description What band bounds measure. Absent means the value itself; percent means percent of the character's own max.
+             * @enum {string}
+             */
+            band_basis?: "value" | "percent";
+            /** @description Labelled ranges, checked in order. Only with display=bands. */
+            bands?: components["schemas"]["ScoreboardBand"][] | null;
+            /**
+             * @description How a cell reads. Absent means value.
+             * @enum {string}
+             */
+            display?: "value" | "value_max" | "bands";
+            /** @description Entry name on that tab, matched ignoring case and surrounding spaces */
+            entry: string;
+            /** @description Shown when no band matches. Formatted like a band label. */
+            fallback_label?: string;
+            /** @description Number or track field of the entry */
+            field_key: string;
+            /** @description Hidden from players while the game runs */
+            hidden?: boolean;
+            /** @description Stable identifier: c_ plus six lower-case letters or digits */
+            id: string;
+            /** @description Column heading */
+            label: string;
+            /** @description Character sheet tab the value comes from */
+            tab_key: string;
+        };
+        ScoreboardConfig: {
+            /** @description Columns in display order */
+            columns?: components["schemas"]["ScoreboardColumn"][] | null;
+            /** @description Up to two sort keys. Absent means by name. */
+            sort?: components["schemas"]["ScoreboardSort"][] | null;
+            /**
+             * Format: int64
+             * @description Players see only this many rows, from the top of the board's order. Absent means every row. The GM, co-GMs and audience always see every row, as does everyone once the game reaches its epilogue.
+             */
+            top_count?: number;
+            /**
+             * @description Who sees the board while the game runs. Absent means staff: the GM, co-GMs and audience.
+             * @enum {string}
+             */
+            visibility?: "staff" | "public";
+        };
+        ScoreboardResult: {
+            /** @description Columns whose sheet tab or field no longer exists. Full view only. */
+            broken_column_ids?: string[] | null;
+            /** @description Columns this viewer may see, in display order */
+            columns: components["schemas"]["ScoreboardResultColumn"][] | null;
+            /** @description The viewer sees every column */
+            full_view: boolean;
+            /** @description Characters in board order */
+            rows: components["schemas"]["ScoreboardRow"][] | null;
+            /** @description The sort, as far as this viewer may know it. Empty means the GM's order uses a hidden column. */
+            sort_description: components["schemas"]["ScoreboardSortDescription"][] | null;
+            /**
+             * Format: int64
+             * @description This viewer gets only the top rows of the board, and this is how many. Absent means every row.
+             */
+            top_count?: number;
+        };
+        ScoreboardResultColumn: {
+            /**
+             * @description How the column's cells read
+             * @enum {string}
+             */
+            display: "value" | "value_max" | "bands";
+            /** @description Hidden from players. Sent only in full view while the game runs. */
+            hidden?: boolean;
+            /** @description Column ID, the key into each row's values */
+            id: string;
+            /** @description Column heading */
+            label: string;
+        };
+        ScoreboardRow: {
+            /** @description Character avatar */
+            avatar_url?: string;
+            /**
+             * Format: int32
+             * @description Character ID
+             */
+            character_id: number;
+            /** @description Character name */
+            character_name: string;
+            /** @description Cells by column ID. A blank cell has no key. */
+            values: {
+                [key: string]: components["schemas"]["ScoreboardCell"];
+            };
+        };
+        ScoreboardSort: {
+            /**
+             * @description Sort direction
+             * @enum {string}
+             */
+            direction: "asc" | "desc";
+            /** @description A column ID, or name */
+            key: string;
+        };
+        ScoreboardSortDescription: {
+            /**
+             * @description Sort direction
+             * @enum {string}
+             */
+            direction: "asc" | "desc";
+            /** @description A column ID, or name for the character's name */
+            key: string;
+            /** @description Column heading, or Name */
+            label: string;
+        };
+        ScoreboardTabEntryNames: {
+            /** @description Entry names used by the game's player characters, sorted, one spelling each */
+            entry_names: string[] | null;
+            /** @description Character sheet tab */
+            tab_key: string;
+        };
         SearchUsersResponse: {
             users: components["schemas"]["UserSearchResult"][] | null;
         };
@@ -6648,6 +6896,7 @@ export interface components {
             /** Format: date-time */
             recruitment_deadline?: string;
             schedule_timezone?: string;
+            scoreboard_enabled?: boolean;
             /** Format: date-time */
             start_date?: string;
             title: string;
@@ -16512,6 +16761,220 @@ export interface operations {
             };
             /** @description phase_id names a phase that isn't the active one */
             423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getGameScoreboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreboardResult"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The game has no scoreboard this caller may see */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getGameScoreboardConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreboardConfig"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can read the scoreboard setup */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateGameScoreboardConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScoreboardConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreboardConfig"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can change the scoreboard */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The game is archived */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The config is invalid or doesn't fit the character sheet */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getGameScoreboardEntryNames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryNamesResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can read this list */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    previewGameScoreboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Game ID */
+                gameID: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScoreboardConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreboardResult"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only the GM can preview the scoreboard */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The config is invalid */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

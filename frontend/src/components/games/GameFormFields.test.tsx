@@ -101,18 +101,37 @@ describe('GameFormFields', () => {
       expect(tooltipTexts.some((t) => /circular/i.test(t) && /portrait/i.test(t))).toBe(true);
     });
 
-    it('renders exactly four setting tooltips across the Rules and Appearance tabs', () => {
-      // Three settings tooltips on Rules, one avatar-style tooltip on Appearance.
+    it('renders exactly five setting tooltips across the Rules and Appearance tabs', () => {
+      // Four settings tooltips on Rules, one avatar-style tooltip on Appearance.
       // Counted per tab rather than in one pass: role queries respect the
       // accessibility tree, and a `hidden` panel is excluded from it — the
       // tooltips are in the DOM (see the inactive-panel test below) but not
       // reachable by role while their tab is closed.
       const { unmount } = renderFields({ activeTab: 'game-form-rules' });
-      expect(screen.getAllByRole('tooltip')).toHaveLength(3);
+      expect(screen.getAllByRole('tooltip')).toHaveLength(4);
       unmount();
 
       renderFields({ activeTab: 'game-form-appearance' });
       expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    });
+  });
+
+  describe('Enable Scoreboard', () => {
+    it('is off by default and reports the change when ticked', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderFields({ activeTab: 'game-form-rules', onChange });
+
+      const checkbox = screen.getByRole('checkbox', { name: /Enable Scoreboard/ });
+      expect(checkbox).not.toBeChecked();
+      await user.click(checkbox);
+
+      expect(onChange).toHaveBeenCalledWith('scoreboard_enabled', true);
+    });
+
+    it('shows the saved setting', () => {
+      renderFields({ activeTab: 'game-form-rules', formData: { ...baseFormData, scoreboard_enabled: true } });
+      expect(screen.getByRole('checkbox', { name: /Enable Scoreboard/ })).toBeChecked();
     });
   });
 
