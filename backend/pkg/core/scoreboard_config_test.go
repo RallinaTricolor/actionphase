@@ -195,14 +195,31 @@ func TestScoreboardLabelText(t *testing.T) {
 		"**Down** _soon_":           "Down soon",
 		"~~Gone~~ `x`":              "Gone x",
 		"[color:red]A[/color] [color:blue]B[/color]": "A B",
-		// An unclosed tag is still markup, and an unknown colour is still a tag.
-		"[color:red]Bloody[/color": "Bloody[/color",
-		"[color:mauve]Odd[/color]": "Odd",
-		"[colour:red]Typo":         "[colour:red]Typo",
+		// What the renderer leaves as literal text counts as text: an unclosed
+		// tag, a stray closing tag, and a colour it doesn't know.
+		"[color:red]Bloody[/color":                      "[color:red]Bloody[/color",
+		"Bloody[/color]":                                "Bloody[/color]",
+		"[color:mauve]Odd[/color]":                      "[color:mauve]Odd[/color]",
+		"[colour:red]Typo":                              "[colour:red]Typo",
+		"[color:red]A\nB[/color]":                       "A\nB",
+		"[color:crimson]A[/color] [color:red]B[/color]": "[color:crimson]A[/color] B",
 	}
 	for label, want := range tests {
 		assert.Equal(t, want, ScoreboardLabelText(label), label)
 	}
+}
+
+func TestValidateScoreboardConfig_UnknownColourCountsAsText(t *testing.T) {
+	// 8 visible characters with a known colour; the renderer shows all 31 of an
+	// unknown one, which is too wide for the cell.
+	ok := bandedColumn(ScoreboardBand{Label: "[color:red]Bloodied[/color]", Min: floatPtr(1)})
+	_, err := ValidateScoreboardConfig(ScoreboardConfig{Columns: []ScoreboardColumn{ok}})
+	require.NoError(t, err)
+
+	unknown := bandedColumn(ScoreboardBand{Label: "[color:crimson]Bloodied[/color]", Min: floatPtr(1)})
+	_, err = ValidateScoreboardConfig(ScoreboardConfig{Columns: []ScoreboardColumn{unknown}})
+	assert.ErrorIs(t, err, ErrInvalidScoreboardConfig)
+	assert.ErrorContains(t, err, "24 characters or fewer, not counting formatting")
 }
 
 func TestValidateScoreboardConfig_AllowsTwoColumnsFromOneSource(t *testing.T) {

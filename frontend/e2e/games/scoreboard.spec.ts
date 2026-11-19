@@ -31,7 +31,7 @@ const BOARD_ORDER = ['Ash', 'Briar', 'Corin', 'Dell'];
 interface BoardResponse {
   top_count?: number;
   columns: { id: string; label: string; hidden?: boolean }[];
-  sort_description: { label: string; direction: string }[];
+  sort_description: { key: string; label: string; direction: string }[];
   rows: { character_name: string; values: Record<string, { value?: number; max?: number; label?: string }> }[];
 }
 

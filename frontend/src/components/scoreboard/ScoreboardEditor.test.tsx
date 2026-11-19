@@ -158,6 +158,15 @@ describe('ScoreboardEditor', () => {
     });
   });
 
+  it('won’t save a column without a heading', async () => {
+    const { user } = await openEditor({ config: { columns: [SCORE] } });
+
+    await user.clear(columnCard('Score').getByLabelText('Heading'));
+
+    expect(screen.getByText('Add a heading')).toBeInTheDocument();
+    expect(screen.getByTestId('save-scoreboard')).toBeDisabled();
+  });
+
   it('offers value of max only on a track', async () => {
     await openEditor({ config: { columns: [SCORE, GOLD] } });
 
@@ -302,6 +311,36 @@ describe('ScoreboardEditor', () => {
       await user.click(screen.getByLabelText(/Label when no range matches/));
       await user.paste('[color:gray]**[/color]');
       expect(screen.getByText('Add some text, not just formatting')).toBeInTheDocument();
+      expect(screen.getByTestId('save-scoreboard')).toBeDisabled();
+    });
+
+    it('won’t save a range just added until it has a label and a bound', async () => {
+      const { user, saved } = await openEditor({ config: { columns: [SCORE] } });
+
+      await showRanges(user, 'Score');
+      expect(screen.getByTestId('scoreboard-bands-problem')).toHaveTextContent('Range 1 needs a label');
+      expect(screen.getByTestId('scoreboard-editor-blocked')).toHaveTextContent('Finish the columns marked above to save.');
+      expect(screen.getByTestId('save-scoreboard')).toBeDisabled();
+
+      await user.type(screen.getByLabelText('Range 1 label'), 'Low');
+      expect(screen.getByTestId('scoreboard-bands-problem')).toHaveTextContent('Range 1 needs a lower or upper bound');
+      expect(screen.getByTestId('save-scoreboard')).toBeDisabled();
+
+      await user.type(screen.getByLabelText('Range 1 upper bound'), '5');
+      expect(screen.queryByTestId('scoreboard-bands-problem')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('scoreboard-editor-blocked')).not.toBeInTheDocument();
+      await save(user);
+
+      await waitFor(() => expect(saved).toHaveLength(1));
+      expect(saved[0].columns?.[0].bands).toEqual([{ label: 'Low', max: 5 }]);
+    });
+
+    it('won’t save a range that can never match', async () => {
+      const { user } = await openEditor({ config: { columns: [twoRanges] } });
+
+      await user.type(screen.getByLabelText('Range 2 upper bound'), '1');
+
+      expect(screen.getByTestId('scoreboard-bands-problem')).toHaveTextContent('Range 2 can never match');
       expect(screen.getByTestId('save-scoreboard')).toBeDisabled();
     });
 

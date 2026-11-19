@@ -6,14 +6,15 @@ import { useToast } from '@/contexts/ToastContext';
 import { useScoreboardConfig, useScoreboardEntryNames, useUpdateScoreboardConfig } from '@/hooks/useScoreboard';
 import { useSheetLayout } from '@/hooks/useSheetLayout';
 import { extractApiErrorMessage } from '@/lib/errors';
+import { isPublicArchive } from '@/lib/gamePermissions';
 import {
   duplicateScoreboardColumnIds,
   findScoreboardSourceField,
-  hasScoreboardBandLabelError,
   MAX_SCOREBOARD_COLUMNS,
   newScoreboardColumn,
   removeScoreboardColumn,
   SCOREBOARD_SORT_BY_NAME,
+  scoreboardColumnsComplete,
   scoreboardSourceTabs,
   scoreboardTopCountError,
   toScoreboardConfig,
@@ -62,11 +63,12 @@ function ScoreboardEditorForm({ gameId, game, config, entryNames, onClose }: Sco
   const columns = draft.columns ?? [];
   const sort = draft.sort ?? [];
   const isDirty = serialized(draft) !== baseline;
-  const isArchived = game.state === 'epilogue' || game.state === 'completed';
+  const isArchived = isPublicArchive(game.state);
   const hasBrokenColumn = columns.some((column) => !findScoreboardSourceField(tabs, column));
   const duplicateIds = duplicateScoreboardColumnIds(columns);
   const hasTopCountError = scoreboardTopCountError(draft.top_count) !== undefined;
-  const hasLabelError = hasScoreboardBandLabelError(columns);
+  // Headings and ranges still being filled in: the server would refuse them.
+  const isIncomplete = !scoreboardColumnsComplete(columns);
 
   const setColumns = (next: ScoreboardColumn[]) => setDraft((current) => ({ ...current, columns: next }));
 
@@ -195,9 +197,9 @@ function ScoreboardEditorForm({ gameId, game, config, entryNames, onClose }: Sco
           {previewing ? 'Back to editing' : 'Preview as player'}
         </Button>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {hasBrokenColumn ? (
+          {hasBrokenColumn || isIncomplete ? (
             <span className="text-sm text-semantic-danger" data-testid="scoreboard-editor-blocked">
-              Fix or remove the columns marked above to save.
+              {hasBrokenColumn ? 'Fix or remove the columns marked above to save.' : 'Finish the columns marked above to save.'}
             </span>
           ) : isDirty ? (
             <span className="hidden text-sm text-content-secondary sm:inline">Unsaved changes</span>
@@ -210,7 +212,7 @@ function ScoreboardEditorForm({ gameId, game, config, entryNames, onClose }: Sco
             variant="primary"
             size="sm"
             onClick={save}
-            disabled={!isDirty || hasBrokenColumn || hasTopCountError || hasLabelError}
+            disabled={!isDirty || hasBrokenColumn || hasTopCountError || isIncomplete}
             loading={saveMutation.isPending}
             data-testid="save-scoreboard"
           >

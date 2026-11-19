@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Alert, Button, Spinner } from '@/components/ui';
 import { useScoreboard } from '@/hooks/useScoreboard';
-import { describeScoreboardCut, describeScoreboardSort } from '@/lib/scoreboardFormat';
+import { isGameWritable } from '@/lib/gamePermissions';
 import type { CharacterSheetConfig } from '@/types/characters';
 import { ScoreboardEditor } from './ScoreboardEditor';
+import { ScoreboardOrderSummary } from './ScoreboardOrderSummary';
 import { ScoreboardTable } from './ScoreboardTable';
 
 interface ScoreboardViewProps {
@@ -16,12 +17,12 @@ interface ScoreboardViewProps {
 /**
  * The Scoreboard tab. Everything shown here is what the server chose to send
  * this viewer, already filtered and in order. The GM edits the setup here too,
- * until the game is completed and can no longer change.
+ * while the game still accepts changes.
  */
 export function ScoreboardView({ gameId, isGM, game }: ScoreboardViewProps) {
   const { data: board, isLoading, isError, refetch } = useScoreboard(gameId);
   const [editing, setEditing] = useState(false);
-  const canEdit = isGM && game.state !== 'completed';
+  const canEdit = isGM && isGameWritable(game.state);
 
   if (editing && canEdit) {
     return <ScoreboardEditor gameId={gameId} game={game} onClose={() => setEditing(false)} />;
@@ -58,14 +59,9 @@ export function ScoreboardView({ gameId, isGM, game }: ScoreboardViewProps) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="scoreboard-heading" className="text-2xl font-bold text-content-primary">Scoreboard</h2>
-          <p className="mt-1 text-sm text-content-secondary" data-testid="scoreboard-sort">
-            {describeScoreboardSort(board.sort_description)}
-          </p>
-          {board.top_count ? (
-            <p className="mt-1 text-sm font-medium text-content-primary" data-testid="scoreboard-top-count">
-              {describeScoreboardCut(board.top_count)}
-            </p>
-          ) : null}
+          <div className="mt-1 space-y-1">
+            <ScoreboardOrderSummary board={board} testIdPrefix="scoreboard" />
+          </div>
         </div>
         {canEdit && columns.length > 0 && (
           <Button type="button" variant="secondary" onClick={() => setEditing(true)} data-testid="edit-scoreboard">
@@ -89,11 +85,7 @@ export function ScoreboardView({ gameId, isGM, game }: ScoreboardViewProps) {
         </div>
       )}
 
-      {board.rows?.length ? (
-        <ScoreboardTable board={board} />
-      ) : (
-        <p className="py-8 text-center text-content-secondary">No characters on the board yet.</p>
-      )}
+      <ScoreboardTable board={board} />
     </section>
   );
 }

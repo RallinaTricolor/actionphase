@@ -331,13 +331,23 @@ func TestBuildScoreboard_SortDescription(t *testing.T) {
 		return BuildScoreboard(ScoreboardInput{Config: config, View: view}).SortDescription
 	}
 
-	assert.Equal(t, []ScoreboardSortDescription{{"Name", "asc"}}, describe(ScoreboardPlayer, config()),
+	assert.Equal(t, []ScoreboardSortDescription{{"name", "Name", "asc"}}, describe(ScoreboardPlayer, config()),
 		"the default sort is not a secret")
-	assert.Equal(t, []ScoreboardSortDescription{{"Score", "desc"}},
+	assert.Equal(t, []ScoreboardSortDescription{{"c_score1", "Score", "desc"}},
 		describe(ScoreboardPlayer, config(ScoreboardSort{"c_score1", "desc"}, ScoreboardSort{"c_hide01", "asc"})))
 	assert.Empty(t, describe(ScoreboardPlayer, config(ScoreboardSort{"c_hide01", "asc"}, ScoreboardSort{"c_score1", "desc"})))
-	assert.Equal(t, []ScoreboardSortDescription{{"Secret", "asc"}, {"Score", "desc"}},
+	assert.Equal(t, []ScoreboardSortDescription{{"c_hide01", "Secret", "asc"}, {"c_score1", "Score", "desc"}},
 		describe(ScoreboardFull, config(ScoreboardSort{"c_hide01", "asc"}, ScoreboardSort{"c_score1", "desc"})))
+
+	// A column may be headed Name; the key, not the label, says it isn't the name sort.
+	named := scoreColumn()
+	named.Label = "Name"
+	assert.Equal(t,
+		[]ScoreboardSortDescription{{"c_score1", "Name", "desc"}, {"name", "Name", "asc"}},
+		describe(ScoreboardPlayer, ScoreboardConfig{
+			Columns: []ScoreboardColumn{named},
+			Sort:    []ScoreboardSort{{"c_score1", "desc"}, {"name", "asc"}},
+		}))
 }
 
 func TestBuildScoreboard_ArchiveShowsHiddenColumns(t *testing.T) {
@@ -510,7 +520,7 @@ func TestBuildScoreboard_Bands(t *testing.T) {
 func TestBuildScoreboard_EmptyBoardEncodesAsLists(t *testing.T) {
 	data, err := json.Marshal(BuildScoreboard(ScoreboardInput{View: ScoreboardPlayer}))
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"columns":[],"sort_description":[{"label":"Name","direction":"asc"}],"full_view":false,"rows":[]}`, string(data))
+	assert.JSONEq(t, `{"columns":[],"sort_description":[{"key":"name","label":"Name","direction":"asc"}],"full_view":false,"rows":[]}`, string(data))
 }
 
 func TestScoreboardEntryNames(t *testing.T) {

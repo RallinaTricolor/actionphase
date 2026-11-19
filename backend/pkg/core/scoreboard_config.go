@@ -271,17 +271,29 @@ func normalizeScoreboardColumn(index int, column ScoreboardColumn) (ScoreboardCo
 	return out, nil
 }
 
-// scoreboardLabelMarkup is the formatting a range label may carry: colour tags
-// and the characters of inline markdown. Mirrored by scoreboardLabelText in
-// frontend/src/lib/scoreboardEditing.ts; the two must agree, or the editor
+// The formatting a range label may carry: a colour wrapper, matched the way the
+// renderer's applyColorMarkup matches it (one pass, a named colour, a closing
+// tag), and the characters of inline markdown. Mirrored by scoreboardLabelText
+// in frontend/src/lib/scoreboardEditing.ts; the two must agree, or the editor
 // accepts a label the server refuses.
-var scoreboardLabelMarkup = regexp.MustCompile("\\[color:[a-z]+\\]|\\[/color\\]|[*_~`]")
+var (
+	scoreboardColorMarkup  = regexp.MustCompile(`\[color:([a-z]+)\]((?s:.*?))\[/color\]`)
+	scoreboardInlineMarkup = regexp.MustCompile("[*_~`]")
+)
 
 // ScoreboardLabelText is a range label without its formatting: roughly what a
 // viewer reads. It is what the length limit counts, so markup is free while the
-// cell stays narrow enough for a phone.
+// cell stays narrow enough for a phone. A tag the renderer shows as text, such
+// as an unknown colour, counts as text.
 func ScoreboardLabelText(label string) string {
-	return scoreboardLabelMarkup.ReplaceAllString(label, "")
+	unwrapped := scoreboardColorMarkup.ReplaceAllStringFunc(label, func(match string) string {
+		parts := scoreboardColorMarkup.FindStringSubmatch(match)
+		if !IsTextColor(parts[1]) {
+			return match
+		}
+		return parts[2]
+	})
+	return scoreboardInlineMarkup.ReplaceAllString(unwrapped, "")
 }
 
 // normalizeScoreboardBandLabel trims a range label and checks both of its

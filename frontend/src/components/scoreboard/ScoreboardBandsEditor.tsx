@@ -12,6 +12,7 @@ import {
   MAX_SCOREBOARD_BANDS,
   MAX_SCOREBOARD_LABEL_LENGTH,
   scoreboardBandLabelError,
+  scoreboardBandsProblem,
   scoreboardLabelText,
 } from '@/lib/scoreboardEditing';
 import type { ScoreboardBand, ScoreboardBandBasis, ScoreboardColumn } from '@/types/scoreboard';
@@ -84,6 +85,7 @@ export function ScoreboardBandsEditor({ column, isTrack, onChange }: ScoreboardB
     setBands(bands.filter((_, i) => i !== index));
   };
 
+  const problem = scoreboardBandsProblem(column);
   const { overlaps, gaps } = checkScoreboardBands(bands);
   // With a fallback, a gap is the fallback's job.
   const shownGaps = fallback ? [] : gaps;
@@ -193,6 +195,10 @@ export function ScoreboardBandsEditor({ column, isTrack, onChange }: ScoreboardB
           );
         })}
       </ol>
+
+      {problem && (
+        <p className="text-sm text-semantic-danger" data-testid="scoreboard-bands-problem">{problem}.</p>
+      )}
 
       {bands.length < MAX_SCOREBOARD_BANDS ? (
         <Button type="button" variant="secondary" size="sm" onClick={() => setBands([...bands, { label: '' }])}>

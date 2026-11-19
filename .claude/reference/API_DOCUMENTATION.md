@@ -339,7 +339,7 @@ curl -X GET http://localhost:3000/api/v1/games/456/scoreboard \
     { "id": "c_score1", "label": "Score", "display": "value", "hidden": true },
     { "id": "c_hpband", "label": "HP", "display": "bands" }
   ],
-  "sort_description": [{ "label": "Score", "direction": "desc" }, { "label": "Name", "direction": "asc" }],
+  "sort_description": [{ "key": "c_score1", "label": "Score", "direction": "desc" }, { "key": "name", "label": "Name", "direction": "asc" }],
   "full_view": true,
   "rows": [
     { "character_id": 12, "character_name": "Ash", "avatar_url": "…",
@@ -358,7 +358,9 @@ curl -X GET http://localhost:3000/api/v1/games/456/scoreboard \
   any sort key from a hidden column onward, and rows below a `top_count` cut.
   When rows were cut, `top_count` says how many were kept; it is absent when the
   board is whole, including in the full view. An empty `sort_description` means
-  the GM's order uses a hidden column; clients show "Ranked by the GM".
+  the GM's order uses a hidden column; clients show "Ranked by the GM". Each
+  entry's `key` is a column ID or `name`: tell the name sort apart by `key`,
+  since a column may be headed "Name" too.
 - `hidden` is sent only in the full view while the game runs. `broken_column_ids`
   (columns whose sheet tab or field no longer exists) is full view only.
 

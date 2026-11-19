@@ -760,7 +760,7 @@
  * Adding a color means touching four places, all of which must agree:
  *   1. here (light), 2. here (dark),
  *   3. TEXT_COLORS in frontend/src/components/common/markdown/textColors.ts,
- *   4. allowedColors in backend/pkg/exports/markdown.go,
+ *   4. textColors in backend/pkg/core/text_colors.go,
  * plus the help text in CommentEditor.tsx. */
 [data-color="red"]     { color: #dc2626; }
 [data-color="green"]   { color: #16a34a; }

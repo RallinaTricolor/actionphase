@@ -21,7 +21,7 @@ const CONFIG_URL = `${BOARD_URL}/config`;
 
 const board: Scoreboard = {
   columns: [{ id: 'c_score1', label: 'Score', display: 'value' }],
-  sort_description: [{ label: 'Score', direction: 'desc' }],
+  sort_description: [{ key: 'c_score1', label: 'Score', direction: 'desc' }],
   full_view: false,
   rows: [{ character_id: 1, character_name: 'Ash', values: { c_score1: { value: 7 } } }],
 };
@@ -47,6 +47,21 @@ describe('useScoreboard', () => {
   it('returns the board the server sends', async () => {
     server.use(http.get(BOARD_URL, () => HttpResponse.json(board)));
     const { result } = renderHook(() => useScoreboard(GAME_ID), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual(board));
+  });
+
+  it('refetches a cached board on mount, whatever the app-wide staleTime', async () => {
+    // As in App.tsx: without its own staleTime, a board cached by an earlier
+    // visit would be served for five minutes after a sheet write that didn't
+    // invalidate it.
+    client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } } });
+    const earlier: Scoreboard = { ...board, rows: [] };
+    client.setQueryData(['scoreboard', GAME_ID], earlier);
+    server.use(http.get(BOARD_URL, () => HttpResponse.json(board)));
+
+    const { result } = renderHook(() => useScoreboard(GAME_ID), { wrapper });
+
+    expect(result.current.data).toEqual(earlier);
     await waitFor(() => expect(result.current.data).toEqual(board));
   });
 

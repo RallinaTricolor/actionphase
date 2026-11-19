@@ -2,9 +2,9 @@ import { EyeOff } from 'lucide-react';
 import { Card } from '@/components/ui';
 import CharacterAvatar from '@/components/characters/CharacterAvatar';
 import { CharacterNameLink } from '@/components/characters/CharacterNameLink';
-import { formatScoreboardCell } from '@/lib/scoreboardFormat';
+import { formatScoreboardBandValue, formatScoreboardCell } from '@/lib/scoreboardFormat';
 import { ScoreboardLabel } from './ScoreboardLabel';
-import type { Scoreboard, ScoreboardDisplay } from '@/types/scoreboard';
+import type { Scoreboard, ScoreboardCell, ScoreboardDisplay } from '@/types/scoreboard';
 
 const HIDDEN_FROM_PLAYERS = 'Hidden from players';
 
@@ -24,8 +24,20 @@ const columnDivider = (index: number) => (index > 0 ? 'border-l' : '');
 const cellAlignment = (display: ScoreboardDisplay) =>
   display === 'bands' ? 'text-left' : 'text-right tabular-nums';
 
+/** One cell. A range label keeps its formatting; everything else is formatScoreboardCell's text. */
+function ScoreboardCellContent({ cell, display }: { cell: ScoreboardCell | undefined; display: ScoreboardDisplay }) {
+  if (display !== 'bands' || !cell?.label) return <>{formatScoreboardCell(cell, display)}</>;
+  const value = formatScoreboardBandValue(cell.value);
+  return (
+    <>
+      <ScoreboardLabel text={cell.label} />
+      {value && ` ${value}`}
+    </>
+  );
+}
+
 /**
- * The board as a table. Position is simply the row's place in the server's
+ * The board as a table, or a note that nobody is on it yet. Position is simply the row's place in the server's
  * order, so tied characters get consecutive numbers and nothing marks a tie:
  * on a board sorted by a hidden column, a tie would give that column away.
  *
@@ -35,6 +47,10 @@ export function ScoreboardTable({ board }: { board: Scoreboard }) {
   const columns = board.columns ?? [];
   const rows = board.rows ?? [];
   const hasHiddenColumn = columns.some((column) => column.hidden);
+
+  if (rows.length === 0) {
+    return <p className="py-8 text-center text-content-secondary">No characters on the board yet.</p>;
+  }
 
   return (
     <div className="space-y-2">
@@ -87,22 +103,14 @@ export function ScoreboardTable({ board }: { board: Scoreboard }) {
                       </span>
                     </span>
                   </th>
-                  {columns.map((column, columnIndex) => {
-                    const cell = row.values[column.id];
-                    return (
-                      <td
-                        key={column.id}
-                        className={`${BODY_CELL} whitespace-nowrap !px-3 text-content-primary ${columnDivider(columnIndex)} ${cellAlignment(column.display)}`}
-                      >
-                        {column.display === 'bands' && cell?.label ? (
-                          <>
-                            <ScoreboardLabel text={cell.label} />
-                            {cell.value !== undefined && ` (${cell.value})`}
-                          </>
-                        ) : formatScoreboardCell(cell, column.display)}
-                      </td>
-                    );
-                  })}
+                  {columns.map((column, columnIndex) => (
+                    <td
+                      key={column.id}
+                      className={`${BODY_CELL} whitespace-nowrap !px-3 text-content-primary ${columnDivider(columnIndex)} ${cellAlignment(column.display)}`}
+                    >
+                      <ScoreboardCellContent cell={row.values[column.id]} display={column.display} />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

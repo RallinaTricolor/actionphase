@@ -3,28 +3,33 @@ import type {
   ScoreboardDisplay,
   ScoreboardSortDescription,
 } from '@/types/scoreboard';
+import { SCOREBOARD_SORT_BY_NAME } from './scoreboardEditing';
 
 /** What a blank cell shows: the character has no such entry, or no range fits. */
 export const BLANK_SCOREBOARD_CELL = '—';
 
 /**
- * A cell as text. A range label comes with its number only when the viewer may
- * see the number: the server leaves `value` out for players.
+ * The number a ranged cell shows after its label, or nothing when the viewer may
+ * not see it: the server leaves `value` out for players.
  */
+export function formatScoreboardBandValue(value: number | undefined): string {
+  return value === undefined ? '' : `(${value})`;
+}
+
+/** A cell as text. */
 export function formatScoreboardCell(cell: ScoreboardCell | undefined, display: ScoreboardDisplay): string {
   if (!cell) return BLANK_SCOREBOARD_CELL;
   const { value, max, label } = cell;
   if (display === 'bands') {
-    if (label && value !== undefined) return `${label} (${value})`;
-    if (label) return label;
-    return value !== undefined ? `(${value})` : BLANK_SCOREBOARD_CELL;
+    return [label, formatScoreboardBandValue(value)].filter(Boolean).join(' ') || BLANK_SCOREBOARD_CELL;
   }
   if (value === undefined) return BLANK_SCOREBOARD_CELL;
   return display === 'value_max' && max !== undefined ? `${value} / ${max}` : String(value);
 }
 
-function describeSortKey({ label, direction }: ScoreboardSortDescription): string {
-  if (label === 'Name') return `Name (${direction === 'asc' ? 'A to Z' : 'Z to A'})`;
+// By key, not label: a column may be headed "Name" too.
+function describeSortKey({ key, label, direction }: ScoreboardSortDescription): string {
+  if (key === SCOREBOARD_SORT_BY_NAME) return `${label} (${direction === 'asc' ? 'A to Z' : 'Z to A'})`;
   return `${label} (${direction === 'asc' ? 'low to high' : 'high to low'})`;
 }
 

@@ -53,8 +53,10 @@ type ScoreboardResultColumn struct {
 	Hidden  bool   `json:"hidden,omitempty" required:"false" doc:"Hidden from players. Sent only in full view while the game runs."`
 }
 
-// ScoreboardSortDescription is one sort key in words.
+// ScoreboardSortDescription is one sort key in words. Key says what kind of key
+// it is: a column may be headed "Name" too.
 type ScoreboardSortDescription struct {
+	Key       string `json:"key" doc:"A column ID, or name for the character's name"`
 	Label     string `json:"label" doc:"Column heading, or Name"`
 	Direction string `json:"direction" enum:"asc,desc" doc:"Sort direction"`
 }
@@ -226,12 +228,12 @@ func scoreboardDisplay(column ScoreboardColumn) string {
 // naming one would claim an order the board doesn't have.
 func describeScoreboardSort(config ScoreboardConfig, fullView bool) []ScoreboardSortDescription {
 	if len(config.Sort) == 0 {
-		return []ScoreboardSortDescription{{Label: "Name", Direction: ScoreboardSortAsc}}
+		return []ScoreboardSortDescription{{Key: ScoreboardSortName, Label: "Name", Direction: ScoreboardSortAsc}}
 	}
 	description := []ScoreboardSortDescription{}
 	for _, key := range config.Sort {
 		if key.Key == ScoreboardSortName {
-			description = append(description, ScoreboardSortDescription{Label: "Name", Direction: key.Direction})
+			description = append(description, ScoreboardSortDescription{Key: ScoreboardSortName, Label: "Name", Direction: key.Direction})
 			continue
 		}
 		index := slices.IndexFunc(config.Columns, func(c ScoreboardColumn) bool { return c.ID == key.Key })
@@ -242,7 +244,7 @@ func describeScoreboardSort(config ScoreboardConfig, fullView bool) []Scoreboard
 		if column.Hidden && !fullView {
 			break
 		}
-		description = append(description, ScoreboardSortDescription{Label: column.Label, Direction: key.Direction})
+		description = append(description, ScoreboardSortDescription{Key: column.ID, Label: column.Label, Direction: key.Direction})
 	}
 	return description
 }

@@ -47,6 +47,8 @@ func TestScoreboardService_ReadsStoredSheets(t *testing.T) {
 		{"numbers", "numbers", `[{"id":"e2","name":"Score","amount":7,"max":12}]`},
 		// A row that isn't the tab's entry list must not be read as one.
 		{"numbers", "other", `[{"id":"e3","name":"Score","amount":99}]`},
+		// Nor a row whose field name is another tab's entry list.
+		{"t_abc123", "numbers", `[{"id":"e4","name":"Score","amount":99}]`},
 	} {
 		_, err := queries.CreateCharacterData(ctx, models.CreateCharacterDataParams{
 			CharacterID: character.ID,
@@ -73,7 +75,12 @@ func TestScoreboardService_ReadsStoredSheets(t *testing.T) {
 		return &current
 	}
 
-	board, err := service.GetScoreboard(ctx, reload(), core.ScoreboardFull)
+	getBoard := func() (*core.ScoreboardResult, error) {
+		current := reload()
+		return service.GetScoreboard(ctx, current, core.ScoreboardConfigForStored(current.Scoreboard), core.ScoreboardFull)
+	}
+
+	board, err := getBoard()
 	require.NoError(t, err)
 	require.Len(t, board.Rows, 1)
 	assert.Equal(t, 40.0, *board.Rows[0].Values["c_gold01"].Value, "a custom tab's number field")
@@ -95,7 +102,7 @@ func TestScoreboardService_ReadsStoredSheets(t *testing.T) {
 	_, err = queries.UpdateGameCharacterSheet(ctx, models.UpdateGameCharacterSheetParams{ID: game.ID, CharacterSheet: sheet})
 	require.NoError(t, err)
 
-	board, err = service.GetScoreboard(ctx, reload(), core.ScoreboardFull)
+	board, err = getBoard()
 	require.NoError(t, err)
 	assert.Equal(t, []string{"c_gold01"}, board.BrokenColumnIDs)
 	assert.NotContains(t, board.Rows[0].Values, "c_gold01")

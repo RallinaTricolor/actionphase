@@ -1,8 +1,8 @@
 import { Alert, Button, Spinner } from '@/components/ui';
 import { useScoreboardPreview } from '@/hooks/useScoreboard';
 import { extractApiErrorMessage } from '@/lib/errors';
-import { describeScoreboardCut, describeScoreboardSort } from '@/lib/scoreboardFormat';
 import type { ScoreboardConfig } from '@/types/scoreboard';
+import { ScoreboardOrderSummary } from './ScoreboardOrderSummary';
 import { ScoreboardTable } from './ScoreboardTable';
 
 interface ScoreboardPreviewProps {
@@ -50,20 +50,9 @@ export function ScoreboardPreview({ gameId, config, isArchived }: ScoreboardPrev
           Players can't open this board yet. This is what they'll see if you make it visible to everyone.
         </Alert>
       )}
-      <p className="text-sm text-content-secondary" data-testid="scoreboard-preview-sort">
-        {describeScoreboardSort(board.sort_description)}
-      </p>
-      {board.top_count ? (
-        <p className="text-sm font-medium text-content-primary" data-testid="scoreboard-preview-top-count">
-          {describeScoreboardCut(board.top_count)}
-        </p>
-      ) : null}
+      <ScoreboardOrderSummary board={board} testIdPrefix="scoreboard-preview" />
       {!board.columns?.length && <p className="text-sm text-content-secondary">Players see no columns.</p>}
-      {board.rows?.length ? (
-        <ScoreboardTable board={board} />
-      ) : (
-        <p className="py-8 text-center text-content-secondary">No characters on the board yet.</p>
-      )}
+      <ScoreboardTable board={board} />
     </div>
   );
 }

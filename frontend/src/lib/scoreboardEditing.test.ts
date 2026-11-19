@@ -7,8 +7,9 @@ import {
   newScoreboardColumn,
   removeScoreboardColumn,
   scoreboardSourceTabs,
-  hasScoreboardBandLabelError,
   scoreboardBandLabelError,
+  scoreboardBandsProblem,
+  scoreboardColumnsComplete,
   scoreboardLabelText,
   scoreboardTopCountError,
   toScoreboardConfig,
@@ -99,6 +100,13 @@ describe('withScoreboardSource', () => {
     expect(withScoreboardSource(column(), inventory, 'number').label).toBe('Gold');
     expect(withScoreboardSource(column({ label: 'Points' }), inventory, 'number').label).toBe('Points');
   });
+
+  it('renames a default heading that was cut short from a long entry name', () => {
+    const entry = 'Reputation with the Thieves Guild';
+    const created = newScoreboardColumn({ tab_key: 'numbers', entry, field_key: 'amount' }, new Set());
+
+    expect(withScoreboardSource(created, inventory, 'number').label).toBe('Gold');
+  });
 });
 
 describe('removeScoreboardColumn', () => {
@@ -187,9 +195,14 @@ describe('scoreboardLabelText', () => {
     ['**Down** _soon_', 'Down soon'],
     ['~~Gone~~ `x`', 'Gone x'],
     ['[color:red]A[/color] [color:blue]B[/color]', 'A B'],
-    ['[color:red]Bloody[/color', 'Bloody[/color'],
-    ['[color:mauve]Odd[/color]', 'Odd'],
+    // What the renderer leaves as literal text counts as text: an unclosed tag,
+    // a stray closing tag, and a colour it doesn't know.
+    ['[color:red]Bloody[/color', '[color:red]Bloody[/color'],
+    ['Bloody[/color]', 'Bloody[/color]'],
+    ['[color:mauve]Odd[/color]', '[color:mauve]Odd[/color]'],
     ['[colour:red]Typo', '[colour:red]Typo'],
+    ['[color:red]A\nB[/color]', 'A\nB'],
+    ['[color:crimson]A[/color] [color:red]B[/color]', '[color:crimson]A[/color] B'],
   ])('%s reads as %s', (label, text) => {
     expect(scoreboardLabelText(label)).toBe(text);
   });
@@ -209,25 +222,53 @@ describe('scoreboardBandLabelError', () => {
       .toBe('Keep it to 24 characters, not counting formatting');
   });
 
+  it('counts a colour the renderer shows as text', () => {
+    expect(scoreboardBandLabelError('[color:red]Bloodied[/color]')).toBeUndefined();
+    expect(scoreboardBandLabelError('[color:crimson]Bloodied[/color]'))
+      .toBe('Keep it to 24 characters, not counting formatting');
+  });
+
   it('refuses formatting with no text in it', () => {
     expect(scoreboardBandLabelError('[color:red]**[/color]')).toBe('Add some text, not just formatting');
     expect(scoreboardBandLabelError('** **')).toBe('Add some text, not just formatting');
   });
 });
 
-describe('hasScoreboardBandLabelError', () => {
+describe('scoreboardBandsProblem', () => {
   const banded = (overrides: Partial<ScoreboardColumn>): ScoreboardColumn => ({
     id: 'c_hp0001', label: 'HP', tab_key: 'numbers', entry: 'HP', field_key: 'amount',
     display: 'bands', bands: [{ label: 'Low', max: 5 }], ...overrides,
   });
 
-  it('finds a bad range label or label for no match', () => {
-    expect(hasScoreboardBandLabelError([banded({})])).toBe(false);
-    expect(hasScoreboardBandLabelError([banded({ bands: [{ label: '**' + 'x'.repeat(25) + '**', max: 5 }] })])).toBe(true);
-    expect(hasScoreboardBandLabelError([banded({ fallback_label: '[color:gray][/color]' })])).toBe(true);
+  it('accepts ranges the server would store', () => {
+    expect(scoreboardBandsProblem(banded({}))).toBeUndefined();
+    expect(scoreboardBandsProblem(banded({ bands: [{ label: 'Even', min: 5, max: 5 }], fallback_label: 'Other' }))).toBeUndefined();
+  });
+
+  // Each of these is a 422 from core.ValidateScoreboardConfig.
+  it.each([
+    ['no ranges', { bands: [] }, 'Add at least one range'],
+    ['a range just added', { bands: [{ label: '' }] }, 'Range 1 needs a label'],
+    ['a label of only formatting', { bands: [{ label: '****', max: 5 }] }, 'Range 1 needs a label'],
+    ['a label too long', { bands: [{ label: 'Low', max: 5 }, { label: 'x'.repeat(25), min: 6 }] },
+      'Range 2: Keep it to 24 characters, not counting formatting'],
+    ['a range with no bound', { bands: [{ label: 'Low' }] }, 'Range 1 needs a lower or upper bound'],
+    ['bounds the wrong way round', { bands: [{ label: 'Low', min: 6, max: 5 }] }, 'Range 1 can never match'],
+    ['a strict bound on a single value', { bands: [{ label: 'Low', min: 5, max: 5, max_strict: true }] }, 'Range 1 can never match'],
+    ['a bad label for no match', { fallback_label: '**' }, 'Label when no range matches: Add some text, not just formatting'],
+  ] as const)('refuses %s', (_name, overrides, problem) => {
+    expect(scoreboardBandsProblem(banded(overrides as Partial<ScoreboardColumn>))).toBe(problem);
   });
 
   it('ignores ranges a column no longer shows', () => {
-    expect(hasScoreboardBandLabelError([banded({ display: 'value', fallback_label: '**' })])).toBe(false);
+    expect(scoreboardBandsProblem(banded({ display: 'value', bands: [{ label: '' }], fallback_label: '**' }))).toBeUndefined();
+  });
+});
+
+describe('scoreboardColumnsComplete', () => {
+  it('needs a heading on every column, and ranges that would save', () => {
+    expect(scoreboardColumnsComplete([column()])).toBe(true);
+    expect(scoreboardColumnsComplete([column(), column({ id: 'c_blank1', label: '  ' })])).toBe(false);
+    expect(scoreboardColumnsComplete([column({ display: 'bands', bands: [{ label: '' }] })])).toBe(false);
   });
 });

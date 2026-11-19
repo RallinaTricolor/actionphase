@@ -6624,6 +6624,8 @@ export interface components {
              * @enum {string}
              */
             direction: "asc" | "desc";
+            /** @description A column ID, or name for the character's name */
+            key: string;
             /** @description Column heading, or Name */
             label: string;
         };

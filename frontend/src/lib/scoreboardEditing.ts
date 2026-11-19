@@ -1,3 +1,4 @@
+import { ALLOWED_COLORS } from '@/components/common/markdown/textColors';
 import { generateKey } from '@/lib/sheetLayoutEditing';
 import type { SheetLayout } from '@/types/characters';
 import type {
@@ -68,7 +69,8 @@ export function newScoreboardColumn(source: ScoreboardSource, takenIds: Readonly
 
 /**
  * Points a column at a new source. A number has no maximum, so whatever needed
- * one is dropped. A heading still matching the old entry follows the new one.
+ * one is dropped. A heading still the default for the old entry (which may be
+ * cut short) follows the new one.
  */
 export function withScoreboardSource(
   column: ScoreboardColumn,
@@ -76,7 +78,7 @@ export function withScoreboardSource(
   fieldType: ScoreboardFieldType,
 ): ScoreboardColumn {
   const next: ScoreboardColumn = { ...column, ...source, entry: source.entry.trim() };
-  if (column.label.trim() === column.entry.trim()) next.label = defaultLabel(source.entry);
+  if (column.label.trim() === defaultLabel(column.entry)) next.label = defaultLabel(source.entry);
   if (fieldType !== 'track') {
     if (next.display === 'value_max') delete next.display;
     if (next.band_basis === 'percent') delete next.band_basis;
@@ -142,13 +144,18 @@ export function scoreboardTopCountError(count: number | undefined): string | und
   return undefined;
 }
 
-// Mirrors scoreboardLabelMarkup in backend/pkg/core/scoreboard_config.go. The
-// two must agree, or the editor accepts a label the server refuses.
-const SCOREBOARD_LABEL_MARKUP = /\[color:[a-z]+\]|\[\/color\]|[*_~`]/g;
+// Mirror scoreboardColorMarkup and scoreboardInlineMarkup in
+// backend/pkg/core/scoreboard_config.go. The two must agree, or the editor
+// accepts a label the server refuses. The colour pattern is the one
+// applyColorMarkup renders, so a tag it shows as text counts as text.
+const SCOREBOARD_COLOR_MARKUP = /\[color:([a-z]+)\]([\s\S]*?)\[\/color\]/g;
+const SCOREBOARD_INLINE_MARKUP = /[*_~`]/g;
 
 /** A range label without its formatting: what the length limit counts. */
 export function scoreboardLabelText(label: string): string {
-  return label.replace(SCOREBOARD_LABEL_MARKUP, '');
+  return label
+    .replace(SCOREBOARD_COLOR_MARKUP, (match, color: string, inner: string) => (ALLOWED_COLORS.has(color) ? inner : match))
+    .replace(SCOREBOARD_INLINE_MARKUP, '');
 }
 
 /** Why a range label (or the label for no match) can't be saved, if it can't. */
@@ -163,12 +170,33 @@ export function scoreboardBandLabelError(label: string | undefined): string | un
   return undefined;
 }
 
-/** Whether any range label in the setup would be refused. */
-export function hasScoreboardBandLabelError(columns: readonly ScoreboardColumn[]): boolean {
-  return columns.some((column) =>
-    column.display === 'bands'
-    && [column.fallback_label, ...(column.bands ?? []).map((band) => band.label)]
-      .some((label) => scoreboardBandLabelError(label) !== undefined));
+/**
+ * Why a column's ranges can't be saved, if they can't: the first thing
+ * core.ValidateScoreboardConfig would refuse. Nothing for a column not showing
+ * ranges, since its ranges aren't saved.
+ */
+export function scoreboardBandsProblem(column: ScoreboardColumn): string | undefined {
+  if (column.display !== 'bands') return undefined;
+  const bands = column.bands ?? [];
+  if (bands.length === 0) return 'Add at least one range';
+  for (const [index, band] of bands.entries()) {
+    const position = index + 1;
+    if (!scoreboardLabelText(band.label).trim()) return `Range ${position} needs a label`;
+    const labelError = scoreboardBandLabelError(band.label);
+    if (labelError) return `Range ${position}: ${labelError}`;
+    if (band.min === undefined && band.max === undefined) return `Range ${position} needs a lower or upper bound`;
+    if (band.min !== undefined && band.max !== undefined
+      && (band.min > band.max || (band.min === band.max && (band.min_strict || band.max_strict)))) {
+      return `Range ${position} can never match`;
+    }
+  }
+  const fallbackError = scoreboardBandLabelError(column.fallback_label);
+  return fallbackError ? `Label when no range matches: ${fallbackError}` : undefined;
+}
+
+/** Whether every column could be saved as it stands: a heading, and ranges the server accepts. */
+export function scoreboardColumnsComplete(columns: readonly ScoreboardColumn[]): boolean {
+  return columns.every((column) => column.label.trim() !== '' && scoreboardBandsProblem(column) === undefined);
 }
 
 const isDefaultSort = (sort: readonly ScoreboardSort[]) =>

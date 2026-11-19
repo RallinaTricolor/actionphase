@@ -24,16 +24,22 @@ describe('formatScoreboardCell', () => {
 describe('describeScoreboardSort', () => {
   it('names each key in order', () => {
     expect(describeScoreboardSort([
-      { label: 'Score', direction: 'desc' },
-      { label: 'Name', direction: 'asc' },
+      { key: 'c_score1', label: 'Score', direction: 'desc' },
+      { key: 'name', label: 'Name', direction: 'asc' },
     ])).toBe('Sorted by Score (high to low), then Name (A to Z)');
   });
 
   it('reads the other direction', () => {
     expect(describeScoreboardSort([
-      { label: 'Wounds', direction: 'asc' },
-      { label: 'Name', direction: 'desc' },
+      { key: 'c_wound1', label: 'Wounds', direction: 'asc' },
+      { key: 'name', label: 'Name', direction: 'desc' },
     ])).toBe('Sorted by Wounds (low to high), then Name (Z to A)');
+  });
+
+  it('reads a column headed Name as a number, not as the name sort', () => {
+    expect(describeScoreboardSort([
+      { key: 'c_named1', label: 'Name', direction: 'desc' },
+    ])).toBe('Sorted by Name (high to low)');
   });
 
   it.each([[[]], [null]])('says only that the GM ranked it when the sort is withheld (%j)', (sort) => {

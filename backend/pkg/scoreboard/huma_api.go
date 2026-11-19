@@ -30,8 +30,10 @@ type updateConfigInput struct {
 	Body core.ScoreboardConfig
 }
 
-// Resolve checks the config on its own terms, so a bad one is a 422 naming the
-// problem. Whether it fits the game's sheet is checked on save.
+// Resolve checks and normalizes the config on its own terms, so a bad one is a
+// 422 naming the problem. This is the only place that runs: the service takes a
+// validated config. Whether it fits the game's sheet needs the game, so the
+// service checks that on save.
 func (in *updateConfigInput) Resolve(huma.Context) []error {
 	validated, err := core.ValidateScoreboardConfig(in.Body)
 	if err != nil {
@@ -81,22 +83,30 @@ func (h *Handler) humaGetScoreboard(ctx context.Context, _ *gameInput) (*scorebo
 		return nil, huma.Error401Unauthorized("authentication required")
 	}
 
+	// Off, or closed to this viewer: either way there is no board for them. This
+	// isn't concealment; the game's details already say whether a board exists
+	// and who it is open to.
+	notFound := huma.Error404NotFound("scoreboard not found")
+	// Checked first, so a game without a board costs no role lookup.
+	if !game.ScoreboardEnabled {
+		return nil, notFound
+	}
+
+	config := core.ScoreboardConfigForStored(game.Scoreboard)
 	isGM, _ := ctx.Value("is_gm").(bool)
 	view := core.ScoreboardViewFor(
 		game.State,
 		game.ScoreboardEnabled,
-		core.ScoreboardConfigForStored(game.Scoreboard).ResolvedVisibility(),
+		config.ResolvedVisibility(),
 		core.ResolveGameRole(ctx, h.App.Pool, game.ID, user.ID, isGM),
 		isGM,
 		user.IsAdmin && core.GetAdminMode(ctx),
 	)
-	// The same answer whether the board is off or just closed to this viewer,
-	// so a 404 doesn't confirm that a staff-only board exists.
 	if view == core.ScoreboardNone {
-		return nil, huma.Error404NotFound("scoreboard not found")
+		return nil, notFound
 	}
 
-	board, err := h.ScoreboardService.GetScoreboard(ctx, game, view)
+	board, err := h.ScoreboardService.GetScoreboard(ctx, game, config, view)
 	if err != nil {
 		return nil, h.internalError(ctx, "Failed to build scoreboard", err, game.ID)
 	}

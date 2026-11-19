@@ -610,15 +610,18 @@ type UpdateGameRequest struct {
 // Who may see what is decided by ScoreboardViewFor, before these are called.
 type ScoreboardServiceInterface interface {
 	// GetScoreboard computes the board for a viewer with the given view.
-	GetScoreboard(ctx context.Context, game *models.Game, view ScoreboardView) (*ScoreboardResult, error)
+	// The config is the game's stored one, which the caller has already parsed
+	// to decide the view.
+	GetScoreboard(ctx context.Context, game *models.Game, config ScoreboardConfig, view ScoreboardView) (*ScoreboardResult, error)
 	// PreviewScoreboard computes the board players would get from an unsaved
 	// config. Nothing is stored.
 	PreviewScoreboard(ctx context.Context, game *models.Game, config ScoreboardConfig) (*ScoreboardResult, error)
 	// GetScoreboardEntryNames lists the entry names in use on each tab that can
 	// feed a column, for the editor's picker.
 	GetScoreboardEntryNames(ctx context.Context, game *models.Game) ([]ScoreboardTabEntryNames, error)
-	// UpdateScoreboardConfig validates and stores the whole config, returning
-	// what was stored. Refused with ErrGameReadOnly on an archived game, and
+	// UpdateScoreboardConfig stores the whole config, returning what was stored.
+	// The config must already have passed ValidateScoreboardConfig (the
+	// handler's Resolve). Refused with ErrGameReadOnly on an archived game, and
 	// with ErrInvalidScoreboardConfig when it doesn't fit the game's sheet.
 	UpdateScoreboardConfig(ctx context.Context, game *models.Game, config ScoreboardConfig) (ScoreboardConfig, error)
 }

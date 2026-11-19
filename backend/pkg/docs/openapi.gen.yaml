@@ -5536,10 +5536,14 @@ components:
                         - asc
                         - desc
                     type: string
+                key:
+                    description: A column ID, or name for the character's name
+                    type: string
                 label:
                     description: Column heading, or Name
                     type: string
             required:
+                - key
                 - label
                 - direction
             type: object

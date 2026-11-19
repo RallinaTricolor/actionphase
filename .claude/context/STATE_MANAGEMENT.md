@@ -281,7 +281,8 @@ Some views are built from data that many mutations change, and have a helper
 that every one of those mutations calls. **A new mutation that changes a
 character sheet value, or which characters are approved and active, must call
 `invalidateScoreboards(queryClient, gameId?)`** (`hooks/useScoreboard.ts`), or
-an open Scoreboard keeps the old values. Leave out the game id only when the
+an open Scoreboard keeps the old values. (The board queries use `staleTime: 0`,
+so a missed call can't outlive the open tab; reopening it refetches.) Leave out the game id only when the
 caller doesn't know it; every game's board is then refreshed.
 `hooks/scoreboardInvalidation.test.tsx` tests the hook callers, and the
 `CharacterSheet` and `CharactersList` tests cover the ones in components; add a

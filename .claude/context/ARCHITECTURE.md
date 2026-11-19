@@ -955,11 +955,19 @@ data that can be out of date.
 anything that changes a sheet value or who is on the board: sheet saves, loot
 rolls, publishing results (drafted sheet updates apply then), approve, delete,
 remove, reassign, rename, avatars, layout saves and `refetchGameData`. Without a
-game id it refreshes every board. It reaches only the browser that made the
-change: other viewers keep their copy until they reload, or open the tab again
-after the app's 5-minute `staleTime` (there's no refetch on window focus), and a
-staged chain's sheet updates applied
-by the release worker send no client event.
+game id it refreshes every board. That keeps a board **on screen** current.
+Correctness doesn't rest on it: the board and entry-name queries have
+`staleTime: 0`, so every mount refetches, and a writer that misses the call
+leaves only an open board stale. It reaches only the browser that made the
+change: other viewers keep their copy until they open the tab again (there's no
+refetch on window focus), and a staged chain's sheet updates applied by the
+release worker send no client event.
+
+The service reads only the tabs it needs (the config's columns, or the tabs
+with numeric fields for entry names) through `GetCharacterSheetRowsByGame`,
+alongside the cast query. Range labels are measured by
+`core.ScoreboardLabelText`, which strips only the markup the renderer would
+render: an unknown colour (`core.IsTextColor`) counts as text.
 
 **Tests and fixtures**: core table tests (`scoreboard_test.go`, which also
 covers `ScoreboardViewFor`, and `scoreboard_config_test.go`), the service and handler

@@ -133,6 +133,7 @@ export function ScoreboardColumnEditor({
             label="Heading"
             inputSize="sm"
             maxLength={MAX_SCOREBOARD_LABEL_LENGTH}
+            error={column.label.trim() ? undefined : 'Add a heading'}
             value={column.label}
             onChange={(e) => onChange({ ...column, label: e.target.value })}
           />

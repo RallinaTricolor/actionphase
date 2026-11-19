@@ -17,7 +17,7 @@ const row = (character_id: number, character_name: string, values: ScoreboardRow
 
 const makeBoard = (overrides: Partial<Scoreboard> = {}): Scoreboard => ({
   columns: [],
-  sort_description: [{ label: 'Name', direction: 'asc' }],
+  sort_description: [{ key: 'name', label: 'Name', direction: 'asc' }],
   full_view: false,
   rows: [row(1, 'Ash')],
   ...overrides,
@@ -40,7 +40,7 @@ describe('ScoreboardView', () => {
   it('lists characters in the server’s order, numbered by position', async () => {
     serve(makeBoard({
       columns: [{ id: 'c_score1', label: 'Score', display: 'value' }],
-      sort_description: [{ label: 'Score', direction: 'desc' }],
+      sort_description: [{ key: 'c_score1', label: 'Score', direction: 'desc' }],
       rows: [
         row(3, 'Cleo', { c_score1: { value: 9 } }),
         row(1, 'Ash', { c_score1: { value: 7 } }),
@@ -214,9 +214,9 @@ describe('ScoreboardView', () => {
       expect(screen.queryByRole('button', { name: 'Set up columns' })).not.toBeInTheDocument();
     });
 
-    it('offers nothing on a completed game, which can no longer change', async () => {
+    it.each(['completed', 'cancelled'])('offers nothing on a %s game, which can no longer change', async (state) => {
       serve(withColumn);
-      await renderBoard({ isGM: true, state: 'completed' });
+      await renderBoard({ isGM: true, state });
 
       expect(screen.queryByTestId('edit-scoreboard')).not.toBeInTheDocument();
     });
