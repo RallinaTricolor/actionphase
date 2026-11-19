@@ -210,6 +210,7 @@ INSERT INTO games (
     title, description, gm_user_id, genre, start_date, end_date,
     recruitment_deadline, max_players, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url,
     common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone,
+    scoreboard_enabled,
     -- Required by the application on every new game (req 5), though the column
     -- stays nullable so pre-community games remain valid. See the migration.
     -- character_sheet is left to its column DEFAULT ('{}', the default
@@ -217,8 +218,8 @@ INSERT INTO games (
     community_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-    $14, $15, $16, $17, $18, $19
-) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board
+    $14, $15, $16, $17, $18, $19, $20
+) RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
 `
 
 type CreateGameParams struct {
@@ -240,6 +241,7 @@ type CreateGameParams struct {
 	CommonRoomCloseDay      pgtype.Int2        `json:"common_room_close_day"`
 	CommonRoomCloseTime     pgtype.Time        `json:"common_room_close_time"`
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
+	ScoreboardEnabled       bool               `json:"scoreboard_enabled"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
 }
 
@@ -263,6 +265,7 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.CommonRoomCloseDay,
 		arg.CommonRoomCloseTime,
 		arg.ScheduleTimezone,
+		arg.ScoreboardEnabled,
 		arg.CommunityID,
 	)
 	var i Game
@@ -294,6 +297,8 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }
@@ -364,7 +369,7 @@ func (q *Queries) GetActiveParticipants(ctx context.Context, gameID int32) ([]Ge
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board FROM games WHERE id = $1 AND deleted_at IS NULL
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard FROM games WHERE id = $1 AND deleted_at IS NULL
 `
 
 // Soft-deleted games are treated as absent here, and this is the load-bearing
@@ -401,6 +406,8 @@ func (q *Queries) GetGame(ctx context.Context, id int32) (Game, error) {
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }
@@ -510,7 +517,7 @@ func (q *Queries) GetGameParticipants(ctx context.Context, gameID int32) ([]GetG
 
 const getGameWithDetails = `-- name: GetGameWithDetails :one
 SELECT
-    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id, g.share_gm_board,
+    g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id, g.share_gm_board, g.scoreboard_enabled, g.scoreboard,
     u.username as gm_username,
     c.name as community_name,
     c.slug as community_slug,
@@ -549,6 +556,8 @@ type GetGameWithDetailsRow struct {
 	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
 	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
 	ShareGmBoard            bool               `json:"share_gm_board"`
+	ScoreboardEnabled       bool               `json:"scoreboard_enabled"`
+	Scoreboard              []byte             `json:"scoreboard"`
 	GmUsername              pgtype.Text        `json:"gm_username"`
 	CommunityName           pgtype.Text        `json:"community_name"`
 	CommunitySlug           pgtype.Text        `json:"community_slug"`
@@ -592,6 +601,8 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 		&i.GmUsername,
 		&i.CommunityName,
 		&i.CommunitySlug,
@@ -601,7 +612,7 @@ func (q *Queries) GetGameWithDetails(ctx context.Context, id int32) (GetGameWith
 }
 
 const getGamesByGM = `-- name: GetGamesByGM :many
-SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board FROM games WHERE gm_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC
+SELECT id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard FROM games WHERE gm_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC
 `
 
 func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, error) {
@@ -641,6 +652,8 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.ShareGmBoard,
+			&i.ScoreboardEnabled,
+			&i.Scoreboard,
 		); err != nil {
 			return nil, err
 		}
@@ -653,7 +666,7 @@ func (q *Queries) GetGamesByGM(ctx context.Context, gmUserID int32) ([]Game, err
 }
 
 const getGamesByUser = `-- name: GetGamesByUser :many
-SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id, g.share_gm_board, gp.role as user_role, u.username as gm_username
+SELECT g.id, g.title, g.description, g.gm_user_id, g.state, g.genre, g.start_date, g.end_date, g.recruitment_deadline, g.max_players, g.created_at, g.updated_at, g.is_anonymous, g.auto_accept_audience, g.allow_group_conversations, g.portrait_avatars, g.banner_url, g.common_room_open_day, g.common_room_open_time, g.common_room_close_day, g.common_room_close_time, g.schedule_timezone, g.character_sheet, g.community_id, g.deleted_at, g.deleted_by_user_id, g.share_gm_board, g.scoreboard_enabled, g.scoreboard, gp.role as user_role, u.username as gm_username
 FROM games g
 JOIN game_participants gp ON g.id = gp.game_id
 JOIN users u ON g.gm_user_id = u.id
@@ -689,6 +702,8 @@ type GetGamesByUserRow struct {
 	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
 	DeletedByUserID         pgtype.Int4        `json:"deleted_by_user_id"`
 	ShareGmBoard            bool               `json:"share_gm_board"`
+	ScoreboardEnabled       bool               `json:"scoreboard_enabled"`
+	Scoreboard              []byte             `json:"scoreboard"`
 	UserRole                string             `json:"user_role"`
 	GmUsername              string             `json:"gm_username"`
 }
@@ -730,6 +745,8 @@ func (q *Queries) GetGamesByUser(ctx context.Context, userID int32) ([]GetGamesB
 			&i.DeletedAt,
 			&i.DeletedByUserID,
 			&i.ShareGmBoard,
+			&i.ScoreboardEnabled,
+			&i.Scoreboard,
 			&i.UserRole,
 			&i.GmUsername,
 		); err != nil {
@@ -1019,15 +1036,17 @@ SET title = $2, description = $3, genre = $4, start_date = $5,
     -- replace, because an edit that omitted it would otherwise NULL the
     -- community -- and a game with no community is one no ban can reach.
     -- The setup-only rule (decision 4) is enforced in the service, not here.
-    community_id = COALESCE($19::integer, games.community_id),
+    community_id = COALESCE($20::integer, games.community_id),
     common_room_open_day = $14, common_room_open_time = $15,
     common_room_close_day = $16, common_room_close_time = $17,
     schedule_timezone = $18,
+    scoreboard_enabled = $19,
     -- character_sheet is deliberately not here: the layout is written only by
-    -- UpdateGameCharacterSheet, so a settings save can never reset it.
+    -- UpdateGameCharacterSheet, so a settings save can never reset it. The
+    -- same goes for scoreboard and UpdateGameScoreboard.
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
 `
 
 type UpdateGameParams struct {
@@ -1049,6 +1068,7 @@ type UpdateGameParams struct {
 	CommonRoomCloseDay      pgtype.Int2        `json:"common_room_close_day"`
 	CommonRoomCloseTime     pgtype.Time        `json:"common_room_close_time"`
 	ScheduleTimezone        pgtype.Text        `json:"schedule_timezone"`
+	ScoreboardEnabled       bool               `json:"scoreboard_enabled"`
 	CommunityID             pgtype.Int4        `json:"community_id"`
 }
 
@@ -1072,6 +1092,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.CommonRoomCloseDay,
 		arg.CommonRoomCloseTime,
 		arg.ScheduleTimezone,
+		arg.ScoreboardEnabled,
 		arg.CommunityID,
 	)
 	var i Game
@@ -1103,6 +1124,8 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }
@@ -1127,7 +1150,7 @@ const updateGameBannerURL = `-- name: UpdateGameBannerURL :one
 UPDATE games
 SET banner_url = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
 `
 
 type UpdateGameBannerURLParams struct {
@@ -1166,6 +1189,8 @@ func (q *Queries) UpdateGameBannerURL(ctx context.Context, arg UpdateGameBannerU
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }
@@ -1174,7 +1199,7 @@ const updateGameCharacterSheet = `-- name: UpdateGameCharacterSheet :one
 UPDATE games
 SET character_sheet = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
 `
 
 type UpdateGameCharacterSheetParams struct {
@@ -1215,6 +1240,59 @@ func (q *Queries) UpdateGameCharacterSheet(ctx context.Context, arg UpdateGameCh
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
+	)
+	return i, err
+}
+
+const updateGameScoreboard = `-- name: UpdateGameScoreboard :one
+UPDATE games
+SET scoreboard = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
+`
+
+type UpdateGameScoreboardParams struct {
+	ID         int32  `json:"id"`
+	Scoreboard []byte `json:"scoreboard"`
+}
+
+// The Scoreboard tab's write. Replaces the whole config: the service validates
+// it first, and the editor always sends all of it.
+func (q *Queries) UpdateGameScoreboard(ctx context.Context, arg UpdateGameScoreboardParams) (Game, error) {
+	row := q.db.QueryRow(ctx, updateGameScoreboard, arg.ID, arg.Scoreboard)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.GmUserID,
+		&i.State,
+		&i.Genre,
+		&i.StartDate,
+		&i.EndDate,
+		&i.RecruitmentDeadline,
+		&i.MaxPlayers,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsAnonymous,
+		&i.AutoAcceptAudience,
+		&i.AllowGroupConversations,
+		&i.PortraitAvatars,
+		&i.BannerUrl,
+		&i.CommonRoomOpenDay,
+		&i.CommonRoomOpenTime,
+		&i.CommonRoomCloseDay,
+		&i.CommonRoomCloseTime,
+		&i.ScheduleTimezone,
+		&i.CharacterSheet,
+		&i.CommunityID,
+		&i.DeletedAt,
+		&i.DeletedByUserID,
+		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }
@@ -1223,7 +1301,7 @@ const updateGameState = `-- name: UpdateGameState :one
 UPDATE games
 SET state = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board
+RETURNING id, title, description, gm_user_id, state, genre, start_date, end_date, recruitment_deadline, max_players, created_at, updated_at, is_anonymous, auto_accept_audience, allow_group_conversations, portrait_avatars, banner_url, common_room_open_day, common_room_open_time, common_room_close_day, common_room_close_time, schedule_timezone, character_sheet, community_id, deleted_at, deleted_by_user_id, share_gm_board, scoreboard_enabled, scoreboard
 `
 
 type UpdateGameStateParams struct {
@@ -1262,6 +1340,8 @@ func (q *Queries) UpdateGameState(ctx context.Context, arg UpdateGameStateParams
 		&i.DeletedAt,
 		&i.DeletedByUserID,
 		&i.ShareGmBoard,
+		&i.ScoreboardEnabled,
+		&i.Scoreboard,
 	)
 	return i, err
 }

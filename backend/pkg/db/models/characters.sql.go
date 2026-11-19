@@ -507,6 +507,58 @@ func (q *Queries) GetCharacterDataByModule(ctx context.Context, arg GetCharacter
 	return items, nil
 }
 
+const getCharacterSheetRowsByGame = `-- name: GetCharacterSheetRowsByGame :many
+SELECT cd.character_id, cd.module_type, cd.field_name, cd.field_value
+FROM character_data cd
+JOIN characters c ON c.id = cd.character_id
+WHERE c.game_id = $1
+  AND cd.field_value IS NOT NULL
+  AND cd.module_type = ANY($2::text[])
+  AND cd.field_name = ANY($3::text[])
+`
+
+type GetCharacterSheetRowsByGameParams struct {
+	GameID      int32    `json:"game_id"`
+	ModuleTypes []string `json:"module_types"`
+	FieldNames  []string `json:"field_names"`
+}
+
+type GetCharacterSheetRowsByGameRow struct {
+	CharacterID int32       `json:"character_id"`
+	ModuleType  string      `json:"module_type"`
+	FieldName   string      `json:"field_name"`
+	FieldValue  pgtype.Text `json:"field_value"`
+}
+
+// A game's sheet rows in the given modules and fields, for readers such as the
+// scoreboard that need a few tabs' entry lists and none of the cast's bios or
+// notes. The two sets filter independently; a caller wanting exact
+// (module_type, field_name) pairs checks the pair itself.
+func (q *Queries) GetCharacterSheetRowsByGame(ctx context.Context, arg GetCharacterSheetRowsByGameParams) ([]GetCharacterSheetRowsByGameRow, error) {
+	rows, err := q.db.Query(ctx, getCharacterSheetRowsByGame, arg.GameID, arg.ModuleTypes, arg.FieldNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCharacterSheetRowsByGameRow
+	for rows.Next() {
+		var i GetCharacterSheetRowsByGameRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.ModuleType,
+			&i.FieldName,
+			&i.FieldValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCharactersByGame = `-- name: GetCharactersByGame :many
 SELECT c.id, c.game_id, c.user_id, c.name, c.character_type, c.status, c.created_at, c.updated_at, c.avatar_url, c.is_active, c.original_owner_user_id, c.is_hidden, u.username as owner_username, na.assigned_user_id, au.username as assigned_username
 FROM characters c

@@ -357,6 +357,40 @@ func CanSeeAllRestrictedPosts(userRole string, isAdminMode bool) bool {
 	return isAdminMode || userRole == "gm" || userRole == "co_gm" || userRole == "audience"
 }
 
+// ScoreboardView says how much of a game's scoreboard a viewer may see.
+type ScoreboardView int
+
+const (
+	// ScoreboardNone: no board at all. Answered as a 404, like other concealment.
+	ScoreboardNone ScoreboardView = iota
+	// ScoreboardPlayer: the board, without hidden columns.
+	ScoreboardPlayer
+	// ScoreboardFull: every column.
+	ScoreboardFull
+)
+
+// ScoreboardViewFor is the ONLY definition of who sees a scoreboard. The
+// frontend's copy (lib/scoreboardVisibility.ts) only decides whether to show
+// the tab.
+//
+// A board that isn't enabled stays off even in a public archive, because the GM
+// never turned it on. Otherwise an archive shows everyone every column, hidden
+// ones and staff-only boards included. isAdminMode must be "user.is_admin AND
+// the X-Admin-Mode header", as for CanSeeAllRestrictedPosts.
+func ScoreboardViewFor(gameState string, enabled bool, visibility, role string, isGM, isAdminMode bool) ScoreboardView {
+	if !enabled {
+		return ScoreboardNone
+	}
+	if IsPublicArchive(gameState) || isGM || isAdminMode ||
+		role == "gm" || role == "co_gm" || role == "audience" {
+		return ScoreboardFull
+	}
+	if visibility == ScoreboardVisibilityPublic {
+		return ScoreboardPlayer
+	}
+	return ScoreboardNone
+}
+
 // CanUserControlNPC checks if a user can control an NPC character.
 // This includes:
 // 1. The NPC is assigned to the user (via npc_assignments table)

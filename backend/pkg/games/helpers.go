@@ -17,6 +17,15 @@ func formatPgtypeTime(t pgtype.Time) string {
 	return fmt.Sprintf("%02d:%02d", h, m)
 }
 
+// scoreboardVisibilityResponse is the game response's scoreboard_visibility:
+// empty, so omitted, unless the board is enabled.
+func scoreboardVisibilityResponse(enabled bool, stored []byte) string {
+	if !enabled {
+		return ""
+	}
+	return core.ScoreboardConfigForStored(stored).ResolvedVisibility()
+}
+
 // characterSheetResponse decodes a stored games.character_sheet column for a
 // response body. Thin alias for the core helper, which the cross-game character
 // payload also uses so both surfaces render identical labels.

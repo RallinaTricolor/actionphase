@@ -52,6 +52,7 @@ export default defineConfig({
           text: 'Running a Game',
           items: [
             { text: 'Phases', link: '/guide/phases' },
+            { text: 'Scoreboard', link: '/guide/scoreboard' },
           ]
         },
         {

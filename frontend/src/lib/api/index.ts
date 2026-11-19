@@ -63,6 +63,7 @@ import { PollsApi } from './polls';
 import { UsersApi } from './users';
 import { ExportsApi } from './exports';
 import { GmBoardApi } from './gmBoard';
+import { ScoreboardApi } from './scoreboard';
 
 class ApiClient extends BaseApiClient {
   public auth: AuthApi;
@@ -80,6 +81,7 @@ class ApiClient extends BaseApiClient {
   public users: UsersApi;
   public exports: ExportsApi;
   public gmBoard: GmBoardApi;
+  public scoreboard: ScoreboardApi;
 
   constructor() {
     super();
@@ -100,6 +102,7 @@ class ApiClient extends BaseApiClient {
     this.users = new UsersApi();
     this.exports = new ExportsApi();
     this.gmBoard = new GmBoardApi();
+    this.scoreboard = new ScoreboardApi();
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import type { GameWithDetails, GameParticipant } from '../types/games';
 import type { Character } from '../types/characters';
@@ -8,6 +8,7 @@ import { useAdminMode } from './AdminModeContext';
 import { computeGamePermissions, resolveUserRole } from '../lib/gamePermissions';
 import type { UserGameRole } from '../lib/gamePermissions';
 import { logger } from '@/services/LoggingService';
+import { invalidateScoreboards } from '@/hooks/useScoreboard';
 
 // Re-exported for the many components that already import it from here. The
 // definition lives with the permission rules in lib/gamePermissions.
@@ -60,6 +61,7 @@ interface GameProviderProps {
 export function GameProvider({ gameId, children }: GameProviderProps) {
   const { currentUser } = useAuth();
   const { adminModeEnabled } = useAdminMode();
+  const queryClient = useQueryClient();
   const currentUserId = currentUser?.id;
 
   // Fetch game details
@@ -160,6 +162,8 @@ export function GameProvider({ gameId, children }: GameProviderProps) {
   // Refresh all game data
   const refetchGameData = async () => {
     logger.debug('Refetching all game data', { gameId });
+    // Called after state changes and settings saves, which decide who sees what.
+    invalidateScoreboards(queryClient, gameId);
     await Promise.all([
       refetchGame(),
       refetchParticipants(),

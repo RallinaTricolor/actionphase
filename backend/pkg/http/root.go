@@ -27,6 +27,7 @@ import (
 	"actionphase/pkg/notifications"
 	"actionphase/pkg/phases"
 	"actionphase/pkg/polls"
+	"actionphase/pkg/scoreboard"
 	"actionphase/pkg/users"
 	"net/http"
 	"os"
@@ -356,6 +357,12 @@ func (h *Handler) Router() (chi.Router, *docs.Handler) {
 				// packages registering on this same /{gameID} subrouter.
 				// Registers the comment operations too.
 				handouts.RegisterHumaGameHandouts(gameScopedAPI, handoutHandler)
+
+				// Scoreboard
+				scoreboard.RegisterHumaGameScoreboard(gameScopedAPI, &scoreboard.Handler{
+					App:               h.App,
+					ScoreboardService: &db.ScoreboardService{DB: h.App.Pool, Logger: h.App.ObsLogger},
+				})
 
 				// The Info tab's community document list (req 8). Open to any
 				// logged-in user, like the community's own document list.

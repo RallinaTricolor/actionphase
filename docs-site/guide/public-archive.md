@@ -10,6 +10,7 @@ When viewing a completed game, you have access to these tabs:
 - **People** — All characters and participants
 - **Handouts** — All published handouts
 - **Audience** — The audience view of action submissions and private messages
+- **Scoreboard** — If the GM turned it on, the whole board, including columns that were hidden from players
 - **Game Info** — Genre, dates, and player count
 
 There is no standalone Common Room tab — Common Room content from each phase is accessible through the **History** tab.

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
+import { invalidateScoreboards } from './useScoreboard';
 
 /**
  * Hook to assign an NPC to a user
@@ -36,6 +37,7 @@ export function useRenameCharacter() {
       }
       // Also invalidate any dashboard queries that might show this character
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      invalidateScoreboards(queryClient, variables.gameId);
     },
   });
 }

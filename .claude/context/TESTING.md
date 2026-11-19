@@ -339,6 +339,14 @@ dozens of fake failures. If a killed run left the lock behind, `rmdir .e2e-run.l
 - `actionTimeout` (10s) and `navigationTimeout` (15s) are set globally so a
   stuck step fails at its own line instead of consuming the test budget.
 
+**Concealment checks read the response, not just the page** *(2026-11-19)*.
+When a spec checks that a role can't see something (a hidden column, a
+restricted post), also assert on the API response the browser received
+(`page.waitForResponse` registered before the action). A value that arrives and
+is merely not drawn passes a page-only check. `e2e/games/scoreboard.spec.ts`
+does this, on read-only fixture games (`e2e/35_scoreboard.sql`, 722-727) with
+the epilogue case seeded in `epilogue` so a retry finds the same state.
+
 **GM results board specs** *(2026-11-12)* live in `frontend/e2e/gm-board/`,
 one file per area (shell, read, map, scenes, write, rewards, publish,
 collaboration, sharing, setup), desktop project only apart from one `@mobile`

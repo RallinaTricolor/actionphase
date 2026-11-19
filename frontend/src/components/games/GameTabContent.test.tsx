@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { GameTabContent } from './GameTabContent';
 import type { GameWithDetails, GameParticipant } from '@/types/games';
 import type { GamePhase } from '@/types/phases';
+import { makeGameWithDetails } from '@/test-utils/factories';
 
 // Mock all child components
 vi.mock('@/components/actions/GameResultsManager', () => ({
@@ -13,6 +14,10 @@ vi.mock('@/components/actions/GameResultsManager', () => ({
 
 vi.mock('@/components/gm-board/OpenResultsBoardButton', () => ({
   OpenResultsBoardButton: () => <div data-testid="open-results-board">OpenResultsBoardButton</div>,
+}));
+
+vi.mock('@/components/scoreboard/ScoreboardView', () => ({
+  ScoreboardView: ({ gameId }: { gameId: number }) => <div data-testid="scoreboard-view">Scoreboard for game {gameId}</div>,
 }));
 
 vi.mock('@/components/actions/ActionsList', () => ({
@@ -79,6 +84,7 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
     allow_group_conversations: false,
     portrait_avatars: false,
     share_gm_board: false,
+    scoreboard_enabled: false,
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
   };
@@ -239,5 +245,44 @@ describe('GameTabContent - Actions Tab with GameResultsManager', () => {
 
     // Now should render GameResultsManager
     expect(screen.getByTestId('game-results-manager')).toBeInTheDocument();
+  });
+});
+
+describe('GameTabContent - Scoreboard tab', () => {
+  const renderTab = (
+    game: Partial<GameWithDetails>,
+    viewer: { isGM?: boolean; isAudience?: boolean } = {},
+  ) => render(
+    <GameTabContent
+      activeTab="scoreboard"
+      gameId={326}
+      game={makeGameWithDetails({ id: 326, state: 'in_progress', ...game })}
+      participants={[]}
+      isGM={viewer.isGM ?? false}
+      isAudience={viewer.isAudience ?? false}
+      isParticipant={false}
+      currentUserId={2}
+      userCharacters={[]}
+    />,
+  );
+
+  it('shows the board to a player when it is open to everyone', () => {
+    renderTab({ scoreboard_enabled: true, scoreboard_visibility: 'public' });
+    expect(screen.getByTestId('scoreboard-view')).toHaveTextContent('Scoreboard for game 326');
+  });
+
+  it('shows a GM-and-audience board to the GM', () => {
+    renderTab({ scoreboard_enabled: true, scoreboard_visibility: 'staff' }, { isGM: true });
+    expect(screen.getByTestId('scoreboard-view')).toBeInTheDocument();
+  });
+
+  it('shows nothing to a player who opens a GM-and-audience board by URL', () => {
+    renderTab({ scoreboard_enabled: true, scoreboard_visibility: 'staff' });
+    expect(screen.queryByTestId('scoreboard-view')).not.toBeInTheDocument();
+  });
+
+  it('shows nothing when the setting is off', () => {
+    renderTab({ scoreboard_enabled: false }, { isGM: true });
+    expect(screen.queryByTestId('scoreboard-view')).not.toBeInTheDocument();
   });
 });

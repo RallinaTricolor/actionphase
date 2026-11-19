@@ -71,6 +71,7 @@ export async function navigateToGameTab(page: Page, tabName: string) {
     'History': 'h2:has-text("History")',
     'Handouts': '', // Variable content
     'Audience': '', // Variable content
+    'Scoreboard': '#scoreboard-heading', // Renders once the board has loaded
   };
 
   const indicator = tabIndicators[tabName];

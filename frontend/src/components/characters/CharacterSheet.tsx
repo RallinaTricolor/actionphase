@@ -14,6 +14,7 @@ import { TabNavigation } from '@/components/layout/TabNavigation';
 import type { Tab } from '@/components/layout/TabNavigation';
 import { Button, Badge, Input } from '@/components/ui';
 import { useRenameCharacter } from '@/hooks/useCharacters';
+import { invalidateScoreboards } from '@/hooks/useScoreboard';
 import { CharacterActionsMenu } from './CharacterActionsMenu';
 import { MarkdownPreview } from '@/components/common/markdown/MarkdownPreview';
 import { CommentEditor } from '@/components/messages/CommentEditor';
@@ -126,6 +127,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
   // The server writes a rolled entry itself, so a roll only refetches.
   const lootRolling = useLootRoll(characterId, () => {
     queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+    invalidateScoreboards(queryClient, character?.game_id);
   });
 
   // Participants can view all private data once the game is a public archive
@@ -169,6 +171,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
       apiClient.characters.setCharacterData(characterId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['characterData', characterId] });
+      invalidateScoreboards(queryClient, character?.game_id);
       setEditingField(null);
       setEditDraft(null);
     }
@@ -178,6 +181,7 @@ export function CharacterSheet({ characterId, canEdit = false, canEditStats = fa
     mutationFn: () => apiClient.characters.deleteCharacterAvatar(characterId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['character', characterId] });
+      invalidateScoreboards(queryClient, character?.game_id);
       setIsDeleteAvatarDialogOpen(false);
     }
   });

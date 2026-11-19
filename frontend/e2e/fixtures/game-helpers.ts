@@ -108,6 +108,14 @@ export const FIXTURE_GAMES = {
   RESULTS_BOARD_ARCHIVE: 'E2E Test: Results Board - Archive', // Game #720 - completed and shared (READ-ONLY)
   RESULTS_BOARD_EMPTY: 'E2E Test: Results Board - Empty',     // Game #721 - no board, no codex (WRITES)
 
+  // Scoreboard (35_scoreboard.sql), owned by games/scoreboard.spec.ts; all READ-ONLY
+  SCOREBOARD_PUBLIC: 'E2E Test: Scoreboard - Public',     // Game #722 - board A: scores shown, high to low
+  SCOREBOARD_RANKED: 'E2E Test: Scoreboard - Ranked',     // Game #723 - board B: scores hidden, order kept
+  SCOREBOARD_PRIVATE: 'E2E Test: Scoreboard - Private',   // Game #724 - board C: GM and audience only
+  SCOREBOARD_EPILOGUE: 'E2E Test: Scoreboard - Epilogue', // Game #725 - board C's setup, seeded in epilogue
+  SCOREBOARD_RANGES: 'E2E Test: Scoreboard - Ranges',     // Game #726 - HP shown as ranges
+  SCOREBOARD_TOP: 'E2E Test: Scoreboard - Top',           // Game #727 - players see only the top 2
+
   // Player multiple characters test (340-345, worker-specific)
   PLAYER_MULTIPLE_CHARACTERS: 'E2E Test: Player Multiple Characters', // Game #340 - "player-multiple-characters.spec.ts"
 

@@ -28,6 +28,13 @@ All date fields are optional and informational — they don't automatically trig
 
 **Allow Group Conversations** — Enabled by default. When on, players can start private message conversations with three or more participants. When off, private messages are limited to one-on-one conversations only.
 
+## Scoreboard
+
+**Enable Scoreboard** — Off by default. Adds a **Scoreboard** tab that ranks
+characters by values from their character sheets. You set the board up on that
+tab, and it starts visible to the GM and audience only. Turning it off hides the
+tab and keeps your setup. See [Scoreboard](./scoreboard).
+
 ## Character Sheet
 
 Three of the character sheet's tabs can be renamed to match your game's system:

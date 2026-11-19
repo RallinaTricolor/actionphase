@@ -4,6 +4,8 @@ import type { Tab } from '@/components/layout/TabNavigation';
 import type { GameState } from '../types/games';
 import { clearForeignTabParams } from '../utils/tabParams';
 import { isPublicArchive } from '@/lib/gamePermissions';
+import { canViewScoreboard } from '@/lib/scoreboardVisibility';
+import type { ScoreboardVisibility } from '@/types/scoreboard';
 
 interface UseGameTabsOptions {
   gameState: GameState | undefined;
@@ -18,6 +20,8 @@ interface UseGameTabsOptions {
   unvotedPollsCount?: number;
   hasSubmittedAction?: boolean;
   isRoleLoading?: boolean;
+  scoreboardEnabled?: boolean;
+  scoreboardVisibility?: ScoreboardVisibility;
 }
 
 // Icon helper to avoid JSX in .ts file
@@ -61,6 +65,8 @@ export function useGameTabs({
   unvotedPollsCount = 0,
   hasSubmittedAction = false,
   isRoleLoading = false,
+  scoreboardEnabled = false,
+  scoreboardVisibility,
 }: UseGameTabsOptions) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -183,6 +189,10 @@ export function useGameTabs({
       tabList.push({ id: 'handouts', label: 'Handouts', icon: icons.handouts });
     }
 
+    if (canViewScoreboard({ gameState, enabled: scoreboardEnabled, visibility: scoreboardVisibility, isGM, isAudience })) {
+      tabList.push({ id: 'scoreboard', label: 'Scoreboard', icon: icons.stats });
+    }
+
     // Trailing tabs are ordered least-essential last on purpose: TabNavigation
     // collapses tabs into "More" from the end of this list backwards, so
     // position here is what decides survival on a narrow viewport. Reference
@@ -211,7 +221,7 @@ export function useGameTabs({
     }
 
     return tabList;
-  }, [gameState, isGM, playerCount, currentPhaseType, isParticipant, isAudience, hasCharacters, unvotedPollsCount, hasSubmittedAction]);
+  }, [gameState, isGM, playerCount, currentPhaseType, isParticipant, isAudience, hasCharacters, unvotedPollsCount, hasSubmittedAction, scoreboardEnabled, scoreboardVisibility]);
 
   // Smart default tab selection logic based on game context
   const defaultTab = useMemo(() => {

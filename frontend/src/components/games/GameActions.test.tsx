@@ -15,6 +15,7 @@ const baseGame: Game = {
   allow_group_conversations: false,
   portrait_avatars: false,
   share_gm_board: false,
+  scoreboard_enabled: false,
   current_players: 0,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',

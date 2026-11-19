@@ -122,6 +122,19 @@ JOIN characters c ON c.id = cd.character_id
 WHERE c.game_id = $1
 ORDER BY cd.character_id, cd.module_type, cd.field_name;
 
+-- A game's sheet rows in the given modules and fields, for readers such as the
+-- scoreboard that need a few tabs' entry lists and none of the cast's bios or
+-- notes. The two sets filter independently; a caller wanting exact
+-- (module_type, field_name) pairs checks the pair itself.
+-- name: GetCharacterSheetRowsByGame :many
+SELECT cd.character_id, cd.module_type, cd.field_name, cd.field_value
+FROM character_data cd
+JOIN characters c ON c.id = cd.character_id
+WHERE c.game_id = sqlc.arg(game_id)
+  AND cd.field_value IS NOT NULL
+  AND cd.module_type = ANY(sqlc.arg(module_types)::text[])
+  AND cd.field_name = ANY(sqlc.arg(field_names)::text[]);
+
 -- name: DeleteCharacterData :exec
 DELETE FROM character_data
 WHERE character_id = $1 AND module_type = $2 AND field_name = $3;

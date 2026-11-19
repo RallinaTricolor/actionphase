@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { apiClient } from '../lib/api';
 import type { CharacterSheetConfig } from '../types/characters';
+import { invalidateScoreboards } from './useScoreboard';
 
 /**
  * Saves a game's whole character sheet layout (the Character Sheet editor).
@@ -19,6 +20,8 @@ export function useUpdateCharacterSheet(gameId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gameDetails', gameId] });
       queryClient.invalidateQueries({ queryKey: ['controllableCharactersAcrossGames'] });
+      // A renamed or removed tab or field changes the board's columns.
+      invalidateScoreboards(queryClient, gameId);
     },
   });
 }
